@@ -1,0 +1,45 @@
+every page struct should have its own full awareness
+which means we need to have stuff like current board
+stuff like current thread place
+shit like that
+
+boardlist page should have:
+ -list of boards
+  -board name
+  -short description
+  -longer description
+  -key?
+  -tags?
+board page:
+ +banner
+ +name and description
+ ?other per-board crap not related to content itself
+ -navigation: catalog links, etc
+ -startnewthread
+ +threads [OP + 5 last replies]
+ +navigation: page selection
+ -navigation: catalog links, etc
+thread page:
+ +banner
+ +name and description
+ ?other per-board crap not related to content itself
+ -navigation[links to catalog, page reload]
+ +OP+all replies
+ -postreply
+ -navigation[links to catalog, page reload]
+catalog:
+ +banner
+ +name and description
+ ?other per-board crap not related to content itself
+ -makenewthread
+ -navigation
+ +threads[picture,stats[replies,images],subject,truncated? text]
+ -navigation
+
+OP:
+file[with description] | subject[blue] name[green] date No[hl post] <number>[reply] {reply button} [[links to replies]]
+                       | message
+                       | message
+message
+message
+[x replies, y images omitted, click HERE to view]
