@@ -1,14 +1,14 @@
 package demoib
 
 import (
-	"io/ioutil"
-	"errors"
 	"../webib0"
+	"errors"
+	"io/ioutil"
 )
 
 var _ webib0.PostProvider = (*IBProviderDemo)(nil)
 
-type DemoFile struct {}
+type DemoFile struct{}
 
 func (DemoFile) Write(p []byte) (n int, err error) {
 	return ioutil.Discard.Write(p)
@@ -17,7 +17,7 @@ func (DemoFile) Write(p []byte) (n int, err error) {
 func (DemoFile) Delete() {
 }
 
-type DemoContext struct{
+type DemoContext struct {
 	n int
 }
 

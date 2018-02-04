@@ -1,9 +1,9 @@
 package psqlib
 
 import (
-	"runtime/debug"
 	"fmt"
 	"os"
+	"runtime/debug"
 )
 
 func sqlError(err error, when string) error {

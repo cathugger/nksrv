@@ -5,15 +5,15 @@ package psql
 
 import (
 	"../psqlcfg"
-	"database/sql"
 	"github.com/jmoiron/sqlx"
+	"time"
 )
 
 type PSQL struct {
 	DB *sqlx.DB
 }
 
-func OpenPSQL(cfg psqlcfg.ConfigPSQL) PSQL, error {
+func OpenPSQL(cfg psqlcfg.ConfigPSQL) (PSQL, error) {
 	db, err := sqlx.Open("postgres", cfg.ConnStr)
 	if err != nil {
 		return PSQL{}, err
@@ -28,5 +28,5 @@ func OpenPSQL(cfg psqlcfg.ConfigPSQL) PSQL, error {
 	if cfg.MaxOpenConns > 0 {
 		db.SetMaxOpenConns(int(cfg.MaxOpenConns))
 	}
-	return PSQL{db: db}, nil
+	return PSQL{DB: db}, nil
 }

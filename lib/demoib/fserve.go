@@ -1,9 +1,9 @@
 package demoib
 
 import (
-	"net/http"
 	fsd "../fservedir"
 	"../webib0"
+	"net/http"
 )
 
 type HTTPFileProvider interface {

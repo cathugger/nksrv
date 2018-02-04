@@ -59,12 +59,12 @@ func (sp PSQLProvider) IBGetThreadListPage(page *ib0.IBThreadListPage, board str
 		return sqlError(err, "row scan"), http.StatusInternalServerError
 	}
 	rows, err := sp.db.Query(
-`SELECT tid,tname,attrib
+		`SELECT tid,tname,attrib
 FROM ib0.threads
 WHERE bid=$1
 ORDER BY bump DESC
 LIMIT $2 OFFSET $3`,
-		bid, battrs.ThreadsPerPage, num * battrs.ThreadsPerPage)
+		bid, battrs.ThreadsPerPage, num*battrs.ThreadsPerPage)
 	if err != nil {
 		return sqlError(err, "query"), http.StatusInternalServerError
 	}
@@ -81,12 +81,12 @@ LIMIT $2 OFFSET $3`,
 		if err != nil {
 			return sqlError(err, "json unmarshal"), http.StatusInternalServerError
 		}
-		tids = append(tids,tid)
+		tids = append(tids, tid)
 		page.Threads = append(page.Threads, t)
 	}
 	for i, tid := range tids {
 		rows, err = sp.db.Query(
-`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
+			`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND tid=$2 AND pid=$2
 UNION ALL
@@ -108,7 +108,7 @@ SELECT * FROM (
 			pattrib := defaultPostAttributes
 			var pid uint64
 			var pdate time.Time
-			err = rows.Scan(&pi.ID,&pid,&pi.pname,&pi.trip,&pi.email,&pi.subject,&pdate,&pi.Message,&jcfg)
+			err = rows.Scan(&pi.ID, &pid, &pi.pname, &pi.trip, &pi.email, &pi.subject, &pdate, &pi.Message, &jcfg)
 			if err != nil {
 				return sqlError(err, "row scan"), http.StatusInternalServerError
 			}
@@ -118,13 +118,13 @@ SELECT * FROM (
 			}
 			pi.Date = fmtTime(pdate)
 			if tid != pid {
-				page.Threads[i].Replies = append(page.Threads[i].Replies,pi)
+				page.Threads[i].Replies = append(page.Threads[i].Replies, pi)
 			} else {
 				page.Threads[i].OP = pi
 			}
 		}
 	}
-	
+
 	*page = ib0.IBThreadListPage{
 		Threads: []ib0.IBThreadListPageThread{{
 			ID: "0123456789ABCDEF0123456789ABCDEF",

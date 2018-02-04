@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var _ fserve.FServe = (*FServeDir)(nil)
+var _ fserve.FServe = FServeDir{}
 
 type FServeDir struct {
 	dir string
@@ -47,6 +47,7 @@ func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 	if err == nil {
 		http.ServeContent(w, r, fname, fi.ModTime(), f)
 	} else {
+		// shouldn't happen
 		http.ServeContent(w, r, fname, time.Time{}, f)
 	}
 }

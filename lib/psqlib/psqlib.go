@@ -3,22 +3,22 @@ package psqlib
 // psql imageboard module
 
 import (
-	"../psqlcfg"
-	"../psql"
-	"../fstorecfg"
 	"../fstore"
+	"../fstorecfg"
+	"../psql"
+	"../psqlcfg"
 	"github.com/jmoiron/sqlx"
 )
 
 type PSQLIB struct {
-	db psql.PSQL
-	src fstore.FStore
+	db    psql.PSQL
+	src   fstore.FStore
 	thumb fstore.FStore
 }
 
 type InitCfg struct {
-	PSQLCfg psqlcfg.ConfigPSQL
-	SrcCfg fstorecfg.ConfigFStore
+	PSQLCfg  psqlcfg.ConfigPSQL
+	SrcCfg   fstorecfg.ConfigFStore
 	ThumbCfg fstorecfg.ConfigFStore
 }
 
