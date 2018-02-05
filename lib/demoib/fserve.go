@@ -2,14 +2,9 @@ package demoib
 
 import (
 	fsd "../fservedir"
-	"../webib0"
+	"../httpibfileprovider"
 	"net/http"
 )
-
-type HTTPFileProvider interface {
-	ServeSrc(w http.ResponseWriter, r *http.Request, id string)
-	ServeThm(w http.ResponseWriter, r *http.Request, id string)
-}
 
 var _ webib0.HTTPFileProvider = (*IBProviderDemo)(nil)
 
