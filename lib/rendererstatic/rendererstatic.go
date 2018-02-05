@@ -36,7 +36,7 @@ func (RendererStatic) ServeBoardList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (RendererStatic) ServeThreadListPage(w http.ResponseWriter, r *http.Request, board string, page uint32) {
-	fname := serveDir + "b-" + board + "-" + strconv.Itoa(int(page)) + ".html"
+	fname := serveDir + "b!" + board + "!" + strconv.Itoa(int(page)) + ".html"
 	f, err := os.Open(fname)
 	if err != nil {
 		http.NotFound(w, r)
@@ -54,7 +54,7 @@ func (RendererStatic) ServeThreadListPage(w http.ResponseWriter, r *http.Request
 }
 
 func (RendererStatic) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
-	fname := serveDir + "c-" + board + ".html"
+	fname := serveDir + "c!" + board + ".html"
 	f, err := os.Open(fname)
 	if err != nil {
 		http.NotFound(w, r)
@@ -72,7 +72,7 @@ func (RendererStatic) ServeThreadCatalog(w http.ResponseWriter, r *http.Request,
 }
 
 func (RendererStatic) ServeThread(w http.ResponseWriter, r *http.Request, board, thread string) {
-	fname := serveDir + "t-" + board + "-" + thread + ".html"
+	fname := serveDir + "t!" + board + "!" + thread + ".html"
 	f, err := os.Open(fname)
 	if err != nil {
 		http.NotFound(w, r)
