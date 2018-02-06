@@ -17,7 +17,11 @@ func NewMethod() *Method {
 
 func (m *Method) Initialize() *Method {
 	m.methods = append(m.methods, "OPTIONS")
-	m.handlers = append(m.handlers, nil)
+	m.handlers = append(m.handlers, http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "405 method not allowed",
+				http.StatusMethodNotAllowed)
+		}))
 	return m
 }
 
@@ -73,11 +77,7 @@ func (m *Method) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Allow", strings.Join(m.methods, ", "))
 	} else {
-		if len(m.handlers) > 0 && m.handlers[0] != nil {
-			m.handlers[0].ServeHTTP(w, r)
-		} else {
-			http.Error(w, "405 method not allowed", http.StatusMethodNotAllowed)
-		}
+		m.handlers[0].ServeHTTP(w, r)
 	}
 }
 

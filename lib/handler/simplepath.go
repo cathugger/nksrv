@@ -20,6 +20,7 @@ func NewSimplePath() *SimplePath {
 }
 
 func (p *SimplePath) Initialize() *SimplePath {
+	p.fallback = http.HandlerFunc(http.NotFound)
 	return p
 }
 
@@ -49,17 +50,14 @@ func (p *SimplePath) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// prefix match
 			l := len(p.routes[i].path)
 			if len(r.URL.Path) > l && r.URL.Path[:l] == p.routes[i].path && r.URL.Path[l] == '/' {
+				// this is destructive
 				r.URL.Path = r.URL.Path[l:]
 				p.routes[i].handler.ServeHTTP(w, r)
 				return
 			}
 		}
 	}
-	if p.fallback != nil {
-		p.fallback.ServeHTTP(w, r)
-	} else {
-		http.NotFound(w, r)
-	}
+	p.fallback.ServeHTTP(w, r)
 }
 
 var _ http.Handler = (*SimplePath)(nil)

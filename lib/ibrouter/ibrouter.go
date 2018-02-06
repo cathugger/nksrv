@@ -68,7 +68,20 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				b := r.Context().Value("b").(string)
 				pn := r.Context().Value("pn").(string)
 				pni := uint32(0)
-				if pnu, e := strconv.ParseUint(pn, 10, 32); e == nil && pnu > 1 {
+				if pn != "" {
+					pnu, e := strconv.ParseUint(pn, 10, 32)
+					if e != nil {
+						// not found because invalid
+						// TODO custom 404 pages
+						http.NotFound(w, r)
+						return
+					}
+					if pnu <= 1 {
+						// redirect to have uniform url
+						// XXX how would we do absolute url there?
+						http.Redirect(w, r, "./", http.StatusTemporaryRedirect)
+						return
+					}
 					// UI-visible stuff starts from 1, but internally from 0
 					pni = uint32(pnu - 1)
 				}

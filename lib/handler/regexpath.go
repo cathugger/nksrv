@@ -43,6 +43,7 @@ func NewRegexPath() *RegexPath {
 }
 
 func (p *RegexPath) Initialize() *RegexPath {
+	p.fallback = http.HandlerFunc(http.NotFound)
 	return p
 }
 
@@ -112,17 +113,14 @@ func (p *RegexPath) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				r = r.WithContext(ctx)
 			}
 			if p.routes[i].strip {
+				// this is destructive
 				r.URL.Path = m[numvars+1]
 			}
 			p.routes[i].handler.ServeHTTP(w, r)
 			return
 		}
 	}
-	if p.fallback != nil {
-		p.fallback.ServeHTTP(w, r)
-	} else {
-		http.NotFound(w, r)
-	}
+	p.fallback.ServeHTTP(w, r)
 }
 
 var _ http.Handler = (*RegexPath)(nil)

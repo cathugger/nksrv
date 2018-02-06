@@ -41,6 +41,7 @@ func (cp *CleanPath) Handle(handler http.Handler) *CleanPath {
 
 func (cp CleanPath) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "CONNECT" {
+		// expects that r.URL.Path isn't modified
 		np := cleanPath(r.URL.Path)
 		if np != r.URL.Path {
 			url := *r.URL
