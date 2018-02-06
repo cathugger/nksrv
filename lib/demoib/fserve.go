@@ -2,11 +2,11 @@ package demoib
 
 import (
 	fsd "../fservedir"
-	"../httpibfileprovider"
+	hfp "../httpibfileprovider"
 	"net/http"
 )
 
-var _ webib0.HTTPFileProvider = (*IBProviderDemo)(nil)
+var _ hfp.HTTPFileProvider = (*IBProviderDemo)(nil)
 
 var (
 	srcServe = fsd.NewFServeDir("_demo/demoib0/src")

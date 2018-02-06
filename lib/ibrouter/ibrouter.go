@@ -7,6 +7,7 @@ import (
 	fp "../httpibfileprovider"
 	"../renderer"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -58,12 +59,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		h_getr := handler.NewRegexPath()
 		h_get.Fallback(h_getr)
 
-		h_getb := handler.NewSimplePath()
-		h_getr.Handle("/{{b:[^_./][^/]*}}", true, h_getb)
-		h_getr.Handle("/_{{b:[_.][^/]*}}", true, h_getb)
+		h_getbr := handler.NewRegexPath()
+		h_getr.Handle("/{{b:[^_./][^/]*}}", true, h_getbr)
+		h_getr.Handle("/_{{b:[_.][^/]*}}", true, h_getbr)
 		// TODO handle boards not ending with slash
 
-		h_getb.Handle("/{{pn:[0-9]*}}", false, http.HandlerFunc(
+		h_getbr.Handle("/{{pn:[0-9]*}}", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				pn := r.Context().Value("pn").(string)
@@ -73,12 +74,14 @@ func NewIBRouter(cfg Cfg) http.Handler {
 					if e != nil {
 						// not found because invalid
 						// TODO custom 404 pages
+						// XXX maybe redirect to "./" there too?
 						http.NotFound(w, r)
 						return
 					}
 					if pnu <= 1 {
 						// redirect to have uniform url
-						// XXX how would we do absolute url there?
+						ru, _ := url.ParseRequestURI(r.RequestURI)
+						r.URL = ru
 						http.Redirect(w, r, "./", http.StatusTemporaryRedirect)
 						return
 					}
@@ -87,14 +90,11 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				}
 				cfg.HTMLRenderer.ServeThreadListPage(w, r, b, pni)
 			}))
-		h_getb.Handle("/catalog", false, http.HandlerFunc(
+		h_getbr.Handle("/catalog", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				cfg.HTMLRenderer.ServeThreadCatalog(w, r, b)
 			}))
-
-		h_getbr := handler.NewRegexPath()
-		h_getb.Fallback(h_getbr)
 
 		h_getbr.Handle("/thread/{{t}}(?:/[^/]*)?", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
