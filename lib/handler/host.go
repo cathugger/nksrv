@@ -74,7 +74,7 @@ func (h *Host) Fallback(handler http.Handler) *Host {
 func (h *Host) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host, port := splitHostPort(r.Host)
 	for i := range h.routes {
-		if h.routes[i].host == "*" || h.routes[i].host == host {
+		if h.routes[i].host == "*" || strings.EqualFold(h.routes[i].host, host) {
 			if h.routes[i].port == "*" || h.routes[i].port == port {
 				h.routes[i].handler.ServeHTTP(w, r)
 				return
