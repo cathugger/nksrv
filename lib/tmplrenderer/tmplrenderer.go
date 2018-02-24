@@ -38,6 +38,8 @@ var filenames = [tmplMax]string{
 	"thread_err.tmpl",
 }
 
+var contentType = "text/html; charset=utf8"
+
 type TmplRenderer struct {
 	p webib0.IBProvider
 	t [tmplMax]*template.Template
@@ -63,7 +65,7 @@ func NewTmplRenderer(p webib0.IBProvider, tdir string) (*TmplRenderer, error) {
 }
 
 func (tr *TmplRenderer) ServeBoardList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", contentType)
 	l := &webib0.IBBoardList{}
 	err, code := tr.p.IBGetBoardList(l)
 	if err != nil {
@@ -82,7 +84,7 @@ func (tr *TmplRenderer) ServeBoardList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Request, board string, page uint32) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", contentType)
 	l := &webib0.IBThreadListPage{}
 	err, code := tr.p.IBGetThreadListPage(l, board, page)
 	if err != nil {
@@ -105,7 +107,7 @@ func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Reque
 }
 
 func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", contentType)
 	l := &webib0.IBThreadCatalog{}
 	err, code := tr.p.IBGetThreadCatalog(l, board)
 	if err != nil {
@@ -126,7 +128,7 @@ func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Reques
 }
 
 func (tr *TmplRenderer) ServeThread(w http.ResponseWriter, r *http.Request, board, thread string) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", contentType)
 	l := &webib0.IBThreadPage{}
 	err, code := tr.p.IBGetThread(l, board, thread)
 	if err != nil {

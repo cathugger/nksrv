@@ -14,7 +14,7 @@ var _ renderer.Renderer = RendererStatic{}
 
 type RendererStatic struct{}
 
-const contentType = "text/html; encoding=utf8"
+const contentType = "text/html; charset=utf8"
 const serveDir = "_demo/statichtml/"
 
 func (RendererStatic) ServeBoardList(w http.ResponseWriter, r *http.Request) {
