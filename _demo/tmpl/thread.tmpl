@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>/{{html .Board.Name}}/ #{{html .ID}}</title>
+<link rel="stylesheet" type="text/css" href="{{$.Node.Root}}/_static/style.css" />
+</head>
+<body>
+{{- /* xxx: node name? board list? */}}
+<hr />
+<h1><p style="text-align: center;">/{{html .Board.Name}}/ - {{html .Board.Description}}</p></h1>
+<p style="text-align: center;">{{html .Board.Info}}</p>
+<hr />
+{{- with .OP}}
+<p class="opinfo" id="p{{.ID}}">
+{{- if .Subject}}<span class="subject">{{html .Subject}}</span>{{end}}
+<span class="name">{{html .Name}}</span>
+{{- if .Trip}}<span class="trip">{{html .Trip}}</span>{{end}}
+<time class="pdate" datetime="{{date .Date}}">{{date .Date}}</time>
+<a href="#p{{.ID}}">No.</a> {{.ID}}
+{{- range .References}} <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>{{end}}
+</p>
+{{- range .Files}}
+<div class="opimg">
+<p class="imginfo">
+File: <a class="filelink" title="{{html .Original}}" href="{{$.Node.FRoot}}/_src/{{urlpath .ID}}/{{urlpath .Original}}">{{html (truncatefn .Original 10)}}</a>
+(<span title="{{.Size}} bytes">{{filesize .Size}}</span>{{/* TODO: WxH for images */}})
+</p>
+<a class="imglink" href="{{$.Node.FRoot}}/_src/{{urlpath .ID}}">
+	{{- if .Thumb.ID -}}
+		<img class="imgthumb" src="{{$.Node.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+	{{- else -}}
+		<img class="imgthumb" src="{{$.Node.Root}}/_static/{{urlpath .Thumb.Alt}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+	{{- end -}}
+</a>
+</div>
+{{end -}}
+
+{{end -}}
+</body>
+</html>

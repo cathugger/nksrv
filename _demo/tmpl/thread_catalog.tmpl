@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>/{{html .Board.Name}}/ - {{html .Board.Description}} - Catalog</title>
+<link rel="stylesheet" type="text/css" href="{{$.Node.Root}}/_static/style.css" />
+</head>
+<body>
+<!-- xxx: node name? board list? -->
+<hr />
+<h1><p style="text-align: center;">/{{html .Board.Name}}/ - {{html .Board.Description}}</p></h1>
+<p style="text-align: center;">{{html .Board.Info}}</p>
+<hr />
+{{- range .Threads}}
+<div class="cat_div">
+<a href="thread/{{urlpath .ID}}">
+{{if .Thumb.ID -}}
+<img src="{{$.Node.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
+{{else -}}
+<img src="{{$.Node.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
+{{end -}}
+</a>
+<br />
+R: {{.TotalReplies}} I: {{.TotalAttachments}}<br />
+{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{html .Message}}
+</div>
+{{- end}}
+<div style="clear: both;"></div>
+<hr />
+</body>
+</html>

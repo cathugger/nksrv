@@ -3,14 +3,17 @@ package demoib
 import (
 	fsd "../fservedir"
 	hfp "../httpibfileprovider"
+	sp "../staticprovider"
 	"net/http"
 )
 
 var _ hfp.HTTPFileProvider = (*IBProviderDemo)(nil)
+var _ sp.StaticProvider = (*IBProviderDemo)(nil)
 
 var (
-	srcServe = fsd.NewFServeDir("_demo/demoib0/src")
-	thmServe = fsd.NewFServeDir("_demo/demoib0/thm")
+	srcServe    = fsd.NewFServeDir("_demo/demoib0/src")
+	thmServe    = fsd.NewFServeDir("_demo/demoib0/thm")
+	staticServe = fsd.NewFServeDir("_demo/demoib0/static")
 )
 
 func (IBProviderDemo) ServeSrc(w http.ResponseWriter, r *http.Request, id string) {
@@ -19,4 +22,8 @@ func (IBProviderDemo) ServeSrc(w http.ResponseWriter, r *http.Request, id string
 
 func (IBProviderDemo) ServeThm(w http.ResponseWriter, r *http.Request, id string) {
 	thmServe.FServe(w, r, id)
+}
+
+func (IBProviderDemo) ServeStatic(w http.ResponseWriter, r *http.Request, id string) {
+	staticServe.FServe(w, r, id)
 }

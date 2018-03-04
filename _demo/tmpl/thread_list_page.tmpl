@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>/{{html .Board.Name}}/ - {{html .Board.Description}} - Page {{.Number}}</title>
+<link rel="stylesheet" type="text/css" href="{{$.Node.Root}}/_static/style.css" />
+</head>
+<body>
+<!-- xxx: node name? board list? -->
+<hr />
+<h1><p style="text-align: center;">/{{html .Board.Name}}/ - {{html .Board.Description}}</p></h1>
+<p style="text-align: center;">{{html .Board.Info}}</p>
+<hr />
+{{range .Threads -}}
+
+{{end -}}
+<hr />
+</body>
+</html>

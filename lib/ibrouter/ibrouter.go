@@ -6,15 +6,17 @@ import (
 	"../handler"
 	fp "../httpibfileprovider"
 	"../renderer"
+	sp "../staticprovider"
 	"net/http"
 	"net/url"
 	"strconv"
 )
 
 type Cfg struct {
-	HTMLRenderer renderer.Renderer   // handles everything else?
-	FileProvider fp.HTTPFileProvider // handles _src and _thm
-	APIHandler   http.Handler        // handles _api
+	HTMLRenderer   renderer.Renderer   // handles everything else?
+	StaticProvider sp.StaticProvider
+	FileProvider   fp.HTTPFileProvider // handles _src and _thm
+	APIHandler     http.Handler        // handles _api
 	// fallback?
 	// http posting?
 }
@@ -45,6 +47,16 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		h.
 			Handle("/_src", true, h_src).
 			Handle("/_thm", true, h_thm)
+	}
+	
+	if cfg.StaticProvider != nil {
+		h_static := handler.NewMethod().Handle("GET", handler.NewRegexPath().
+			Handle("/{{id:[^_./][^/]*}}(?:/[^/]*)?", false, http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					id := r.Context().Value("id").(string)
+					cfg.StaticProvider.ServeStatic(w, r, id)
+				})))
+		h.Handle("/_static", true, h_static)
 	}
 
 	if cfg.HTMLRenderer != nil {
@@ -80,6 +92,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 					}
 					if pnu <= 1 {
 						// redirect to have uniform url
+						// need to re-parse URL, because at this point it's modified
 						ru, _ := url.ParseRequestURI(r.RequestURI)
 						r.URL = ru
 						http.Redirect(w, r, "./", http.StatusTemporaryRedirect)

@@ -11,6 +11,13 @@ package webib0
 // we should hack them in to database and calculate only at post time
 // to minimize complexity at query time
 
+// information about this node
+type IBNodeInfo struct {
+	Name  string `json:"name"`
+	Root  string `json:"root"`
+	FRoot string `json:"froot"`
+}
+
 // board list member
 type IBBoardListBoard struct {
 	Name        string   `json:"name"` // short name
@@ -20,6 +27,7 @@ type IBBoardListBoard struct {
 
 // board list page
 type IBBoardList struct {
+	Node   IBNodeInfo         `json:"node"`   // info about this node
 	Boards []IBBoardListBoard `json:"boards"` // boards
 }
 
@@ -39,20 +47,22 @@ type IBFileInfo struct {
 	Type     string                 `json:"type"`              // short type of file
 	Thumb    IBThumbInfo            `json:"thumb"`             // thumbnail
 	Original string                 `json:"original"`          // original filename
+	Size     int64                  `json:"size"`              // all files have size
 	Options  map[string]interface{} `json:"options,omitempty"` // metadata which depends on file type
 }
 
 // post
 type IBPostInfo struct {
-	ID      string                 `json:"id"`                // ID of post. long, global one
-	Subject string                 `json:"subject"`           // subject text
-	Name    string                 `json:"name"`              // name of poster
-	Trip    string                 `json:"trip,omitempty"`    // tripcode, usually not set
-	Email   string                 `json:"email,omitempty"`   // email field, usually useless, used for sage too
-	Date    int64                  `json:"date"`              // seconds since unix epoch
-	Message string                 `json:"message"`           // message itself. formatted
-	Files   []IBFileInfo           `json:"files,omitempty"`   // attached files
-	Options map[string]interface{} `json:"options,omitempty"` // additional stuff
+	ID         string                 `json:"id"`                   // ID of post. long, global one
+	Subject    string                 `json:"subject"`              // subject text
+	Name       string                 `json:"name"`                 // name of poster
+	Trip       string                 `json:"trip,omitempty"`       // tripcode, usually not set
+	Email      string                 `json:"email,omitempty"`      // email field, usually useless, used for sage too
+	Date       int64                  `json:"date"`                 // seconds since unix epoch
+	Message    string                 `json:"message"`              // message itself. formatted
+	Files      []IBFileInfo           `json:"files,omitempty"`      // attached files
+	References []string               `json:"references,omitempty"` // references. may not be present
+	Options    map[string]interface{} `json:"options,omitempty"`    // additional stuff
 }
 
 // thread in thread list page
@@ -72,6 +82,7 @@ type IBBoardInfo struct {
 }
 
 type IBThreadListPage struct {
+	Node     IBNodeInfo               `json:"node"`           // info about this node
 	Board    IBBoardInfo              `json:"board"`          // info about this board
 	Number   uint32                   `json:"page_number"`    // this page num
 	Avaiable uint32                   `json:"pages_avaiable"` // num of pages
@@ -88,11 +99,13 @@ type IBThreadCatalogThread struct {
 }
 
 type IBThreadCatalog struct {
+	Node    IBNodeInfo              `json:"node"`    // info about this node
 	Board   IBBoardInfo             `json:"board"`   // info about this baord
 	Threads []IBThreadCatalogThread `json:"threads"` // threads
 }
 
 type IBThreadPage struct {
+	Node    IBNodeInfo   `json:"node"`    // info about this node
 	Board   IBBoardInfo  `json:"board"`   // info about this board
 	ID      string       `json:"id"`      // thread ID
 	OP      IBPostInfo   `json:"op"`      // OP
