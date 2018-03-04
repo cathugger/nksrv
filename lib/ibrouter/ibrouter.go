@@ -13,7 +13,7 @@ import (
 )
 
 type Cfg struct {
-	HTMLRenderer   renderer.Renderer   // handles everything else?
+	HTMLRenderer   renderer.Renderer // handles everything else?
 	StaticProvider sp.StaticProvider
 	FileProvider   fp.HTTPFileProvider // handles _src and _thm
 	APIHandler     http.Handler        // handles _api
@@ -48,7 +48,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			Handle("/_src", true, h_src).
 			Handle("/_thm", true, h_thm)
 	}
-	
+
 	if cfg.StaticProvider != nil {
 		h_static := handler.NewMethod().Handle("GET", handler.NewRegexPath().
 			Handle("/{{id:[^_./][^/]*}}(?:/[^/]*)?", false, http.HandlerFunc(

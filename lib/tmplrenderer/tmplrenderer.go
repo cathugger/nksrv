@@ -15,8 +15,8 @@ import (
 	"path"
 	"strings"
 	"text/template"
-	"unicode/utf8"
 	"time"
+	"unicode/utf8"
 )
 
 var _ renderer.Renderer = (*TmplRenderer)(nil)
