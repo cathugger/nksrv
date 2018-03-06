@@ -4,6 +4,8 @@ import (
 	di "../../lib/demoib"
 	ir "../../lib/ibrouter"
 	rt "../../lib/tmplrenderer"
+	fl "../../lib/filelogger"
+	"../../lib/logx"
 	"context"
 	"fmt"
 	"net/http"
@@ -13,10 +15,27 @@ import (
 )
 
 func main() {
-	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, "_demo/tmpl")
+	var err error
+	lgr, err := fl.NewFileLogger(os.Stderr, fl.ColorAuto)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "newtmplrenderer error: %v\n", err)
-		return
+		fmt.Fprintf(os.Stderr, "fl.NewFileLogger error: %v\n", err)
+		os.Exit(1)
+	}
+	mlg := logx.NewLogToX(lgr, "main")
+	mlg.LogPrintln(logx.DEBUG, "testing DEBUG log message")
+	mlg.LogPrintln(logx.VERBOSE, "testing VERBOSE log message")
+	mlg.LogPrintln(logx.INFO, "testing INFO log message")
+	mlg.LogPrintln(logx.WARN, "testing WARN log message")
+	mlg.LogPrintln(logx.ERROR, "testing ERROR log message")
+	mlg.LogPrintln(logx.FATAL, "testing FATAL log message")
+
+	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
+		TemplateDir: "_demo/tmpl",
+		Logger: lgr,
+	})
+	if err != nil {
+		mlg.LogPrintln(logx.FATAL, "rt.NewTmplRenderer error:", err)
+		os.Exit(1)
 	}
 	rcfg := ir.Cfg{
 		HTMLRenderer:   rend,
@@ -47,6 +66,6 @@ func main() {
 
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		fmt.Fprintf(os.Stderr, "error from ListenAndServe: %v\n", err)
+		mlg.LogPrintln(logx.ERROR, "error from ListenAndServe:", err)
 	}
 }

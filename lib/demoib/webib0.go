@@ -85,7 +85,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: "test OP message",
+		Message: []byte("test OP message"),
 		Files: []webib0.IBFileInfo{
 			testFile1,
 			testFile2,
@@ -97,7 +97,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: "test OP message",
+		Message: []byte("test OP message"),
 		Files: []webib0.IBFileInfo{
 			testFile1,
 		},
@@ -108,7 +108,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396801,
-		Message: "test reply message 1",
+		Message: []byte("test reply message 1"),
 		Files:   []webib0.IBFileInfo{},
 	}
 	testPost4 = webib0.IBPostInfo{
@@ -117,7 +117,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396802,
-		Message: "test reply message 2",
+		Message: []byte("test reply message 2"),
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,
@@ -163,7 +163,7 @@ var (
 				TotalReplies:     0,
 				TotalAttachments: 0,
 				Subject:          "test1",
-				Message:          "test message 1",
+				Message:          []byte("test message 1"),
 			},
 			{
 				ID:               "00112233445566770011223344556677",
@@ -171,7 +171,7 @@ var (
 				TotalReplies:     2,
 				TotalAttachments: 0,
 				Subject:          "test2",
-				Message:          "",
+				Message:          []byte(""),
 			},
 			{
 				ID:               "8899AABBCCDDEEFF8899AABBCCDDEEFF",
@@ -179,7 +179,7 @@ var (
 				TotalReplies:     5,
 				TotalAttachments: 3,
 				Subject:          "",
-				Message:          "test message 3",
+				Message:          []byte("test message 3"),
 			},
 		},
 	}

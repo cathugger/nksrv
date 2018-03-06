@@ -51,18 +51,27 @@ type IBFileInfo struct {
 	Options  map[string]interface{} `json:"options,omitempty"` // metadata which depends on file type
 }
 
+type IBReference struct {
+	Start  uint   `json:"start"`            // points to reference start position in Message
+	End    uint   `json:"end"`              // points after reference end in Message
+	Board  string `json:"board,omitempty"`  // board which contains post which is refered to. if empty, "this board"
+	Thread string `json:"thread,omitempty"` // thread which contains post which is refered to. if empty, "this thread"
+	Post   string `json:"post"`             // full post number
+}
+
 // post
 type IBPostInfo struct {
-	ID         string                 `json:"id"`                   // ID of post. long, global one
-	Subject    string                 `json:"subject"`              // subject text
-	Name       string                 `json:"name"`                 // name of poster
-	Trip       string                 `json:"trip,omitempty"`       // tripcode, usually not set
-	Email      string                 `json:"email,omitempty"`      // email field, usually useless, used for sage too
-	Date       int64                  `json:"date"`                 // seconds since unix epoch
-	Message    string                 `json:"message"`              // message itself. formatted
-	Files      []IBFileInfo           `json:"files,omitempty"`      // attached files
-	References []string               `json:"references,omitempty"` // references. may not be present
-	Options    map[string]interface{} `json:"options,omitempty"`    // additional stuff
+	ID             string                 `json:"id"`                       // ID of post. long, global one
+	Subject        string                 `json:"subject"`                  // subject text
+	Name           string                 `json:"name"`                     // name of poster
+	Trip           string                 `json:"trip,omitempty"`           // tripcode, usually not set
+	Email          string                 `json:"email,omitempty"`          // email field, usually useless, used for sage too
+	Date           int64                  `json:"date"`                     // seconds since unix epoch
+	Message        []byte                 `json:"message"`                  // message itself. formatted
+	References     []IBReference          `json:"references,omitempty"`     // posts Message refers to
+	Files          []IBFileInfo           `json:"files,omitempty"`          // attached files
+	BackRererences []string               `json:"backreferences,omitempty"` // post refering to this post
+	Options        map[string]interface{} `json:"options,omitempty"`        // additional stuff
 }
 
 // thread in thread list page
@@ -95,7 +104,7 @@ type IBThreadCatalogThread struct {
 	TotalReplies     uint32      `json:"total_replies"`     // number of replies
 	TotalAttachments uint32      `json:"total_attachments"` // number of attachments
 	Subject          string      `json:"subject"`           // subject
-	Message          string      `json:"message"`           // message
+	Message          []byte      `json:"message"`           // message
 }
 
 type IBThreadCatalog struct {
