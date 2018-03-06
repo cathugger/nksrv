@@ -72,10 +72,7 @@ func nowTime() time.Time {
 }
 
 func NewFileLogger(f *os.File, logLevel logx.Level, c useColor) (*FileLogger, error) {
-	l := &FileLogger{f: f, m: logLevel}
-	if c == ColorOn {
-		l.t = 1
-	}
+	l := &FileLogger{f: f, t: uint(c) & 1, m: logLevel}
 	fd := f.Fd()
 	if c != ColorOff && (isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)) {
 		l.w.w = bufio.NewWriter(colorable.NewColorable(f))
