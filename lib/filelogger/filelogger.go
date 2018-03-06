@@ -24,20 +24,20 @@ type logLevels [logx.LevelCount][]byte
 var levelstrings = [2]logLevels{
 	// uncolored
 	{
-		logx.DEBUG:    []byte("DEBUG   "),
-		logx.INFO:     []byte("INFO    "),
-		logx.NOTICE:   []byte("NOTICE  "),
-		logx.WARN:     []byte("WARNING "),
-		logx.ERROR:    []byte("ERROR   "),
+		logx.DEBUG:    []byte("   DEBUG"),
+		logx.INFO:     []byte("    INFO"),
+		logx.NOTICE:   []byte("  NOTICE"),
+		logx.WARN:     []byte(" WARNING"),
+		logx.ERROR:    []byte("   ERROR"),
 		logx.CRITICAL: []byte("CRITICAL"),
 	},
 	// colored
 	{
-		logx.DEBUG:    []byte("\033[37mDEBUG   \033[0m"),
-		logx.INFO:     []byte("\033[34mINFO    \033[0m"),
-		logx.NOTICE:   []byte("\033[32mNOTICE  \033[0m"),
-		logx.WARN:     []byte("\033[33mWARNING \033[0m"),
-		logx.ERROR:    []byte("\033[31mERROR   \033[0m"),
+		logx.DEBUG:    []byte("\033[37m   DEBUG\033[0m"),
+		logx.INFO:     []byte("\033[34m    INFO\033[0m"),
+		logx.NOTICE:   []byte("\033[32m  NOTICE\033[0m"),
+		logx.WARN:     []byte("\033[33m WARNING\033[0m"),
+		logx.ERROR:    []byte("\033[31m   ERROR\033[0m"),
 		logx.CRITICAL: []byte("\033[35mCRITICAL\033[0m"),
 	},
 }
