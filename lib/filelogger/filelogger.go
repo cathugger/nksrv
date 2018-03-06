@@ -37,8 +37,8 @@ var levelstrings = [2]logLevels{
 		logx.INFO:     []byte("\033[34mINFO    \033[0m"),
 		logx.NOTICE:   []byte("\033[32mNOTICE  \033[0m"),
 		logx.WARN:     []byte("\033[33mWARNING \033[0m"),
-		logx.ERROR:    []byte("\033[35mERROR   \033[0m"),
-		logx.CRITICAL: []byte("\033[31mCRITICAL\033[0m"),
+		logx.ERROR:    []byte("\033[31mERROR   \033[0m"),
+		logx.CRITICAL: []byte("\033[35mCRITICAL\033[0m"),
 	},
 }
 
@@ -63,6 +63,7 @@ type FileLogger struct {
 	f *os.File
 	l sync.Mutex
 	t int
+	m logx.Level
 	n bool
 }
 
@@ -70,8 +71,8 @@ func nowTime() time.Time {
 	return time.Now()
 }
 
-func NewFileLogger(f *os.File, c useColor) (*FileLogger, error) {
-	l := &FileLogger{f: f}
+func NewFileLogger(f *os.File, logLevel logx.Level, c useColor) (*FileLogger, error) {
+	l := &FileLogger{f: f, m: logLevel}
 	if c == ColorOn {
 		l.t = 1
 	}
@@ -83,6 +84,10 @@ func NewFileLogger(f *os.File, c useColor) (*FileLogger, error) {
 		l.w.w = bufio.NewWriter(f)
 	}
 	return l, nil
+}
+
+func (l *FileLogger) Level() logx.Level {
+	return l.m
 }
 
 func (l *FileLogger) writeTime(t time.Time) {
@@ -108,6 +113,10 @@ func (l *FileLogger) prepareWrite(section string, lvl logx.Level, t time.Time) {
 }
 
 func (l *FileLogger) LogPrintX(section string, lvl logx.Level, v ...interface{}) {
+	if l.m > lvl {
+		return
+	}
+
 	t := time.Now().UTC()
 
 	l.l.Lock()
@@ -120,6 +129,10 @@ func (l *FileLogger) LogPrintX(section string, lvl logx.Level, v ...interface{})
 }
 
 func (l *FileLogger) LogPrintlnX(section string, lvl logx.Level, v ...interface{}) {
+	if l.m > lvl {
+		return
+	}
+
 	t := time.Now().UTC()
 
 	l.l.Lock()
@@ -132,6 +145,10 @@ func (l *FileLogger) LogPrintlnX(section string, lvl logx.Level, v ...interface{
 }
 
 func (l *FileLogger) LogPrintfX(section string, lvl logx.Level, fmts string, v ...interface{}) {
+	if l.m > lvl {
+		return
+	}
+
 	t := time.Now().UTC()
 
 	l.l.Lock()
@@ -143,15 +160,23 @@ func (l *FileLogger) LogPrintfX(section string, lvl logx.Level, fmts string, v .
 	l.w.finish()
 }
 
-func (l *FileLogger) LockWriteX(section string, lvl logx.Level) {
+func (l *FileLogger) LockWriteX(section string, lvl logx.Level) bool {
+	if l.m > lvl {
+		return false
+	}
+
 	t := nowTime()
 	l.l.Lock()
 	l.prepareWrite(section, lvl, t)
+
+	return true
 }
+
 func (l *FileLogger) UnlockWriteX() {
 	l.w.finish()
 	l.l.Unlock()
 }
+
 func (l *FileLogger) Write(b []byte) (int, error) {
 	return l.w.Write(b)
 }

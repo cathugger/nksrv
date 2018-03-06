@@ -16,7 +16,7 @@ import (
 
 func main() {
 	var err error
-	lgr, err := fl.NewFileLogger(os.Stderr, fl.ColorAuto)
+	lgr, err := fl.NewFileLogger(os.Stderr, logx.DEBUG, fl.ColorAuto)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fl.NewFileLogger error: %v\n", err)
 		os.Exit(1)
