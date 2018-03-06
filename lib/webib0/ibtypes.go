@@ -99,12 +99,12 @@ type IBThreadListPage struct {
 }
 
 type IBThreadCatalogThread struct {
-	ID               string      `json:"id"`                // thread ID
-	Thumb            IBThumbInfo `json:"thumb"`             // thumbnail
-	TotalReplies     uint32      `json:"total_replies"`     // number of replies
-	TotalAttachments uint32      `json:"total_attachments"` // number of attachments
-	Subject          string      `json:"subject"`           // subject
-	Message          []byte      `json:"message"`           // message
+	ID               string      `json:"id"`       // thread ID
+	Thumb            IBThumbInfo `json:"thumb"`    // thumbnail
+	TotalReplies     uint32      `json:"nreplies"` // number of replies
+	TotalAttachments uint32      `json:"nattach"`  // number of attachments
+	Subject          string      `json:"subject"`  // subject
+	Message          []byte      `json:"message"`  // message
 }
 
 type IBThreadCatalog struct {
