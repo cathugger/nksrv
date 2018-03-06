@@ -23,18 +23,18 @@ func main() {
 	}
 	mlg := logx.NewLogToX(lgr, "main")
 	mlg.LogPrint(logx.DEBUG, "testing DEBUG log message")
-	mlg.LogPrint(logx.VERBOSE, "testing VERBOSE log message")
 	mlg.LogPrint(logx.INFO, "testing INFO log message")
+	mlg.LogPrint(logx.NOTICE, "testing NOTICE log message")
 	mlg.LogPrint(logx.WARN, "testing WARN log message")
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
-	mlg.LogPrint(logx.FATAL, "testing FATAL log message")
+	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
 
 	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
 		TemplateDir: "_demo/tmpl",
 		Logger:      lgr,
 	})
 	if err != nil {
-		mlg.LogPrintln(logx.FATAL, "rt.NewTmplRenderer error:", err)
+		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
 		os.Exit(1)
 	}
 	rcfg := ir.Cfg{

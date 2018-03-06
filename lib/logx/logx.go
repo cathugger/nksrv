@@ -8,11 +8,11 @@ type Level int
 
 const (
 	DEBUG Level = iota
-	VERBOSE
 	INFO
+	NOTICE
 	WARN
 	ERROR
-	FATAL
+	CRITICAL
 	LevelCount
 )
 
