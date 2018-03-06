@@ -62,7 +62,7 @@ type FileLogger struct {
 	d day
 	f *os.File
 	l sync.Mutex
-	t int
+	t uint
 	m logx.Level
 	n bool
 }
@@ -109,7 +109,7 @@ func (l *FileLogger) writeTime(t time.Time) {
 func (l *FileLogger) prepareWrite(section string, lvl logx.Level, t time.Time) {
 	l.w.reset()
 	l.writeTime(t)
-	fmt.Fprintf(&l.w.p, formatstrings[int(l.t)], levelstrings[int(l.t)][lvl], section)
+	fmt.Fprintf(&l.w.p, formatstrings[l.t], levelstrings[l.t][lvl], section)
 }
 
 func (l *FileLogger) LogPrintX(section string, lvl logx.Level, v ...interface{}) {
