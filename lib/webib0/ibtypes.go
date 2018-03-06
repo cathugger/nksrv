@@ -70,7 +70,7 @@ type IBPostInfo struct {
 	Message        []byte                 `json:"message"`                  // message itself. formatted
 	References     []IBReference          `json:"references,omitempty"`     // posts Message refers to
 	Files          []IBFileInfo           `json:"files,omitempty"`          // attached files
-	BackRererences []string               `json:"backreferences,omitempty"` // post refering to this post
+	BackReferences []string               `json:"backreferences,omitempty"` // post refering to this post
 	Options        map[string]interface{} `json:"options,omitempty"`        // additional stuff
 }
 

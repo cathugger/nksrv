@@ -30,6 +30,7 @@ var (
 		Type:     "image",
 		Thumb:    testThumb1,
 		Original: "original test file.png",
+		Size:     2048,
 		Options: map[string]interface{}{
 			"width":  480,
 			"height": 480,
@@ -45,6 +46,7 @@ var (
 		Type:     "image",
 		Thumb:    testThumb2,
 		Original: "original test file 2.jpg",
+		Size:     12345,
 		Options: map[string]interface{}{
 			"width":  1360,
 			"height": 1020,
@@ -60,6 +62,7 @@ var (
 		Type:     "image",
 		Thumb:    testThumb3,
 		Original: "original test file 3.png",
+		Size:     1234567,
 		Options: map[string]interface{}{
 			"width":  922,
 			"height": 922,
@@ -75,6 +78,7 @@ var (
 		Type:     "audio",
 		Thumb:    testThumb4,
 		Original: "original test file 4.opus",
+		Size:     12345678901,
 		Options:  map[string]interface{}{},
 	}
 )
