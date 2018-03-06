@@ -22,12 +22,12 @@ func main() {
 		os.Exit(1)
 	}
 	mlg := logx.NewLogToX(lgr, "main")
-	mlg.LogPrintln(logx.DEBUG, "testing DEBUG log message")
-	mlg.LogPrintln(logx.VERBOSE, "testing VERBOSE log message")
-	mlg.LogPrintln(logx.INFO, "testing INFO log message")
-	mlg.LogPrintln(logx.WARN, "testing WARN log message")
-	mlg.LogPrintln(logx.ERROR, "testing ERROR log message")
-	mlg.LogPrintln(logx.FATAL, "testing FATAL log message")
+	mlg.LogPrint(logx.DEBUG, "testing DEBUG log message")
+	mlg.LogPrint(logx.VERBOSE, "testing VERBOSE log message")
+	mlg.LogPrint(logx.INFO, "testing INFO log message")
+	mlg.LogPrint(logx.WARN, "testing WARN log message")
+	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
+	mlg.LogPrint(logx.FATAL, "testing FATAL log message")
 
 	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
 		TemplateDir: "_demo/tmpl",

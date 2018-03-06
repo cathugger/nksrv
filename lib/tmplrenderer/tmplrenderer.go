@@ -76,7 +76,7 @@ func NewTmplRenderer(p webib0.IBProvider, cfg TmplRendererCfg) (*TmplRenderer, e
 		}
 		tr.t[i] = t
 	}
-	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%x", tr))
+	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
 	return tr, nil
 }
 
