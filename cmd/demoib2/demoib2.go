@@ -2,10 +2,10 @@ package main
 
 import (
 	di "../../lib/demoib"
-	ir "../../lib/ibrouter"
-	rt "../../lib/tmplrenderer"
 	fl "../../lib/filelogger"
+	ir "../../lib/ibrouter"
 	"../../lib/logx"
+	rt "../../lib/tmplrenderer"
 	"context"
 	"fmt"
 	"net/http"
@@ -31,7 +31,7 @@ func main() {
 
 	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
 		TemplateDir: "_demo/tmpl",
-		Logger: lgr,
+		Logger:      lgr,
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.FATAL, "rt.NewTmplRenderer error:", err)

@@ -1,2 +1,2 @@
 #!/bin/sh
-exec find ./ -iname '*.go' -exec gofmt -w '{}' ';'
+exec find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'

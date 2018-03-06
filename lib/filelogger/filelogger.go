@@ -23,7 +23,7 @@ type logLevels [logx.LevelCount][]byte
 
 var levelstrings = [2]logLevels{
 	// uncolored
-	logLevels {
+	{
 		logx.DEBUG:   []byte("DEBUG  "),
 		logx.VERBOSE: []byte("VERBOSE"),
 		logx.INFO:    []byte("INFO   "),
@@ -32,7 +32,7 @@ var levelstrings = [2]logLevels{
 		logx.FATAL:   []byte("FATAL  "),
 	},
 	// colored
-	logLevels {
+	{
 		logx.DEBUG:   []byte("\033[37mDEBUG\033[0m  "),
 		logx.VERBOSE: []byte("\033[34mVERBOSE\033[0m"),
 		logx.INFO:    []byte("\033[32mINFO\033[0m   "),
@@ -42,7 +42,7 @@ var levelstrings = [2]logLevels{
 	},
 }
 
-var formatstrings = [2]string {
+var formatstrings = [2]string{
 	// uncolored
 	" %s [%s] ",
 	// colored
@@ -64,7 +64,6 @@ type FileLogger struct {
 	l sync.Mutex
 	t int
 	n bool
-	
 }
 
 func nowTime() time.Time {
