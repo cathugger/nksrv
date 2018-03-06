@@ -14,6 +14,7 @@ var funcs = map[string]interface{}{
 	"filesize":   filesize,
 	"date":       date,
 	"fmtmsg":     fmtmsg,
+	"fmtmsgcat":  fmtmsgcat,
 }
 
 func urlPath(p string) string {

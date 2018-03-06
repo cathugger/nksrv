@@ -21,7 +21,7 @@
 </a>
 <br />
 R: {{.TotalReplies}} I: {{.TotalAttachments}}<br />
-{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{html .Message}}
+{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{fmtmsgcat .}}
 </div>
 {{- end}}
 <div style="clear: both;"></div>
