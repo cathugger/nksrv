@@ -95,7 +95,7 @@ func (l *FileLogger) writeTime(t time.Time) {
 	if l.t != 0 {
 		if l.d != d {
 			l.d = d
-			fmt.Fprintf(&l.w, "\033[1mdate is %d-%02d-%02d\033[0m\n", d.Y, d.M, d.D)
+			fmt.Fprintf(l.w.w, "\033[1mdate is %d-%02d-%02d\033[0m\n", d.Y, d.M, d.D)
 		}
 		fmt.Fprintf(&l.w.p, "%02d:%02d:%02d", h, m, s)
 	} else {
@@ -120,7 +120,6 @@ func (l *FileLogger) LogPrintX(section string, lvl logx.Level, v ...interface{})
 	defer l.l.Unlock()
 
 	l.prepareWrite(section, lvl, t)
-
 	fmt.Fprint(&l.w, v...)
 	l.w.finish()
 }
@@ -136,7 +135,6 @@ func (l *FileLogger) LogPrintlnX(section string, lvl logx.Level, v ...interface{
 	defer l.l.Unlock()
 
 	l.prepareWrite(section, lvl, t)
-
 	fmt.Fprintln(&l.w, v...)
 	l.w.finish()
 }
@@ -152,7 +150,6 @@ func (l *FileLogger) LogPrintfX(section string, lvl logx.Level, fmts string, v .
 	defer l.l.Unlock()
 
 	l.prepareWrite(section, lvl, t)
-
 	fmt.Fprintf(&l.w, fmts, v...)
 	l.w.finish()
 }
@@ -163,9 +160,10 @@ func (l *FileLogger) LockWriteX(section string, lvl logx.Level) bool {
 	}
 
 	t := nowTime()
-	l.l.Lock()
-	l.prepareWrite(section, lvl, t)
 
+	l.l.Lock()
+
+	l.prepareWrite(section, lvl, t)
 	return true
 }
 
