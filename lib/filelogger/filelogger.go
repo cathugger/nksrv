@@ -169,9 +169,10 @@ func (l *FileLogger) LockWriteX(section string, lvl logx.Level) bool {
 	return true
 }
 
-func (l *FileLogger) UnlockWriteX() {
+func (l *FileLogger) Close() error {
 	l.w.finish()
 	l.l.Unlock()
+	return nil
 }
 
 func (l *FileLogger) Write(b []byte) (int, error) {
