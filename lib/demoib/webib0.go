@@ -10,10 +10,6 @@ type IBProviderDemo struct{}
 
 var _ webib0.IBProvider = (*IBProviderDemo)(nil)
 
-var testNodeInfo = webib0.IBNodeInfo{
-	Name: "testnode",
-}
-
 var testBoardInfo = webib0.IBBoardInfo{
 	Name:        "test",
 	Description: "board for testing",
@@ -132,7 +128,6 @@ var (
 
 var (
 	testBoardList = webib0.IBBoardList{
-		Node: testNodeInfo,
 		Boards: []webib0.IBBoardListBoard{
 			{"test", "board for testing", []string{"test"}},
 			{"testname2", "test description 2", []string{"test", "test2"}},
@@ -142,7 +137,6 @@ var (
 		},
 	}
 	testThreadListPage = webib0.IBThreadListPage{
-		Node:  testNodeInfo,
 		Board: testBoardInfo,
 		Threads: []webib0.IBThreadListPageThread{{
 			IBCommonThread: webib0.IBCommonThread{
@@ -160,7 +154,6 @@ var (
 		Avaiable: 2,
 	}
 	testThread = webib0.IBThreadPage{
-		Node:  testNodeInfo,
 		Board: testBoardInfo,
 		IBCommonThread: webib0.IBCommonThread{
 			ID: "0123456789ABCDEF0123456789ABCDEF",
@@ -173,7 +166,6 @@ var (
 		},
 	}
 	testThreadCatalog = webib0.IBThreadCatalog{
-		Node:  testNodeInfo,
 		Board: testBoardInfo,
 		Threads: []webib0.IBThreadCatalogThread{
 			{

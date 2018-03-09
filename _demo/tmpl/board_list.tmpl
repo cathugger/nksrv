@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>{{html $.Node.Name}} board list</title>
-<link rel="stylesheet" type="text/css" href="{{$.Node.Root}}/_static/style.css" />
+<title>{{html $.N.Name}} board list</title>
+<link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
 </head>
 <body>
 <table>
@@ -11,7 +11,7 @@
 <th>Description</th>
 <th>Tags</th>
 </tr>
-{{- range .Boards}}
+{{- range $.D.Boards}}
 <tr>
 <td>{{html .Name}}</td>
 <td>{{html .Description}}</td>

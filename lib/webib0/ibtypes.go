@@ -15,13 +15,6 @@ import (
 // we should hack them in to database and calculate only at post time
 // to minimize complexity at query time
 
-// information about this node
-type IBNodeInfo struct {
-	Name  string `json:"name"`
-	Root  string `json:"root"`
-	FRoot string `json:"froot"`
-}
-
 // board list member
 type IBBoardListBoard struct {
 	Name        string   `json:"name"` // short name
@@ -31,7 +24,6 @@ type IBBoardListBoard struct {
 
 // board list page
 type IBBoardList struct {
-	Node   IBNodeInfo         `json:"node"`   // info about this node
 	Boards []IBBoardListBoard `json:"boards"` // boards
 }
 
@@ -130,7 +122,6 @@ type IBBoardInfo struct {
 }
 
 type IBThreadListPage struct {
-	Node        IBNodeInfo               `json:"node"`                  // info about this node
 	Board       IBBoardInfo              `json:"board"`                 // info about this board
 	Number      uint32                   `json:"page_number"`           // this page num
 	Avaiable    uint32                   `json:"pages_avaiable"`        // num of pages
@@ -139,7 +130,6 @@ type IBThreadListPage struct {
 }
 
 type IBThreadPage struct {
-	Node  IBNodeInfo  `json:"node"`  // info about this node
 	Board IBBoardInfo `json:"board"` // info about this board
 	IBCommonThread
 	HasBackRefs bool `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
@@ -155,7 +145,6 @@ type IBThreadCatalogThread struct {
 }
 
 type IBThreadCatalog struct {
-	Node    IBNodeInfo              `json:"node"`    // info about this node
 	Board   IBBoardInfo             `json:"board"`   // info about this baord
 	Threads []IBThreadCatalogThread `json:"threads"` // threads
 }

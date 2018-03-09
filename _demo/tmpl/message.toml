@@ -1,0 +1,8 @@
+pre_msg        = ""
+post_msg       = ""
+first_pre_line = "<p>"
+next_pre_line  = "<p>"
+post_line      = "</p>"
+newline        = ""
+pre_reference  = "<a href=\"#test\">"
+post_reference = "</a>"

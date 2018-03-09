@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>/{{html .Board.Name}}/ - {{html .Board.Description}} - Catalog</title>
-<link rel="stylesheet" type="text/css" href="{{$.Node.Root}}/_static/style.css" />
+<title>/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}} - Catalog</title>
+<link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
 </head>
 <body>
 <!-- xxx: node name? board list? -->
 <hr />
-<h1><p style="text-align: center;">/{{html .Board.Name}}/ - {{html .Board.Description}}</p></h1>
-<p style="text-align: center;">{{html .Board.Info}}</p>
+<h1><p style="text-align: center;">/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}}</p></h1>
+<p style="text-align: center;">{{html $.D.Board.Info}}</p>
 <hr />
-{{- range .Threads}}
+{{- range $.D.Threads}}
 <div class="cat_div">
 <a href="thread/{{urlpath .ID}}">
 {{if .Thumb.ID -}}
-<img src="{{$.Node.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
+<img src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
 {{else -}}
-<img src="{{$.Node.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
+<img src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
 {{end -}}
 </a>
 <br />
 R: {{.TotalReplies}} I: {{.TotalAttachments}}<br />
-{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{fmtmsgcat .}}
+{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{fmtmsgcat $.R $.N .}}
 </div>
 {{- end}}
 <div style="clear: both;"></div>
