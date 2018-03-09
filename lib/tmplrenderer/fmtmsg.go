@@ -2,18 +2,18 @@ package tmplrenderer
 
 import (
 	"../webib0"
-	"bytes"
+	"strings"
 	t "text/template"
 )
 
 func fmtmsg(p *webib0.IBPostInfo) string {
-	var b bytes.Buffer
+	var b strings.Builder
 	t.HTMLEscape(&b, p.Message)
-	return string(b.Bytes())
+	return b.String()
 }
 
 func fmtmsgcat(p *webib0.IBThreadCatalogThread) string {
-	var b bytes.Buffer
+	var b strings.Builder
 	t.HTMLEscape(&b, p.Message)
-	return string(b.Bytes())
+	return b.String()
 }

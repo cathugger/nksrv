@@ -2,6 +2,10 @@ package webib0
 
 // web IB API representation v0
 
+import (
+	"encoding/json"
+)
+
 // references to other places than current thread will need to be hacked in
 // references to curren thread' objects are easy because we can drop
 // them in on rendering stage but for foreign ones we can't know
@@ -52,35 +56,66 @@ type IBFileInfo struct {
 }
 
 type IBReference struct {
-	Start  uint   `json:"start"`            // points to reference start position in Message
-	End    uint   `json:"end"`              // points after reference end in Message
 	Board  string `json:"board,omitempty"`  // board which contains post which is refered to. if empty, "this board"
 	Thread string `json:"thread,omitempty"` // thread which contains post which is refered to. if empty, "this thread"
-	Post   string `json:"post"`             // full post number
+	Post   string `json:"post,omitempty"`   // full post number. may be empty when referencing to board or thread
+}
+
+type IBMessageReference struct {
+	Start uint `json:"start"` // points to reference start position in Message
+	End   uint `json:"end"`   // points after reference end in Message
+	IBReference
+}
+
+type IBBackReference struct {
+	IBReference
+}
+
+var _ json.Marshaler = (*IBBackReference)(nil)
+var _ json.Unmarshaler = (*IBBackReference)(nil)
+
+func (r *IBBackReference) MarshalJSON() ([]byte, error) {
+	if r.Board == "" && r.Thread == "" {
+		return json.Marshal(r.Post)
+	} else {
+		return json.Marshal(&r.IBReference)
+	}
+}
+
+func (r *IBBackReference) UnmarshalJSON(b []byte) error {
+	e := json.Unmarshal(b, &r.Post)
+	if e != nil {
+		e = json.Unmarshal(b, &r.IBReference)
+		if e != nil {
+			return e
+		}
+	}
+	return nil
 }
 
 // post
 type IBPostInfo struct {
-	ID             string                 `json:"id"`                       // ID of post. long, global one
-	Subject        string                 `json:"subject"`                  // subject text
-	Name           string                 `json:"name"`                     // name of poster
-	Trip           string                 `json:"trip,omitempty"`           // tripcode, usually not set
-	Email          string                 `json:"email,omitempty"`          // email field, usually useless, used for sage too
-	Date           int64                  `json:"date"`                     // seconds since unix epoch
-	Message        []byte                 `json:"message"`                  // message itself. formatted
-	References     []IBReference          `json:"references,omitempty"`     // posts Message refers to
-	Files          []IBFileInfo           `json:"files,omitempty"`          // attached files
-	BackReferences []string               `json:"backreferences,omitempty"` // post refering to this post
-	Options        map[string]interface{} `json:"options,omitempty"`        // additional stuff
+	ID             string                 `json:"id"`                 // ID of post. long, global one
+	Subject        string                 `json:"subject"`            // subject text
+	Name           string                 `json:"name"`               // name of poster
+	Trip           string                 `json:"trip,omitempty"`     // tripcode, usually not set
+	Email          string                 `json:"email,omitempty"`    // email field, usually useless, used for sage too
+	Date           int64                  `json:"date"`               // seconds since unix epoch
+	Message        []byte                 `json:"msg"`                // message itself. formatted
+	References     []IBMessageReference   `json:"refs,omitempty"`     // posts Message refers to
+	Files          []IBFileInfo           `json:"files,omitempty"`    // attached files
+	BackReferences []IBBackReference      `json:"backrefs,omitempty"` // post refering to this post
+	Options        map[string]interface{} `json:"options,omitempty"`  // additional stuff
 }
 
 // thread in thread list page
 type IBThreadListPageThread struct {
-	ID                 string       `json:"id"`                  // short ID for references
-	OP                 IBPostInfo   `json:"op"`                  // OP
-	SkippedReplies     uint32       `json:"skipped_replies"`     // number of replies not included
-	SkippedAttachments uint32       `json:"skipped_attachments"` // number of attachments not included
-	Replies            []IBPostInfo `json:"replies"`             // replies
+	ID                 string       `json:"id"`                    // short ID for references
+	OP                 IBPostInfo   `json:"op"`                    // OP
+	SkippedReplies     uint32       `json:"skipped_replies"`       // number of replies not included
+	SkippedAttachments uint32       `json:"skipped_attachments"`   // number of attachments not included
+	Replies            []IBPostInfo `json:"replies"`               // replies
+	HasBackRefs        bool         `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
 }
 
 // info about board common across pages
@@ -114,9 +149,10 @@ type IBThreadCatalog struct {
 }
 
 type IBThreadPage struct {
-	Node    IBNodeInfo   `json:"node"`    // info about this node
-	Board   IBBoardInfo  `json:"board"`   // info about this board
-	ID      string       `json:"id"`      // thread ID
-	OP      IBPostInfo   `json:"op"`      // OP
-	Replies []IBPostInfo `json:"replies"` // replies
+	Node        IBNodeInfo   `json:"node"`                  // info about this node
+	Board       IBBoardInfo  `json:"board"`                 // info about this board
+	ID          string       `json:"id"`                    // thread ID
+	OP          IBPostInfo   `json:"op"`                    // OP
+	Replies     []IBPostInfo `json:"replies"`               // replies
+	HasBackRefs bool         `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
 }
