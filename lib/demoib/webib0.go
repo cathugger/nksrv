@@ -145,17 +145,32 @@ var (
 		Node:  testNodeInfo,
 		Board: testBoardInfo,
 		Threads: []webib0.IBThreadListPageThread{{
-			ID:                 "0123456789ABCDEF0123456789ABCDEF",
+			IBCommonThread: webib0.IBCommonThread{
+				ID: "0123456789ABCDEF0123456789ABCDEF",
+				OP: testPost1,
+				Replies: []webib0.IBPostInfo{
+					testPost2,
+					testPost3,
+					testPost4,
+				},
+			},
 			SkippedAttachments: 0,
 			SkippedReplies:     0,
-			OP:                 testPost1,
+		}},
+		Avaiable: 2,
+	}
+	testThread = webib0.IBThreadPage{
+		Node:  testNodeInfo,
+		Board: testBoardInfo,
+		IBCommonThread: webib0.IBCommonThread{
+			ID: "0123456789ABCDEF0123456789ABCDEF",
+			OP: testPost1,
 			Replies: []webib0.IBPostInfo{
 				testPost2,
 				testPost3,
 				testPost4,
 			},
-		}},
-		Avaiable: 2,
+		},
 	}
 	testThreadCatalog = webib0.IBThreadCatalog{
 		Node:  testNodeInfo,
@@ -185,17 +200,6 @@ var (
 				Subject:          "",
 				Message:          []byte("test message 3"),
 			},
-		},
-	}
-	testThread = webib0.IBThreadPage{
-		Node:  testNodeInfo,
-		Board: testBoardInfo,
-		ID:    "0123456789ABCDEF0123456789ABCDEF",
-		OP:    testPost1,
-		Replies: []webib0.IBPostInfo{
-			testPost2,
-			testPost3,
-			testPost4,
 		},
 	}
 )
@@ -229,7 +233,7 @@ func (IBProviderDemo) IBGetThread(thread *webib0.IBThreadPage, board string, thr
 	if board != "test" {
 		return errors.New("board does not exist"), http.StatusNotFound
 	}
-	if threadid != "0123456789ABCDEF0123456789ABCDEF" {
+	if threadid != testThread.ID {
 		return errors.New("thread does not exist"), http.StatusNotFound
 	}
 	*thread = testThread

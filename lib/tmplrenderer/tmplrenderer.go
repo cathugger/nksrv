@@ -119,28 +119,13 @@ func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Reque
 		tr.execTmpl(tmplThreadListPageErr, w, ctx)
 		return
 	}
-	tr.execTmpl(tmplThreadListPage, w, l)
-}
-
-func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
-	w.Header().Set("Content-Type", contentType)
-	l := &webib0.IBThreadCatalog{}
-	err, code := tr.p.IBGetThreadCatalog(l, board)
-	if err != nil {
-		w.WriteHeader(code)
-		ctx := struct {
-			Code  int
-			Err   error
-			Board string
-		}{
-			code,
-			err,
-			board,
+	if !l.HasBackRefs {
+		for i := range l.Threads {
+			webib0.ProcessBackReferences(&l.Threads[i].IBCommonThread)
 		}
-		tr.execTmpl(tmplThreadCatalogErr, w, ctx)
-		return
+		l.HasBackRefs = true
 	}
-	tr.execTmpl(tmplThreadCatalog, w, l)
+	tr.execTmpl(tmplThreadListPage, w, l)
 }
 
 func (tr *TmplRenderer) ServeThread(w http.ResponseWriter, r *http.Request, board, thread string) {
@@ -163,5 +148,30 @@ func (tr *TmplRenderer) ServeThread(w http.ResponseWriter, r *http.Request, boar
 		tr.execTmpl(tmplThreadErr, w, ctx)
 		return
 	}
+	if !l.HasBackRefs {
+		webib0.ProcessBackReferences(&l.IBCommonThread)
+		l.HasBackRefs = true
+	}
 	tr.execTmpl(tmplThread, w, l)
+}
+
+func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
+	w.Header().Set("Content-Type", contentType)
+	l := &webib0.IBThreadCatalog{}
+	err, code := tr.p.IBGetThreadCatalog(l, board)
+	if err != nil {
+		w.WriteHeader(code)
+		ctx := struct {
+			Code  int
+			Err   error
+			Board string
+		}{
+			code,
+			err,
+			board,
+		}
+		tr.execTmpl(tmplThreadCatalogErr, w, ctx)
+		return
+	}
+	tr.execTmpl(tmplThreadCatalog, w, l)
 }
