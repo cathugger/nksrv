@@ -108,11 +108,18 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		}
 		normalfmt(int(rr.Start))
 		preline()
-		tr.m.preRefTmpl.Execute(w, &rr.IBReference)
+		d := struct {
+			D *webib0.IBReference
+			N *NodeInfo
+		}{
+			D: &rr.IBReference,
+			N: ni,
+		}
+		tr.m.preRefTmpl.Execute(w, d)
 		t.HTMLEscape(w, b[src:rr.End])
 		src = int(rr.End)
 		last = src
-		tr.m.postRefTmpl.Execute(w, &rr.IBReference)
+		tr.m.postRefTmpl.Execute(w, d)
 	}
 	normalfmt(blen)
 	if !n {
