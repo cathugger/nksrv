@@ -113,7 +113,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	tn := "templates.toml"
 	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
 	if err != nil {
-		tr.l.LogPrintf(NOTICE, "couldn't read %q: %v", tn, err)
+		tr.l.LogPrintf(INFO, "couldn't read %q: %v", tn, err)
 	} else {
 		fukugo := make(tmplTOML)
 		tt = &fukugo
@@ -123,16 +123,26 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 			return fmt.Errorf("failed to parse TOML file %q: %v", tn, err)
 		}
 	}
+	var dcharset string
+	if tt != nil {
+		s, ok := (*tt)["default"]
+		if ok {
+			(*tt)["default"].recognised = true
+			dcharset = s.Charset
+		}
+	}
+	if dcharset == "" {
+		dcharset = "utf-8"
+	}
 	for i := 0; i < tmplMax; i++ {
 		filename := names[i] + ".tmpl"
-		charset := "utf-8"
+		charset := dcharset
 		var contenttype string
 		if i&1 == 0 {
 			contenttype = "text/html"
 		} else {
 			contenttype = "text/plain"
 		}
-
 		if tt != nil {
 			s, ok := (*tt)[names[i]]
 			if ok {
