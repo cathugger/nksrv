@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -113,11 +112,9 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 
 	tn := "templates.toml"
 	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
-	if err != nil && err != os.ErrNotExist {
-		tr.l.LogPrintf(ERROR, "failed to read %q: %v", tn, err)
-		return fmt.Errorf("failed to read %q: %v", tn, err)
-	}
-	if err == nil {
+	if err != nil {
+		tr.l.LogPrintf(NOTICE, "couldn't read %q: %v", tn, err)
+	} else {
 		fukugo := make(tmplTOML)
 		tt = &fukugo
 		err = toml.Unmarshal(f, tt)
