@@ -158,6 +158,9 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		case "ascii", "us-ascii", "iso-8859-1":
 			tr.t[i].w = nopWCCreator
 			cset = charset
+		case "utf-16", "utf16":
+			// TODO
+			tr.t[i].W = utf16WCCreator
 		default:
 			tr.l.LogPrintf(ERROR, "unknown charset: %s", charset)
 			return fmt.Errorf("unknown charset: %s", charset)
