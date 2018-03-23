@@ -67,8 +67,6 @@ type msgFmtCfg struct {
 	postRefTmpl  *template.Template
 }
 
-var contentType = "text/html; charset=utf8"
-
 type tmplTOMLSection struct {
 	FileName    string `toml:"file"`
 	ContentType string `toml:"content_type"`
@@ -128,7 +126,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	}
 	for i := 0; i < tmplMax; i++ {
 		filename := names[i] + ".tmpl"
-		charset := "utf8"
+		charset := "utf-8"
 		var contenttype string
 		if i&1 == 0 {
 			contenttype = "text/html"
@@ -154,10 +152,10 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		lenc := strings.ToLower(charset)
 		var cset string
 		switch lenc {
-		case "utf8":
+		case "utf-8", "utf8":
 			tr.t[i].w = nopWCCreator
-			cset = charset
-		case "ascii", "us-ascii":
+			cset = charset[:3] + "-8"
+		case "ascii", "us-ascii", "iso-8859-1":
 			tr.t[i].w = nopWCCreator
 			cset = charset
 		default:
