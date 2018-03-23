@@ -54,6 +54,7 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 	}
 	normalfmt := func(end int) {
 		for src < end {
+			//firstch := n
 			preline()
 			c := b[src]
 			inc := 1 // default ammout to skip is one character
