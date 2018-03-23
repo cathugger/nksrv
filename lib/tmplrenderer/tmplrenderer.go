@@ -241,28 +241,27 @@ func (tr *TmplRenderer) execTmpl(t int, w io.WriteCloser, d interface{}) {
 	w.Close()
 }
 
-func NewTmplRenderer(p webib0.IBProvider, cfg TmplRendererCfg) (*TmplRenderer, error) {
-	var err error
-	var f []byte
+func (tr *TmplRenderer) outTmpl(w http.ResponseWriter, tr *TmplRenderer, num int, code int, d interface{}) {
+	ww := tmplWC(w, tr, num, code)
+	tr.execTmpl(num, ww, d)
+}
+
+func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	var t *template.Template
+	var f []byte
+	var err error
 
-	tr := &TmplRenderer{p: p}
-
-	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
-
-	err = tr.configTemplates(cfg)
+	tn := "message.toml"
+	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
 	if err != nil {
-		return nil, err
-	}
-
-	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, "message.toml"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %q: %v", "message.toml", err)
+		tr.l.LogPrintf(ERROR, "failed to read %q: %v", tn, err)
+		return fmt.Errorf("failed to read %q: %v", tn, err)
 	}
 	mtoml := &msgFmtTOML{}
 	_, err = toml.Decode(string(f), mtoml)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse toml file %q: %v", "message.toml", err)
+		tr.l.LogPrintf(ERROR, "failed to parse toml file %q: %v", tn, err)
+		return fmt.Errorf("failed to parse toml file %q: %v", tn, err)
 	}
 	tr.m = msgFmtCfg{
 		PreMsg:       []byte(mtoml.PreMsg),
@@ -282,13 +281,32 @@ func NewTmplRenderer(p webib0.IBProvider, cfg TmplRendererCfg) (*TmplRenderer, e
 	t = template.New("pre_reference").Funcs(funcs)
 	tr.m.preRefTmpl, err = t.Parse(mtoml.PreReference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template %q: %v", mtoml.PreReference, err)
+		return fmt.Errorf("failed to parse template %q: %v", mtoml.PreReference, err)
 	}
 
 	t = template.New("post_reference").Funcs(funcs)
 	tr.m.postRefTmpl, err = t.Parse(mtoml.PostReference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template %q: %v", mtoml.PostReference, err)
+		return fmt.Errorf("failed to parse template %q: %v", mtoml.PostReference, err)
+	}
+	return nil
+}
+
+func NewTmplRenderer(p webib0.IBProvider, cfg TmplRendererCfg) (*TmplRenderer, error) {
+	var err error
+
+	tr := &TmplRenderer{p: p}
+
+	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
+
+	err = tr.configTemplates(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tr.configMessage(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	return tr, nil
@@ -312,12 +330,10 @@ func (tr *TmplRenderer) ServeBoardList(w http.ResponseWriter, r *http.Request) {
 			code,
 			err,
 		}
-		ww := tmplWC(w, tr, tmplBoardListErr, code)
-		tr.execTmpl(tmplBoardListErr, ww, ctx)
+		outTmpl(w, tr, tmplBoardListErr, code, ctx)
 		return
 	}
-	ww := tmplWC(w, tr, tmplBoardList, 200)
-	tr.execTmpl(tmplBoardList, ww, l)
+	outTmpl(w, tr, tmplBoardList, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Request, board string, page uint32) {
@@ -342,8 +358,7 @@ func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Reque
 			board,
 			page,
 		}
-		ww := tmplWC(w, tr, tmplThreadListPageErr, code)
-		tr.execTmpl(tmplThreadListPageErr, ww, ctx)
+		outTmpl(w, tr, tmplThreadListPageErr, code, ctx)
 		return
 	}
 	if !l.D.HasBackRefs {
@@ -352,8 +367,7 @@ func (tr *TmplRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Reque
 		}
 		l.D.HasBackRefs = true
 	}
-	ww := tmplWC(w, tr, tmplThreadListPage, 200)
-	tr.execTmpl(tmplThreadListPage, ww, l)
+	outTmpl(w, tr, tmplThreadListPage, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThread(w http.ResponseWriter, r *http.Request, board, thread string) {
@@ -378,16 +392,14 @@ func (tr *TmplRenderer) ServeThread(w http.ResponseWriter, r *http.Request, boar
 			board,
 			thread,
 		}
-		ww := tmplWC(w, tr, tmplThreadErr, code)
-		tr.execTmpl(tmplThreadErr, ww, ctx)
+		outTmpl(w, tr, tmplThreadErr, code, ctx)
 		return
 	}
 	if !l.D.HasBackRefs {
 		webib0.ProcessBackReferences(&l.D.IBCommonThread)
 		l.D.HasBackRefs = true
 	}
-	ww := tmplWC(w, tr, tmplThread, 200)
-	tr.execTmpl(tmplThread, ww, l)
+	outTmpl(w, tr, tmplThread, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
@@ -410,10 +422,8 @@ func (tr *TmplRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Reques
 			err,
 			board,
 		}
-		ww := tmplWC(w, tr, tmplThreadCatalogErr, code)
-		tr.execTmpl(tmplThreadCatalogErr, ww, ctx)
+		outTmpl(w, tr, tmplThreadCatalogErr, code, ctx)
 		return
 	}
-	ww := tmplWC(w, tr, tmplThreadCatalog, 200)
-	tr.execTmpl(tmplThreadCatalog, ww, l)
+	outTmpl(w, tr, tmplThreadCatalog, 200, l)
 }
