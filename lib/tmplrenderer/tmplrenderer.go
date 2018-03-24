@@ -241,7 +241,7 @@ func (tr *TmplRenderer) execTmpl(t int, w io.WriteCloser, d interface{}) {
 	w.Close()
 }
 
-func (tr *TmplRenderer) outTmpl(w http.ResponseWriter, tr *TmplRenderer, num int, code int, d interface{}) {
+func outTmpl(w http.ResponseWriter, tr *TmplRenderer, num int, code int, d interface{}) {
 	ww := tmplWC(w, tr, num, code)
 	tr.execTmpl(num, ww, d)
 }
