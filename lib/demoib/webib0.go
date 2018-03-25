@@ -88,7 +88,7 @@ var (
 		Message: []byte("test OP message"),
 		Files: []webib0.IBFileInfo{
 			testFile1,
-			testFile2,
+			//testFile2,
 		},
 	}
 	testPost2 = webib0.IBPostInfo{
