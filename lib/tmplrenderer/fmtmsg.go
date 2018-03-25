@@ -34,27 +34,37 @@ var (
 // that's bit too much for now
 // so I'll just do text/template
 
+type msgLineFmtCfg struct {
+	PreFirstLine     []byte
+	PreNonFirstLine  []byte
+	PostFinalLine    []byte
+	PostNonFinalLine []byte
+	FinalNewline     []byte
+	NonFinalNewline  []byte
+}
+
 func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo) {
 	w.Write(tr.m.PreMsg)
 
 	src, last := 0, 0
-	//var tags []uint
+	greentext := false
 	b := p.Message
 	blen := len(b)
 	n := true
 	preline := func() {
 		if n {
 			if src != 0 {
-				w.Write(tr.m.FirstPreLine)
+				w.Write(tr.m.PreFirstLine)
 			} else {
-				w.Write(tr.m.NextPreLine)
+				w.Write(tr.m.PreNonFirstLine)
 			}
 			n = false
 		}
 	}
+	r := 0
 	normalfmt := func(end int) {
 		for src < end {
-			//firstch := n
+			firstch := n
 			preline()
 			c := b[src]
 			inc := 1 // default ammout to skip is one character
@@ -69,6 +79,18 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 			case '<':
 				esc = htmlLt
 			case '>':
+				if firstch {
+					greentext = true
+					// flush
+					w.Write(b[last:src])
+					src++
+					last = src
+					// pre-greentext
+					w.Write(tr.m.PreQuote)
+					// rest of text is normal
+					w.Write(htmlGt)
+					continue
+				}
 				esc = htmlGt
 			case '\000':
 				esc = htmlNull
@@ -77,9 +99,19 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 				w.Write(b[last:src])
 				src++
 				last = src
+				if greentext {
+					// terminate greentext
+					w.Write(tr.m.PostQuote)
+					greentext = false
+				}
 				// write out post-line stuff
-				w.Write(tr.m.PostLine)
-				w.Write(tr.m.Newline)
+				if src < blen {
+					w.Write(tr.m.PostNonFinalLine)
+					w.Write(tr.m.NonFinalNewline)
+				} else {
+					w.Write(tr.m.PostFinalLine)
+					w.Write(tr.m.FinalNewline)
+				}
 				n = true
 				continue
 			case '\r':
@@ -102,7 +134,8 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		w.Write(b[last:src])
 		last = src
 	}
-	for r := range p.References {
+	rlen := len(p.References)
+	for ; r < rlen; r++ {
 		rr := &p.References[r]
 		if rr.Start > rr.End || rr.End > uint(blen) {
 			break
@@ -116,15 +149,20 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 			D: &rr.IBReference,
 			N: ni,
 		}
-		tr.m.preRefTmpl.Execute(w, d)
+		tr.m.PreRefTmpl.Execute(w, d)
 		t.HTMLEscape(w, b[src:rr.End])
 		src = int(rr.End)
 		last = src
-		tr.m.postRefTmpl.Execute(w, d)
+		tr.m.PostRefTmpl.Execute(w, d)
 	}
 	normalfmt(blen)
 	if !n {
-		w.Write(tr.m.PostLine)
+		if greentext {
+			// terminate greentext
+			w.Write(tr.m.PostQuote)
+			//greentext = false
+		}
+		w.Write(tr.m.PostFinalLine)
 	}
 
 	w.Write(tr.m.PostMsg)

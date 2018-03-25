@@ -10,12 +10,12 @@ html {
 	margin: 2px 2px 2px 2px;
 }
 
-.opinfo {
+.opinfo, .rinfo {
 	margin: 0px 0px 0px 0px;
 	border: 1px solid green;
 }
 
-.opimg {
+.opimg, .rimg {
 	float: left;
 	border: 1px dashed blue;
 }
@@ -23,4 +23,22 @@ html {
 .imginfo {
 	margin: 0px 0px 0px 0px;
 	border: 1px solid red;
+}
+
+.body {
+	margin: 0px 0px 0px 0px;
+}
+
+.quote {
+	color: green;
+}
+
+.ref {
+	color: red;
+}
+
+.reply {
+	background-color: #CCEEFF;
+	border: 1px dotted blue;
+	margin: 6px 3px 3px 3px;
 }

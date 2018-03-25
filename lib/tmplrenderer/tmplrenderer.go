@@ -44,26 +44,31 @@ var names = [tmplMax]string{
 }
 
 type msgFmtTOML struct {
-	PreMsg        string `toml:"pre_msg"`
-	PostMsg       string `toml:"post_msg"`
-	PreLine       string `toml:"pre_line"`
-	FirstPreLine  string `toml:"first_pre_line"`
-	NextPreLine   string `toml:"next_pre_line"`
-	PostLine      string `toml:"post_line"`
-	Newline       string `toml:"newline"`
-	PreReference  string `toml:"pre_reference"`
-	PostReference string `toml:"post_reference"`
+	PreMsg           string `toml:"pre_msg"`
+	PostMsg          string `toml:"post_msg"`
+	PreLine          string `toml:"pre_line"`
+	PreFirstLine     string `toml:"pre_first_line"`
+	PreNonFirstLine  string `toml:"pre_nonfirst_line"`
+	PostLine         string `toml:"post_line"`
+	PostFinalLine    string `toml:"post_final_line"`
+	PostNonFinalLine string `toml:"post_nonfinal_line"`
+	Newline          string `toml:"newline"`
+	FinalNewline     string `toml:"final_newline"`
+	NonFinalNewline  string `toml:"nonfinal_newline"`
+	PreQuote         string `toml:"pre_quote"`
+	PostQuote        string `toml:"post_quote"`
+	PreReference     string `toml:"pre_reference"`
+	PostReference    string `toml:"post_reference"`
 }
 
 type msgFmtCfg struct {
-	PreMsg       []byte
-	PostMsg      []byte
-	FirstPreLine []byte
-	NextPreLine  []byte
-	PostLine     []byte
-	Newline      []byte
-	preRefTmpl   *template.Template
-	postRefTmpl  *template.Template
+	PreMsg  []byte
+	PostMsg []byte
+	msgLineFmtCfg
+	PreQuote    []byte
+	PostQuote   []byte
+	PreRefTmpl  *template.Template
+	PostRefTmpl *template.Template
 }
 
 type tmplTOMLSection struct {
@@ -264,28 +269,46 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 		return fmt.Errorf("failed to parse toml file %q: %v", tn, err)
 	}
 	tr.m = msgFmtCfg{
-		PreMsg:       []byte(mtoml.PreMsg),
-		PostMsg:      []byte(mtoml.PostMsg),
-		FirstPreLine: []byte(mtoml.FirstPreLine),
-		NextPreLine:  []byte(mtoml.NextPreLine),
-		PostLine:     []byte(mtoml.PostLine),
-		Newline:      []byte(mtoml.Newline),
+		PreMsg:  []byte(mtoml.PreMsg),
+		PostMsg: []byte(mtoml.PostMsg),
+		msgLineFmtCfg: msgLineFmtCfg{
+			PreFirstLine:     []byte(mtoml.PreFirstLine),
+			PreNonFirstLine:  []byte(mtoml.PreNonFirstLine),
+			PostFinalLine:    []byte(mtoml.PostFinalLine),
+			PostNonFinalLine: []byte(mtoml.PostNonFinalLine),
+			FinalNewline:     []byte(mtoml.FinalNewline),
+			NonFinalNewline:  []byte(mtoml.NonFinalNewline),
+		},
+		PreQuote:  []byte(mtoml.PreQuote),
+		PostQuote: []byte(mtoml.PostQuote),
 	}
-	if mtoml.FirstPreLine == "" {
-		tr.m.FirstPreLine = []byte(mtoml.PreLine)
+	if mtoml.PreFirstLine == "" {
+		tr.m.PreFirstLine = []byte(mtoml.PreLine)
 	}
-	if mtoml.NextPreLine == "" {
-		tr.m.NextPreLine = []byte(mtoml.PreLine)
+	if mtoml.PreNonFirstLine == "" {
+		tr.m.PreNonFirstLine = []byte(mtoml.PreLine)
+	}
+	if mtoml.PostFinalLine == "" {
+		tr.m.PostFinalLine = []byte(mtoml.PostLine)
+	}
+	if mtoml.PostNonFinalLine == "" {
+		tr.m.PostNonFinalLine = []byte(mtoml.PostLine)
+	}
+	if mtoml.FinalNewline == "" {
+		tr.m.FinalNewline = []byte(mtoml.Newline)
+	}
+	if mtoml.NonFinalNewline == "" {
+		tr.m.NonFinalNewline = []byte(mtoml.Newline)
 	}
 
 	t = template.New("pre_reference").Funcs(funcs)
-	tr.m.preRefTmpl, err = t.Parse(mtoml.PreReference)
+	tr.m.PreRefTmpl, err = t.Parse(mtoml.PreReference)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v", mtoml.PreReference, err)
 	}
 
 	t = template.New("post_reference").Funcs(funcs)
-	tr.m.postRefTmpl, err = t.Parse(mtoml.PostReference)
+	tr.m.PostRefTmpl, err = t.Parse(mtoml.PostReference)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v", mtoml.PostReference, err)
 	}

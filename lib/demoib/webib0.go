@@ -97,7 +97,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: []byte("test OP message"),
+		Message: []byte("test reply msg 0"),
 		Files: []webib0.IBFileInfo{
 			testFile1,
 		},
@@ -118,6 +118,19 @@ var (
 		Subject: "",
 		Date:    1072396802,
 		Message: []byte("test reply message 2"),
+		Files: []webib0.IBFileInfo{
+			testFile2,
+			testFile3,
+			testFile4,
+		},
+	}
+	testPost5 = webib0.IBPostInfo{
+		ID:      "8899AABBCCDDEEFF8899AABBCCDDEEFF",
+		Name:    "Anonymous",
+		Trip:    "",
+		Subject: "",
+		Date:    1072396803,
+		Message: []byte(">testing greentext\nnon-greentext\n>greentext again"),
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,
@@ -146,6 +159,7 @@ var (
 					testPost2,
 					testPost3,
 					testPost4,
+					testPost5,
 				},
 			},
 			SkippedAttachments: 0,
@@ -162,6 +176,7 @@ var (
 				testPost2,
 				testPost3,
 				testPost4,
+				testPost5,
 			},
 		},
 	}

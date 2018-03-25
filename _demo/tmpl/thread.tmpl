@@ -34,7 +34,39 @@ File: <a class="filelink" title="{{html .Original}}" href="{{$.N.FRoot}}/_src/{{
 </a>
 </div>
 {{- end}}
-{{fmtmsg $.R $.N .}}
-{{end -}}
+{{- if gt (len .Files) 1}}<div style="clear:both"></div>{{end}}
+{{- fmtmsg $.R $.N .}}
+<div style="clear:both"></div>
+{{- end}}
+{{- range $.D.Replies}}
+<div class="reply">
+<p class="rinfo" id="p{{.ID}}">
+{{- if .Subject}}<span class="subject">{{html .Subject}}</span>{{end}}
+<span class="name">{{html .Name}}</span>
+{{- if .Trip}}<span class="trip">{{html .Trip}}</span>{{end}}
+<time class="pdate" datetime="{{date .Date}}">{{date .Date}}</time>
+<a href="#p{{.ID}}">No.</a> {{.ID}}
+{{- range .BackReferences}} <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>{{end}}
+</p>
+{{- range .Files}}
+<div class="rimg">
+<p class="imginfo">
+File: <a class="filelink" title="{{html .Original}}" href="{{$.N.FRoot}}/_src/{{urlpath .ID}}/{{urlpath .Original}}">{{html (truncatefn .Original 24)}}</a>
+(<span title="{{.Size}} bytes">{{filesize .Size}}</span>{{/* TODO: WxH for images */}})
+</p>
+<a class="imglink" href="{{$.N.FRoot}}/_src/{{urlpath .ID}}">
+	{{- if .Thumb.ID -}}
+		<img class="imgthumb" src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+	{{- else -}}
+		<img class="imgthumb" src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+	{{- end -}}
+</a>
+</div>
+{{- end}}
+{{- if gt (len .Files) 1}}<div style="clear:both"></div>{{end}}
+{{- fmtmsg $.R $.N .}}
+<div style="clear:both"></div>
+</div>
+{{- end}}
 </body>
 </html>
