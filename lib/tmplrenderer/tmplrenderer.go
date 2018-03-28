@@ -59,16 +59,18 @@ type msgFmtTOML struct {
 	PostQuote        string `toml:"post_quote"`
 	PreReference     string `toml:"pre_reference"`
 	PostReference    string `toml:"post_reference"`
+	TruncationLine   string `toml:"truncation_line"`
 }
 
 type msgFmtCfg struct {
 	PreMsg  []byte
 	PostMsg []byte
 	msgLineFmtCfg
-	PreQuote    []byte
-	PostQuote   []byte
-	PreRefTmpl  *template.Template
-	PostRefTmpl *template.Template
+	PreQuote           []byte
+	PostQuote          []byte
+	PreRefTmpl         *template.Template
+	PostRefTmpl        *template.Template
+	TruncationLineTmpl *template.Template
 }
 
 type tmplTOMLSection struct {
@@ -312,6 +314,13 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v", mtoml.PostReference, err)
 	}
+
+	t = template.New("truncation_line").Funcs(funcs)
+	tr.m.TruncationLineTmpl, err = t.Parse(mtoml.TruncationLine)
+	if err != nil {
+		return fmt.Errorf("failed to parse template %q: %v", mtoml.TruncationLine, err)
+	}
+
 	return nil
 }
 

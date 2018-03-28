@@ -6,27 +6,29 @@ html {
 	float: left;
 	text-align: center;
 	width: 132;
-	border: 1px solid;
+	background-color: #EEEEEE;
 	margin: 2px 2px 2px 2px;
 }
 
 .opinfo, .rinfo {
 	margin: 0px 0px 0px 0px;
-	border: 1px solid green;
+	background-color: #FFCCCC;
 }
 
 .opimg, .rimg {
 	float: left;
-	border: 1px dashed blue;
+	background-color: #DDFFCC;
+	margin: 0px 5px 0px 0px;
 }
 
 .imginfo {
 	margin: 0px 0px 0px 0px;
-	border: 1px solid red;
+	background-color: #CCCCFF;
 }
 
 .body {
-	margin: 0px 0px 0px 2px;
+	background-color: #FFFFCC;
+	margin: 0px 0px 0px 12px;
 }
 
 .quote {
@@ -42,4 +44,5 @@ html {
 	background-color: #CCEEFF;
 	border: 1px dotted blue;
 	margin: 6px 3px 3px 3px;
+	padding: 0px 0px 6px 0px;
 }

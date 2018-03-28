@@ -43,16 +43,52 @@ type msgLineFmtCfg struct {
 	NonFinalNewline  []byte
 }
 
-func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo) {
+func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) {
 	w.Write(tr.m.PreMsg)
 
+	lines := 0
 	src, last := 0, 0
 	greentext := false
 	b := p.Message
 	blen := len(b)
 	n := true
-	preline := func() {
+	preline := func() bool {
 		if n {
+			// truncation
+			if linelimit != 0 {
+				c := 0
+				for _, ch := range string(b[src:]) {
+					if ch == '\n' {
+						lines++
+						c = 0
+						break
+					}
+					if charsperline != 0 && c >= charsperline {
+						// TODO break in middle of line
+						lines++
+						c = 0
+					}
+					c++
+				}
+				if c != 0 {
+					lines++
+				}
+				if lines > linelimit {
+					d := struct {
+						B *webib0.IBBoardInfo
+						T *webib0.IBCommonThread
+						P *webib0.IBPostInfo
+						N *NodeInfo
+					}{
+						B: boardInfo,
+						T: threadInfo,
+						P: p,
+						N: ni,
+					}
+					tr.m.TruncationLineTmpl.Execute(w, d)
+					return false
+				}
+			}
 			if src != 0 {
 				w.Write(tr.m.PreFirstLine)
 			} else {
@@ -60,12 +96,15 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 			}
 			n = false
 		}
+		return true
 	}
 	r := 0
-	normalfmt := func(end int) {
+	normalfmt := func(end int) bool {
 		for src < end {
 			firstch := n
-			preline()
+			if !preline() {
+				return false
+			}
 			c := b[src]
 			inc := 1 // default ammout to skip is one character
 			var esc []byte
@@ -133,6 +172,7 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		// flush
 		w.Write(b[last:src])
 		last = src
+		return true
 	}
 	rlen := len(p.References)
 	for ; r < rlen; r++ {
@@ -140,8 +180,12 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		if rr.Start > rr.End || rr.End > uint(blen) {
 			break
 		}
-		normalfmt(int(rr.Start))
-		preline()
+		if !normalfmt(int(rr.Start)) {
+			goto endmsg
+		}
+		if !preline() {
+			goto endmsg
+		}
 		d := struct {
 			D *webib0.IBReference
 			N *NodeInfo
@@ -155,7 +199,9 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		last = src
 		tr.m.PostRefTmpl.Execute(w, d)
 	}
-	normalfmt(blen)
+	if !normalfmt(blen) {
+		goto endmsg
+	}
 	if !n {
 		if greentext {
 			// terminate greentext
@@ -165,12 +211,13 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, p *webib0.IBPostInfo
 		w.Write(tr.m.PostFinalLine)
 	}
 
+endmsg:
 	w.Write(tr.m.PostMsg)
 }
 
-func fmtmsg(tr *TmplRenderer, n *NodeInfo, p *webib0.IBPostInfo) string {
+func fmtmsg(tr *TmplRenderer, n *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) string {
 	var b strings.Builder
-	formatmsg(&b, tr, n, p)
+	formatmsg(&b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
 	return b.String()
 }
 

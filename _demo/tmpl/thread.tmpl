@@ -35,7 +35,7 @@ File: <a class="filelink" title="{{html .Original}}" href="{{$.N.FRoot}}/_src/{{
 </div>
 {{- end}}
 {{- if gt (len .Files) 1}}<div style="clear:both"></div>{{end}}
-{{- fmtmsg $.R $.N .}}
+{{- fmtmsg $.R $.N $.D.Board $.D.IBCommonThread . 4 0}}
 {{- end}}
 {{- range $.D.Replies}}
 <div class="reply">
@@ -63,7 +63,7 @@ File: <a class="filelink" title="{{html .Original}}" href="{{$.N.FRoot}}/_src/{{
 </div>
 {{- end}}
 {{- if gt (len .Files) 1}}<div style="clear:both"></div>{{end}}
-{{- fmtmsg $.R $.N .}}
+{{- fmtmsg $.R $.N $.D.Board $.D.IBCommonThread . 0 0}}
 <div style="clear:both"></div>
 </div>
 <div style="clear:both"></div>
