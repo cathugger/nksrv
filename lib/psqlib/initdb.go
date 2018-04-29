@@ -55,6 +55,8 @@ var initStatement8 = `CREATE TABLE ib0.files (
 	bid      INTEGER   NOT NULL, /* internal board ID post of this file belongs to */
 	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
 	fname    TEXT      NOT NULL, /* filename of original file. not unique! */
+	ftype    TEXT      NOT NULL, /* file type */
+	fsize    BIGINT    NOT NULL, /* file size */
 	thumb    TEXT      NOT NULL, /* filename of thumbnail. not unique! */
 	oname    TEXT      NOT NULL, /* original filename of this file */
 	filecfg  JSONB,              /* additional info about original file */

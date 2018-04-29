@@ -37,12 +37,6 @@ type postAttributes struct {
 
 var defaultPostAttributes = postAttributes{}
 
-type fileAttributes struct {
-	Type string `json:"type"`
-}
-
-var defaultFileAttributes = fileAttributes{}
-
 type thumbAttributes struct {
 	Width  uint32 `json:"w"`
 	Height uint32 `json:"h"`
@@ -71,17 +65,22 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 
 		err = rows.Scan(&b.Name, &jcfg)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("boards query rows scan", err), http.StatusInternalServerError
 		}
 
 		err = jcfg.Unmarshal(&cfg)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("board json unmarshal", err), http.StatusInternalServerError
 		}
 
 		b.Description = cfg.Description
 		b.Tags = cfg.Tags
 		bl.Boards = append(bl.Boards, b)
+	}
+	if err = rows.Err(); err != nil {
+		return sp.sqlError("boards query rows iteration", err), http.StatusInternalServerError
 	}
 
 	return nil, 0
@@ -147,16 +146,21 @@ LIMIT $2 OFFSET $3`,
 
 		err = rows.Scan(&tid, &t.ID, &jcfg)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("threads query rows scan", err), http.StatusInternalServerError
 		}
 
 		err = jcfg.Unmarshal(&tattrib)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
 		}
 
 		tids = append(tids, tid)
 		page.Threads = append(page.Threads, t)
+	}
+	if err = rows.Err(); err != nil {
+		return sp.sqlError("threads query rows iteration", err), http.StatusInternalServerError
 	}
 
 	// one SQL query per thread, horrible
@@ -190,11 +194,13 @@ SELECT * FROM (
 
 			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
 			if err != nil {
+				rows.Close()
 				return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
 			}
 
 			err = jcfg.Unmarshal(&pattrib)
 			if err != nil {
+				rows.Close()
 				return sp.sqlError("post attrib json unmarshal", err), http.StatusInternalServerError
 			}
 
@@ -207,6 +213,9 @@ SELECT * FROM (
 				page.Threads[i].OP = pi
 			}
 		}
+		if err = rows.Err(); err != nil {
+			return sp.sqlError("posts query rows iteration", err), http.StatusInternalServerError
+		}
 	}
 
 	return nil, 0
@@ -215,7 +224,7 @@ SELECT * FROM (
 func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (error, int) {
 	var err error
 	var bid uint32
-	var jcfg, jcfg2 xtypes.JSONText
+	var jcfg xtypes.JSONText
 
 	// XXX SQL needs more work
 
@@ -260,11 +269,13 @@ ORDER BY bump DESC`,
 
 		err = rows.Scan(&tid, &t.ID, &jcfg, &bdate)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("threads query rows scan", err), http.StatusInternalServerError
 		}
 
 		err = jcfg.Unmarshal(&tattrib)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
 		}
 
@@ -272,6 +283,9 @@ ORDER BY bump DESC`,
 
 		tids = append(tids, tid)
 		page.Threads = append(page.Threads, t)
+	}
+	if err = rows.Err(); err != nil {
+		return sp.sqlError("threads query rows iteration", err), http.StatusInternalServerError
 	}
 
 	for i, tid := range tids {
@@ -284,9 +298,10 @@ ORDER BY bump DESC`,
 			return sp.sqlError("posts row query scan", err), http.StatusInternalServerError
 		}
 		var fname string
+		var ftype string
 		err = sp.db.DB.
-			QueryRow("SELECT fname,thumb,filecfg,thumbcfg FROM ib0.files WHERE bid=$1 AND pid=$2 ORDER BY fid ASC LIMIT 1", bid, tid).
-			Scan(&fname, &t.ID, &jcfg, &jcfg2)
+			QueryRow("SELECT fname,thumb,ftype,thumbcfg FROM ib0.files WHERE bid=$1 AND pid=$2 ORDER BY fid ASC LIMIT 1", bid, tid).
+			Scan(&fname, &t.ID, &ftype, &jcfg)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				return sp.sqlError("files row query scan", err), http.StatusInternalServerError
@@ -294,17 +309,12 @@ ORDER BY bump DESC`,
 
 			t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb("", "")
 		} else {
-			fattrib := defaultFileAttributes
-			err = jcfg.Unmarshal(&fattrib)
-			if err != nil {
-				return sp.sqlError("file attrib json unmarshal", err), http.StatusInternalServerError
-			}
-
 			if t.ID == "" {
-				t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb(fname, fattrib.Type)
+				t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb(fname, ftype)
 			} else {
 				tattrib := defaultThumbAttributes
-				err = jcfg2.Unmarshal(&tattrib)
+
+				err = jcfg.Unmarshal(&tattrib)
 				if err != nil {
 					return sp.sqlError("thumb attrib json unmarshal", err), http.StatusInternalServerError
 				}
@@ -322,7 +332,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 	var err error
 	var bid uint32
 	var tid uint64
-	var jcfg xtypes.JSONText
+	var jcfg, jcfg2 xtypes.JSONText
 
 	// XXX SQL needs more work
 
@@ -348,11 +358,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 		Info:        battrs.Info,
 	}
 
-	err = sp.db.DB.QueryRow(
-		`SELECT tid,attrib
-FROM ib0.threads
-WHERE bid=$1 AND tname=$2
-LIMIT 1`,
+	err = sp.db.DB.QueryRow(`SELECT tid,attrib FROM ib0.threads WHERE bid=$1 AND tname=$2 LIMIT 1`,
 		bid, threadid).
 		Scan(&tid, &jcfg)
 	if err != nil {
@@ -368,7 +374,6 @@ LIMIT 1`,
 		return sp.sqlError("thread attr json unmarshal", err), http.StatusInternalServerError
 	}
 
-	// TODO attachments
 	rows, err := sp.db.DB.Query(
 		`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
 FROM ib0.posts
@@ -379,6 +384,8 @@ ORDER BY pdate ASC,pid ASC`,
 		return sp.sqlError("posts query", err), http.StatusInternalServerError
 	}
 
+	var pids []uint64
+
 	for rows.Next() {
 		var pi ib0.IBPostInfo
 		pattrib := defaultPostAttributes
@@ -387,21 +394,79 @@ ORDER BY pdate ASC,pid ASC`,
 
 		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
 		}
 
 		err = jcfg.Unmarshal(&pattrib)
 		if err != nil {
+			rows.Close()
 			return sp.sqlError("post attrib json unmarshal", err), http.StatusInternalServerError
 		}
 
 		pi.Date = pdate.Unix()
 		pi.References = pattrib.References
 
+		pids = append(pids, pid)
+
 		if tid != pid {
 			page.Replies = append(page.Replies, pi)
 		} else {
 			page.OP = pi
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return sp.sqlError("posts query rows iteration", err), http.StatusInternalServerError
+	}
+
+	for i, pid := range pids {
+		var pi *ib0.IBPostInfo
+		var fi ib0.IBFileInfo
+
+		if i != 0 {
+			pi = &page.Replies[i-1]
+		} else {
+			pi = &page.OP
+		}
+
+		rows, err := sp.db.DB.Query(
+			`SELECT fname,ftype,fsize,thumb,oname,filecfg,thumbcfg
+FROM ib0.files
+WHERE bid=$1 AND pid=$2
+ORDER BY fid ASC`,
+			bid, pid)
+		if err != nil {
+			return sp.sqlError("files query", err), http.StatusInternalServerError
+		}
+
+		for rows.Next() {
+			fattrib := make(map[string]interface{})
+			tattrib := defaultThumbAttributes
+
+			err = rows.Scan(&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original, &jcfg, &jcfg2)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("files query rows scan", err), http.StatusInternalServerError
+			}
+
+			err = jcfg.Unmarshal(&fattrib)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("file fattrib json unmarshal", err), http.StatusInternalServerError
+			}
+
+			err = jcfg2.Unmarshal(&tattrib)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("file tattrib json unmarshal", err), http.StatusInternalServerError
+			}
+
+			fi.Options = fattrib
+			fi.Thumb.Width, fi.Thumb.Height = tattrib.Width, tattrib.Height
+			pi.Files = append(pi.Files, fi)
+		}
+		if err = rows.Err(); err != nil {
+			return sp.sqlError("files query rows iteration", err), http.StatusInternalServerError
 		}
 	}
 
