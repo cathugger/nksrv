@@ -3,62 +3,132 @@ package psqlib
 // implements web imageboard interface v0
 
 import (
-	"../webib0"
+	ib0 "../webib0"
+	"database/sql"
+	"errors"
+	xtypes "github.com/jmoiron/sqlx/types"
+	"net/http"
+	"time"
 )
 
-func (sp PSQLProvider) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
-	rows, err := sp.db.Query("SELECT bname,attrib FROM ib0.boards")
+// structures
+
+type boardAttributes struct {
+	Description    string   `json:"desc,omitempty"`
+	Info           string   `json:"info,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	PageLimit      uint32   `json:"page_limit,omitempty"`
+	ThreadsPerPage uint32   `json:"threads_per_page,omitempty"`
+}
+
+var defaultBoardAttributes = boardAttributes{
+	ThreadsPerPage: 10,
+}
+
+type threadAttributes struct {
+	Locked bool `json:"locked"`
+}
+
+var defaultThreadAttributes = threadAttributes{}
+
+type postAttributes struct {
+	References []ib0.IBMessageReference `json:"refs"`
+}
+
+var defaultPostAttributes = postAttributes{}
+
+type fileAttributes struct {
+	Type string `json:"type"`
+}
+
+var defaultFileAttributes = fileAttributes{}
+
+type thumbAttributes struct {
+	Width  uint32 `json:"w"`
+	Height uint32 `json:"h"`
+}
+
+var defaultThumbAttributes = thumbAttributes{}
+
+// functionality
+
+// XXX this all stuff is horribly unoptimised and unatomic
+
+func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
+	var err error
+
+	rows, err := sp.db.DB.Query("SELECT bname,attrib FROM ib0.boards")
 	if err != nil {
-		return sqlError(err, "query"), http.StatusInternalServerError
+		return sp.sqlError("boards query", err), http.StatusInternalServerError
 	}
+
 	var jcfg xtypes.JSONText
 	bl.Boards = make([]ib0.IBBoardListBoard, 0)
+
 	for rows.Next() {
-		cfg := defaultBoardAttributes
 		var b ib0.IBBoardListBoard
+		cfg := defaultBoardAttributes
+
 		err = rows.Scan(&b.Name, &jcfg)
 		if err != nil {
-			return sqlError(err, "rows scan"), http.StatusInternalServerError
+			return sp.sqlError("boards query rows scan", err), http.StatusInternalServerError
 		}
-		err := jcfg.Unmarshal(&cfg)
+
+		err = jcfg.Unmarshal(&cfg)
 		if err != nil {
-			return sqlError(err, "json unmarshal"), http.StatusInternalServerError
+			return sp.sqlError("board json unmarshal", err), http.StatusInternalServerError
 		}
+
 		b.Description = cfg.Description
 		b.Tags = cfg.Tags
 		bl.Boards = append(bl.Boards, b)
 	}
+
 	return nil, 0
 }
 
-func (sp PSQLProvider) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, num uint32) (error, int) {
+func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, num uint32) (error, int) {
+	var err error
 	var bid uint32
 	var jcfg xtypes.JSONText
-	err := sp.db.
+
+	// XXX SQL needs more work
+
+	err = sp.db.DB.
 		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1", board).
 		Scan(&bid, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("board does not exist"), http.StatusNotFound
 		}
-		return sqlError(err, "row scan"), http.StatusInternalServerError
+		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
+
 	battrs := defaultBoardAttributes
 	err = jcfg.Unmarshal(&battrs)
 	if err != nil {
-		return sqlError(err, "json unmarshal"), http.StatusInternalServerError
+		return sp.sqlError("board attr json unmarshal", err), http.StatusInternalServerError
 	}
+
 	if battrs.PageLimit != 0 && num > battrs.PageLimit {
 		return errors.New("page does not exist"), http.StatusNotFound
 	}
+
+	page.Board = ib0.IBBoardInfo{
+		Name:        board,
+		Description: battrs.Description,
+		Info:        battrs.Info,
+	}
+
 	var allcount uint64
-	err = sp.db.
+	err = sp.db.DB.
 		QueryRow("SELECT COUNT(*) FROM ib0.threads WHERE bid=$1", bid).
 		Scan(&allcount)
 	if err != nil {
-		return sqlError(err, "row scan"), http.StatusInternalServerError
+		return sp.sqlError("thread row count query scan", err), http.StatusInternalServerError
 	}
-	rows, err := sp.db.Query(
+
+	rows, err := sp.db.DB.Query(
 		`SELECT tid,tname,attrib
 FROM ib0.threads
 WHERE bid=$1
@@ -66,26 +136,34 @@ ORDER BY bump DESC
 LIMIT $2 OFFSET $3`,
 		bid, battrs.ThreadsPerPage, num*battrs.ThreadsPerPage)
 	if err != nil {
-		return sqlError(err, "query"), http.StatusInternalServerError
+		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
+
 	var tids []uint64
 	for rows.Next() {
 		var t ib0.IBThreadListPageThread
 		tattrib := defaultThreadAttributes
 		var tid uint64
-		err := rows.Scan(&tid, &t.ID, &jcfg)
+
+		err = rows.Scan(&tid, &t.ID, &jcfg)
 		if err != nil {
-			return sqlError(err, "rows scan"), http.StatusInternalServerError
+			return sp.sqlError("threads query rows scan", err), http.StatusInternalServerError
 		}
+
 		err = jcfg.Unmarshal(&tattrib)
 		if err != nil {
-			return sqlError(err, "json unmarshal"), http.StatusInternalServerError
+			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
 		}
+
 		tids = append(tids, tid)
 		page.Threads = append(page.Threads, t)
 	}
+
+	// one SQL query per thread, horrible
 	for i, tid := range tids {
-		rows, err = sp.db.Query(
+		// OP, then 5 last posts, sorted ascending
+		// TODO attachments
+		rows, err = sp.db.DB.Query(
 			`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND tid=$2 AND pid=$2
@@ -101,22 +179,28 @@ SELECT * FROM (
 	ORDER BY pdate ASC,pid ASC
 ) AS ttt`, bid, tid)
 		if err != nil {
-			return sqlError(err, "query"), http.StatusInternalServerError
+			return sp.sqlError("posts query", err), http.StatusInternalServerError
 		}
+
 		for rows.Next() {
-			var pi ib0.IBPostInfo1
+			var pi ib0.IBPostInfo
 			pattrib := defaultPostAttributes
 			var pid uint64
 			var pdate time.Time
-			err = rows.Scan(&pi.ID, &pid, &pi.pname, &pi.trip, &pi.email, &pi.subject, &pdate, &pi.Message, &jcfg)
+
+			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
 			if err != nil {
-				return sqlError(err, "row scan"), http.StatusInternalServerError
+				return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
 			}
+
 			err = jcfg.Unmarshal(&pattrib)
 			if err != nil {
-				return sqlError(err, "json unmarshal"), http.StatusInternalServerError
+				return sp.sqlError("post attrib json unmarshal", err), http.StatusInternalServerError
 			}
-			pi.Date = fmtTime(pdate)
+
+			pi.Date = pdate.Unix()
+			pi.References = pattrib.References
+
 			if tid != pid {
 				page.Threads[i].Replies = append(page.Threads[i].Replies, pi)
 			} else {
@@ -125,205 +209,201 @@ SELECT * FROM (
 		}
 	}
 
-	*page = ib0.IBThreadListPage{
-		Threads: []ib0.IBThreadListPageThread{{
-			ID: "0123456789ABCDEF0123456789ABCDEF",
-			OP: ib0.IBPostInfo1{
-				ID:      "0123456789ABCDEF0123456789ABCDEF",
-				Name:    "",
-				Trip:    "",
-				Subject: "test subject",
-				Date:    "1980-09-11 14:30",
-				Message: "test OP message",
-				Files: []ib0.IBFileInfo{
-					{
-						ID:   "_test/1.png",
-						Type: "image",
-						Thumb: ib0.IBThumbInfo{
-							ID:     "_test/1.png.jpg",
-							Width:  128,
-							Height: 128,
-						},
-						Original: "original test file.png",
-						Options: map[string]interface{}{
-							"width":  512,
-							"height": 512,
-						},
-					},
-				},
-			},
-			SkippedReplies: 0,
-			Replies: []ib0.IBPostInfo1{
-				{
-					ID:      "00112233445566770011223344556677",
-					Name:    "",
-					Trip:    "",
-					Subject: "",
-					Date:    "1980-09-12 14:30",
-					Message: "test reply message 1",
-					Files:   []ib0.IBFileInfo{},
-				},
-				{
-					ID:      "8899AABBCCDDEEFF8899AABBCCDDEEFF",
-					Name:    "bob",
-					Trip:    "",
-					Subject: "",
-					Date:    "1980-09-13 14:30",
-					Message: "test reply message 2",
-					Files: []ib0.IBFileInfo{
-						{
-							ID:   "_test/2.jpg",
-							Type: "image",
-							Thumb: ib0.IBThumbInfo{
-								ID:     "_test/2.jpg.jpg",
-								Width:  128,
-								Height: 64,
-							},
-							Original: "original test file 2.jpg",
-							Options: map[string]interface{}{
-								"width":  512,
-								"height": 256,
-							},
-						},
-						{
-							ID:   "_test/3.opus",
-							Type: "audio",
-							Thumb: ib0.IBThumbInfo{
-								ID:     "_test/3.opus.jpg",
-								Width:  128,
-								Height: 128,
-							},
-							Original: "original test file 3.opus",
-							Options:  map[string]interface{}{},
-						},
-					},
-				},
-			},
-		}},
-		Number:   num,
-		Avaiable: 2,
-	}
 	return nil, 0
 }
 
-func (PSQLProvider) IBGetThreadCatalog(catalog *ib0.IBThreadCatalog, board string) (error, int) {
-	if board != "test" {
-		return errors.New("board does not exist"), http.StatusNotFound
+func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (error, int) {
+	var err error
+	var bid uint32
+	var jcfg, jcfg2 xtypes.JSONText
+
+	// XXX SQL needs more work
+
+	err = sp.db.DB.
+		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1", board).
+		Scan(&bid, &jcfg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("board does not exist"), http.StatusNotFound
+		}
+		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
-	*catalog = ib0.IBThreadCatalog{Threads: []ib0.IBThreadInfo1{
-		{
-			ID: "0123456789ABCDEF0123456789ABCDEF",
-			Thumb: ib0.IBThumbInfo{
-				ID:     "_test/1.png.jpg",
-				Width:  128,
-				Height: 128,
-			},
-			Subject: "test1",
-			Message: "test message 1",
-		},
-		{
-			ID: "00112233445566770011223344556677",
-			Thumb: ib0.IBThumbInfo{
-				ID:     "_test/2.jpg.jpg",
-				Width:  128,
-				Height: 64,
-			},
-			Subject: "test2",
-			Message: "",
-		},
-		{
-			ID: "8899AABBCCDDEEFF8899AABBCCDDEEFF",
-			Thumb: ib0.IBThumbInfo{
-				ID:     "_test/3.opus.jpg",
-				Width:  128,
-				Height: 128,
-			},
-			Subject: "",
-			Message: "test message 3",
-		},
-	}}
+
+	battrs := defaultBoardAttributes
+	err = jcfg.Unmarshal(&battrs)
+	if err != nil {
+		return sp.sqlError("board attr json unmarshal", err), http.StatusInternalServerError
+	}
+
+	page.Board = ib0.IBBoardInfo{
+		Name:        board,
+		Description: battrs.Description,
+		Info:        battrs.Info,
+	}
+
+	rows, err := sp.db.DB.Query(
+		`SELECT tid,tname,attrib,bump
+FROM ib0.threads
+WHERE bid=$1
+ORDER BY bump DESC`,
+		bid)
+	if err != nil {
+		return sp.sqlError("threads query", err), http.StatusInternalServerError
+	}
+
+	var tids []uint64
+	for rows.Next() {
+		var t ib0.IBThreadCatalogThread
+		tattrib := defaultThreadAttributes
+		var tid uint64
+		var bdate time.Time
+
+		err = rows.Scan(&tid, &t.ID, &jcfg, &bdate)
+		if err != nil {
+			return sp.sqlError("threads query rows scan", err), http.StatusInternalServerError
+		}
+
+		err = jcfg.Unmarshal(&tattrib)
+		if err != nil {
+			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
+		}
+
+		t.BumpDate = bdate.Unix()
+
+		tids = append(tids, tid)
+		page.Threads = append(page.Threads, t)
+	}
+
+	for i, tid := range tids {
+		t := &page.Threads[i]
+		// XXX dumb code xd
+		err = sp.db.DB.
+			QueryRow("SELECT subject,message FROM ib0.posts WHERE bid=$1 AND tid=$2 AND pid=$2 LIMIT 1", bid, tid).
+			Scan(&t.Subject, &t.Message)
+		if err != nil {
+			return sp.sqlError("posts row query scan", err), http.StatusInternalServerError
+		}
+		var fname string
+		err = sp.db.DB.
+			QueryRow("SELECT fname,thumb,filecfg,thumbcfg FROM ib0.files WHERE bid=$1 AND pid=$2 ORDER BY fid ASC LIMIT 1", bid, tid).
+			Scan(&fname, &t.ID, &jcfg, &jcfg2)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return sp.sqlError("files row query scan", err), http.StatusInternalServerError
+			}
+
+			t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb("", "")
+		} else {
+			fattrib := defaultFileAttributes
+			err = jcfg.Unmarshal(&fattrib)
+			if err != nil {
+				return sp.sqlError("file attrib json unmarshal", err), http.StatusInternalServerError
+			}
+
+			if t.ID == "" {
+				t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb(fname, fattrib.Type)
+			} else {
+				tattrib := defaultThumbAttributes
+				err = jcfg2.Unmarshal(&tattrib)
+				if err != nil {
+					return sp.sqlError("thumb attrib json unmarshal", err), http.StatusInternalServerError
+				}
+
+				t.Thumb.Width = tattrib.Width
+				t.Thumb.Height = tattrib.Height
+			}
+		}
+	}
+
 	return nil, 0
 }
 
-func (PSQLProvider) IBGetThread(thread *ib0.IBThread, board string, threadid string) (error, int) {
-	if board != "test" {
-		return errors.New("board does not exist"), http.StatusNotFound
+func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid string) (error, int) {
+	var err error
+	var bid uint32
+	var tid uint64
+	var jcfg xtypes.JSONText
+
+	// XXX SQL needs more work
+
+	err = sp.db.DB.
+		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1 LIMIT 1", board).
+		Scan(&bid, &jcfg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("board does not exist"), http.StatusNotFound
+		}
+		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
-	if threadid != "0123456789ABCDEF0123456789ABCDEF" {
-		return errors.New("thread does not exist"), http.StatusNotFound
+
+	battrs := defaultBoardAttributes
+	err = jcfg.Unmarshal(&battrs)
+	if err != nil {
+		return sp.sqlError("board attr json unmarshal", err), http.StatusInternalServerError
 	}
-	*thread = ib0.IBThread{
-		ID: "0123456789ABCDEF0123456789ABCDEF",
-		OP: ib0.IBPostInfo1{
-			ID:      "0123456789ABCDEF0123456789ABCDEF",
-			Name:    "",
-			Trip:    "",
-			Subject: "test subject",
-			Date:    "1980-09-11 14:30",
-			Message: "test OP message",
-			Files: []ib0.IBFileInfo{
-				{
-					ID:   "_test/1.png",
-					Type: "image",
-					Thumb: ib0.IBThumbInfo{
-						ID:     "_test/1.png.jpg",
-						Width:  128,
-						Height: 128,
-					},
-					Original: "original test file.png",
-					Options: map[string]interface{}{
-						"width":  512,
-						"height": 512,
-					},
-				},
-			},
-		},
-		Replies: []ib0.IBPostInfo1{
-			{
-				ID:      "00112233445566770011223344556677",
-				Name:    "",
-				Trip:    "",
-				Subject: "",
-				Date:    "1980-09-12 14:30",
-				Message: "test reply message 1",
-				Files:   []ib0.IBFileInfo{},
-			},
-			{
-				ID:      "8899AABBCCDDEEFF8899AABBCCDDEEFF",
-				Name:    "bob",
-				Trip:    "",
-				Subject: "",
-				Date:    "1980-09-13 14:30",
-				Message: "test reply message 2",
-				Files: []ib0.IBFileInfo{
-					{
-						ID:   "_test/2.jpg",
-						Type: "image",
-						Thumb: ib0.IBThumbInfo{
-							ID:     "_test/2.jpg.jpg",
-							Width:  128,
-							Height: 64,
-						},
-						Original: "original test file 2.jpg",
-						Options: map[string]interface{}{
-							"width":  512,
-							"height": 256,
-						},
-					},
-					{
-						ID:   "_test/3.opus",
-						Type: "audio",
-						Thumb: ib0.IBThumbInfo{
-							ID:     "_test/3.opus.jpg",
-							Width:  128,
-							Height: 128,
-						},
-						Original: "original test file 3.opus",
-						Options:  map[string]interface{}{},
-					},
-				},
-			},
-		},
+
+	page.Board = ib0.IBBoardInfo{
+		Name:        board,
+		Description: battrs.Description,
+		Info:        battrs.Info,
 	}
+
+	err = sp.db.DB.QueryRow(
+		`SELECT tid,attrib
+FROM ib0.threads
+WHERE bid=$1 AND tname=$2
+LIMIT 1`,
+		bid, threadid).
+		Scan(&tid, &jcfg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("thread does not exist"), http.StatusNotFound
+		}
+		return sp.sqlError("thread query scan", err), http.StatusInternalServerError
+	}
+
+	tattrs := defaultThreadAttributes
+	err = jcfg.Unmarshal(&tattrs)
+	if err != nil {
+		return sp.sqlError("thread attr json unmarshal", err), http.StatusInternalServerError
+	}
+
+	// TODO attachments
+	rows, err := sp.db.DB.Query(
+		`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
+FROM ib0.posts
+WHERE bid=$1 AND tid=$2
+ORDER BY pdate ASC,pid ASC`,
+		bid, tid)
+	if err != nil {
+		return sp.sqlError("posts query", err), http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var pi ib0.IBPostInfo
+		pattrib := defaultPostAttributes
+		var pid uint64
+		var pdate time.Time
+
+		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
+		if err != nil {
+			return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
+		}
+
+		err = jcfg.Unmarshal(&pattrib)
+		if err != nil {
+			return sp.sqlError("post attrib json unmarshal", err), http.StatusInternalServerError
+		}
+
+		pi.Date = pdate.Unix()
+		pi.References = pattrib.References
+
+		if tid != pid {
+			page.Replies = append(page.Replies, pi)
+		} else {
+			page.OP = pi
+		}
+	}
+
 	return nil, 0
 }

@@ -48,14 +48,14 @@ type IBFileInfo struct {
 }
 
 type IBReference struct {
-	Board  string `json:"board,omitempty"`  // board which contains post which is refered to. if empty, "this board"
-	Thread string `json:"thread,omitempty"` // thread which contains post which is refered to. if empty, "this thread"
-	Post   string `json:"post,omitempty"`   // full post number. may be empty when referencing to board or thread
+	Board  string `json:"b,omitempty"` // board which contains post which is refered to. if empty, "this board"
+	Thread string `json:"t,omitempty"` // thread which contains post which is refered to. if empty, "this thread"
+	Post   string `json:"p,omitempty"` // full post number. may be empty when referencing to board or thread
 }
 
 type IBMessageReference struct {
-	Start uint `json:"start"` // points to reference start position in Message
-	End   uint `json:"end"`   // points after reference end in Message
+	Start uint `json:"s"` // points to reference start position in Message
+	End   uint `json:"e"` // points after reference end in Message
 	IBReference
 }
 
@@ -140,6 +140,7 @@ type IBThreadCatalogThread struct {
 	Thumb            IBThumbInfo `json:"thumb"`    // thumbnail
 	TotalReplies     uint32      `json:"nreplies"` // number of replies
 	TotalAttachments uint32      `json:"nattach"`  // number of attachments
+	BumpDate         int64       `json:"bdate"`    // bump date
 	Subject          string      `json:"subject"`  // subject
 	Message          []byte      `json:"message"`  // message
 }

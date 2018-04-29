@@ -4,6 +4,7 @@ package fstore
 
 import (
 	"../fstorecfg"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"

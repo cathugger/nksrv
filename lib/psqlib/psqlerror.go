@@ -1,13 +1,20 @@
 package psqlib
 
 import (
+	. "../logx"
+	"errors"
 	"fmt"
-	"os"
 	"runtime/debug"
 )
 
-func sqlError(err error, when string) error {
-	fmt.Fprintf(os.Stderr, "[sql] error on %s: %v\n", when, err)
-	debug.PrintStack()
-	return fmt.Errorf("error on %s: %v", when, err)
+func (sp *PSQLIB) sqlError(when string, err error) error {
+	emsg := fmt.Sprintf("error on %s: %v", when, err)
+	if sp.log.Level() <= ERROR {
+		sp.log.LogPrint(ERROR, emsg)
+		if sp.log.LockWrite(ERROR) {
+			sp.log.Write(debug.Stack())
+			sp.log.Close()
+		}
+	}
+	return errors.New(emsg)
 }
