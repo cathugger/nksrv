@@ -161,7 +161,7 @@ LIMIT $2 OFFSET $3`,
 			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
 		}
 
-		tpids = append(tpids, tpid{tid: tid})
+		tpids = append(tpids, tpid{tid: tid, pids: []uint64{tid}})
 		page.Threads = append(page.Threads, t)
 	}
 	if err = rows.Err(); err != nil {
@@ -214,15 +214,11 @@ SELECT * FROM (
 			pi.References = pattrib.References
 
 			if tid != pid {
-				if len(tpids[i].pids) == 0 {
-					rows.Close()
-					return sp.sqlError("first returned post isn't OP", nil), http.StatusInternalServerError
-				}
 				page.Threads[i].Replies = append(page.Threads[i].Replies, pi)
+				tpids[i].pids = append(tpids[i].pids, pid)
 			} else {
 				page.Threads[i].OP = pi
 			}
-			tpids[i].pids = append(tpids[i].pids, pid)
 		}
 		if err = rows.Err(); err != nil {
 			return sp.sqlError("posts query rows iteration", err), http.StatusInternalServerError
@@ -449,7 +445,7 @@ ORDER BY pdate ASC,pid ASC`,
 		return sp.sqlError("posts query", err), http.StatusInternalServerError
 	}
 
-	var pids []uint64
+	pids := []uint64{tid}
 
 	for rows.Next() {
 		var pi ib0.IBPostInfo
@@ -472,10 +468,9 @@ ORDER BY pdate ASC,pid ASC`,
 		pi.Date = pdate.Unix()
 		pi.References = pattrib.References
 
-		pids = append(pids, pid)
-
 		if tid != pid {
 			page.Replies = append(page.Replies, pi)
+			pids = append(pids, pid)
 		} else {
 			page.OP = pi
 		}
