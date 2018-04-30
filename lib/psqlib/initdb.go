@@ -50,7 +50,8 @@ var initStatement7 = `CREATE TABLE ib0.posts (
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
 	FOREIGN KEY (bid,tid) REFERENCES ib0.threads
 )`
-var initStatement8 = `CREATE TABLE ib0.files (
+var initStatement8 = `CREATE INDEX ON ib0.posts (bid,tid)`
+var initStatement9 = `CREATE TABLE ib0.files (
 	fid      BIGSERIAL NOT NULL, /* internal file ID of this file */
 	bid      INTEGER   NOT NULL, /* internal board ID post of this file belongs to */
 	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
@@ -66,8 +67,8 @@ var initStatement8 = `CREATE TABLE ib0.files (
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
 	FOREIGN KEY (bid,pid) REFERENCES ib0.posts
 )`
-var initStatement9 = `CREATE INDEX ON ib0.files (bid,pid)`
-var initStatement10 = `CREATE INDEX ON ib0.files (fname)`
+var initStatement10 = `CREATE INDEX ON ib0.files (bid,pid)`
+var initStatement11 = `CREATE INDEX ON ib0.files (fname)`
 
 func (sp *PSQLIB) initDB() {
 	sp.db.DB.MustExec(initStatement0)
@@ -81,6 +82,7 @@ func (sp *PSQLIB) initDB() {
 	sp.db.DB.MustExec(initStatement8)
 	sp.db.DB.MustExec(initStatement9)
 	sp.db.DB.MustExec(initStatement10)
+	sp.db.DB.MustExec(initStatement11)
 }
 
 func (sp *PSQLIB) checkVersion() error {

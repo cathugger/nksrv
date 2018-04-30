@@ -138,7 +138,12 @@ LIMIT $2 OFFSET $3`,
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
 
-	var tids []uint64
+	type tpid struct {
+		tid  uint64
+		pids []uint64
+	}
+	var tpids []tpid
+
 	for rows.Next() {
 		var t ib0.IBThreadListPageThread
 		tattrib := defaultThreadAttributes
@@ -156,7 +161,7 @@ LIMIT $2 OFFSET $3`,
 			return sp.sqlError("thread attrib json unmarshal", err), http.StatusInternalServerError
 		}
 
-		tids = append(tids, tid)
+		tpids = append(tpids, tpid{tid: tid})
 		page.Threads = append(page.Threads, t)
 	}
 	if err = rows.Err(); err != nil {
@@ -164,13 +169,14 @@ LIMIT $2 OFFSET $3`,
 	}
 
 	// one SQL query per thread, horrible
-	for i, tid := range tids {
+	for i := range tpids {
+		tid := tpids[i].tid
 		// OP, then 5 last posts, sorted ascending
 		// TODO attachments
 		rows, err = sp.db.DB.Query(
 			`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
 FROM ib0.posts
-WHERE bid=$1 AND tid=$2 AND pid=$2
+WHERE bid=$1 AND pid=$2
 UNION ALL
 SELECT * FROM (
 	SELECT * FROM (
@@ -208,10 +214,15 @@ SELECT * FROM (
 			pi.References = pattrib.References
 
 			if tid != pid {
+				if len(tpids[i].pids) == 0 {
+					rows.Close()
+					return sp.sqlError("first returned post isn't OP", nil), http.StatusInternalServerError
+				}
 				page.Threads[i].Replies = append(page.Threads[i].Replies, pi)
 			} else {
 				page.Threads[i].OP = pi
 			}
+			tpids[i].pids = append(tpids[i].pids, pid)
 		}
 		if err = rows.Err(); err != nil {
 			return sp.sqlError("posts query rows iteration", err), http.StatusInternalServerError
@@ -292,7 +303,7 @@ ORDER BY bump DESC`,
 		t := &page.Threads[i]
 		// XXX dumb code xd
 		err = sp.db.DB.
-			QueryRow("SELECT subject,message FROM ib0.posts WHERE bid=$1 AND tid=$2 AND pid=$2 LIMIT 1", bid, tid).
+			QueryRow("SELECT subject,message FROM ib0.posts WHERE bid=$1 AND pid=$2 LIMIT 1", bid, tid).
 			Scan(&t.Subject, &t.Message)
 		if err != nil {
 			return sp.sqlError("posts row query scan", err), http.StatusInternalServerError
@@ -429,6 +440,7 @@ ORDER BY pdate ASC,pid ASC`,
 			pi = &page.OP
 		}
 
+		// one query per post, outright bad
 		rows, err := sp.db.DB.Query(
 			`SELECT fname,ftype,fsize,thumb,oname,filecfg,thumbcfg
 FROM ib0.files
