@@ -235,7 +235,7 @@ SELECT * FROM (
 			var pi *ib0.IBPostInfo
 
 			if j != 0 {
-				pi = &page.Threads[i].Replies[i-1]
+				pi = &page.Threads[i].Replies[j-1]
 			} else {
 				pi = &page.Threads[i].OP
 			}
