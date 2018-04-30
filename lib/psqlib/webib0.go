@@ -89,7 +89,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, num uint32) (error, int) {
 	var err error
 	var bid uint32
-	var jcfg xtypes.JSONText
+	var jcfg, jcfg2 xtypes.JSONText
 
 	// XXX SQL needs more work
 
@@ -226,6 +226,60 @@ SELECT * FROM (
 		}
 		if err = rows.Err(); err != nil {
 			return sp.sqlError("posts query rows iteration", err), http.StatusInternalServerError
+		}
+	}
+
+	// one SQL query per post, outright bad
+	for i := range tpids {
+		for j, pid := range tpids[i].pids {
+			var pi *ib0.IBPostInfo
+
+			if j != 0 {
+				pi = &page.Threads[i].Replies[i-1]
+			} else {
+				pi = &page.Threads[i].OP
+			}
+
+			rows, err := sp.db.DB.Query(
+				`SELECT fname,ftype,fsize,thumb,oname,filecfg,thumbcfg
+FROM ib0.files
+WHERE bid=$1 AND pid=$2
+ORDER BY fid ASC`,
+				bid, pid)
+			if err != nil {
+				return sp.sqlError("files query", err), http.StatusInternalServerError
+			}
+
+			for rows.Next() {
+				var fi ib0.IBFileInfo
+				fattrib := make(map[string]interface{})
+				tattrib := defaultThumbAttributes
+
+				err = rows.Scan(&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original, &jcfg, &jcfg2)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError("files query rows scan", err), http.StatusInternalServerError
+				}
+
+				err = jcfg.Unmarshal(&fattrib)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError("file fattrib json unmarshal", err), http.StatusInternalServerError
+				}
+
+				err = jcfg2.Unmarshal(&tattrib)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError("file tattrib json unmarshal", err), http.StatusInternalServerError
+				}
+
+				fi.Options = fattrib
+				fi.Thumb.Width, fi.Thumb.Height = tattrib.Width, tattrib.Height
+				pi.Files = append(pi.Files, fi)
+			}
+			if err = rows.Err(); err != nil {
+				return sp.sqlError("files query rows iteration", err), http.StatusInternalServerError
+			}
 		}
 	}
 
@@ -432,7 +486,6 @@ ORDER BY pdate ASC,pid ASC`,
 
 	for i, pid := range pids {
 		var pi *ib0.IBPostInfo
-		var fi ib0.IBFileInfo
 
 		if i != 0 {
 			pi = &page.Replies[i-1]
@@ -452,6 +505,7 @@ ORDER BY fid ASC`,
 		}
 
 		for rows.Next() {
+			var fi ib0.IBFileInfo
 			fattrib := make(map[string]interface{})
 			tattrib := defaultThumbAttributes
 
