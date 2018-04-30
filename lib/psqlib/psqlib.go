@@ -49,3 +49,11 @@ func NewPSQLIB(cfg InitCfg) (p *PSQLIB, err error) {
 	// TODO maybe some more initialization
 	return
 }
+
+func (p *PSQLIB) Close() error {
+	err := p.db.DB.Close()
+	if err != nil {
+		return p.sqlError("database close", err)
+	}
+	return nil
+}
