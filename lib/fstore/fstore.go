@@ -3,7 +3,6 @@ package fstore
 // abstracts and automates some filestore operations
 
 import (
-	"../fstorecfg"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +10,10 @@ import (
 	"sync"
 	"time"
 )
+
+type Config struct {
+	Path string `toml:"path"`
+}
 
 type FStore struct {
 	root     string
@@ -40,7 +43,7 @@ func nextSuffix() string {
 	return strconv.Itoa(int(1e9 + r%1e9))[1:]
 }
 
-func OpenFStore(cfg fstorecfg.ConfigFStore) (FStore, error) {
+func OpenFStore(cfg Config) (FStore, error) {
 	var s FStore
 	i := len(cfg.Path)
 	if i > 0 && !os.IsPathSeparator(cfg.Path[i-1]) {

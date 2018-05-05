@@ -5,7 +5,6 @@ package psqlib
 import (
 	"../altthumber"
 	"../fstore"
-	"../fstorecfg"
 	. "../logx"
 	"../psql"
 	"fmt"
@@ -19,17 +18,17 @@ type PSQLIB struct {
 	altthumb altthumber.AltThumber
 }
 
-type InitCfg struct {
+type Config struct {
 	DB         psql.PSQL
 	Logger     LoggerX
-	SrcCfg     fstorecfg.ConfigFStore
-	ThumbCfg   fstorecfg.ConfigFStore
+	SrcCfg     fstore.Config
+	ThmCfg     fstore.Config
 	AltThumber altthumber.AltThumber
 }
 
 // readonly for now
 
-func NewPSQLIB(cfg InitCfg) (p *PSQLIB, err error) {
+func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p = new(PSQLIB)
 
 	p.log = NewLogToX(cfg.Logger, fmt.Sprintf("psqlib.%p", p))
@@ -41,7 +40,7 @@ func NewPSQLIB(cfg InitCfg) (p *PSQLIB, err error) {
 		return nil, err
 	}
 
-	p.thumb, err = fstore.OpenFStore(cfg.ThumbCfg)
+	p.thumb, err = fstore.OpenFStore(cfg.ThmCfg)
 	if err != nil {
 		return nil, err
 	}

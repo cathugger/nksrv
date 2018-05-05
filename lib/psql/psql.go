@@ -10,13 +10,28 @@ import (
 	"time"
 )
 
+type Config struct {
+	ConnStr         string
+	ConnMaxLifetime float64
+	MaxIdleConns    int32
+	MaxOpenConns    int32
+	Logger          LoggerX
+}
+
+var DefaultConfig = Config{
+	ConnStr:         "",
+	ConnMaxLifetime: 0.0,
+	MaxIdleConns:    0,
+	MaxOpenConns:    0,
+}
+
 type PSQL struct {
 	DB  *sqlx.DB
 	log Logger
 	id  string
 }
 
-func OpenPSQL(cfg ConfigPSQL) (PSQL, error) {
+func OpenPSQL(cfg Config) (PSQL, error) {
 	db, err := sqlx.Open("postgres", cfg.ConnStr)
 	if err != nil {
 		return PSQL{}, err
