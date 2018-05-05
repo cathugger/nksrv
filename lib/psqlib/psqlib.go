@@ -8,23 +8,22 @@ import (
 	"../fstorecfg"
 	. "../logx"
 	"../psql"
-	"../psqlcfg"
 	"fmt"
 )
 
 type PSQLIB struct {
 	db       psql.PSQL
+	log      Logger
 	src      fstore.FStore
 	thumb    fstore.FStore
-	log      Logger
 	altthumb altthumber.AltThumber
 }
 
 type InitCfg struct {
-	PSQLCfg    psqlcfg.ConfigPSQL
+	DB         psql.PSQL
+	Logger     LoggerX
 	SrcCfg     fstorecfg.ConfigFStore
 	ThumbCfg   fstorecfg.ConfigFStore
-	Logger     LoggerX
 	AltThumber altthumber.AltThumber
 }
 
@@ -32,28 +31,22 @@ type InitCfg struct {
 
 func NewPSQLIB(cfg InitCfg) (p *PSQLIB, err error) {
 	p = new(PSQLIB)
+
 	p.log = NewLogToX(cfg.Logger, fmt.Sprintf("psqlib.%p", p))
-	p.db, err = psql.OpenPSQL(cfg.PSQLCfg)
-	if err != nil {
-		return nil, err
-	}
+
+	p.db = cfg.DB
+
 	p.src, err = fstore.OpenFStore(cfg.SrcCfg)
 	if err != nil {
 		return nil, err
 	}
+
 	p.thumb, err = fstore.OpenFStore(cfg.ThumbCfg)
 	if err != nil {
 		return nil, err
 	}
-	p.altthumb = cfg.AltThumber
-	// TODO maybe some more initialization
-	return
-}
 
-func (p *PSQLIB) Close() error {
-	err := p.db.DB.Close()
-	if err != nil {
-		return p.sqlError("database close", err)
-	}
-	return nil
+	p.altthumb = cfg.AltThumber
+
+	return
 }

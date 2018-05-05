@@ -1,34 +1,13 @@
 package psqlib
 
+// database stuff
+
 import (
 	"database/sql"
 	"fmt"
 )
 
-var (
-	currDBVersion   = ""
-	currCom0Version = ""
-	currIb0Version  = ""
-)
-
-var dbInitStatements = []string{
-	`CREATE TABLE capabilities (
-	component TEXT NOT NULL UNIQUE,
-	version   TEXT NOT NULL
-)`,
-	`INSERT INTO capabilities(component,version) VALUES ('','')`,
-}
-
-var dbCom0InitStatements = []string{
-	`CREATE SCHEMA IF NOT EXISTS com0`,
-	`CREATE TABLE com0.groups (
-	gname     TEXT  NOT NULL, /* group name */
-	bend_type TEXT  NOT NULL, /* backend type */
-	bend_cfg  JSONB NOT NULL, /* backend config. format depends on backend type */
-	PRIMARY KEY (gname)
-)`,
-	`INSERT INTO capabilities(component,version) VALUES ('com0','')`,
-}
+var currIb0Version = ""
 
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
@@ -91,64 +70,10 @@ var dbIb0InitStatements = []string{
 	`INSERT INTO capabilities(component,version) VALUES ('ib0','')`,
 }
 
-func (sp *PSQLIB) InitDB() {
-	for i := range dbInitStatements {
-		sp.db.DB.MustExec(dbInitStatements[i])
-	}
-}
-
-func (sp *PSQLIB) InitCom0() {
-	for i := range dbCom0InitStatements {
-		sp.db.DB.MustExec(dbCom0InitStatements[i])
-	}
-}
-
 func (sp *PSQLIB) InitIb0() {
 	for i := range dbIb0InitStatements {
 		sp.db.DB.MustExec(dbIb0InitStatements[i])
 	}
-}
-
-func (sp *PSQLIB) IsValidDB() bool {
-	var exists bool
-	err := sp.db.DB.
-		QueryRow(`SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'capabilities')`).
-		Scan(&exists)
-	if err != nil {
-		panic(fmt.Sprintf("error checking validity: %v", err))
-	}
-	return exists
-}
-
-func (sp *PSQLIB) CheckVersion() error {
-	var ver string
-	err := sp.db.DB.
-		QueryRow("SELECT version FROM capabilities WHERE component = '' LIMIT 1").
-		Scan(&ver)
-	if err != nil {
-		return sp.sqlError("version row query", err)
-	}
-	if ver != currDBVersion {
-		return fmt.Errorf("incorrect database version: %q (our: %q)", ver, currDBVersion)
-	}
-	return nil
-}
-
-func (sp *PSQLIB) CheckCom0() (initialised bool, versionerror error) {
-	var ver string
-	err := sp.db.DB.
-		QueryRow("SELECT version FROM capabilities WHERE component = 'ib0' LIMIT 1").
-		Scan(&ver)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, sp.sqlError("version row query", err)
-	}
-	if ver != currCom0Version {
-		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currCom0Version)
-	}
-	return true, nil
 }
 
 func (sp *PSQLIB) CheckIb0() (initialised bool, versionerror error) {
