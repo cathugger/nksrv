@@ -93,7 +93,7 @@ type IBPostInfo struct {
 	Trip           string                 `json:"trip,omitempty"`     // tripcode, usually not set
 	Email          string                 `json:"email,omitempty"`    // email field, usually useless, used for sage too
 	Date           int64                  `json:"date"`               // seconds since unix epoch
-	Message        []byte                 `json:"msg"`                // message itself. formatted
+	Message        string                 `json:"msg"`                // message itself. formatted
 	References     []IBMessageReference   `json:"refs,omitempty"`     // posts Message refers to
 	Files          []IBFileInfo           `json:"files,omitempty"`    // attached files
 	BackReferences []IBBackReference      `json:"backrefs,omitempty"` // post refering to this post
@@ -102,9 +102,9 @@ type IBPostInfo struct {
 
 // common thread fields
 type IBCommonThread struct {
-	ID      string       `json:"id"`      // thread ID
-	OP      IBPostInfo   `json:"op"`      // OP
-	Replies []IBPostInfo `json:"replies"` // replies
+	ID      string       `json:"id"`                // thread ID
+	OP      IBPostInfo   `json:"op"`                // OP
+	Replies []IBPostInfo `json:"replies,omitempty"` // replies
 }
 
 // thread in thread list page
@@ -125,7 +125,7 @@ type IBThreadListPage struct {
 	Board       IBBoardInfo              `json:"board"`                 // info about this board
 	Number      uint32                   `json:"page_number"`           // this page num
 	Avaiable    uint32                   `json:"pages_avaiable"`        // num of pages
-	Threads     []IBThreadListPageThread `json:"threads"`               // threads
+	Threads     []IBThreadListPageThread `json:"threads,omitempty"`     // threads
 	HasBackRefs bool                     `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
 }
 
@@ -146,6 +146,6 @@ type IBThreadCatalogThread struct {
 }
 
 type IBThreadCatalog struct {
-	Board   IBBoardInfo             `json:"board"`   // info about this baord
-	Threads []IBThreadCatalogThread `json:"threads"` // threads
+	Board   IBBoardInfo             `json:"board"`             // info about this baord
+	Threads []IBThreadCatalogThread `json:"threads,omitempty"` // threads
 }

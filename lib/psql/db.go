@@ -23,15 +23,15 @@ func (sp PSQL) InitDB() {
 	}
 }
 
-func (sp PSQL) IsValidDB() bool {
+func (sp PSQL) IsValidDB() (bool, error) {
 	var exists bool
 	err := sp.DB.
 		QueryRow(`SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'capabilities')`).
 		Scan(&exists)
 	if err != nil {
-		panic(fmt.Sprintf("error checking validity: %v", err))
+		return false, err
 	}
-	return exists
+	return exists, nil
 }
 
 func (sp PSQL) CheckVersion() error {

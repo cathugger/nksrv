@@ -42,7 +42,7 @@ type LogToX struct {
 }
 
 func (l LogToX) Level() Level {
-	return l.Level()
+	return l.logx.Level()
 }
 func (l LogToX) LogPrint(lvl Level, v ...interface{}) {
 	l.logx.LogPrintX(l.section, lvl, v...)

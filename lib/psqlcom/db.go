@@ -27,7 +27,7 @@ func (sp *PSQLCOM) InitCom0() {
 func (sp *PSQLCOM) CheckCom0() (initialised bool, versionerror error) {
 	var ver string
 	err := sp.db.DB.
-		QueryRow("SELECT version FROM capabilities WHERE component = 'ib0' LIMIT 1").
+		QueryRow("SELECT version FROM capabilities WHERE component = 'com0' LIMIT 1").
 		Scan(&ver)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -36,7 +36,7 @@ func (sp *PSQLCOM) CheckCom0() (initialised bool, versionerror error) {
 		return false, sp.sqlError("version row query", err)
 	}
 	if ver != currCom0Version {
-		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currCom0Version)
+		return true, fmt.Errorf("incorrect com0 schema version: %q (our: %q)", ver, currCom0Version)
 	}
 	return true, nil
 }

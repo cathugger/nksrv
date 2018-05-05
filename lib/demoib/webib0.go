@@ -116,7 +116,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: []byte(bible1),
+		Message: bible1,
 		Files: []webib0.IBFileInfo{
 			testFile1,
 			//testFile2,
@@ -128,7 +128,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: []byte("test reply msg 0"),
+		Message: "test reply msg 0",
 		Files: []webib0.IBFileInfo{
 			testFile1,
 		},
@@ -139,7 +139,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396801,
-		Message: []byte("test reply message 1"),
+		Message: "test reply message 1",
 		Files:   []webib0.IBFileInfo{},
 	}
 	testPost4 = webib0.IBPostInfo{
@@ -148,7 +148,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396802,
-		Message: []byte("test reply message 2"),
+		Message: "test reply message 2",
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,
@@ -161,7 +161,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396803,
-		Message: []byte(">testing greentext\nnon-greentext\n>greentext again"),
+		Message: ">testing greentext\nnon-greentext\n>greentext again",
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,

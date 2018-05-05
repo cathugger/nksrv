@@ -14,7 +14,7 @@ type PSQLIB struct {
 	db       psql.PSQL
 	log      Logger
 	src      fstore.FStore
-	thumb    fstore.FStore
+	thm      fstore.FStore
 	altthumb altthumber.AltThumber
 }
 
@@ -40,7 +40,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		return nil, err
 	}
 
-	p.thumb, err = fstore.OpenFStore(cfg.ThmCfg)
+	p.thm, err = fstore.OpenFStore(cfg.ThmCfg)
 	if err != nil {
 		return nil, err
 	}

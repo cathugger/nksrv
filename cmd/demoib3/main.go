@@ -15,10 +15,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 )
 
 func main() {
+	var errorcode int
+	defer os.Exit(errorcode)
+
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
@@ -47,6 +51,40 @@ func main() {
 		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
 		os.Exit(1)
 	}
+	defer db.Close()
+
+	valid, err := db.IsValidDB()
+	if err != nil {
+		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
+		errorcode = 1
+		runtime.Goexit()
+	}
+	// if not valid, try to create
+	if !valid {
+		mlg.LogPrint(logx.NOTICE, "uninitialized PSQL db, attempting to initialize")
+
+		db.InitDB()
+
+		// revalidate
+		valid, err = db.IsValidDB()
+		if err != nil {
+			mlg.LogPrintln(logx.CRITICAL, "second psql.OpenPSQL error:", err)
+			errorcode = 1
+			runtime.Goexit()
+		}
+		if !valid {
+			mlg.LogPrintln(logx.CRITICAL, "psql.IsValidDB failed second validation")
+			errorcode = 1
+			runtime.Goexit()
+		}
+	}
+
+	err = db.CheckVersion()
+	if err != nil {
+		mlg.LogPrintln(logx.CRITICAL, "psql.CheckVersion: ", err)
+		errorcode = 1
+		runtime.Goexit()
+	}
 
 	dbib, err := psqlib.NewPSQLIB(psqlib.Config{
 		DB:         db,
@@ -57,13 +95,39 @@ func main() {
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewPSQLIB error:", err)
-		os.Exit(1)
+		errorcode = 1
+		runtime.Goexit()
+	}
+
+	valid, err = dbib.CheckIb0()
+	if err != nil {
+		mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0:", err)
+		errorcode = 1
+		runtime.Goexit()
+	}
+	if !valid {
+		mlg.LogPrint(logx.NOTICE, "uninitialized PSQLIB db, attempting to initialize")
+
+		dbib.InitIb0()
+
+		valid, err = dbib.CheckIb0()
+		if err != nil {
+			mlg.LogPrintln(logx.CRITICAL, "second psqlib.CheckIb0:", err)
+			errorcode = 1
+			runtime.Goexit()
+		}
+		if !valid {
+			mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0 failed second validation")
+			errorcode = 1
+			runtime.Goexit()
+		}
 	}
 
 	rend, err := rj.NewJSONRenderer(dbib, rj.Config{Indent: "\t"})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rj.NewJSONRenderer error:", err)
-		os.Exit(1)
+		errorcode = 1
+		runtime.Goexit()
 	}
 	rcfg := ir.Cfg{
 		HTMLRenderer:   rend,

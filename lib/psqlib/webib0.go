@@ -429,6 +429,8 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 		return sp.sqlError("thread query scan", err), http.StatusInternalServerError
 	}
 
+	page.ID = threadid
+
 	tattrs := defaultThreadAttributes
 	err = jcfg.Unmarshal(&tattrs)
 	if err != nil {

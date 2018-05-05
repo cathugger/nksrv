@@ -7,6 +7,7 @@ import (
 	. "../logx"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"time"
 )
 
