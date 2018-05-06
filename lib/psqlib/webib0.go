@@ -138,6 +138,9 @@ LIMIT $2 OFFSET $3`,
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
 
+	page.Number = num
+	page.Available = uint32((allcount + uint64(battrs.ThreadsPerPage) - 1) / uint64(battrs.ThreadsPerPage))
+
 	type tpid struct {
 		tid  uint64
 		pids []uint64
@@ -198,7 +201,7 @@ SELECT * FROM (
 			var pid uint64
 			var pdate time.Time
 
-			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
+			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
@@ -455,7 +458,7 @@ ORDER BY pdate ASC,pid ASC`,
 		var pid uint64
 		var pdate time.Time
 
-		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, &pi.Message, &jcfg)
+		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError

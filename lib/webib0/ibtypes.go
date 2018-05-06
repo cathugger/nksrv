@@ -2,10 +2,6 @@ package webib0
 
 // web IB API representation v0
 
-import (
-	"encoding/json"
-)
-
 // references to other places than current thread will need to be hacked in
 // references to curren thread' objects are easy because we can drop
 // them in on rendering stage but for foreign ones we can't know
@@ -63,27 +59,7 @@ type IBBackReference struct {
 	IBReference
 }
 
-var _ json.Marshaler = (*IBBackReference)(nil)
-var _ json.Unmarshaler = (*IBBackReference)(nil)
-
-func (r *IBBackReference) MarshalJSON() ([]byte, error) {
-	if r.Board == "" && r.Thread == "" {
-		return json.Marshal(r.Post)
-	} else {
-		return json.Marshal(&r.IBReference)
-	}
-}
-
-func (r *IBBackReference) UnmarshalJSON(b []byte) error {
-	e := json.Unmarshal(b, &r.Post)
-	if e != nil {
-		e = json.Unmarshal(b, &r.IBReference)
-		if e != nil {
-			return e
-		}
-	}
-	return nil
-}
+type IBMessage []byte
 
 // post
 type IBPostInfo struct {
@@ -93,7 +69,7 @@ type IBPostInfo struct {
 	Trip           string                 `json:"trip,omitempty"`     // tripcode, usually not set
 	Email          string                 `json:"email,omitempty"`    // email field, usually useless, used for sage too
 	Date           int64                  `json:"date"`               // seconds since unix epoch
-	Message        string                 `json:"msg"`                // message itself. formatted
+	Message        IBMessage              `json:"msg"`                // message itself. formatted
 	References     []IBMessageReference   `json:"refs,omitempty"`     // posts Message refers to
 	Files          []IBFileInfo           `json:"files,omitempty"`    // attached files
 	BackReferences []IBBackReference      `json:"backrefs,omitempty"` // post refering to this post
@@ -124,7 +100,7 @@ type IBBoardInfo struct {
 type IBThreadListPage struct {
 	Board       IBBoardInfo              `json:"board"`                 // info about this board
 	Number      uint32                   `json:"page_number"`           // this page num
-	Avaiable    uint32                   `json:"pages_avaiable"`        // num of pages
+	Available   uint32                   `json:"pages_available"`       // num of pages
 	Threads     []IBThreadListPageThread `json:"threads,omitempty"`     // threads
 	HasBackRefs bool                     `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
 }

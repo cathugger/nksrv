@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-var bible1 = `In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
+var bible1 = []byte(`In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
 And God said, Let there be light: and there was light.
 And God saw the light, that it was good: and God divided the light from the darkness.
 And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.
@@ -35,7 +35,7 @@ So God created man in his own image, in the image of God created he him; male an
 And God blessed them, and God said unto them, Be fruitful, and multiply, and replenish the earth, and subdue it: and have dominion over the fish of the sea, and over the fowl of the air, and over every living thing that moveth upon the earth.
 And God said, Behold, I have given you every herb bearing seed, which is upon the face of all the earth, and every tree, in the which is the fruit of a tree yielding seed; to you it shall be for meat.
 And to every beast of the earth, and to every fowl of the air, and to every thing that creepeth upon the earth, wherein there is life, I have given every green herb for meat: and it was so.
-And God saw every thing that he had made, and, behold, it was very good. And the evening and the morning were the sixth day.`
+And God saw every thing that he had made, and, behold, it was very good. And the evening and the morning were the sixth day.`)
 
 type IBProviderDemo struct{}
 
@@ -128,7 +128,7 @@ var (
 		Name:    "Anonymous",
 		Trip:    "",
 		Date:    1072396800,
-		Message: "test reply msg 0",
+		Message: []byte("test reply msg 0"),
 		Files: []webib0.IBFileInfo{
 			testFile1,
 		},
@@ -139,7 +139,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396801,
-		Message: "test reply message 1",
+		Message: []byte("test reply message 1"),
 		Files:   []webib0.IBFileInfo{},
 	}
 	testPost4 = webib0.IBPostInfo{
@@ -148,7 +148,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396802,
-		Message: "test reply message 2",
+		Message: []byte("test reply message 2"),
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,
@@ -161,7 +161,7 @@ var (
 		Trip:    "",
 		Subject: "",
 		Date:    1072396803,
-		Message: ">testing greentext\nnon-greentext\n>greentext again",
+		Message: []byte(">testing greentext\nnon-greentext\n>greentext again"),
 		Files: []webib0.IBFileInfo{
 			testFile2,
 			testFile3,
@@ -196,7 +196,7 @@ var (
 			SkippedAttachments: 0,
 			SkippedReplies:     0,
 		}},
-		Avaiable: 2,
+		Available: 2,
 	}
 	testThread = webib0.IBThreadPage{
 		Board: testBoardInfo,

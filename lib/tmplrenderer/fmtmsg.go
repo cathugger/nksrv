@@ -43,12 +43,7 @@ type msgLineFmtCfg struct {
 	NonFinalNewline  []byte
 }
 
-type stringWriter interface {
-	io.Writer
-	WriteString(s string) (int, error)
-}
-
-func formatmsg(w stringWriter, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) {
+func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) {
 	w.Write(tr.m.PreMsg)
 
 	lines := 0
@@ -126,7 +121,7 @@ func formatmsg(w stringWriter, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0
 				if firstch {
 					greentext = true
 					// flush
-					w.WriteString(b[last:src])
+					w.Write(b[last:src])
 					src++
 					last = src
 					// pre-greentext
@@ -140,7 +135,7 @@ func formatmsg(w stringWriter, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0
 				esc = htmlNull
 			case '\n':
 				// flush
-				w.WriteString(b[last:src])
+				w.Write(b[last:src])
 				src++
 				last = src
 				if greentext {
@@ -166,7 +161,7 @@ func formatmsg(w stringWriter, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0
 				continue
 			}
 			// flush stuff before replacement
-			w.WriteString(b[last:src])
+			w.Write(b[last:src])
 			// write replacement
 			w.Write(esc)
 			// skip some ammount
@@ -175,7 +170,7 @@ func formatmsg(w stringWriter, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0
 			last = src
 		}
 		// flush
-		w.WriteString(b[last:src])
+		w.Write(b[last:src])
 		last = src
 		return true
 	}
