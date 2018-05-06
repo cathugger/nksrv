@@ -26,21 +26,21 @@ type IBBoardList struct {
 // thumbnail info
 // consistent across pages
 type IBThumbInfo struct {
-	ID     string `json:"id,omitempty"`     // identifier. filename
-	Alt    string `json:"alt,omitempty"`    // alternative. for stuff like spoilers
-	Width  uint32 `json:"width,omitempty"`  // width
-	Height uint32 `json:"height,omitempty"` // height
+	ID     string `json:"id,omitempty"`  // identifier. filename
+	Alt    string `json:"alt,omitempty"` // alternative. for stuff like spoilers
+	Width  uint32 `json:"w,omitempty"`   // width
+	Height uint32 `json:"h,omitempty"`   // height
 }
 
 // file info
 // consistent across pages
 type IBFileInfo struct {
-	ID       string                 `json:"id"`                // identifier. filename
-	Type     string                 `json:"type"`              // short type of file
-	Thumb    IBThumbInfo            `json:"thumb"`             // thumbnail
-	Original string                 `json:"original"`          // original filename
-	Size     int64                  `json:"size"`              // all files have size
-	Options  map[string]interface{} `json:"options,omitempty"` // metadata which depends on file type
+	ID       string                 `json:"id"`             // identifier. filename
+	Type     string                 `json:"type"`           // short type of file
+	Thumb    IBThumbInfo            `json:"thumb"`          // thumbnail
+	Original string                 `json:"orig"`           // original filename
+	Size     int64                  `json:"size"`           // all files have size
+	Options  map[string]interface{} `json:"opts,omitempty"` // metadata which depends on file type
 }
 
 type IBReference struct {
