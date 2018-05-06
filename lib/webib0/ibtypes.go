@@ -118,7 +118,7 @@ type IBThreadCatalogThread struct {
 	TotalAttachments uint32      `json:"nattach"`  // number of attachments
 	BumpDate         int64       `json:"bdate"`    // bump date
 	Subject          string      `json:"subject"`  // subject
-	Message          IBMessage   `json:"message"`  // message
+	Message          IBMessage   `json:"msg"`      // message
 }
 
 type IBThreadCatalog struct {
