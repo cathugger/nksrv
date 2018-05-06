@@ -357,7 +357,7 @@ ORDER BY bump DESC`,
 		// XXX dumb code xd
 		err = sp.db.DB.
 			QueryRow("SELECT subject,message FROM ib0.posts WHERE bid=$1 AND pid=$2 LIMIT 1", bid, tid).
-			Scan(&t.Subject, &t.Message)
+			Scan(&t.Subject, (*[]byte)(&t.Message))
 		if err != nil {
 			return sp.sqlError("posts row query scan", err), http.StatusInternalServerError
 		}

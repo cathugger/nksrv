@@ -194,7 +194,7 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IB
 			N: ni,
 		}
 		tr.m.PreRefTmpl.Execute(w, d)
-		t.HTMLEscape(w, []byte(b[src:rr.End]))
+		t.HTMLEscape(w, b[src:rr.End])
 		src = int(rr.End)
 		last = src
 		tr.m.PostRefTmpl.Execute(w, d)
