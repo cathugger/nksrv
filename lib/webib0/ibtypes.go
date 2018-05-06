@@ -115,7 +115,7 @@ type IBThreadCatalogThread struct {
 	ID               string      `json:"id"`       // thread ID
 	Thumb            IBThumbInfo `json:"thumb"`    // thumbnail
 	TotalReplies     uint32      `json:"nreplies"` // number of replies
-	TotalAttachments uint32      `json:"nattach"`  // number of attachments
+	TotalAttachments uint32      `json:"nfiles"`   // number of attachments
 	BumpDate         int64       `json:"bdate"`    // bump date
 	Subject          string      `json:"subject"`  // subject
 	Message          IBMessage   `json:"msg"`      // message
