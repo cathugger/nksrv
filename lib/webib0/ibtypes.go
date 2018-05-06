@@ -63,17 +63,17 @@ type IBMessage []byte
 
 // post
 type IBPostInfo struct {
-	ID             string                 `json:"id"`                 // ID of post. long, global one
-	Subject        string                 `json:"subject"`            // subject text
-	Name           string                 `json:"name"`               // name of poster
-	Trip           string                 `json:"trip,omitempty"`     // tripcode, usually not set
-	Email          string                 `json:"email,omitempty"`    // email field, usually useless, used for sage too
-	Date           int64                  `json:"date"`               // seconds since unix epoch
-	Message        IBMessage              `json:"msg"`                // message itself. formatted
-	References     []IBMessageReference   `json:"refs,omitempty"`     // posts Message refers to
-	Files          []IBFileInfo           `json:"files,omitempty"`    // attached files
-	BackReferences []IBBackReference      `json:"backrefs,omitempty"` // post refering to this post
-	Options        map[string]interface{} `json:"options,omitempty"`  // additional stuff
+	ID             string                 `json:"id"`              // ID of post. long, global one
+	Subject        string                 `json:"subject"`         // subject text
+	Name           string                 `json:"name"`            // name of poster
+	Trip           string                 `json:"trip,omitempty"`  // tripcode, usually not set
+	Email          string                 `json:"email,omitempty"` // email field, usually useless, used for sage too
+	Date           int64                  `json:"date"`            // seconds since unix epoch
+	Message        IBMessage              `json:"msg"`             // message itself. formatted
+	References     []IBMessageReference   `json:"refs,omitempty"`  // posts Message refers to
+	Files          []IBFileInfo           `json:"files,omitempty"` // attached files
+	BackReferences []IBBackReference      `json:"brefs,omitempty"` // post refering to this post
+	Options        map[string]interface{} `json:"opts,omitempty"`  // additional stuff
 }
 
 // common thread fields
@@ -86,8 +86,8 @@ type IBCommonThread struct {
 // thread in thread list page
 type IBThreadListPageThread struct {
 	IBCommonThread
-	SkippedReplies     uint32 `json:"skipped_replies"`     // number of replies not included
-	SkippedAttachments uint32 `json:"skipped_attachments"` // number of attachments not included
+	SkippedReplies     uint32 `json:"skipreplies"` // number of replies not included
+	SkippedAttachments uint32 `json:"skipfiles"`   // number of attachments not included
 }
 
 // info about board common across pages
@@ -98,17 +98,17 @@ type IBBoardInfo struct {
 }
 
 type IBThreadListPage struct {
-	Board       IBBoardInfo              `json:"board"`                 // info about this board
-	Number      uint32                   `json:"page_number"`           // this page num
-	Available   uint32                   `json:"pages_available"`       // num of pages
-	Threads     []IBThreadListPageThread `json:"threads,omitempty"`     // threads
-	HasBackRefs bool                     `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
+	Board       IBBoardInfo              `json:"board"`              // info about this board
+	Number      uint32                   `json:"pnum"`               // this page num
+	Available   uint32                   `json:"pavail"`             // num of pages
+	Threads     []IBThreadListPageThread `json:"threads,omitempty"`  // threads
+	HasBackRefs bool                     `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
 
 type IBThreadPage struct {
 	Board IBBoardInfo `json:"board"` // info about this board
 	IBCommonThread
-	HasBackRefs bool `json:"hasbackrefs,omitempty"` // whether backreferences are already calculated
+	HasBackRefs bool `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
 
 type IBThreadCatalogThread struct {
