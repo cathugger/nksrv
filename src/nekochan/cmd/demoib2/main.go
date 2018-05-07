@@ -1,11 +1,11 @@
 package main
 
 import (
-	di "../../lib/demoib"
-	fl "../../lib/filelogger"
-	ir "../../lib/ibrouter"
-	"../../lib/logx"
-	rt "../../lib/tmplrenderer"
+	di "nekochan/lib/demoib"
+	fl "nekochan/lib/filelogger"
+	ir "nekochan/lib/ibrouter"
+	"nekochan/lib/logx"
+	rt "nekochan/lib/tmplrenderer"
 	"context"
 	"fmt"
 	"net/http"

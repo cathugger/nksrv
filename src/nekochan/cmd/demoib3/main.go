@@ -1,14 +1,14 @@
 package main
 
 import (
-	di "../../lib/demoib"
-	fl "../../lib/filelogger"
-	"../../lib/fstore"
-	ir "../../lib/ibrouter"
-	rj "../../lib/jsonrenderer"
-	"../../lib/logx"
-	"../../lib/psql"
-	"../../lib/psqlib"
+	di "nekochan/lib/demoib"
+	fl "nekochan/lib/filelogger"
+	"nekochan/lib/fstore"
+	ir "nekochan/lib/ibrouter"
+	rj "nekochan/lib/jsonrenderer"
+	"nekochan/lib/logx"
+	"nekochan/lib/psql"
+	"nekochan/lib/psqlib"
 	"context"
 	"flag"
 	"fmt"

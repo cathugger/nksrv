@@ -1,9 +1,9 @@
 package main
 
 import (
-	di "../../lib/demoib"
-	ir "../../lib/ibrouter"
-	rs "../../lib/rendererstatic"
+	di "nekochan/lib/demoib"
+	ir "nekochan/lib/ibrouter"
+	rs "nekochan/lib/rendererstatic"
 	"context"
 	"fmt"
 	"net/http"
