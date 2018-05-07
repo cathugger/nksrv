@@ -3,11 +3,11 @@ package psqlib
 // psql imageboard module
 
 import (
+	"fmt"
 	"nekochan/lib/altthumber"
 	"nekochan/lib/fstore"
 	. "nekochan/lib/logx"
 	"nekochan/lib/psql"
-	"fmt"
 )
 
 type PSQLIB struct {

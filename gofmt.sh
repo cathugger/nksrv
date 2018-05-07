@@ -1,2 +1,4 @@
 #!/bin/sh
-exec find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'
+export GOPATH=`realpath .`
+find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'
+goimports -w .

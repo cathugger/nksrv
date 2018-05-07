@@ -3,9 +3,10 @@ package com0
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type jsonPair struct {

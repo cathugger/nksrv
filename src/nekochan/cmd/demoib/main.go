@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	di "nekochan/lib/demoib"
 	ir "nekochan/lib/ibrouter"
 	rs "nekochan/lib/rendererstatic"
-	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"

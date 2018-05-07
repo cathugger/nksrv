@@ -1,14 +1,15 @@
 package filelogger
 
 import (
-	"nekochan/lib/logx"
 	"bufio"
 	"fmt"
-	colorable "github.com/mattn/go-colorable"
-	isatty "github.com/mattn/go-isatty"
+	"nekochan/lib/logx"
 	"os"
 	"sync"
 	"time"
+
+	colorable "github.com/mattn/go-colorable"
+	isatty "github.com/mattn/go-isatty"
 )
 
 type useColor int

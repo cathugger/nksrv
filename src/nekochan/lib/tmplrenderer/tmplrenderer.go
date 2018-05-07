@@ -4,18 +4,19 @@ package tmplrenderer
 // renders into html
 
 import (
-	. "nekochan/lib/logx"
-	"nekochan/lib/renderer"
-	"nekochan/lib/webib0"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"io"
 	"io/ioutil"
 	"mime"
+	. "nekochan/lib/logx"
+	"nekochan/lib/renderer"
+	"nekochan/lib/webib0"
 	"net/http"
 	"path"
 	"strings"
 	"text/template"
+
+	"github.com/BurntSushi/toml"
 )
 
 var _ renderer.Renderer = (*TmplRenderer)(nil)

@@ -4,11 +4,12 @@ package psql
 // can be used by more concrete forum packages
 
 import (
-	. "nekochan/lib/logx"
 	"fmt"
+	. "nekochan/lib/logx"
+	"time"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"time"
 )
 
 type Config struct {

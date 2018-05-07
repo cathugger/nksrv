@@ -1,9 +1,9 @@
 package demoib
 
 import (
-	"nekochan/lib/webib0"
 	"errors"
 	"io/ioutil"
+	"nekochan/lib/webib0"
 )
 
 var _ webib0.PostProvider = (*IBProviderDemo)(nil)

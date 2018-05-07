@@ -1,9 +1,9 @@
 package psqlcom
 
 import (
+	"fmt"
 	. "nekochan/lib/logx"
 	"nekochan/lib/psql"
-	"fmt"
 )
 
 type PSQLCOM struct {

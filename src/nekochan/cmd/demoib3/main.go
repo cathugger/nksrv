@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
 	"nekochan/lib/fstore"
@@ -9,9 +12,6 @@ import (
 	"nekochan/lib/logx"
 	"nekochan/lib/psql"
 	"nekochan/lib/psqlib"
-	"context"
-	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"

@@ -1,8 +1,8 @@
 package tmplrenderer
 
 import (
-	"nekochan/lib/webib0"
 	"io"
+	"nekochan/lib/webib0"
 	"strings"
 	t "text/template"
 )
