@@ -1,7 +1,7 @@
 package demoib
 
 import (
-	"../webib0"
+	"nekochan/lib/webib0"
 	"errors"
 	"io/ioutil"
 )

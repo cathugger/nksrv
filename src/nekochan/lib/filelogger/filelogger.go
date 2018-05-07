@@ -1,7 +1,7 @@
 package filelogger
 
 import (
-	"../logx"
+	"nekochan/lib/logx"
 	"bufio"
 	"fmt"
 	colorable "github.com/mattn/go-colorable"

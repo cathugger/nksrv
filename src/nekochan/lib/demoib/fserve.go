@@ -1,9 +1,9 @@
 package demoib
 
 import (
-	fsd "../fservedir"
-	hfp "../httpibfileprovider"
-	sp "../staticprovider"
+	fsd "nekochan/lib/fservedir"
+	hfp "nekochan/lib/httpibfileprovider"
+	sp "nekochan/lib/staticprovider"
 	"net/http"
 )
 

@@ -3,10 +3,10 @@ package ibrouter
 // simple html and webapi server
 
 import (
-	"../handler"
-	fp "../httpibfileprovider"
-	"../renderer"
-	sp "../staticprovider"
+	"nekochan/lib/handler"
+	fp "nekochan/lib/httpibfileprovider"
+	"nekochan/lib/renderer"
+	sp "nekochan/lib/staticprovider"
 	"net/http"
 	"net/url"
 	"strconv"

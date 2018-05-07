@@ -1,7 +1,7 @@
 package psqlib
 
 import (
-	"../psql"
+	"nekochan/lib/psql"
 )
 
 func (s PSQLIB) sqlError(when string, err error) error {

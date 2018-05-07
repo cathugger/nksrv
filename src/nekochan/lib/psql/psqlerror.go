@@ -1,7 +1,7 @@
 package psql
 
 import (
-	. "../logx"
+	. "nekochan/lib/logx"
 	"errors"
 	"fmt"
 	"runtime/debug"

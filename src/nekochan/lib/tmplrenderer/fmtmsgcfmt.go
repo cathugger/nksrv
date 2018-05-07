@@ -2,7 +2,7 @@ package tmplrenderer
 
 /*
 import (
-	"../webib0"
+	"nekochan/lib/webib0"
 	"io"
 	"strings"
 	t "text/template"

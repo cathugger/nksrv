@@ -1,7 +1,7 @@
 package demoib
 
 import (
-	"../altthumber"
+	"nekochan/lib/altthumber"
 )
 
 type DemoAltThumber struct{}

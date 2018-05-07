@@ -4,7 +4,7 @@ package psql
 // can be used by more concrete forum packages
 
 import (
-	. "../logx"
+	. "nekochan/lib/logx"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"

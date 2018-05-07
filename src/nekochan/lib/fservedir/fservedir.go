@@ -1,8 +1,8 @@
 package fservedir
 
 import (
-	"../fserve"
-	mm "../mime"
+	"nekochan/lib/fserve"
+	mm "nekochan/lib/mime"
 	"net/http"
 	"os"
 	"strings"

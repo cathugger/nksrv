@@ -1,6 +1,6 @@
 package webib0
 
-import fp "../httpibfileprovider"
+import fp "nekochan/lib/httpibfileprovider"
 
 type WebIB0 interface {
 	IBProvider          // for web-ish formatting

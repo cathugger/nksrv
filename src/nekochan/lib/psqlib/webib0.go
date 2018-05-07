@@ -3,7 +3,7 @@ package psqlib
 // implements web imageboard interface v0
 
 import (
-	ib0 "../webib0"
+	ib0 "nekochan/lib/webib0"
 	"database/sql"
 	"errors"
 	xtypes "github.com/jmoiron/sqlx/types"

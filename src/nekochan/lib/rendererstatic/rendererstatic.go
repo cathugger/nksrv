@@ -3,7 +3,7 @@ package rendererstatic
 // not really renderer, just for html testing
 
 import (
-	"../renderer"
+	"nekochan/lib/renderer"
 	"net/http"
 	"os"
 	"strconv"

@@ -4,9 +4,9 @@ package tmplrenderer
 // renders into html
 
 import (
-	. "../logx"
-	"../renderer"
-	"../webib0"
+	. "nekochan/lib/logx"
+	"nekochan/lib/renderer"
+	"nekochan/lib/webib0"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"io"

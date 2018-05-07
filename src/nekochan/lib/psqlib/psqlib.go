@@ -3,10 +3,10 @@ package psqlib
 // psql imageboard module
 
 import (
-	"../altthumber"
-	"../fstore"
-	. "../logx"
-	"../psql"
+	"nekochan/lib/altthumber"
+	"nekochan/lib/fstore"
+	. "nekochan/lib/logx"
+	"nekochan/lib/psql"
 	"fmt"
 )
 

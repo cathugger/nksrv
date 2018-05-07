@@ -1,9 +1,9 @@
 package jsonrenderer
 
 import (
-	//. "../logx"
-	"../renderer"
-	ib0 "../webib0"
+	//. "nekochan/lib/logx"
+	"nekochan/lib/renderer"
+	ib0 "nekochan/lib/webib0"
 	"encoding/json"
 	"net/http"
 )
