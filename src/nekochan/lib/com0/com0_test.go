@@ -3,7 +3,7 @@ package com0
 import (
 	"bytes"
 	"encoding/json"
-	spew "github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"testing"
 )
