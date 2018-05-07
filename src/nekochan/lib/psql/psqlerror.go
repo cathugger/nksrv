@@ -3,8 +3,9 @@ package psql
 import (
 	"errors"
 	"fmt"
-	. "nekochan/lib/logx"
 	"runtime/debug"
+
+	. "nekochan/lib/logx"
 )
 
 func SQLError(l Logger, when string, err error) error {

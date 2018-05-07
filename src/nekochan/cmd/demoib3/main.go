@@ -4,6 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
 	"nekochan/lib/fstore"
@@ -12,11 +18,6 @@ import (
 	"nekochan/lib/logx"
 	"nekochan/lib/psql"
 	"nekochan/lib/psqlib"
-	"net/http"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
 )
 
 func main() {

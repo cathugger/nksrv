@@ -2,6 +2,7 @@ package psqlcom
 
 import (
 	"fmt"
+
 	. "nekochan/lib/logx"
 	"nekochan/lib/psql"
 )

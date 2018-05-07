@@ -2,9 +2,10 @@ package tmplrenderer
 
 import (
 	"io"
-	"nekochan/lib/webib0"
 	"strings"
 	t "text/template"
+
+	"nekochan/lib/webib0"
 )
 
 // HTML escapes

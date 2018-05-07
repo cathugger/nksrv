@@ -5,9 +5,10 @@ package psqlib
 import (
 	"database/sql"
 	"errors"
-	ib0 "nekochan/lib/webib0"
 	"net/http"
 	"time"
+
+	ib0 "nekochan/lib/webib0"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 )

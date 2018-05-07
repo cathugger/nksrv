@@ -3,13 +3,14 @@ package ibrouter
 // simple html and webapi server
 
 import (
+	"net/http"
+	"net/url"
+	"strconv"
+
 	"nekochan/lib/handler"
 	fp "nekochan/lib/httpibfileprovider"
 	"nekochan/lib/renderer"
 	sp "nekochan/lib/staticprovider"
-	"net/http"
-	"net/url"
-	"strconv"
 )
 
 type Cfg struct {

@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	di "nekochan/lib/demoib"
-	ir "nekochan/lib/ibrouter"
-	rs "nekochan/lib/rendererstatic"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	di "nekochan/lib/demoib"
+	ir "nekochan/lib/ibrouter"
+	rs "nekochan/lib/rendererstatic"
 )
 
 func main() {

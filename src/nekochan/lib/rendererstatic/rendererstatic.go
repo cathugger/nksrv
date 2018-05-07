@@ -3,11 +3,12 @@ package rendererstatic
 // not really renderer, just for html testing
 
 import (
-	"nekochan/lib/renderer"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"nekochan/lib/renderer"
 )
 
 var _ renderer.Renderer = RendererStatic{}

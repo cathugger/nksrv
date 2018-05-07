@@ -1,12 +1,13 @@
 package fservedir
 
 import (
-	"nekochan/lib/fserve"
-	mm "nekochan/lib/mime"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"nekochan/lib/fserve"
+	mm "nekochan/lib/mime"
 )
 
 var _ fserve.FServe = FServeDir{}

@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
 	ir "nekochan/lib/ibrouter"
 	"nekochan/lib/logx"
 	rt "nekochan/lib/tmplrenderer"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {

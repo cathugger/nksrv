@@ -4,6 +4,7 @@ package psqlib
 
 import (
 	"fmt"
+
 	"nekochan/lib/altthumber"
 	"nekochan/lib/fstore"
 	. "nekochan/lib/logx"

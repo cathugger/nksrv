@@ -5,8 +5,9 @@ package psql
 
 import (
 	"fmt"
-	. "nekochan/lib/logx"
 	"time"
+
+	. "nekochan/lib/logx"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"

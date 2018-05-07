@@ -1,4 +1,3 @@
 #!/bin/sh
-export GOPATH=`realpath .`
-find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'
-goimports -w .
+#exec find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'
+GOPATH=`realpath .` exec goimports -local 'nekochan/' -w .

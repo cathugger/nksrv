@@ -2,8 +2,9 @@ package demoib
 
 import (
 	"errors"
-	"nekochan/lib/webib0"
 	"net/http"
+
+	"nekochan/lib/webib0"
 )
 
 var bible1 = []byte(`In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.

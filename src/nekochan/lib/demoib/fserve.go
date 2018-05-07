@@ -1,10 +1,11 @@
 package demoib
 
 import (
+	"net/http"
+
 	fsd "nekochan/lib/fservedir"
 	hfp "nekochan/lib/httpibfileprovider"
 	sp "nekochan/lib/staticprovider"
-	"net/http"
 )
 
 var _ hfp.HTTPFileProvider = (*IBProviderDemo)(nil)

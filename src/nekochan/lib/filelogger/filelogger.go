@@ -3,10 +3,11 @@ package filelogger
 import (
 	"bufio"
 	"fmt"
-	"nekochan/lib/logx"
 	"os"
 	"sync"
 	"time"
+
+	"nekochan/lib/logx"
 
 	colorable "github.com/mattn/go-colorable"
 	isatty "github.com/mattn/go-isatty"
