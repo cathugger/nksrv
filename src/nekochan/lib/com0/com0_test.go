@@ -48,6 +48,23 @@ var jsonCases = []jsonPair{
 		},
 		[]byte(`{"head":{},"body":[{"body":"xdd"}]}`),
 	},
+	{
+		MsgRoot{
+			Head: make(map[string]ArrayOfStringByteBuf),
+			Body: BodyValue{&MultipartBody{
+				{
+					Head: []PartHeader{
+						PartHeader{
+							Key: "testkey1",
+							Val: []byte("testval1"),
+						},
+					},
+					Body: BodyValue{&PlainBody{InnerPlainBody{Type: StringBody, Value: []byte("xdd")}}},
+				},
+			}},
+		},
+		[]byte(`{"head":{},"body":[{"head":[["testkey1","testval1"]],"body":"xdd"}]}`),
+	},
 }
 
 func TestJSONMarshal(t *testing.T) {
