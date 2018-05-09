@@ -65,6 +65,50 @@ var jsonCases = []jsonPair{
 		},
 		[]byte(`{"head":{},"body":[{"head":[["testkey1","testval1"]],"body":"xdd"}]}`),
 	},
+	{
+		MsgRoot{
+			Head: map[string]ArrayOfStringByteBuf{
+				"a": ArrayOfStringByteBuf{[]byte("aval")},
+			},
+			Body: BodyValue{&MultipartBody{
+				{
+					Head: []PartHeader{
+						PartHeader{
+							Key: "testkey1",
+							Val: []byte("testval1"),
+						},
+						PartHeader{
+							Key: "testkey1",
+							Val: []byte("testval2"),
+						},
+						PartHeader{
+							Key: "testkey2",
+							Val: []byte("testval3"),
+						},
+					},
+					Body: BodyValue{&PlainBody{InnerPlainBody{Type: StringBody, Value: []byte("xdd")}}},
+				},
+			}},
+		},
+		[]byte(`{"head":{"a":"aval"},"body":[{"head":[["testkey1","testval1"],["testkey1","testval2"],["testkey2","testval3"]],"body":"xdd"}]}`),
+	},
+	{
+		MsgRoot{
+			Head: map[string]ArrayOfStringByteBuf{
+				"a": ArrayOfStringByteBuf{[]byte("aval")},
+				"b": ArrayOfStringByteBuf{[]byte("bval1"),[]byte("bval2"),[]byte("bval3")},
+				"c": ArrayOfStringByteBuf{[]byte("cval")},
+				"d": ArrayOfStringByteBuf{[]byte("dval")},
+			},
+			Body: BodyValue{&MultipartBody{
+				{
+					Head: nil,
+					Body: BodyValue{&PlainBody{InnerPlainBody{Type: StringBody, Value: []byte("xdd")}}},
+				},
+			}},
+		},
+		[]byte(`{"head":{"a":"aval","b":["bval1","bval2","bval3"],"c":"cval","d":"dval"},"body":[{"body":"xdd"}]}`),
+	},
 }
 
 func TestJSONMarshal(t *testing.T) {
