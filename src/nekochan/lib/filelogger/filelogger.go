@@ -16,9 +16,9 @@ import (
 type useColor int
 
 const (
-	ColorAuto useColor = iota
-	ColorOn
-	ColorOff
+	ColorAuto useColor = 0
+	ColorOn   useColor = 1
+	ColorOff  useColor = 2
 )
 
 type logLevels [logx.LevelCount][]byte

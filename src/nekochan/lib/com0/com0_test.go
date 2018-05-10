@@ -96,7 +96,7 @@ var jsonCases = []jsonPair{
 		MsgRoot{
 			Head: map[string]ArrayOfStringByteBuf{
 				"a": ArrayOfStringByteBuf{[]byte("aval")},
-				"b": ArrayOfStringByteBuf{[]byte("bval1"),[]byte("bval2"),[]byte("bval3")},
+				"b": ArrayOfStringByteBuf{[]byte("bval1"), []byte("bval2"), []byte("bval3")},
 				"c": ArrayOfStringByteBuf{[]byte("cval")},
 				"d": ArrayOfStringByteBuf{[]byte("dval")},
 			},
