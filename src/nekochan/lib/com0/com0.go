@@ -2,7 +2,6 @@ package com0
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -33,9 +32,11 @@ func (m *StringByteBuf) UnmarshalJSON(b []byte) error {
 type ArrayOfStringByteBuf []StringByteBuf
 
 func (m ArrayOfStringByteBuf) MarshalJSON() ([]byte, error) {
+	/* unnecesary
 	if m == nil || len(m) == 0 {
 		return nil, errors.New("must have atleast one value")
 	}
+	*/
 	if len(m) == 1 {
 		return json.Marshal(m[0])
 	} else {
@@ -178,7 +179,7 @@ type MultipartBody []Part
 // part used in multipart body
 
 /*
- * XXX: should I do [["key", "value"],["key", "value"]] or ["key", "value", "key", "value"]?
+ * XXX: should I do [["key","value"],["key","value"]] or ["key","value","key","value"]?
  * I'll pick first one for now as it's kinda cleaner to implement
  */
 
