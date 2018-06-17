@@ -12,6 +12,11 @@ import (
 	. "nekochan/lib/logx"
 )
 
+// sugar because im lazy
+type Responder struct {
+	*tp.Writer
+}
+
 type ConnState struct {
 	srv  *NNTPServer
 	conn ConnCW

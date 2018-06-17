@@ -119,6 +119,12 @@ func init() {
 			maxargs: 4, // <distributions> {RFC 977}
 			help:    "[YY]YYMMDD hhmmss [GMT] - list newsgroups created since specified date.",
 		},
+		"NEWNEWS": &command{
+			cmdfunc: cmdNewNews,
+			minargs: 3,
+			maxargs: 5, // <distributions> {RFC 977}
+			help:    "wildmat [YY]YYMMDD hhmmss [GMT] - list newsgroups created since specified date.",
+		},
 	}
 
 	listCommandMap = map[string]*command{
@@ -198,7 +204,9 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 	fmt.Fprintf(dw, "VERSION 2\n")
 	fmt.Fprintf(dw, "READER\n")
 	fmt.Fprintf(dw, "IHAVE\n")
-	//fmt.Fprintf(dw, "NEWNEWS\n")
+	if c.prov.SupportsNewNews() {
+		fmt.Fprintf(dw, "NEWNEWS\n")
+	}
 	fmt.Fprintf(dw, "OVER\n")
 	// TODO
 	dw.Close()
@@ -478,6 +486,77 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 	c.w.PrintfLine("231 list of new groups follows")
 	dw := c.w.DotWriter()
 	c.prov.ListNewGroups(dw, qt)
+	dw.Close()
+
+	return true
+}
+
+func validWildmat(x []byte) bool {
+	/*
+	 * {RFC 3977}
+	 * wildmat = wildmat-pattern *("," ["!"] wildmat-pattern)
+	 * wildmat-pattern = 1*wildmat-item
+	 * wildmat-item = wildmat-exact / wildmat-wild
+	 * wildmat-exact = %x22-29 / %x2B / %x2D-3E / %x40-5A / %x5E-7E /
+	 *   UTF8-non-ascii ; exclude ! * , ? [ \ ]
+	 * wildmat-wild = "*" / "?"
+	 */
+	const (
+		sStartPattern = iota
+		sInsidePattern
+	)
+	s := sStartPattern
+	for _, c := range x {
+		if (c >= 0x22 && c <= 0x29) || c == 0x2B ||
+			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
+			(c >= 0x5E && c <= 0x7E) || c >= 0x80 /* wildmat-exact */ ||
+			c == '*' || c == '?' /* wildmat-wild */ ||
+			(c == '!' && s == sStartPattern) /* "!" only allowed in front of pattern */ {
+			s = sInsidePattern
+			continue
+		}
+		if c == ',' && s == sInsidePattern {
+			s = sStartPattern // next char must be start of new pattern or '!'
+			continue
+		}
+		return false
+	}
+	return s == sInsidePattern // cannot end with comma
+}
+
+func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
+	if !c.prov.SupportsNewNews() {
+		c.w.PrintfLine("503 unimplemented")
+		return true
+	}
+
+	wildmat := args[0]
+	if !validWildmat(wildmat) {
+		c.w.PrintfLine("501 invalid wildmat")
+		return true
+	}
+
+	// we use GMT either way so dont even check for that
+	// <distributions> is not specified in newest RFC so dont care about that either
+	// NEWNEWS wildmat [YY]YYMMDD hhmmss
+	var Y, M, D, h, m, s int
+	var valid bool
+
+	if Y, M, D, valid = parseDateSlice(args[1]); !valid {
+		c.w.PrintfLine("501 invalid date")
+		return true
+	}
+
+	if h, m, s, valid = parseTimeSlice(args[2]); !valid {
+		c.w.PrintfLine("501 invalid time")
+		return true
+	}
+
+	qt := time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
+
+	c.w.PrintfLine("230 list of new articles follows")
+	dw := c.w.DotWriter()
+	c.prov.ListNewNews(dw, wildmat, qt)
 	dw.Close()
 
 	return true

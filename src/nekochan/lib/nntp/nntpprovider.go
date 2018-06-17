@@ -2,16 +2,12 @@ package nntp
 
 import (
 	"io"
-	tp "net/textproto"
 	"time"
 )
 
-// sugar because im lazy
-type Responder struct {
-	*tp.Writer
-}
-
 type NNTPProvider interface {
+	SupportsNewNews() bool
+
 	// ARTICLE, HEAD, BODY, STAT x 3 forms for each
 	// ok: ARTICLE - 220, HEAD - 221, BODY - 222, STAT - 223
 	// fail:
@@ -37,4 +33,5 @@ type NNTPProvider interface {
 	SelectPrevArticle(w Responder, cs *ConnState)
 
 	ListNewGroups(w io.Writer, qt time.Time)
+	ListNewNews(w io.Writer, wildmat []byte, qt time.Time)
 }
