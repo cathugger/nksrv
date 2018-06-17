@@ -46,7 +46,7 @@ func (r *BufReader) Read(p []byte) (n int, err error) {
 		}
 		n, r.err = r.u.Read(r.b)
 		if n <= 0 {
-			return n, r.readErr()
+			return 0, r.readErr()
 		}
 		r.r = 0
 		r.w = n
@@ -54,6 +54,24 @@ func (r *BufReader) Read(p []byte) (n int, err error) {
 	n = copy(p, r.b[r.r:r.w])
 	r.r += n
 	return
+}
+
+func (r *BufReader) ReadByte() (byte, error) {
+	if r.r == r.w {
+		if r.err != nil {
+			return 0, r.readErr()
+		}
+		var n int
+		n, r.err = r.u.Read(r.b)
+		if n <= 0 {
+			return 0, r.readErr()
+		}
+		r.r = 0
+		r.w = n
+	}
+	c := r.b[r.r]
+	r.r++
+	return c, nil
 }
 
 // reads into buffer supplied in p parameter until byte supplied in q parameter is found.

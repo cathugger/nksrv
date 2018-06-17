@@ -671,7 +671,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
-var ovewviewFmt = []byte(
+var overviewFmt = []byte(
 	`Subject:
 From:
 Date:
@@ -683,7 +683,7 @@ References:
 
 func listCmdOverviewFmt(c *ConnState, args [][]byte, rest []byte) bool {
 	dw := c.w.DotWriter()
-	dw.Write(ovewviewFmt)
+	dw.Write(overviewFmt)
 	dw.Close()
 	return true
 }
