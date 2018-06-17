@@ -212,32 +212,59 @@ const (
 )
 
 var setA = [articleAmmount]struct {
-	byMsgID func(c *ConnState, msgid []byte)
-	byNum   func(c *ConnState, num uint64)
-	byCurr  func(c *ConnState)
+	byMsgID func(c *ConnState, msgid []byte) bool
+	byNum   func(c *ConnState, num uint64) bool
+	byCurr  func(c *ConnState) bool
 }{
 	{
-		func(c *ConnState, msgid []byte) { c.prov.GetArticleFullByMsgID(c.w, msgid) },
-		func(c *ConnState, num uint64) { c.prov.GetArticleFullByNum(c.w, c, num) },
-		func(c *ConnState) { c.prov.GetArticleFullByCurr(c.w, c) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleFullByMsgID(c.w, msgid) },
+		func(c *ConnState, num uint64) bool { return c.prov.GetArticleFullByNum(c.w, c, num) },
+		func(c *ConnState) bool { return c.prov.GetArticleFullByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) { c.prov.GetArticleHeadByMsgID(c.w, msgid) },
-		func(c *ConnState, num uint64) { c.prov.GetArticleHeadByNum(c.w, c, num) },
-		func(c *ConnState) { c.prov.GetArticleHeadByCurr(c.w, c) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleHeadByMsgID(c.w, msgid) },
+		func(c *ConnState, num uint64) bool { return c.prov.GetArticleHeadByNum(c.w, c, num) },
+		func(c *ConnState) bool { return c.prov.GetArticleHeadByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) { c.prov.GetArticleBodyByMsgID(c.w, msgid) },
-		func(c *ConnState, num uint64) { c.prov.GetArticleBodyByNum(c.w, c, num) },
-		func(c *ConnState) { c.prov.GetArticleBodyByCurr(c.w, c) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleBodyByMsgID(c.w, msgid) },
+		func(c *ConnState, num uint64) bool { return c.prov.GetArticleBodyByNum(c.w, c, num) },
+		func(c *ConnState) bool { return c.prov.GetArticleBodyByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) { c.prov.GetArticleStatByMsgID(c.w, msgid) },
-		func(c *ConnState, num uint64) { c.prov.GetArticleStatByNum(c.w, c, num) },
-		func(c *ConnState) { c.prov.GetArticleStatByCurr(c.w, c) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleStatByMsgID(c.w, msgid) },
+		func(c *ConnState, num uint64) bool { return c.prov.GetArticleStatByNum(c.w, c, num) },
+		func(c *ConnState) bool { return c.prov.GetArticleStatByCurr(c.w, c) },
 	},
+}
+
+func isPrintableASCIISlice(s []byte, e byte) bool {
+	for _, c := range s {
+		if c < 32 || c >= 127 || c == e {
+			return false
+		}
+	}
+	return true
+}
+
+func validMessageID(id []byte) bool {
+	return len(id) >= 3 && len(id) <= 250 &&
+		id[0] == '<' && id[len(id)-1] == '>' &&
+		isPrintableASCIISlice(id[1:len(id)-1], '>')
+}
+
+func validGroupSlice(s []byte) bool {
+	for _, c := range s {
+		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
+			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
+			(c >= 0x5E && c <= 0x7E) || c >= 0x80) {
+			return false
+		}
+	}
+	return len(s) != 0
 }
 
 func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 	if len(args) > 0 {
-		sid := unsafeBytesToStr(args[0])
+		id := args[0]
+		sid := unsafeBytesToStr(id)
 		num, e := strconv.ParseUint(sid, 10, 64)
 		if e != nil {
 			if ne, ok := e.(*strconv.NumError); ok && ne != nil {
@@ -248,12 +275,15 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 				}
 			}
 			// non-empty, non-number, prolly Message-ID
-			// XXX rejection here would probably be better
-			if len(sid) >= 2 && sid[0] == '<' && sid[len(sid)-1] == '>' {
-				sid = sid[1 : len(sid)-1]
+			// check validity
+			if !validMessageID(id) {
+				c.w.PrintfLine("501 unrecognised message identifier")
+				return
 			}
 
-			setA[kind].byMsgID(c, args[0])
+			if !setA[kind].byMsgID(c, id[1:len(id)-1]) {
+				c.w.ResNoArticleWithThatMsgID()
+			}
 			return
 		}
 
@@ -262,29 +292,47 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 			return
 		}
 
-		setA[kind].byNum(c, num)
+		if !setA[kind].byNum(c, num) {
+			c.w.ResNoArticleWithThatNum()
+		}
 	} else {
 		if c.CurrentGroup == nil {
 			c.w.ResNoNewsgroupSelected()
 			return
 		}
 
-		setA[kind].byCurr(c)
+		if !setA[kind].byCurr(c) {
+			c.w.ResCurrentArticleNumberIsInvalid()
+		}
 	}
 }
 
 func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
-	c.prov.SetGroup(args[0])
+	if !validGroupSlice(args[0]) {
+		c.w.PrintfLine("501 invalid group name")
+		return true
+	}
+	if !c.prov.SetGroup(c.w, c, args[0]) {
+		c.w.ResNoSuchNewsgroup()
+	}
 	return true
 }
 
 func cmdNext(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	if c.CurrentGroup == nil {
+		c.w.ResNoNewsgroupSelected()
+		return true
+	}
+	c.prov.SelectNext(c.w, c)
 	return true
 }
 
 func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	if c.CurrentGroup == nil {
+		c.w.ResNoNewsgroupSelected()
+		return true
+	}
+	c.prov.SelectPrev(c.w, c)
 	return true
 }
 
