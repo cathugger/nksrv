@@ -531,16 +531,20 @@ func validWildmat(x []byte) bool {
 	const (
 		sStartPattern = iota
 		sInsidePattern
+		sNegate
 	)
 	s := sStartPattern
 	for _, c := range x {
 		if (c >= 0x22 && c <= 0x29) || c == 0x2B ||
 			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
 			(c >= 0x5E && c <= 0x7E) || c >= 0x80 /* wildmat-exact */ ||
-			c == '*' || c == '?' /* wildmat-wild */ ||
-			(c == '!' && s == sStartPattern) /* "!" only allowed in front of pattern */ {
+			c == '*' || c == '?' /* wildmat-wild */ {
 			s = sInsidePattern
 			continue
+		}
+		// "!" only allowed in front of pattern
+		if c == '!' && s == sStartPattern {
+			s = sNegate
 		}
 		if c == ',' && s == sInsidePattern {
 			s = sStartPattern // next char must be start of new pattern or '!'
