@@ -1,7 +1,9 @@
 package nntp
 
 import (
+	"io"
 	tp "net/textproto"
+	"time"
 )
 
 // sugar because im lazy
@@ -33,4 +35,6 @@ type NNTPProvider interface {
 	SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool
 	SelectNextArticle(w Responder, cs *ConnState)
 	SelectPrevArticle(w Responder, cs *ConnState)
+
+	ListNewGroups(w io.Writer, qt time.Time)
 }

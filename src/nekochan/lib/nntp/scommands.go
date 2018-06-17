@@ -401,8 +401,85 @@ func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+func isNumberSlice(x []byte) bool {
+	for _, c := range x {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func stoi(x []byte) (n int) {
+	for _, c := range x {
+		n = n*10 + int(c)
+	}
+	return
+}
+
+func parseDateSlice(date []byte) (Y, M, D int, valid bool) {
+	if len(date) < 5 || len(date) > 12 || !isNumberSlice(date) {
+		return Y, M, D, false
+	}
+
+	D = int(date[len(date)-2])*10 + int(date[len(date)-1])
+	M = int(date[len(date)-4])*10 + int(date[len(date)-3])
+	if len(date) != 6 {
+		Y = stoi(date[:len(date)-4])
+	} else {
+		Y = int(date[0])*10 + int(date[1])
+		/*
+		 * {RFC 3977}
+		 * If the first two digits of the year are not specified
+		 * (this is supported only for backward compatibility), the year is to
+		 * be taken from the current century if yy is smaller than or equal to
+		 * the current year, and the previous century otherwise.
+		 */
+		CY := time.Now().UTC().Year()
+		CYa, CYb := CY/100, CY%100
+		if Y <= CYb {
+			Y += CYa * 100
+		} else {
+			Y += (CYa - 1) * 100
+		}
+	}
+	return Y, M, D, M >= 1 && M <= 12
+}
+
+func parseTimeSlice(t []byte) (h, m, s int, valid bool) {
+	if len(t) != 4 || !isNumberSlice(t) {
+		return h, m, s, false
+	}
+	h = int(t[0])*10 + int(t[1])
+	m = int(t[2])*10 + int(t[3])
+	s = int(t[4])*10 + int(t[5])
+	return h, m, s, h <= 24
+}
+
 func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	// we use GMT either way so dont even check for that
+	// <distributions> is not specified in newest RFC so dont care about that either
+	// NEWGROUPS [YY]YYMMDD hhmmss
+	var Y, M, D, h, m, s int
+	var valid bool
+
+	if Y, M, D, valid = parseDateSlice(args[0]); !valid {
+		c.w.PrintfLine("501 invalid date")
+		return true
+	}
+
+	if h, m, s, valid = parseTimeSlice(args[1]); !valid {
+		c.w.PrintfLine("501 invalid time")
+		return true
+	}
+
+	qt := time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
+
+	c.w.PrintfLine("231 list of new groups follows")
+	dw := c.w.DotWriter()
+	c.prov.ListNewGroups(dw, qt)
+	dw.Close()
+
 	return true
 }
 
