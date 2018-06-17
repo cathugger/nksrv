@@ -7,6 +7,9 @@ import (
 
 type NNTPProvider interface {
 	SupportsNewNews() bool
+	SupportsIHave() bool
+	SupportsPost() bool
+	SupportsOverByMsgID() bool
 
 	// ARTICLE, HEAD, BODY, STAT x 3 forms for each
 	// ok: ARTICLE - 220, HEAD - 221, BODY - 222, STAT - 223
@@ -34,4 +37,10 @@ type NNTPProvider interface {
 
 	ListNewGroups(w io.Writer, qt time.Time)
 	ListNewNews(w io.Writer, wildmat []byte, qt time.Time)
+	ListActiveGroups(w io.Writer, wildmat []byte)
+	ListNewsgroups(w io.Writer, wildmat []byte)
+
+	GetOverByMsgID(w Responder, msgid []byte) bool
+	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
+	GetOverByCurr(w Responder, cs *ConnState) bool
 }

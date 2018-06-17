@@ -78,6 +78,10 @@ func (r Responder) ResNoArticleWithThatNum() {
 	r.PrintfLine("423 no article with that number")
 }
 
+func (r Responder) ResNoArticlesInThatRange() {
+	r.PrintfLine("423 no articles in that range")
+}
+
 func (r Responder) ResNoArticleWithThatMsgID() {
 	r.PrintfLine("430 no article with that Message-ID")
 }

@@ -125,6 +125,17 @@ func init() {
 			maxargs: 5, // <distributions> {RFC 977}
 			help:    "wildmat [YY]YYMMDD hhmmss [GMT] - list newsgroups created since specified date.",
 		},
+
+		"OVER": &command{
+			cmdfunc: cmdOver,
+			maxargs: 1,
+			help:    "[range|<message-id>]",
+		},
+		"XOVER": &command{
+			cmdfunc: cmdOver,
+			maxargs: 1,
+			help:    "- same as OVER",
+		},
 	}
 
 	listCommandMap = map[string]*command{
@@ -203,12 +214,21 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 	dw := c.w.DotWriter()
 	fmt.Fprintf(dw, "VERSION 2\n")
 	fmt.Fprintf(dw, "READER\n")
-	fmt.Fprintf(dw, "IHAVE\n")
+	if c.prov.SupportsIHave() {
+		fmt.Fprintf(dw, "IHAVE\n")
+	}
+	if c.prov.SupportsPost() {
+		fmt.Fprintf(dw, "POST\n")
+	}
 	if c.prov.SupportsNewNews() {
 		fmt.Fprintf(dw, "NEWNEWS\n")
 	}
-	fmt.Fprintf(dw, "OVER\n")
-	// TODO
+	if !c.prov.SupportsOverByMsgID() {
+		fmt.Fprintf(dw, "OVER\n")
+	} else {
+		fmt.Fprintf(dw, "OVER MSGID\n")
+	}
+	fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	dw.Close()
 	return true
 }
@@ -333,6 +353,40 @@ func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+func parseRange(srange string) (rmin, rmax int64, valid bool) {
+	rmin = 1
+	rmax = -1
+	// [num[-[num]]]
+	if i := strings.IndexByte(srange, '-'); i >= 0 {
+		if i != 0 {
+			n, e := strconv.ParseUint(srange[:i], 10, 64)
+			if e != nil {
+				return rmin, rmax, false
+			}
+			if int64(n) >= 0 {
+				rmin = int64(n)
+			}
+		}
+		if i+1 != len(srange) {
+			n, e := strconv.ParseUint(srange[i+1:], 10, 64)
+			if e != nil {
+				return rmin, rmax, false
+			}
+			if int64(n) >= 0 {
+				rmax = int64(n)
+			}
+		}
+	} else {
+		n, e := strconv.ParseUint(srange, 10, 64)
+		if e != nil {
+			return rmin, rmax, false
+		}
+		rmin = int64(n)
+		rmax = rmin
+	}
+	return rmin, rmax, true
+}
+
 func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	var group []byte
 	if len(args) > 0 {
@@ -351,37 +405,10 @@ func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	rmin := int64(1)
 	rmax := int64(-1)
 	if len(args) > 1 {
-		srange := unsafeBytesToStr(args[1])
-		// [num[-[num]]]
-		if i := strings.IndexByte(srange, '-'); i >= 0 {
-			if i != 0 {
-				n, e := strconv.ParseUint(srange[:i], 10, 64)
-				if e != nil {
-					c.w.PrintfLine("501 invalid range")
-					return true
-				}
-				if int64(n) >= 0 {
-					rmin = int64(n)
-				}
-			}
-			if i+1 != len(srange) {
-				n, e := strconv.ParseUint(srange[i+1:], 10, 64)
-				if e != nil {
-					c.w.PrintfLine("501 invalid range")
-					return true
-				}
-				if int64(n) >= 0 {
-					rmax = int64(n)
-				}
-			}
-		} else {
-			n, e := strconv.ParseUint(srange, 10, 64)
-			if e != nil {
-				c.w.PrintfLine("501 invalid range")
-				return true
-			}
-			rmin = int64(n)
-			rmax = rmin
+		var valid bool
+		if rmin, rmax, valid = parseRange(unsafeBytesToStr(args[1])); !valid {
+			c.w.PrintfLine("501 invalid range")
+			return true
 		}
 	}
 
@@ -562,17 +589,96 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
+	if len(args) > 0 {
+		id := args[0]
+		sid := unsafeBytesToStr(id)
+
+		if validMessageID(id) {
+			if !c.prov.SupportsOverByMsgID() {
+				c.w.PrintfLine("503 OVER MSGID unimplemented")
+				return true
+			}
+			if reservedMessageID(sid) || !c.prov.GetOverByMsgID(c.w, id[1:len(id)-1]) {
+				c.w.ResNoArticleWithThatMsgID()
+			}
+		} else {
+			if c.CurrentGroup == nil {
+				c.w.ResNoNewsgroupSelected()
+				return true
+			}
+
+			var rmin, rmax int64
+			var valid bool
+			if rmin, rmax, valid = parseRange(sid); !valid {
+				c.w.PrintfLine("501 invalid range")
+				return true
+			}
+
+			if (rmax >= 0 && rmax < rmin) || !c.prov.GetOverByRange(c.w, c, rmin, rmax) {
+				c.w.ResNoArticlesInThatRange()
+			}
+		}
+	} else {
+		if c.CurrentGroup == nil {
+			c.w.ResNoNewsgroupSelected()
+			return true
+		}
+
+		if !c.prov.GetOverByCurr(c.w, c) {
+			c.w.ResCurrentArticleNumberIsInvalid()
+		}
+	}
+	return true
+}
+
 func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	var wildmat []byte
+	if len(args) > 0 {
+		wildmat = args[0]
+		if !validWildmat(wildmat) {
+			c.w.PrintfLine("501 invalid wildmat")
+			return true
+		}
+	}
+
+	dw := c.w.DotWriter()
+	c.prov.ListActiveGroups(dw, wildmat)
+	dw.Close()
+
 	return true
 }
 
 func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	var wildmat []byte
+	if len(args) > 0 {
+		wildmat = args[0]
+		if !validWildmat(wildmat) {
+			c.w.PrintfLine("501 invalid wildmat")
+			return true
+		}
+	}
+
+	dw := c.w.DotWriter()
+	c.prov.ListNewsgroups(dw, wildmat)
+	dw.Close()
+
 	return true
 }
 
+var ovewviewFmt = []byte(
+	`Subject:
+From:
+Date:
+Message-ID:
+References:
+:bytes
+:lines
+`)
+
 func listCmdOverviewFmt(c *ConnState, args [][]byte, rest []byte) bool {
-	// TODO
+	dw := c.w.DotWriter()
+	dw.Write(ovewviewFmt)
+	dw.Close()
 	return true
 }
