@@ -29,7 +29,8 @@ type NNTPProvider interface {
 	GetArticleBodyByCurr(w Responder, cs *ConnState) bool
 	GetArticleStatByCurr(w Responder, cs *ConnState) bool
 
-	SetGroup(w Responder, cs *ConnState, group []byte) bool
-	SelectNext(w Responder, cs *ConnState)
-	SelectPrev(w Responder, cs *ConnState)
+	SelectGroup(w Responder, cs *ConnState, group []byte) bool
+	SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool
+	SelectNextArticle(w Responder, cs *ConnState)
+	SelectPrevArticle(w Responder, cs *ConnState)
 }

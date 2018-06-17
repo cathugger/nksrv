@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -58,11 +59,17 @@ func init() {
 			cmdfunc: cmdDate,
 			help:    "- get server's current Coordinated Universal Time.",
 		},
+
 		"GROUP": &command{
 			cmdfunc: cmdGroup,
 			minargs: 1,
 			maxargs: 1,
-			help:    "- select current group and set current article number to first article in the group.",
+			help:    "group - select current group and set current article number to first article in the group.",
+		},
+		"LISTGROUP": &command{
+			cmdfunc: cmdListGroup,
+			maxargs: 2,
+			help:    "[group [range]] - select current group (if specified) and set current article number to first article in the group (even if group is not specified). list articles present in the group, optionally limited by range argument.",
 		},
 		"NEXT": &command{
 			cmdfunc: cmdNext,
@@ -191,7 +198,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 	fmt.Fprintf(dw, "VERSION 2\n")
 	fmt.Fprintf(dw, "READER\n")
 	fmt.Fprintf(dw, "IHAVE\n")
-	fmt.Fprintf(dw, "NEWNEWS\n")
+	//fmt.Fprintf(dw, "NEWNEWS\n")
 	fmt.Fprintf(dw, "OVER\n")
 	// TODO
 	dw.Close()
@@ -245,9 +252,17 @@ func isPrintableASCIISlice(s []byte, e byte) bool {
 }
 
 func validMessageID(id []byte) bool {
-	return len(id) >= 3 && len(id) <= 250 &&
-		id[0] == '<' && id[len(id)-1] == '>' &&
-		isPrintableASCIISlice(id[1:len(id)-1], '>')
+	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
+		len(id) <= 250 && isPrintableASCIISlice(id[1:len(id)-1], '>')
+}
+
+func reservedMessageID(id string) bool {
+	return id == "<0>" /* {RFC 977} */ ||
+		id == "<keepalive@dummy.tld>" /* srndv2 */
+}
+
+func validMessageNum(n uint64) bool {
+	return int64(n) > 0
 }
 
 func validGroupSlice(s []byte) bool {
@@ -267,21 +282,16 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 		sid := unsafeBytesToStr(id)
 		num, e := strconv.ParseUint(sid, 10, 64)
 		if e != nil {
-			if ne, ok := e.(*strconv.NumError); ok && ne != nil {
-				if ne.Err == strconv.ErrRange {
-					// oops thats actually not syntax error but too big number for us to handle
-					c.w.ResNoArticleWithThatNum()
-					return
-				}
-			}
-			// non-empty, non-number, prolly Message-ID
-			// check validity
+			// either non-number or too huge number.
+			// ParseUint does not verify rest of string if it's too huge, so treat as invalid.
+
+			// check if Message-ID
 			if !validMessageID(id) {
 				c.w.PrintfLine("501 unrecognised message identifier")
 				return
 			}
 
-			if !setA[kind].byMsgID(c, id[1:len(id)-1]) {
+			if reservedMessageID(sid) || !setA[kind].byMsgID(c, id[1:len(id)-1]) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 			return
@@ -292,7 +302,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 			return
 		}
 
-		if !setA[kind].byNum(c, num) {
+		if validMessageNum(num) || !setA[kind].byNum(c, num) {
 			c.w.ResNoArticleWithThatNum()
 		}
 	} else {
@@ -312,7 +322,65 @@ func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.PrintfLine("501 invalid group name")
 		return true
 	}
-	if !c.prov.SetGroup(c.w, c, args[0]) {
+	if !c.prov.SelectGroup(c.w, c, args[0]) {
+		c.w.ResNoSuchNewsgroup()
+	}
+	return true
+}
+
+func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
+	var group []byte
+	if len(args) > 0 {
+		if !validGroupSlice(args[0]) {
+			c.w.PrintfLine("501 invalid group name")
+			return true
+		}
+		group = args[0]
+	} else {
+		if c.CurrentGroup == nil {
+			c.w.ResNoNewsgroupSelected()
+			return true
+		}
+	}
+
+	rmin := int64(1)
+	rmax := int64(-1)
+	if len(args) > 1 {
+		srange := unsafeBytesToStr(args[1])
+		// [num[-[num]]]
+		if i := strings.IndexByte(srange, '-'); i >= 0 {
+			if i != 0 {
+				n, e := strconv.ParseUint(srange[:i], 10, 64)
+				if e != nil {
+					c.w.PrintfLine("501 invalid range")
+					return true
+				}
+				if int64(n) >= 0 {
+					rmin = int64(n)
+				}
+			}
+			if i+1 != len(srange) {
+				n, e := strconv.ParseUint(srange[i+1:], 10, 64)
+				if e != nil {
+					c.w.PrintfLine("501 invalid range")
+					return true
+				}
+				if int64(n) >= 0 {
+					rmax = int64(n)
+				}
+			}
+		} else {
+			n, e := strconv.ParseUint(srange, 10, 64)
+			if e != nil {
+				c.w.PrintfLine("501 invalid range")
+				return true
+			}
+			rmin = int64(n)
+			rmax = rmin
+		}
+	}
+
+	if !c.prov.SelectAndListGroup(c.w, c, group, rmin, rmax) {
 		c.w.ResNoSuchNewsgroup()
 	}
 	return true
@@ -323,7 +391,7 @@ func cmdNext(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.ResNoNewsgroupSelected()
 		return true
 	}
-	c.prov.SelectNext(c.w, c)
+	c.prov.SelectNextArticle(c.w, c)
 	return true
 }
 
@@ -332,7 +400,7 @@ func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.ResNoNewsgroupSelected()
 		return true
 	}
-	c.prov.SelectPrev(c.w, c)
+	c.prov.SelectPrevArticle(c.w, c)
 	return true
 }
 
