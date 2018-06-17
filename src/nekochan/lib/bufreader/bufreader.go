@@ -22,6 +22,9 @@ func NewBufReader(u io.Reader) *BufReader {
 }
 
 func NewBufReaderSize(u io.Reader, s int) *BufReader {
+	if s <= 0 {
+		panic("size must be >0\n")
+	}
 	return &BufReader{u: u, b: make([]byte, s)}
 }
 
@@ -31,6 +34,7 @@ func (r *BufReader) readErr() (err error) {
 	return
 }
 
+// implements io.Reader interface
 func (r *BufReader) Read(p []byte) (n int, err error) {
 	if r.r == r.w {
 		if r.err != nil {
@@ -52,6 +56,9 @@ func (r *BufReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+// reads into buffer supplied in p parameter until byte supplied in q parameter is found.
+// filled buffer contains last byte specified as q.
+// returns number of bytes written into p, and error, either generic or in case q was not found and p was filled.
 func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
 	var x int
 	for {
@@ -89,4 +96,39 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
 			return n, ErrDelimNotFound
 		}
 	}
+}
+
+// skips specified ammount of bytes.
+// returns skipped ammount of bytes and error if specified ammount could not be skipped.
+func (r *BufReader) Skip(n int) (s int, e error) {
+	var x int
+	for {
+		if r.w-r.r >= n {
+			// existing buffer is enough to satisfy
+			r.r += n
+			s += n
+			return s, nil
+		}
+		// existing buffer is too small to satisfy so just eat it whole
+		n -= r.w - r.r
+		s += r.w - r.r
+		r.Discard()
+
+		if r.err != nil {
+			return s, r.readErr()
+		}
+
+		x, r.err = r.u.Read(r.b)
+		if x <= 0 {
+			return s, r.readErr()
+		}
+		r.r = 0
+		r.w = x
+	}
+}
+
+// discards all cached data. use only if you know what you are doing.
+func (r *BufReader) Discard() {
+	r.r = 0
+	r.w = 0
 }
