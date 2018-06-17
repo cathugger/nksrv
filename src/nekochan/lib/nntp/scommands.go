@@ -129,7 +129,7 @@ func init() {
 		"OVER": &command{
 			cmdfunc: cmdOver,
 			maxargs: 1,
-			help:    "[range|<message-id>]",
+			help:    "[range|<message-id>] - query overview of article(s) specified by range or Message-ID, or currently selected article.",
 		},
 		"XOVER": &command{
 			cmdfunc: cmdOver,
