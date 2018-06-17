@@ -280,31 +280,28 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 	if len(args) > 0 {
 		id := args[0]
 		sid := unsafeBytesToStr(id)
-		num, e := strconv.ParseUint(sid, 10, 64)
-		if e != nil {
-			// either non-number or too huge number.
-			// ParseUint does not verify rest of string if it's too huge, so treat as invalid.
 
-			// check if Message-ID
-			if !validMessageID(id) {
-				c.w.PrintfLine("501 unrecognised message identifier")
-				return
-			}
-
+		if validMessageID(id) {
 			if reservedMessageID(sid) || !setA[kind].byMsgID(c, id[1:len(id)-1]) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 			return
 		}
 
-		if c.CurrentGroup == nil {
-			c.w.ResNoNewsgroupSelected()
+		num, e := strconv.ParseUint(sid, 10, 64)
+		if e != nil {
+			if c.CurrentGroup == nil {
+				c.w.ResNoNewsgroupSelected()
+				return
+			}
+
+			if validMessageNum(num) || !setA[kind].byNum(c, num) {
+				c.w.ResNoArticleWithThatNum()
+			}
 			return
 		}
 
-		if validMessageNum(num) || !setA[kind].byNum(c, num) {
-			c.w.ResNoArticleWithThatNum()
-		}
+		c.w.PrintfLine("501 unrecognised message identifier")
 	} else {
 		if c.CurrentGroup == nil {
 			c.w.ResNoNewsgroupSelected()
