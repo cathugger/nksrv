@@ -545,6 +545,7 @@ func validWildmat(x []byte) bool {
 		// "!" only allowed in front of pattern
 		if c == '!' && s == sStartPattern {
 			s = sNegate
+			continue
 		}
 		if c == ',' && s == sInsidePattern {
 			s = sStartPattern // next char must be start of new pattern or '!'
