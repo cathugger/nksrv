@@ -289,7 +289,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 		}
 
 		num, e := strconv.ParseUint(sid, 10, 64)
-		if e != nil {
+		if e == nil {
 			if c.CurrentGroup == nil {
 				c.w.ResNoNewsgroupSelected()
 				return
