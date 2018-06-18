@@ -37,6 +37,11 @@ func init() {
 			allowextra: true,
 			help:       "- print server's capabilities.",
 		},
+		"MODE": &command{
+			cmdfunc: cmdMode,
+			minargs: 1,
+			maxargs: 1,
+		},
 		"HELP": &command{
 			cmdfunc: cmdHelp,
 			help:    "- print manual.",
@@ -172,6 +177,91 @@ func init() {
 	sort.Strings(listCommandList)
 }
 
+func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
+	c.w.PrintfLine("101 capability list follows")
+
+	dw := c.w.DotWriter()
+
+	fmt.Fprintf(dw, "VERSION 2\n")
+
+	if c.advertiseAuth() {
+		fmt.Fprintf(dw, "AUTHINFO USER\n")
+	}
+
+	if c.AllowReading {
+		fmt.Fprintf(dw, "READER\n")
+	}
+
+	if c.AllowPosting {
+		if c.prov.SupportsPost() {
+			fmt.Fprintf(dw, "POST\n")
+		}
+		if c.prov.SupportsIHave() {
+			fmt.Fprintf(dw, "IHAVE\n")
+		}
+		if c.prov.SupportsStream() {
+			fmt.Fprintf(dw, "STREAMING\n")
+		}
+	}
+
+	if c.AllowReading {
+		if c.prov.SupportsNewNews() {
+			fmt.Fprintf(dw, "NEWNEWS\n")
+		}
+
+		if !c.prov.SupportsOverByMsgID() {
+			fmt.Fprintf(dw, "OVER\n")
+		} else {
+			fmt.Fprintf(dw, "OVER MSGID\n")
+		}
+
+		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
+	}
+
+	dw.Close()
+
+	return true
+}
+
+func toUpperASCII(b []byte) {
+	for i, c := range b {
+		if c >= 'a' && c <= 'z' {
+			b[i] = c - ('a' - 'A')
+		}
+	}
+}
+
+func cmdMode(c *ConnState, args [][]byte, rest []byte) bool {
+	mode := args[0]
+	toUpperASCII(mode)
+	smode := unsafeBytesToStr(mode)
+
+	if smode == "READER" {
+		if !c.AllowReading {
+			c.w.ResAuthRequired()
+			return true
+		}
+		if c.AllowPosting {
+			c.w.PrintfLine("200 posting allowed")
+		} else {
+			c.w.PrintfLine("201 posting forbidden")
+		}
+	} else if smode == "STREAM" {
+		if !c.prov.SupportsStream() {
+			c.w.PrintfLine("503 STREAMING unimplemented")
+			return true
+		}
+		if c.AllowPosting {
+			c.w.PrintfLine("203 streaming permitted")
+		} else {
+			c.w.ResAuthRequired()
+		}
+	} else {
+		c.w.PrintfLine("503 STREAMING")
+	}
+	return true
+}
+
 func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
 	c.w.PrintfLine("100 here's manual")
 	dw := c.w.DotWriter()
@@ -204,32 +294,8 @@ func cmdDate(c *ConnState, args [][]byte, rest []byte) bool {
 	Y, M, D := t.Date()
 	h, m, s := t.Clock()
 	// 111 YYYYMMDDhhmmss    Server date and time
-	// XXX will break when year>9999
+	// XXX will break format when year>9999
 	c.w.PrintfLine("111 %4d%2d%2d%2d%2d%2d YYYYMMDDhhmmss", Y, M, D, h, m, s)
-	return true
-}
-
-func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("101 capability list follows")
-	dw := c.w.DotWriter()
-	fmt.Fprintf(dw, "VERSION 2\n")
-	fmt.Fprintf(dw, "READER\n")
-	if c.prov.SupportsIHave() {
-		fmt.Fprintf(dw, "IHAVE\n")
-	}
-	if c.prov.SupportsPost() {
-		fmt.Fprintf(dw, "POST\n")
-	}
-	if c.prov.SupportsNewNews() {
-		fmt.Fprintf(dw, "NEWNEWS\n")
-	}
-	if !c.prov.SupportsOverByMsgID() {
-		fmt.Fprintf(dw, "OVER\n")
-	} else {
-		fmt.Fprintf(dw, "OVER MSGID\n")
-	}
-	fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
-	dw.Close()
 	return true
 }
 
@@ -305,6 +371,11 @@ func validGroupSlice(s []byte) bool {
 }
 
 func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return
+	}
+
 	if len(args) > 0 {
 		id := args[0]
 		sid := unsafeBytesToStr(id)
@@ -347,6 +418,12 @@ func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.PrintfLine("501 invalid group name")
 		return true
 	}
+
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
+	}
+
 	if !c.prov.SelectGroup(c.w, c, args[0]) {
 		c.w.ResNoSuchNewsgroup()
 	}
@@ -412,6 +489,11 @@ func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 		}
 	}
 
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
+	}
+
 	if !c.prov.SelectAndListGroup(c.w, c, group, rmin, rmax) {
 		c.w.ResNoSuchNewsgroup()
 	}
@@ -423,6 +505,9 @@ func cmdNext(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.ResNoNewsgroupSelected()
 		return true
 	}
+
+	// if current group pointer set, reading was allowed already
+
 	c.prov.SelectNextArticle(c.w, c)
 	return true
 }
@@ -432,6 +517,9 @@ func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.ResNoNewsgroupSelected()
 		return true
 	}
+
+	// if current group pointer set, reading was allowed already
+
 	c.prov.SelectPrevArticle(c.w, c)
 	return true
 }
@@ -478,37 +566,49 @@ func parseDateSlice(date []byte) (Y, M, D int, valid bool) {
 			Y += (CYa - 1) * 100
 		}
 	}
-	return Y, M, D, M >= 1 && M <= 12
+	return Y, M, D, M > 0 && M <= 12 && D > 0
 }
 
 func parseTimeSlice(t []byte) (h, m, s int, valid bool) {
-	if len(t) != 4 || !isNumberSlice(t) {
+	if len(t) != 6 || !isNumberSlice(t) {
 		return h, m, s, false
 	}
 	h = int(t[0])*10 + int(t[1])
 	m = int(t[2])*10 + int(t[3])
 	s = int(t[4])*10 + int(t[5])
-	return h, m, s, h <= 24
+	return h, m, s, h <= 24 && m < 60
+}
+
+func parseDateTime(w Responder, ds, ts []byte) (t time.Time, v bool) {
+	var Y, M, D, h, m, s int
+
+	if Y, M, D, v = parseDateSlice(ds); !v {
+		w.PrintfLine("501 invalid date")
+		return
+	}
+
+	if h, m, s, v = parseTimeSlice(ts); !v {
+		w.PrintfLine("501 invalid time")
+		return
+	}
+
+	t = time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
+	return
 }
 
 func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 	// we use GMT either way so dont even check for that
 	// <distributions> is not specified in newest RFC so dont care about that either
 	// NEWGROUPS [YY]YYMMDD hhmmss
-	var Y, M, D, h, m, s int
-	var valid bool
-
-	if Y, M, D, valid = parseDateSlice(args[0]); !valid {
-		c.w.PrintfLine("501 invalid date")
+	qt, valid := parseDateTime(c.w, args[0], args[1])
+	if !valid {
 		return true
 	}
 
-	if h, m, s, valid = parseTimeSlice(args[1]); !valid {
-		c.w.PrintfLine("501 invalid time")
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
 		return true
 	}
-
-	qt := time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
 
 	c.w.PrintfLine("231 list of new groups follows")
 	dw := c.w.DotWriter()
@@ -562,29 +662,25 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
+	// we use GMT either way so dont even check for that
+	// <distributions> is not specified in newest RFC so dont care about that either
+	// NEWNEWS wildmat [YY]YYMMDD hhmmss
+
 	wildmat := args[0]
 	if !validWildmat(wildmat) {
 		c.w.PrintfLine("501 invalid wildmat")
 		return true
 	}
 
-	// we use GMT either way so dont even check for that
-	// <distributions> is not specified in newest RFC so dont care about that either
-	// NEWNEWS wildmat [YY]YYMMDD hhmmss
-	var Y, M, D, h, m, s int
-	var valid bool
-
-	if Y, M, D, valid = parseDateSlice(args[1]); !valid {
-		c.w.PrintfLine("501 invalid date")
+	qt, valid := parseDateTime(c.w, args[1], args[2])
+	if !valid {
 		return true
 	}
 
-	if h, m, s, valid = parseTimeSlice(args[2]); !valid {
-		c.w.PrintfLine("501 invalid time")
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
 		return true
 	}
-
-	qt := time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
 
 	c.w.PrintfLine("230 list of new articles follows")
 	dw := c.w.DotWriter()
@@ -595,6 +691,11 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 }
 
 func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
+	}
+
 	if len(args) > 0 {
 		id := args[0]
 		sid := unsafeBytesToStr(id)
@@ -647,6 +748,11 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 		}
 	}
 
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
+	}
+
 	dw := c.w.DotWriter()
 	c.prov.ListActiveGroups(dw, wildmat)
 	dw.Close()
@@ -662,6 +768,11 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 			c.w.PrintfLine("501 invalid wildmat")
 			return true
 		}
+	}
+
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
 	}
 
 	dw := c.w.DotWriter()

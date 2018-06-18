@@ -7,6 +7,7 @@ import (
 )
 
 var ErrDelimNotFound = errors.New("bufreader: delimiter not found")
+var errInvalidUnread = errors.New("bufreader: invalid use of UnreadByte")
 
 const defaultBufSize = 4096
 
@@ -74,6 +75,21 @@ func (r *BufReader) ReadByte() (byte, error) {
 	return c, nil
 }
 
+func (r *BufReader) UnreadByte(c byte) error {
+	if r.r != 0 {
+		r.r--
+		r.b[r.r] = c
+	} else {
+		if r.w == 0 {
+			r.w = 1
+			r.b[0] = c
+		} else {
+			return errInvalidUnread
+		}
+	}
+	return nil
+}
+
 // reads into buffer supplied in p parameter until byte supplied in q parameter is found.
 // filled buffer contains last byte specified as q.
 // returns number of bytes written into p, and error, either generic or in case q was not found and p was filled.
@@ -116,21 +132,23 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
 	}
 }
 
-// skips specified ammount of bytes.
+// skips specified ammount of bytes. if specified ammount is negative, read until fail.
 // returns skipped ammount of bytes and error if specified ammount could not be skipped.
-func (r *BufReader) Skip(n int) (s int, e error) {
+func (r *BufReader) Discard(n int) (s int, e error) {
 	var x int
 	for {
-		if r.w-r.r >= n {
+		if n >= 0 && r.w-r.r >= n {
 			// existing buffer is enough to satisfy
 			r.r += n
 			s += n
 			return s, nil
 		}
 		// existing buffer is too small to satisfy so just eat it whole
-		n -= r.w - r.r
+		if n > 0 {
+			n -= r.w - r.r
+		}
 		s += r.w - r.r
-		r.Discard()
+		r.Drop()
 
 		if r.err != nil {
 			return s, r.readErr()
@@ -146,7 +164,7 @@ func (r *BufReader) Skip(n int) (s int, e error) {
 }
 
 // discards all cached data. use only if you know what you are doing.
-func (r *BufReader) Discard() {
+func (r *BufReader) Drop() {
 	r.r = 0
 	r.w = 0
 }

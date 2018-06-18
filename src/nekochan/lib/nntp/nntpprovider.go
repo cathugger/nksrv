@@ -5,11 +5,22 @@ import (
 	"time"
 )
 
+type ArticleReader interface {
+	io.Reader
+	ReadByte() (byte, error)
+	Discard(n int) (int, error)
+}
+
+type ReaderOpener interface {
+	OpenReader() ArticleReader
+}
+
 type NNTPProvider interface {
 	SupportsNewNews() bool
+	SupportsOverByMsgID() bool
 	SupportsIHave() bool
 	SupportsPost() bool
-	SupportsOverByMsgID() bool
+	SupportsStream() bool
 
 	// ARTICLE, HEAD, BODY, STAT x 3 forms for each
 	// ok: ARTICLE - 220, HEAD - 221, BODY - 222, STAT - 223
@@ -36,11 +47,16 @@ type NNTPProvider interface {
 	SelectPrevArticle(w Responder, cs *ConnState)
 
 	ListNewGroups(w io.Writer, qt time.Time)
-	ListNewNews(w io.Writer, wildmat []byte, qt time.Time)
+	ListNewNews(w io.Writer, wildmat []byte, qt time.Time) // SupportsNewNews()
 	ListActiveGroups(w io.Writer, wildmat []byte)
 	ListNewsgroups(w io.Writer, wildmat []byte)
 
-	GetOverByMsgID(w Responder, msgid []byte) bool
+	GetOverByMsgID(w Responder, msgid []byte) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
+
+	HandlePost(w Responder, ro ReaderOpener, cs *ConnState) bool                   // SupportsIHave()
+	HandleIHave(w Responder, ro ReaderOpener, cs *ConnState) bool                  // SupportsPost()
+	HandleCheck(w Responder, cs *ConnState, msgid []byte) bool                     // SupportsStream()
+	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid []byte) bool // SupportsStream()
 }

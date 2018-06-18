@@ -25,6 +25,8 @@ type ConnState struct {
 
 	prov         NNTPProvider
 	CurrentGroup interface{}
+	AllowReading bool
+	AllowPosting bool
 }
 
 func parseKeyword(b []byte) int {
@@ -165,11 +167,12 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		r:    r,
 		w:    Responder{Writer: tp.NewWriter(bufio.NewWriter(c))},
 	}
+	s.setupClientDefaults(cs)
 
 	graceful := cs.serve()
 
 	if graceful && c.CloseWrite() == nil {
-		r.Skip(1) // ignore return, it's error to send anything after quit command
+		r.Discard(1) // ignore return, it's error to send anything after quit command
 	}
 
 	c.Close()

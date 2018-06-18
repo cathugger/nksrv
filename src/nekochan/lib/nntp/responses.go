@@ -105,3 +105,7 @@ func (r Responder) ResPostingNotPermitted() {
 func (r Responder) ResPostingFailed() {
 	r.PrintfLine("441 article injection failed")
 }
+
+func (r Responder) ResAuthRequired() {
+	r.PrintfLine("480 authentication required")
+}
