@@ -109,3 +109,9 @@ func (r Responder) ResPostingFailed() {
 func (r Responder) ResAuthRequired() {
 	r.PrintfLine("480 authentication required")
 }
+
+// 5** - pernament errors
+
+func (r Responder) ResBadMessageID() {
+	r.PrintfLine("501 invalid Message-ID")
+}

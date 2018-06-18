@@ -12,49 +12,6 @@ import (
 	. "nekochan/lib/logx"
 )
 
-// sugar because im lazy
-type Responder struct {
-	*tp.Writer
-}
-
-type ConnState struct {
-	srv  *NNTPServer
-	conn ConnCW
-	r    *bufreader.BufReader
-	w    Responder
-
-	prov         NNTPProvider
-	CurrentGroup interface{}
-	AllowReading bool
-	AllowPosting bool
-}
-
-func parseKeyword(b []byte) int {
-	i := 0
-	l := len(b)
-	for {
-		if i >= l {
-			return i
-		}
-		c := b[i]
-		if c == ' ' || c == '\t' {
-			return i
-		}
-		if c >= 'a' && c <= 'z' {
-			b[i] = c - ('a' - 'A')
-		}
-		i++
-	}
-}
-
-func cmdVoid(c *ConnState, args [][]byte, rest []byte) bool {
-	if len(rest) != 0 {
-		c.w.PrintfLine("501 command must not start with space")
-	}
-	// otherwise ignore
-	return true
-}
-
 // net.Conn with additional CloseWrite() function
 type ConnCW interface {
 	net.Conn
@@ -278,68 +235,6 @@ func (s *NNTPServer) Close() bool {
 
 	s.mu.Unlock()
 	// done ^_^
-	return true
-}
-
-func cmdList(c *ConnState, args [][]byte, rest []byte) bool {
-	args = args[:0] // reuse
-
-	if len(rest) == 0 {
-		listCmdActive(c, args, nil)
-		return true
-	}
-
-	x := parseKeyword(rest)
-
-	cmd, ok := listCommandMap[string(rest[:x])]
-	if !ok {
-		c.w.PrintfLine("501 unrecognised LIST keyword")
-		return true
-	}
-
-	if x >= len(rest) {
-		goto argsparsed
-	}
-
-	for {
-		// skip spaces
-		for {
-			x++
-			if x >= len(rest) {
-				goto argsparsed
-			}
-			if rest[x] != ' ' && rest[x] != '\t' {
-				break
-			}
-		}
-		if len(args) >= cmd.maxargs {
-			if !cmd.allowextra {
-				c.w.PrintfLine("501 too much parameters")
-			} else {
-				cmd.cmdfunc(c, args, rest[x:])
-			}
-			return true
-		}
-		sx := x
-		// skip non-spaces
-		for {
-			x++
-			if x >= len(rest) {
-				args = append(args, rest[sx:x])
-				goto argsparsed
-			}
-			if rest[x] == ' ' || rest[x] == '\t' {
-				args = append(args, rest[sx:x])
-				break
-			}
-		}
-	}
-argsparsed:
-	if len(args) < cmd.minargs {
-		c.w.PrintfLine("501 not enough parameters")
-		return true
-	}
-	cmd.cmdfunc(c, args, nil)
 	return true
 }
 

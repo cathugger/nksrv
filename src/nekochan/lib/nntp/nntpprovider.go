@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+type FullMsgID []byte // msgid with < and >
+type CutMsgID []byte  // msgid without < and >
+
 type ArticleReader interface {
 	io.Reader
 	ReadByte() (byte, error)
@@ -28,10 +31,10 @@ type NNTPProvider interface {
 	//   1st_form: 430 (not found by msgid)
 	//   2nd_form: 412 (no group selected), 423 (not found by num)
 	//   3rd_form: 412 (no group selected), 420 (not found by curr)
-	GetArticleFullByMsgID(w Responder, msgid []byte) bool
-	GetArticleHeadByMsgID(w Responder, msgid []byte) bool
-	GetArticleBodyByMsgID(w Responder, msgid []byte) bool
-	GetArticleStatByMsgID(w Responder, msgid []byte) bool
+	GetArticleFullByMsgID(w Responder, msgid CutMsgID) bool
+	GetArticleHeadByMsgID(w Responder, msgid CutMsgID) bool
+	GetArticleBodyByMsgID(w Responder, msgid CutMsgID) bool
+	GetArticleStatByMsgID(w Responder, msgid CutMsgID) bool
 	GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool
@@ -51,12 +54,13 @@ type NNTPProvider interface {
 	ListActiveGroups(w io.Writer, wildmat []byte)
 	ListNewsgroups(w io.Writer, wildmat []byte)
 
-	GetOverByMsgID(w Responder, msgid []byte) bool // SupportsOverByMsgID()
+	GetOverByMsgID(w Responder, msgid CutMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
 
-	HandlePost(w Responder, ro ReaderOpener, cs *ConnState) bool                   // SupportsIHave()
-	HandleIHave(w Responder, ro ReaderOpener, cs *ConnState) bool                  // SupportsPost()
-	HandleCheck(w Responder, cs *ConnState, msgid []byte) bool                     // SupportsStream()
-	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid []byte) bool // SupportsStream()
+	// implementers MUST drain readers or bad things will happen
+	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool                  // SupportsIHave()
+	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CutMsgID) bool // SupportsPost()
+	HandleCheck(w Responder, cs *ConnState, msgid CutMsgID) bool                  // SupportsStream()
+	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CutMsgID)   // SupportsStream()
 }
