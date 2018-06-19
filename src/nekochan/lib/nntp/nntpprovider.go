@@ -25,12 +25,16 @@ type NNTPProvider interface {
 	SupportsPost() bool
 	SupportsStream() bool
 
-	// ARTICLE, HEAD, BODY, STAT x 3 forms for each
-	// ok: ARTICLE - 220, HEAD - 221, BODY - 222, STAT - 223
+	// + ARTICLE, HEAD, BODY, STAT x 3 forms for each
+	// ok:
+	//   ARTICLE Full 220{ResArticleFollows}
+	//   HEAD    Head 221{ResHeadFollows}
+	//   BODY    Body 222{ResBodyFollows}
+	//   STAT    Stat 223{ResArticleFound}
 	// fail:
-	//   1st_form: 430 (not found by msgid)
-	//   2nd_form: 412 (no group selected), 423 (not found by num)
-	//   3rd_form: 412 (no group selected), 420 (not found by curr)
+	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
+	//   <ByNum>   412{ResNoNewsgroupSelected} 423{ResNoArticleWithThatNum[false]}
+	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
 	GetArticleFullByMsgID(w Responder, msgid CutMsgID) bool
 	GetArticleHeadByMsgID(w Responder, msgid CutMsgID) bool
 	GetArticleBodyByMsgID(w Responder, msgid CutMsgID) bool
@@ -44,23 +48,42 @@ type NNTPProvider interface {
 	GetArticleBodyByCurr(w Responder, cs *ConnState) bool
 	GetArticleStatByCurr(w Responder, cs *ConnState) bool
 
+	// + ok: 211{ResGroupSuccessfullySelected} fail: 411{ResNoSuchNewsgroup[false]}
 	SelectGroup(w Responder, cs *ConnState, group []byte) bool
+	// + ok: 211{ResArticleNumbersFollow} fail: 411{ResNoSuchNewsgroup[false]} 412{ResNoNewsgroupSelected}
 	SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool
+	// + ok: 223{ResArticleFound} fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid}
+	// - fail: 421{ResNoNextArticleInThisGroup}
 	SelectNextArticle(w Responder, cs *ConnState)
+	// - fail: 422{ResNoPrevArticleInThisGroup}
 	SelectPrevArticle(w Responder, cs *ConnState)
 
+	// + 231{ResListOfNewNewsgroupsFollows}
 	ListNewGroups(w io.Writer, qt time.Time)
+	// + 230{ResListOfNewArticlesFollows}
 	ListNewNews(w io.Writer, wildmat []byte, qt time.Time) // SupportsNewNews()
+	// + 215{ResListOfNewsgroupsFollows}
 	ListActiveGroups(w io.Writer, wildmat []byte)
 	ListNewsgroups(w io.Writer, wildmat []byte)
 
+	// + ok: 224{ResOverviewInformationFollows}
+	// fail:
+	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
+	//   <ByRange> 412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
+	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
 	GetOverByMsgID(w Responder, msgid CutMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
 
-	// implementers MUST drain readers or bad things will happen
-	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool                  // SupportsIHave()
-	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CutMsgID) bool // SupportsPost()
-	HandleCheck(w Responder, cs *ConnState, msgid CutMsgID) bool                  // SupportsStream()
-	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CutMsgID)   // SupportsStream()
+	// ! implementers MUST drain readers or bad things will happen
+	// + iok: 340{ResSendArticleToBePosted} ifail: 440{ResPostingNotPermitted[false]}
+	// cok: 240{ResPostingAccepted} cfail: 441{ResPostingFailed}
+	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool // SupportsPost()
+	// + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
+	// cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
+	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CutMsgID) bool // SupportsIHave()
+	// + ok: 238{ResPleaseSend} fail: 431{ResCantAccept} 438{ResArticleNotWanted[false]}
+	HandleCheck(w Responder, cs *ConnState, msgid CutMsgID) bool // SupportsStream()
+	// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
+	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CutMsgID) bool // SupportsStream()
 }

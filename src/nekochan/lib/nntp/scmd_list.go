@@ -44,6 +44,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+// TODO: need to decide what fields exactly we're going to expose
 var overviewFmt = []byte(
 	`Subject:
 From:

@@ -29,7 +29,7 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if reservedMessageID(id) || !c.prov.HandleIHave(c.w, c, c, cutMessageID(id)) {
-		c.w.ResArticleNotWanted()
+		c.w.ResTransferNotWanted()
 	}
 	return true
 }
@@ -47,8 +47,9 @@ func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	if reservedMessageID(id) || !c.prov.HandleCheck(c.w, c, cutMessageID(id)) {
-		c.w.PrintfLine("438 %s", id)
+	cid := cutMessageID(id)
+	if reservedMessageID(id) || !c.prov.HandleCheck(c.w, c, cid) {
+		c.w.ResArticleNotWanted(cid)
 	}
 	return true
 }
@@ -74,8 +75,9 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	if reservedMessageID(id) || !c.prov.HandleCheck(c.w, c, cutMessageID(id)) {
-		c.w.PrintfLine("439 %s", id)
+	cid := cutMessageID(id)
+	if reservedMessageID(id) || !c.prov.HandleTakeThis(c.w, c, r, cid) {
+		c.w.ResArticleRejected(cid)
 	}
 	return true
 }
