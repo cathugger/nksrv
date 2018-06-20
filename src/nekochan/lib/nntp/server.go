@@ -3,6 +3,7 @@ package nntp
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	tp "net/textproto"
 	"sync"
@@ -116,19 +117,25 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 	s.mu.Unlock()
 }
 
+const (
+	cGraceful = iota
+	cHangup
+	cError
+)
+
 func (s *NNTPServer) handleConnection(c ConnCW) {
 	r := bufreader.NewBufReader(c)
 	cs := &ConnState{
 		srv:  s,
 		conn: c,
 		r:    r,
-		w:    Responder{Writer: tp.NewWriter(bufio.NewWriter(c))},
+		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 	}
 	s.setupClientDefaults(cs)
 
-	graceful := cs.serve()
+	reason := cs.serveClient()
 
-	if graceful && c.CloseWrite() == nil {
+	if reason != cError && c.CloseWrite() == nil && reason == cGraceful {
 		r.Discard(1) // ignore return, it's error to send anything after quit command
 	}
 
@@ -238,7 +245,7 @@ func (s *NNTPServer) Close() bool {
 	return true
 }
 
-func (c *ConnState) serve() bool {
+func (c *ConnState) serveClient() int {
 	var inbuf [512]byte
 	args := make([][]byte, 0)
 
@@ -254,14 +261,18 @@ func (c *ConnState) serve() bool {
 					}
 				}
 				if e != nil {
-					// generic error while draining
-					return false
+					if e == io.EOF {
+						return cHangup
+					} else {
+						return cError
+					}
 				}
 				c.w.PrintfLine("501 command too long")
 				continue
+			} else if e == io.EOF {
+				return cHangup
 			} else {
-				// generic read error, just quit as socket prolly broke
-				return false
+				return cError
 			}
 		}
 
@@ -307,7 +318,7 @@ func (c *ConnState) serve() bool {
 					c.w.PrintfLine("501 too much parameters")
 				} else {
 					if !cmd.cmdfunc(c, args, incmd[x:]) {
-						return true
+						return cGraceful
 					}
 				}
 				goto nextcommand
@@ -332,7 +343,7 @@ func (c *ConnState) serve() bool {
 			goto nextcommand
 		}
 		if !cmd.cmdfunc(c, args, nil) {
-			return true
+			return cGraceful
 		}
 	nextcommand:
 	}

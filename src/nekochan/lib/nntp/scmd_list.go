@@ -45,6 +45,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 }
 
 // TODO: need to decide what fields exactly we're going to expose
+// {RFC 2980} Many newsreaders work better if Xref: is one of the optional fields.
 var overviewFmt = []byte(
 	`Subject:
 From:
