@@ -21,6 +21,7 @@ type ReaderOpener interface {
 type NNTPProvider interface {
 	SupportsNewNews() bool
 	SupportsOverByMsgID() bool
+	SupportsHdr() bool
 	SupportsIHave() bool
 	SupportsPost() bool
 	SupportsStream() bool
@@ -68,12 +69,28 @@ type NNTPProvider interface {
 
 	// + ok: 224{ResOverviewInformationFollows}
 	// fail:
-	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
-	//   <ByRange> 412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
-	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
+	//   <ByMsgID>      430{ResNoArticleWithThatMsgID[false]}
+	//   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
+	//   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
+	//   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
 	GetOverByMsgID(w Responder, msgid CutMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
+	GetXOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
+
+	// +
+	//   <HdrByMsgID>  ok: 225{ResHdrFollow}  fail: 430{ResNoArticleWithThatMsgID[false]}
+	//   <HdrByRange>  ok: 225{ResHdrFollow}  fail: 412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
+	//   <HdrByCurr>   ok: 225{ResHdrFollow}  fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
+	//   <XHdrByMsgID> ok: 221{ResXHdrFollow} fail: 430{ResNoArticleWithThatMsgID[false]}
+	//   <XHdrByRange> ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
+	//   <XHdrByCurr>  ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
+	GetHdrByMsgID(w Responder, hdr []byte, msgid CutMsgID) bool
+	GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
+	GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
+	GetXHdrByMsgID(w Responder, hdr []byte, msgid CutMsgID) bool
+	GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
+	GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
 
 	// ! implementers MUST drain readers or bad things will happen
 	// + iok: 340{ResSendArticleToBePosted} ifail: 440{ResPostingNotPermitted[false]}

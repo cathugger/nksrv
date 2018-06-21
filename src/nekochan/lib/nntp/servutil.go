@@ -32,6 +32,14 @@ func toUpperASCII(b []byte) {
 	}
 }
 
+func toLowerASCII(b []byte) {
+	for i, c := range b {
+		if c >= 'A' && c <= 'Z' {
+			b[i] = c + ('a' - 'A')
+		}
+	}
+}
+
 func isPrintableASCIISlice(s []byte, e byte) bool {
 	for _, c := range s {
 		if c < 32 || c >= 127 || c == e {
@@ -58,6 +66,13 @@ func ReservedMessageID(id FullMsgID) bool {
 
 func validMessageNum(n uint64) bool {
 	return int64(n) > 0
+}
+
+func validHeaderQuery(hq []byte) bool {
+	if hq[0] == ':' {
+		hq = hq[1:]
+	}
+	return isPrintableASCIISlice(hq, ':')
 }
 
 func validGroupSlice(s []byte) bool {
@@ -212,5 +227,5 @@ func validWildmat(x []byte) bool {
 		}
 		return false
 	}
-	return s == sInsidePattern // cannot end with comma
+	return s == sInsidePattern // cannot end with ',' or '!'
 }

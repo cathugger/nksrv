@@ -133,8 +133,15 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	}
 	s.setupClientDefaults(cs)
 
+	if cs.AllowPosting {
+		cs.w.PrintfLine("200 hello! posting allowed.")
+	} else {
+		cs.w.PrintfLine("201 hello! posting forbidden.")
+	}
+
 	reason := cs.serveClient()
 
+	// XXX incase cHangup, we have no way to check if other side ACK'd data before killing socket.
 	if reason != cError && c.CloseWrite() == nil && reason == cGraceful {
 		r.Discard(1) // ignore return, it's error to send anything after quit command
 	}

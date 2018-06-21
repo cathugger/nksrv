@@ -126,14 +126,38 @@ func init() {
 		},
 
 		"OVER": &command{
-			cmdfunc: cmdOver,
+			cmdfunc: func(c *ConnState, args [][]byte, rest []byte) bool {
+				commonCmdOver(c, args, true)
+				return true
+			},
 			maxargs: 1,
 			help:    "[range|<message-id>] - query overview of article(s) specified by range or Message-ID, or currently selected article.",
 		},
 		"XOVER": &command{
-			cmdfunc: cmdOver,
+			cmdfunc: func(c *ConnState, args [][]byte, rest []byte) bool {
+				commonCmdOver(c, args, false)
+				return true
+			},
 			maxargs: 1,
 			help:    "- same as OVER.",
+		},
+		"HDR": &command{
+			cmdfunc: func(c *ConnState, args [][]byte, rest []byte) bool {
+				commonCmdHdr(c, args, true)
+				return true
+			},
+			minargs: 1,
+			maxargs: 2,
+			help:    "field [range|<message-id>] - query header field of article(s).",
+		},
+		"XHDR": &command{
+			cmdfunc: func(c *ConnState, args [][]byte, rest []byte) bool {
+				commonCmdHdr(c, args, false)
+				return true
+			},
+			minargs: 1,
+			maxargs: 2,
+			help:    "field [range|<message-id>] - query header field of article(s).",
 		},
 
 		"POST": &command{

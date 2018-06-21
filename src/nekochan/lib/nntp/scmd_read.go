@@ -210,10 +210,10 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
-func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
+func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 	if !c.AllowReading {
 		c.w.ResAuthRequired()
-		return true
+		return
 	}
 
 	if len(args) > 0 {
@@ -222,7 +222,7 @@ func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
 		if ValidMessageID(FullMsgID(id)) {
 			if !c.prov.SupportsOverByMsgID() {
 				c.w.PrintfLine("503 OVER MSGID unimplemented")
-				return true
+				return
 			}
 			mid := FullMsgID(id)
 			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, cutMessageID(mid)) {
@@ -231,29 +231,113 @@ func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
 		} else {
 			if c.CurrentGroup == nil {
 				c.w.ResNoNewsgroupSelected()
-				return true
+				return
 			}
 
 			var rmin, rmax int64
 			var valid bool
 			if rmin, rmax, valid = parseRange(unsafeBytesToStr(id)); !valid {
 				c.w.PrintfLine("501 invalid range")
-				return true
+				return
 			}
 
-			if (rmax >= 0 && rmax < rmin) || !c.prov.GetOverByRange(c.w, c, rmin, rmax) {
-				c.w.ResNoArticlesInThatRange()
+			if over {
+				if (rmax >= 0 && rmax < rmin) || !c.prov.GetOverByRange(c.w, c, rmin, rmax) {
+					c.w.ResNoArticlesInThatRange()
+				}
+			} else {
+				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXOverByRange(c.w, c, rmin, rmax) {
+					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
+					// that RFC is gay tbh
+					c.w.ResXNoArticles()
+				}
 			}
 		}
 	} else {
 		if c.CurrentGroup == nil {
 			c.w.ResNoNewsgroupSelected()
-			return true
+			return
 		}
 
 		if !c.prov.GetOverByCurr(c.w, c) {
 			c.w.ResCurrentArticleNumberIsInvalid()
 		}
 	}
-	return true
+}
+
+func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
+	if !c.prov.SupportsHdr() {
+		c.w.PrintfLine("503 (X)HDR unimplemented")
+		return
+	}
+
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return
+	}
+
+	hq := args[0]
+	toLowerASCII(hq)
+	if !validHeaderQuery(hq) {
+		c.w.PrintfLine("501 invalid header query")
+		return
+	}
+
+	if len(args) > 1 {
+		id := args[1]
+
+		if ValidMessageID(FullMsgID(id)) {
+			mid := FullMsgID(id)
+			ok := false
+			if !ReservedMessageID(mid) {
+				if hdr {
+					ok = c.prov.GetHdrByMsgID(c.w, hq, cutMessageID(mid))
+				} else {
+					ok = c.prov.GetXHdrByMsgID(c.w, hq, cutMessageID(mid))
+				}
+			}
+			if !ok {
+				c.w.ResNoArticleWithThatMsgID()
+			}
+		} else {
+			if c.CurrentGroup == nil {
+				c.w.ResNoNewsgroupSelected()
+				return
+			}
+
+			var rmin, rmax int64
+			var valid bool
+			if rmin, rmax, valid = parseRange(unsafeBytesToStr(id)); !valid {
+				c.w.PrintfLine("501 invalid range")
+				return
+			}
+
+			if hdr {
+				if (rmax >= 0 && rmax < rmin) || !c.prov.GetHdrByRange(c.w, c, hq, rmin, rmax) {
+					c.w.ResNoArticlesInThatRange()
+				}
+			} else {
+				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXHdrByRange(c.w, c, hq, rmin, rmax) {
+					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
+					// ultrahomo
+					c.w.ResXNoArticles()
+				}
+			}
+		}
+	} else {
+		if c.CurrentGroup == nil {
+			c.w.ResNoNewsgroupSelected()
+			return
+		}
+
+		var ok bool
+		if hdr {
+			ok = c.prov.GetHdrByCurr(c.w, c, hq)
+		} else {
+			ok = c.prov.GetXHdrByCurr(c.w, c, hq)
+		}
+		if !ok {
+			c.w.ResCurrentArticleNumberIsInvalid()
+		}
+	}
 }

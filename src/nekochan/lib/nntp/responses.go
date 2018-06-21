@@ -22,6 +22,10 @@ func (r Responder) ResHeadFollows(num int64, msgid string) {
 	r.PrintfLine("221 %d %s head incoming", num, msgid)
 }
 
+func (r Responder) ResXHdrFollow() {
+	r.PrintfLine("221 headers follow")
+}
+
 func (r Responder) ResBodyFollows(num int64, msgid string) {
 	r.PrintfLine("222 %d %s body is coming", num, msgid)
 }
@@ -32,6 +36,10 @@ func (r Responder) ResArticleFound(num int64, msgid string) {
 
 func (r Responder) ResOverviewInformationFollows() {
 	r.PrintfLine("224 ovewview info follows")
+}
+
+func (r Responder) ResHdrFollow() {
+	r.PrintfLine("225 headers follow")
 }
 
 func (r Responder) ResListOfNewArticlesFollows() {
@@ -80,6 +88,10 @@ func (r Responder) ResNoNewsgroupSelected() {
 
 func (r Responder) ResCurrentArticleNumberIsInvalid() {
 	r.PrintfLine("420 current blaze article number isn't valid")
+}
+
+func (r Responder) ResXNoArticles() {
+	r.PrintfLine("420 no articles")
 }
 
 func (r Responder) ResNoNextArticleInThisGroup() {
@@ -142,4 +154,10 @@ func (r Responder) ResAuthRequired() {
 
 func (r Responder) ResBadMessageID() {
 	r.PrintfLine("501 invalid Message-ID")
+}
+
+func (r Responder) ResXPermission() {
+	// {RFC 977} 502 access restriction or permission denied
+	// {RFC 3977} Meaning for all other commands: command not permitted (and there is no way for the client to change this).
+	r.PrintfLine("502 no permission")
 }
