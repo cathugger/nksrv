@@ -10,8 +10,8 @@ func (r Responder) ResArticleNumbersFollow(est, lo, hi int64, group string) {
 	r.PrintfLine("211 %d %d %d %s list follows", est, lo, hi, group)
 }
 
-func (r Responder) ResListOfNewsgroupsFollows() {
-	r.PrintfLine("215 newsgroups list")
+func (r Responder) ResListFollows() {
+	r.PrintfLine("215 list follows")
 }
 
 func (r Responder) ResArticleFollows(num int64, msgid string) {

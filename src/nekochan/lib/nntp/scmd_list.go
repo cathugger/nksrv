@@ -15,7 +15,7 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.PrintfLine("215 data follows")
+	c.w.ResListFollows()
 	dw := c.w.DotWriter()
 	c.prov.ListActiveGroups(dw, wildmat)
 	dw.Close()
@@ -38,7 +38,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.PrintfLine("215 data follows")
+	c.w.ResListFollows()
 	dw := c.w.DotWriter()
 	c.prov.ListNewsgroups(dw, wildmat)
 	dw.Close()
@@ -84,7 +84,7 @@ Xref:full
 `)
 
 func listCmdOverviewFmt(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("215 data follows")
+	c.w.ResListFollows()
 	dw := c.w.DotWriter()
 	dw.Write(overviewFmt)
 	dw.Close()
