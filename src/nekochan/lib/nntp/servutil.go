@@ -75,7 +75,7 @@ func validHeaderQuery(hq []byte) bool {
 	return isPrintableASCIISlice(hq, ':')
 }
 
-func validGroupSlice(s []byte) bool {
+func ValidGroupSlice(s []byte) bool {
 	for _, c := range s {
 		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
 			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||

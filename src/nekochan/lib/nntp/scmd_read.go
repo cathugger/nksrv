@@ -78,7 +78,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 }
 
 func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
-	if !validGroupSlice(args[0]) {
+	if !ValidGroupSlice(args[0]) {
 		c.w.PrintfLine("501 invalid group name")
 		return true
 	}
@@ -97,7 +97,7 @@ func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	var group []byte
 	if len(args) > 0 {
-		if !validGroupSlice(args[0]) {
+		if !ValidGroupSlice(args[0]) {
 			c.w.PrintfLine("501 invalid group name")
 			return true
 		}
