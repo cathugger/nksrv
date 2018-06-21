@@ -43,9 +43,9 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 	if len(args) > 0 {
 		id := args[0]
 
-		if validMessageID(FullMsgID(id)) {
+		if ValidMessageID(FullMsgID(id)) {
 			mid := FullMsgID(id)
-			if reservedMessageID(mid) || !setA[kind].byMsgID(c, cutMessageID(mid)) {
+			if ReservedMessageID(mid) || !setA[kind].byMsgID(c, cutMessageID(mid)) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 			return
@@ -154,28 +154,6 @@ func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
-func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
-	// we use GMT either way so dont even check for that
-	// <distributions> is not specified in newest RFC so dont care about that either
-	// NEWGROUPS [YY]YYMMDD hhmmss
-	qt, valid := parseDateTime(c.w, args[0], args[1])
-	if !valid {
-		return true
-	}
-
-	if !c.AllowReading {
-		c.w.ResAuthRequired()
-		return true
-	}
-
-	c.w.PrintfLine("231 list of new groups follows")
-	dw := c.w.DotWriter()
-	c.prov.ListNewGroups(dw, qt)
-	dw.Close()
-
-	return true
-}
-
 func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	if !c.prov.SupportsNewNews() {
 		c.w.PrintfLine("503 unimplemented")
@@ -210,6 +188,28 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
+	// we use GMT either way so dont even check for that
+	// <distributions> is not specified in newest RFC so dont care about that either
+	// NEWGROUPS [YY]YYMMDD hhmmss
+	qt, valid := parseDateTime(c.w, args[0], args[1])
+	if !valid {
+		return true
+	}
+
+	if !c.AllowReading {
+		c.w.ResAuthRequired()
+		return true
+	}
+
+	c.w.PrintfLine("231 list of new groups follows")
+	dw := c.w.DotWriter()
+	c.prov.ListNewGroups(dw, qt)
+	dw.Close()
+
+	return true
+}
+
 func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
 	if !c.AllowReading {
 		c.w.ResAuthRequired()
@@ -219,13 +219,13 @@ func cmdOver(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(args) > 0 {
 		id := args[0]
 
-		if validMessageID(FullMsgID(id)) {
+		if ValidMessageID(FullMsgID(id)) {
 			if !c.prov.SupportsOverByMsgID() {
 				c.w.PrintfLine("503 OVER MSGID unimplemented")
 				return true
 			}
 			mid := FullMsgID(id)
-			if reservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, cutMessageID(mid)) {
+			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, cutMessageID(mid)) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 		} else {

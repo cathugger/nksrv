@@ -119,6 +119,12 @@ func init() {
 			help:    "wildmat [YY]YYMMDD hhmmss [GMT] - list newsgroups created since specified date.",
 		},
 
+		"XGTITLE": &command{
+			cmdfunc: cmdXGTitle,
+			maxargs: 1,
+			help:    "[wildmat] - same as LIST NEWSGROUPS.",
+		},
+
 		"OVER": &command{
 			cmdfunc: cmdOver,
 			maxargs: 1,

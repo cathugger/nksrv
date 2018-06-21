@@ -18,7 +18,7 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	id := FullMsgID(args[0])
-	if !validMessageID(id) {
+	if !ValidMessageID(id) {
 		c.w.ResBadMessageID()
 		return true
 	}
@@ -28,7 +28,7 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	if reservedMessageID(id) || !c.prov.HandleIHave(c.w, c, c, cutMessageID(id)) {
+	if ReservedMessageID(id) || !c.prov.HandleIHave(c.w, c, c, cutMessageID(id)) {
 		c.w.ResTransferNotWanted()
 	}
 	return true
@@ -36,7 +36,7 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 	id := FullMsgID(args[0])
-	if !validMessageID(id) {
+	if !ValidMessageID(id) {
 		c.w.ResBadMessageID()
 		return true
 	}
@@ -48,7 +48,7 @@ func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	cid := cutMessageID(id)
-	if reservedMessageID(id) || !c.prov.HandleCheck(c.w, c, cid) {
+	if ReservedMessageID(id) || !c.prov.HandleCheck(c.w, c, cid) {
 		c.w.ResArticleNotWanted(cid)
 	}
 	return true
@@ -64,7 +64,7 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	id := FullMsgID(args[0])
-	if !validMessageID(id) {
+	if !ValidMessageID(id) {
 		c.w.ResBadMessageID()
 		return true
 	}
@@ -76,7 +76,7 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	cid := cutMessageID(id)
-	if reservedMessageID(id) || !c.prov.HandleTakeThis(c.w, c, r, cid) {
+	if ReservedMessageID(id) || !c.prov.HandleTakeThis(c.w, c, r, cid) {
 		c.w.ResArticleRejected(cid)
 	}
 	return true

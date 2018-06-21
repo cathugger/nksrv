@@ -45,12 +45,12 @@ func cutMessageID(id FullMsgID) CutMsgID {
 	return CutMsgID(id[1 : len(id)-1])
 }
 
-func validMessageID(id FullMsgID) bool {
+func ValidMessageID(id FullMsgID) bool {
 	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
 		len(id) <= 250 && isPrintableASCIISlice(cutMessageID(id), '>')
 }
 
-func reservedMessageID(id FullMsgID) bool {
+func ReservedMessageID(id FullMsgID) bool {
 	sid := unsafeBytesToStr(id)
 	return sid == "<0>" /* {RFC 977} */ ||
 		sid == "<keepalive@dummy.tld>" /* srndv2 */
