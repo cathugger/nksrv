@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func parseKeyword(b []byte) int {
@@ -83,7 +84,22 @@ func ValidGroupSlice(s []byte) bool {
 			return false
 		}
 	}
-	return len(s) != 0
+	return true
+}
+
+func FullValidGroupSlice(s []byte) bool {
+	hasunicode := false
+	for _, c := range s {
+		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
+			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
+			(c >= 0x5E && c <= 0x7E) || c >= 0x80) {
+			return false
+		}
+		if c >= 0x80 {
+			hasunicode = true
+		}
+	}
+	return !hasunicode || utf8.Valid(s)
 }
 
 func parseRange(srange string) (rmin, rmax int64, valid bool) {
@@ -190,42 +206,4 @@ func parseDateTime(w Responder, ds, ts []byte) (t time.Time, v bool) {
 
 	t = time.Date(Y, time.Month(M), D, h, m, s, 0, time.UTC)
 	return
-}
-
-func validWildmat(x []byte) bool {
-	/*
-	 * {RFC 3977}
-	 * wildmat = wildmat-pattern *("," ["!"] wildmat-pattern)
-	 * wildmat-pattern = 1*wildmat-item
-	 * wildmat-item = wildmat-exact / wildmat-wild
-	 * wildmat-exact = %x22-29 / %x2B / %x2D-3E / %x40-5A / %x5E-7E /
-	 *   UTF8-non-ascii ; exclude ! * , ? [ \ ]
-	 * wildmat-wild = "*" / "?"
-	 */
-	const (
-		sStartPattern = iota
-		sInsidePattern
-		sNegate
-	)
-	s := sStartPattern
-	for _, c := range x {
-		if (c >= 0x22 && c <= 0x29) || c == 0x2B ||
-			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
-			(c >= 0x5E && c <= 0x7E) || c >= 0x80 /* wildmat-exact */ ||
-			c == '*' || c == '?' /* wildmat-wild */ {
-			s = sInsidePattern
-			continue
-		}
-		// "!" only allowed in front of pattern
-		if c == '!' && s == sStartPattern {
-			s = sNegate
-			continue
-		}
-		if c == ',' && s == sInsidePattern {
-			s = sStartPattern // next char must be start of new pattern or '!'
-			continue
-		}
-		return false
-	}
-	return s == sInsidePattern // cannot end with ',' or '!'
 }

@@ -16,19 +16,19 @@ var setA = [articleAmmount]struct {
 	byCurr  func(c *ConnState) bool
 }{
 	{
-		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleFullByMsgID(c.w, msgid) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleFullByMsgID(c.w, c, msgid) },
 		func(c *ConnState, num uint64) bool { return c.prov.GetArticleFullByNum(c.w, c, num) },
 		func(c *ConnState) bool { return c.prov.GetArticleFullByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleHeadByMsgID(c.w, msgid) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleHeadByMsgID(c.w, c, msgid) },
 		func(c *ConnState, num uint64) bool { return c.prov.GetArticleHeadByNum(c.w, c, num) },
 		func(c *ConnState) bool { return c.prov.GetArticleHeadByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleBodyByMsgID(c.w, msgid) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleBodyByMsgID(c.w, c, msgid) },
 		func(c *ConnState, num uint64) bool { return c.prov.GetArticleBodyByNum(c.w, c, num) },
 		func(c *ConnState) bool { return c.prov.GetArticleBodyByCurr(c.w, c) },
 	}, {
-		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleStatByMsgID(c.w, msgid) },
+		func(c *ConnState, msgid []byte) bool { return c.prov.GetArticleStatByMsgID(c.w, c, msgid) },
 		func(c *ConnState, num uint64) bool { return c.prov.GetArticleStatByNum(c.w, c, num) },
 		func(c *ConnState) bool { return c.prov.GetArticleStatByCurr(c.w, c) },
 	},
@@ -78,7 +78,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 }
 
 func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
-	if !ValidGroupSlice(args[0]) {
+	if !FullValidGroupSlice(args[0]) {
 		c.w.PrintfLine("501 invalid group name")
 		return true
 	}
@@ -97,7 +97,7 @@ func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	var group []byte
 	if len(args) > 0 {
-		if !ValidGroupSlice(args[0]) {
+		if !FullValidGroupSlice(args[0]) {
 			c.w.PrintfLine("501 invalid group name")
 			return true
 		}
@@ -225,7 +225,7 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 				return
 			}
 			mid := FullMsgID(id)
-			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, cutMessageID(mid)) {
+			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, c, cutMessageID(mid)) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 		} else {
@@ -291,9 +291,9 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 			ok := false
 			if !ReservedMessageID(mid) {
 				if hdr {
-					ok = c.prov.GetHdrByMsgID(c.w, hq, cutMessageID(mid))
+					ok = c.prov.GetHdrByMsgID(c.w, c, hq, cutMessageID(mid))
 				} else {
-					ok = c.prov.GetXHdrByMsgID(c.w, hq, cutMessageID(mid))
+					ok = c.prov.GetXHdrByMsgID(c.w, c, hq, cutMessageID(mid))
 				}
 			}
 			if !ok {

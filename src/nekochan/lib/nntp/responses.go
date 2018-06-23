@@ -2,11 +2,11 @@ package nntp
 
 // 2** - successful completion
 
-func (r Responder) ResGroupSuccessfullySelected(est, lo, hi int64, group string) {
+func (r Responder) ResGroupSuccessfullySelected(est, lo, hi uint64, group string) {
 	r.PrintfLine("211 %d %d %d %s", est, lo, hi, group)
 }
 
-func (r Responder) ResArticleNumbersFollow(est, lo, hi int64, group string) {
+func (r Responder) ResArticleNumbersFollow(est, lo, hi uint64, group string) {
 	r.PrintfLine("211 %d %d %d %s list follows", est, lo, hi, group)
 }
 
@@ -14,11 +14,11 @@ func (r Responder) ResListFollows() {
 	r.PrintfLine("215 list follows")
 }
 
-func (r Responder) ResArticleFollows(num int64, msgid string) {
+func (r Responder) ResArticleFollows(num uint64, msgid string) {
 	r.PrintfLine("220 %d %s cominngg!!!", num, msgid)
 }
 
-func (r Responder) ResHeadFollows(num int64, msgid string) {
+func (r Responder) ResHeadFollows(num uint64, msgid string) {
 	r.PrintfLine("221 %d %s head incoming", num, msgid)
 }
 
@@ -26,11 +26,11 @@ func (r Responder) ResXHdrFollow() {
 	r.PrintfLine("221 headers follow")
 }
 
-func (r Responder) ResBodyFollows(num int64, msgid string) {
+func (r Responder) ResBodyFollows(num uint64, msgid string) {
 	r.PrintfLine("222 %d %s body is coming", num, msgid)
 }
 
-func (r Responder) ResArticleFound(num int64, msgid string) {
+func (r Responder) ResArticleFound(num uint64, msgid string) {
 	r.PrintfLine("223 %d %s it's here", num, msgid)
 }
 

@@ -36,10 +36,10 @@ type NNTPProvider interface {
 	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
 	//   <ByNum>   412{ResNoNewsgroupSelected} 423{ResNoArticleWithThatNum[false]}
 	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetArticleFullByMsgID(w Responder, msgid CutMsgID) bool
-	GetArticleHeadByMsgID(w Responder, msgid CutMsgID) bool
-	GetArticleBodyByMsgID(w Responder, msgid CutMsgID) bool
-	GetArticleStatByMsgID(w Responder, msgid CutMsgID) bool
+	GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
+	GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
+	GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
+	GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
 	GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool
@@ -59,10 +59,10 @@ type NNTPProvider interface {
 	// - fail: 422{ResNoPrevArticleInThisGroup}
 	SelectPrevArticle(w Responder, cs *ConnState)
 
-	// + 231{ResListOfNewNewsgroupsFollows}
-	ListNewGroups(w io.Writer, qt time.Time)
 	// + 230{ResListOfNewArticlesFollows}
 	ListNewNews(w io.Writer, wildmat []byte, qt time.Time) // SupportsNewNews()
+	// + 231{ResListOfNewNewsgroupsFollows}
+	ListNewGroups(w io.Writer, qt time.Time)
 	// + 215{ResListOfNewsgroupsFollows}
 	ListActiveGroups(w io.Writer, wildmat []byte)
 	ListNewsgroups(w io.Writer, wildmat []byte)
@@ -73,22 +73,22 @@ type NNTPProvider interface {
 	//   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 	//   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetOverByMsgID(w Responder, msgid CutMsgID) bool // SupportsOverByMsgID()
+	GetOverByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetXOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
 
-	// +
+	// + SupportsHdr()
 	//   <HdrByMsgID>  ok: 225{ResHdrFollow}  fail: 430{ResNoArticleWithThatMsgID[false]}
 	//   <HdrByRange>  ok: 225{ResHdrFollow}  fail: 412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 	//   <HdrByCurr>   ok: 225{ResHdrFollow}  fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
 	//   <XHdrByMsgID> ok: 221{ResXHdrFollow} fail: 430{ResNoArticleWithThatMsgID[false]}
 	//   <XHdrByRange> ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <XHdrByCurr>  ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetHdrByMsgID(w Responder, hdr []byte, msgid CutMsgID) bool
+	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CutMsgID) bool
 	GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
-	GetXHdrByMsgID(w Responder, hdr []byte, msgid CutMsgID) bool
+	GetXHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CutMsgID) bool
 	GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
 
