@@ -29,6 +29,11 @@ func NewBufReaderSize(u io.Reader, s int) *BufReader {
 	return &BufReader{u: u, b: make([]byte, s)}
 }
 
+func (r *BufReader) SetReader(u io.Reader) {
+	r.u = u
+	r.err = nil
+}
+
 func (r *BufReader) readErr() (err error) {
 	err = r.err
 	r.err = nil
@@ -130,6 +135,49 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
 			return n, ErrDelimNotFound
 		}
 	}
+}
+
+func (r *BufReader) Buffered() []byte {
+	return r.b[r.r:r.w]
+}
+
+func (r *BufReader) Capacity() int {
+	if r.r == r.w {
+		r.r = 0
+		r.w = 0
+	}
+	return len(r.b) - r.r
+}
+
+func (r *BufReader) CompactBuffer() {
+	if r.r != 0 {
+		copy(r.b, r.b[r.r:r.w])
+		r.w -= r.r
+		r.r = 0
+	}
+}
+
+func (r *BufReader) FillBuffer(w int) (n int, e error) {
+	if r.r == r.w {
+		r.r = 0
+		r.w = 0
+	}
+	if w <= 0 {
+		w = len(r.b) - r.r
+	}
+	var x int
+	for r.w < len(r.b) || r.w-r.r >= w {
+		if r.err != nil {
+			return n, r.readErr()
+		}
+		x, r.err = r.u.Read(r.b[r.w:])
+		if x <= 0 {
+			return n, r.readErr()
+		}
+		r.w += x
+		n += x
+	}
+	return
 }
 
 // skips specified ammount of bytes. if specified ammount is negative, read until fail.

@@ -41,9 +41,10 @@ func toLowerASCII(b []byte) {
 	}
 }
 
+// XXX space isn't included because nothing which uses this function accepts space
 func isPrintableASCIISlice(s []byte, e byte) bool {
 	for _, c := range s {
-		if c < 32 || c >= 127 || c == e {
+		if c <= 32 || c >= 127 || c == e {
 			return false
 		}
 	}
@@ -74,6 +75,11 @@ func validHeaderQuery(hq []byte) bool {
 		hq = hq[1:]
 	}
 	return isPrintableASCIISlice(hq, ':')
+}
+
+func validHeader(h []byte) bool {
+	// TODO improve
+	return isPrintableASCIISlice(h, ':')
 }
 
 func ValidGroupSlice(s []byte) bool {
