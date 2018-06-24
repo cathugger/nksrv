@@ -178,10 +178,14 @@ func (mh MessageHead) Close() error {
 	return nil
 }
 
-func ReadHeaders(r io.Reader) (mh MessageHead, e error) {
+func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
-	br.SetReader(r)
+	if headlimit > 0 {
+		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
+	} else {
+		br.SetReader(r)
+	}
 	h := hdrPool.Get().(*bytes.Buffer)
 
 	mh.H = make(Headers)
@@ -236,6 +240,7 @@ func ReadHeaders(r io.Reader) (mh MessageHead, e error) {
 			if len(wb) == 0 {
 				// empty line == end of headers
 				mh.B = br
+				br.SetReader(r)
 				goto endHeaders
 			}
 
