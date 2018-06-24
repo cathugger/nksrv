@@ -166,7 +166,7 @@ func (r *BufReader) FillBuffer(w int) (n int, e error) {
 		w = len(r.b) - r.r
 	}
 	var x int
-	for r.w < len(r.b) || r.w-r.r >= w {
+	for r.w < len(r.b) && r.w-r.r < w {
 		if r.err != nil {
 			return n, r.readErr()
 		}
