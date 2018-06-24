@@ -133,7 +133,7 @@ func init() {
 	}
 }
 
-type Header map[string][]string
+type Headers map[string][]string
 
 // XXX can modify underlying storage
 func mapCanonicalHeader(b []byte) string {
@@ -160,13 +160,25 @@ func mapCanonicalHeader(b []byte) string {
 	return string(b)
 }
 
-func ReadHeaders(r io.Reader) (H Header, rr io.Reader, e error) {
+type MessageHead struct {
+	H Headers   // message headers
+	B io.Reader // message body reader
+}
+
+func (mh MessageHead) Close() error {
+	if mh.B != nil {
+		bufPool.Put(mh.B)
+	}
+	return nil
+}
+
+func ReadHeaders(r io.Reader) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
 	br.SetReader(r)
-	h := bufPool.Get().(*bytes.Buffer)
+	h := hdrPool.Get().(*bytes.Buffer)
 
-	H = make(Header)
+	mh.H = make(Headers)
 
 	var currHeader string
 
@@ -176,13 +188,13 @@ func ReadHeaders(r io.Reader) (H Header, rr io.Reader, e error) {
 	finishCurrent := func() {
 		if len(currHeader) != 0 {
 			hval := string(h.Bytes())
-			if cs, ok := H[currHeader]; ok {
-				H[currHeader] = append(cs, hval)
+			if cs, ok := mh.H[currHeader]; ok {
+				mh.H[currHeader] = append(cs, hval)
 			} else {
 				// do not include previous values, as in case of reallocation we don't need them
 				Hbuf = append(Hbuf[len(Hbuf):], hval)
 				// ensure that append will reallocate and not spill into Hbuf by forcing cap to 1
-				H[currHeader] = Hbuf[0:1:1]
+				mh.H[currHeader] = Hbuf[0:1:1]
 			}
 			currHeader = ""
 		}
@@ -217,7 +229,7 @@ func ReadHeaders(r io.Reader) (H Header, rr io.Reader, e error) {
 
 			if len(wb) == 0 {
 				// empty line == end of headers
-				rr = br
+				mh.B = br
 				goto endHeaders
 			}
 
@@ -268,5 +280,6 @@ func ReadHeaders(r io.Reader) (H Header, rr io.Reader, e error) {
 	}
 endHeaders:
 	finishCurrent()
+	hdrPool.Put(h)
 	return
 }
