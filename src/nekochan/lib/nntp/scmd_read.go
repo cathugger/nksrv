@@ -293,7 +293,7 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 				if hdr {
 					ok = c.prov.GetHdrByMsgID(c.w, c, hq, CutMessageID(mid))
 				} else {
-					ok = c.prov.GetXHdrByMsgID(c.w, c, hq, CutMessageID(mid))
+					ok = c.prov.GetXHdrByMsgID(c.w, hq, CutMessageID(mid))
 				}
 			}
 			if !ok {

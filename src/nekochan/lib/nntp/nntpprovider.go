@@ -90,7 +90,7 @@ type NNTPProvider interface {
 	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool
 	GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
-	GetXHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool
+	GetXHdrByMsgID(w Responder, hdr []byte, msgid CoreMsgID) bool
 	GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
 

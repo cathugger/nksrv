@@ -42,23 +42,6 @@ type (
 	ConnState    = nntp.ConnState
 )
 
-/*
-type NNTPProvider interface {
-
-	// ! implementers MUST drain readers or bad things will happen
-	// + iok: 340{ResSendArticleToBePosted} ifail: 440{ResPostingNotPermitted[false]}
-	// cok: 240{ResPostingAccepted} cfail: 441{ResPostingFailed}
-	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool // SupportsPost()
-	// + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
-	// cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
-	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CoreMsgID) bool // SupportsIHave()
-	// + ok: 238{ResPleaseSend} fail: 431{ResCantAccept} 438{ResArticleNotWanted[false]}
-	HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsStream()
-	// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
-	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CoreMsgID) bool // SupportsStream()
-}
-*/
-
 func artnumInGroup(cs *ConnState, group string, num uint64) uint64 {
 	if cg, ok := cs.CurrentGroup.(*groupState); ok && cg != nil && cg.group == group {
 		return num
@@ -642,8 +625,8 @@ func (p *TestSrv) GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rm
 func (p *TestSrv) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
 	return p.commonGetHdrByCurr(w, cs, hdr, true)
 }
-func (p *TestSrv) GetXHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool {
-	return p.commonGetHdrByMsgID(w, cs, hdr, msgid, false)
+func (p *TestSrv) GetXHdrByMsgID(w Responder, hdr []byte, msgid CoreMsgID) bool {
+	return p.commonGetHdrByMsgID(w, nil, hdr, msgid, false)
 }
 func (p *TestSrv) GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
 	return p.commonGetHdrByRange(w, cs, hdr, rmin, rmax, false)
