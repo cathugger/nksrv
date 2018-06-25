@@ -58,7 +58,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 				return
 			}
 
-			if validMessageNum(num) || !setA[kind].byNum(c, num) {
+			if !validMessageNum(num) || !setA[kind].byNum(c, num) {
 				c.w.ResNoArticleWithThatNum()
 			}
 			return

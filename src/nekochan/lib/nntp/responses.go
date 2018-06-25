@@ -14,24 +14,24 @@ func (r Responder) ResListFollows() {
 	r.PrintfLine("215 list follows")
 }
 
-func (r Responder) ResArticleFollows(num uint64, msgid string) {
-	r.PrintfLine("220 %d %s cominngg!!!", num, msgid)
+func (r Responder) ResArticleFollows(num uint64, msgid CoreMsgIDStr) {
+	r.PrintfLine("220 %d <%s> cominngg!!!", num, msgid)
 }
 
-func (r Responder) ResHeadFollows(num uint64, msgid string) {
-	r.PrintfLine("221 %d %s head incoming", num, msgid)
+func (r Responder) ResHeadFollows(num uint64, msgid CoreMsgIDStr) {
+	r.PrintfLine("221 %d <%s> head incoming", num, msgid)
 }
 
 func (r Responder) ResXHdrFollow() {
 	r.PrintfLine("221 headers follow")
 }
 
-func (r Responder) ResBodyFollows(num uint64, msgid string) {
-	r.PrintfLine("222 %d %s body is coming", num, msgid)
+func (r Responder) ResBodyFollows(num uint64, msgid CoreMsgIDStr) {
+	r.PrintfLine("222 %d <%s> body is coming", num, msgid)
 }
 
-func (r Responder) ResArticleFound(num uint64, msgid string) {
-	r.PrintfLine("223 %d %s it's here", num, msgid)
+func (r Responder) ResArticleFound(num uint64, msgid CoreMsgIDStr) {
+	r.PrintfLine("223 %d <%s> it's here", num, msgid)
 }
 
 func (r Responder) ResOverviewInformationFollows() {

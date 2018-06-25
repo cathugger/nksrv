@@ -2,7 +2,7 @@ package nntp
 
 func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 	var wildmat []byte
-	if len(args) > 0 {
+	if len(args) != 0 {
 		wildmat = args[0]
 		if !validWildmat(wildmat) {
 			c.w.PrintfLine("501 invalid wildmat")

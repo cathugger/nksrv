@@ -129,6 +129,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		srv:  s,
 		conn: c,
 		r:    r,
+		prov: s.prov,
 		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 	}
 	s.setupClientDefaults(cs)

@@ -7,6 +7,8 @@ import (
 
 type FullMsgID []byte // msgid with < and >
 type CoreMsgID []byte // msgid without < and >
+type FullMsgIDStr string
+type CoreMsgIDStr string
 
 type ArticleReader interface {
 	io.Reader
