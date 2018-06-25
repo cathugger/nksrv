@@ -45,7 +45,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 
 		if ValidMessageID(FullMsgID(id)) {
 			mid := FullMsgID(id)
-			if ReservedMessageID(mid) || !setA[kind].byMsgID(c, cutMessageID(mid)) {
+			if ReservedMessageID(mid) || !setA[kind].byMsgID(c, CutMessageID(mid)) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 			return
@@ -225,7 +225,7 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 				return
 			}
 			mid := FullMsgID(id)
-			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, c, cutMessageID(mid)) {
+			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, c, CutMessageID(mid)) {
 				c.w.ResNoArticleWithThatMsgID()
 			}
 		} else {
@@ -277,7 +277,7 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 	}
 
 	hq := args[0]
-	toLowerASCII(hq)
+	ToLowerASCII(hq)
 	if !validHeaderQuery(hq) {
 		c.w.PrintfLine("501 invalid header query")
 		return
@@ -291,9 +291,9 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 			ok := false
 			if !ReservedMessageID(mid) {
 				if hdr {
-					ok = c.prov.GetHdrByMsgID(c.w, c, hq, cutMessageID(mid))
+					ok = c.prov.GetHdrByMsgID(c.w, c, hq, CutMessageID(mid))
 				} else {
-					ok = c.prov.GetXHdrByMsgID(c.w, c, hq, cutMessageID(mid))
+					ok = c.prov.GetXHdrByMsgID(c.w, c, hq, CutMessageID(mid))
 				}
 			}
 			if !ok {

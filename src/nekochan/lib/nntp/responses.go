@@ -54,11 +54,11 @@ func (r Responder) ResTransferSuccess() {
 	r.PrintfLine("235 got it :>")
 }
 
-func (r Responder) ResPleaseSend(msgid CutMsgID) {
+func (r Responder) ResPleaseSend(msgid CoreMsgID) {
 	r.PrintfLine("238 <%s>", msgid)
 }
 
-func (r Responder) ResArticleTransferedOK(msgid CutMsgID) {
+func (r Responder) ResArticleTransferedOK(msgid CoreMsgID) {
 	r.PrintfLine("239 <%s>", msgid)
 }
 
@@ -114,7 +114,7 @@ func (r Responder) ResNoArticleWithThatMsgID() {
 	r.PrintfLine("430 no article with that Message-ID")
 }
 
-func (r Responder) ResCantAccept(msgid CutMsgID) {
+func (r Responder) ResCantAccept(msgid CoreMsgID) {
 	r.PrintfLine("431 <%s>", msgid)
 }
 
@@ -130,11 +130,11 @@ func (r Responder) ResTransferRejected() {
 	r.PrintfLine("437 transfer rejected, don't wanna")
 }
 
-func (r Responder) ResArticleNotWanted(msgid CutMsgID) {
+func (r Responder) ResArticleNotWanted(msgid CoreMsgID) {
 	r.PrintfLine("438 <%s>", msgid)
 }
 
-func (r Responder) ResArticleRejected(msgid CutMsgID) {
+func (r Responder) ResArticleRejected(msgid CoreMsgID) {
 	r.PrintfLine("439 <%s>", msgid)
 }
 

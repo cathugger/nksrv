@@ -274,7 +274,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdMode(c *ConnState, args [][]byte, rest []byte) bool {
 	mode := args[0]
-	toUpperASCII(mode)
+	ToUpperASCII(mode)
 	smode := unsafeBytesToStr(mode)
 
 	if smode == "READER" {

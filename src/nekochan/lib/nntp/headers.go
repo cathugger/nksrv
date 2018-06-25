@@ -22,12 +22,6 @@ var hdrPool = sync.Pool{
 	},
 }
 
-// XXX shit name
-type ReadingResult struct {
-	H map[string][]string
-	R io.Reader
-}
-
 func estimateNumHeaders(br *bufreader.BufReader) (n int) {
 	br.CompactBuffer()
 	br.FillBuffer(0)
@@ -139,7 +133,15 @@ func init() {
 	}
 }
 
-type Headers map[string][]string
+type HeaderVal string
+type Headers map[string][]HeaderVal
+
+func (h Headers) GetFirst(x string) HeaderVal {
+	if s, ok := h[x]; ok {
+		return s[0]
+	}
+	return ""
+}
 
 // XXX can modify underlying storage
 func mapCanonicalHeader(b []byte) string {
@@ -167,8 +169,9 @@ func mapCanonicalHeader(b []byte) string {
 }
 
 type MessageHead struct {
-	H Headers   // message headers
-	B io.Reader // message body reader
+	H     Headers       // message headers
+	HSort []string      // header keys sorted in order they appeared
+	B     ArticleReader // message body reader
 }
 
 func (mh MessageHead) Close() error {
@@ -192,15 +195,19 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 
 	var currHeader string
 
+	est := estimateNumHeaders(br)
+	mh.HSort = make([]string, 0, est)
 	// one buffer for string slice
-	Hbuf := make([]string, 0, estimateNumHeaders(br))
+	Hbuf := make([]HeaderVal, 0, est)
 
 	finishCurrent := func() {
 		if len(currHeader) != 0 {
-			hval := string(h.Bytes())
+			hval := HeaderVal(h.Bytes())
 			if cs, ok := mh.H[currHeader]; ok {
 				mh.H[currHeader] = append(cs, hval)
 			} else {
+				// mark key in HSort array
+				mh.HSort = append(mh.HSort, currHeader)
 				// do not include previous values, as in case of reallocation we don't need them
 				Hbuf = append(Hbuf[len(Hbuf):], hval)
 				// ensure that append will reallocate and not spill into Hbuf by forcing cap to 1

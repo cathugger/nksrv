@@ -6,7 +6,7 @@ import (
 )
 
 type FullMsgID []byte // msgid with < and >
-type CutMsgID []byte  // msgid without < and >
+type CoreMsgID []byte // msgid without < and >
 
 type ArticleReader interface {
 	io.Reader
@@ -36,10 +36,10 @@ type NNTPProvider interface {
 	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
 	//   <ByNum>   412{ResNoNewsgroupSelected} 423{ResNoArticleWithThatNum[false]}
 	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
-	GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
-	GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
-	GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool
+	GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
+	GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
+	GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
+	GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
 	GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool
@@ -73,7 +73,7 @@ type NNTPProvider interface {
 	//   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 	//   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetOverByMsgID(w Responder, cs *ConnState, msgid CutMsgID) bool // SupportsOverByMsgID()
+	GetOverByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetXOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
@@ -85,10 +85,10 @@ type NNTPProvider interface {
 	//   <XHdrByMsgID> ok: 221{ResXHdrFollow} fail: 430{ResNoArticleWithThatMsgID[false]}
 	//   <XHdrByRange> ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <XHdrByCurr>  ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CutMsgID) bool
+	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool
 	GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
-	GetXHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CutMsgID) bool
+	GetXHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool
 	GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
 
@@ -98,9 +98,9 @@ type NNTPProvider interface {
 	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool // SupportsPost()
 	// + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
 	// cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
-	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CutMsgID) bool // SupportsIHave()
+	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CoreMsgID) bool // SupportsIHave()
 	// + ok: 238{ResPleaseSend} fail: 431{ResCantAccept} 438{ResArticleNotWanted[false]}
-	HandleCheck(w Responder, cs *ConnState, msgid CutMsgID) bool // SupportsStream()
+	HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsStream()
 	// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
-	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CutMsgID) bool // SupportsStream()
+	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CoreMsgID) bool // SupportsStream()
 }

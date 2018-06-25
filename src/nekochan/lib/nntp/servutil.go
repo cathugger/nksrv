@@ -25,7 +25,7 @@ func parseKeyword(b []byte) int {
 	}
 }
 
-func toUpperASCII(b []byte) {
+func ToUpperASCII(b []byte) {
 	for i, c := range b {
 		if c >= 'a' && c <= 'z' {
 			b[i] = c - ('a' - 'A')
@@ -33,7 +33,7 @@ func toUpperASCII(b []byte) {
 	}
 }
 
-func toLowerASCII(b []byte) {
+func ToLowerASCII(b []byte) {
 	for i, c := range b {
 		if c >= 'A' && c <= 'Z' {
 			b[i] = c + ('a' - 'A')
@@ -41,7 +41,7 @@ func toLowerASCII(b []byte) {
 	}
 }
 
-// XXX space isn't included because nothing which uses this function accepts space
+// NOTE ASCII space (32) is neither printable chatacter nor control character
 func isPrintableASCIISlice(s []byte, e byte) bool {
 	for _, c := range s {
 		if c <= 32 || c >= 127 || c == e {
@@ -51,13 +51,13 @@ func isPrintableASCIISlice(s []byte, e byte) bool {
 	return true
 }
 
-func cutMessageID(id FullMsgID) CutMsgID {
-	return CutMsgID(id[1 : len(id)-1])
+func CutMessageID(id FullMsgID) CoreMsgID {
+	return CoreMsgID(id[1 : len(id)-1])
 }
 
 func ValidMessageID(id FullMsgID) bool {
 	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
-		len(id) <= 250 && isPrintableASCIISlice(cutMessageID(id), '>')
+		len(id) <= 250 && isPrintableASCIISlice(CutMessageID(id), '>')
 }
 
 func ReservedMessageID(id FullMsgID) bool {
@@ -78,7 +78,6 @@ func validHeaderQuery(hq []byte) bool {
 }
 
 func validHeader(h []byte) bool {
-	// TODO improve
 	return isPrintableASCIISlice(h, ':')
 }
 
