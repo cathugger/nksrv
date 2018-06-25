@@ -264,6 +264,10 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 			fmt.Fprintf(dw, "OVER MSGID\n")
 		}
 
+		if c.prov.SupportsHdr() {
+			fmt.Fprintf(dw, "HDR\n")
+		}
+
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 

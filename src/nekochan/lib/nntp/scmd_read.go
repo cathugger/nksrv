@@ -248,7 +248,6 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 			} else {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXOverByRange(c.w, c, rmin, rmax) {
 					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
-					// that RFC is gay tbh
 					c.w.ResXNoArticles()
 				}
 			}
@@ -319,7 +318,6 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 			} else {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXHdrByRange(c.w, c, hq, rmin, rmax) {
 					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
-					// ultrahomo
 					c.w.ResXNoArticles()
 				}
 			}
