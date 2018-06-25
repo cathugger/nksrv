@@ -28,6 +28,7 @@ type ListenerCW interface {
 
 type NNTPServer struct {
 	log  Logger
+	logx LoggerX
 	prov NNTPProvider
 
 	mu          sync.Mutex
@@ -65,7 +66,10 @@ func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 }
 
 func NewNNTPServer(prov NNTPProvider, logx LoggerX) *NNTPServer {
-	s := &NNTPServer{prov: prov}
+	s := &NNTPServer{
+		prov: prov,
+		logx: logx,
+	}
 	s.log = NewLogToX(logx, fmt.Sprintf("nntpsrv.%p", s))
 	return s
 }
@@ -132,6 +136,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		prov: s.prov,
 		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 	}
+	cs.log = NewLogToX(s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
 	s.setupClientDefaults(cs)
 
 	if cs.AllowPosting {
@@ -297,12 +302,16 @@ func (c *ConnState) serveClient() int {
 			}
 		}
 
+		c.log.LogPrintf(DEBUG, "got %q", incmd)
+
 		x := parseKeyword(incmd)
 		cmd, ok := commandMap[string(incmd[:x])]
 		if !ok {
 			c.w.PrintfLine("500 unrecognised command")
+			c.log.LogPrintf(WARN, "unrecognised command %q", incmd[:x])
 			continue
 		}
+		c.log.LogPrintf(INFO, "processing command %q", incmd[:x])
 
 		args = args[:0] // reuse
 
@@ -324,6 +333,7 @@ func (c *ConnState) serveClient() int {
 			if len(args) >= cmd.maxargs {
 				if !cmd.allowextra {
 					c.w.PrintfLine("501 too much parameters")
+					c.log.LogPrintf(WARN, "too much parameters")
 				} else {
 					if !cmd.cmdfunc(c, args, incmd[x:]) {
 						return cGraceful
@@ -348,6 +358,7 @@ func (c *ConnState) serveClient() int {
 	argsparsed:
 		if len(args) < cmd.minargs {
 			c.w.PrintfLine("501 not enough parameters")
+			c.log.LogPrintf(WARN, "not enough parameters")
 			goto nextcommand
 		}
 		if !cmd.cmdfunc(c, args, nil) {

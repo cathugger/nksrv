@@ -121,6 +121,7 @@ func init() {
 		"X-Antivirus-Status",
 		"X-Complaints-To",
 		"X-Mailer",
+		"X-Mozilla-News-Host",
 		"X-Newsreader",
 		"X-Trace",
 		"X-Face",

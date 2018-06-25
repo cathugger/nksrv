@@ -4,6 +4,7 @@ import (
 	tp "net/textproto"
 
 	"nekochan/lib/bufreader"
+	. "nekochan/lib/logx"
 )
 
 // sugar because im lazy
@@ -17,6 +18,7 @@ type ConnState struct {
 	r    *bufreader.BufReader
 	dr   *bufreader.DotReader
 	w    Responder
+	log  Logger
 
 	prov         NNTPProvider
 	CurrentGroup interface{}
