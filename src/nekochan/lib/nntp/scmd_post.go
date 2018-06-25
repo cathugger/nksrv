@@ -35,6 +35,11 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 }
 
 func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
+	if !c.prov.SupportsStream() {
+		c.w.PrintfLine("503 STREAMING unimplemented")
+		return true
+	}
+
 	id := FullMsgID(args[0])
 	if !ValidMessageID(id) {
 		c.w.ResBadMessageID()
@@ -42,7 +47,8 @@ func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	// check can waste server's resources too
-	if !c.AllowPosting {
+	// but if reading is allowed, then client can do the same in different way
+	if !c.AllowPosting && !c.AllowReading {
 		c.w.ResAuthRequired()
 		return true
 	}
@@ -58,8 +64,8 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 	r := c.OpenReader()
 	defer r.Discard(-1)
 
-	if !c.prov.SupportsIHave() {
-		c.w.PrintfLine("503 TAKETHIS unimplemented")
+	if !c.prov.SupportsStream() {
+		c.w.PrintfLine("503 STREAMING unimplemented")
 		return true
 	}
 
