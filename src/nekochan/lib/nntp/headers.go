@@ -234,15 +234,15 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 				break
 			}
 
-			b = b[n+1:]
-			br.Discard(n + 1)
-
 			var wb []byte
 			if n == 0 || b[n-1] != '\r' {
 				wb = b[:n]
 			} else {
 				wb = b[:n-1]
 			}
+
+			b = b[n+1:]
+			br.Discard(n + 1)
 
 			if len(wb) == 0 {
 				// empty line == end of headers
