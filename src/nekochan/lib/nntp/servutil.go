@@ -107,6 +107,28 @@ func FullValidGroupSlice(s []byte) bool {
 	return !hasunicode || utf8.Valid(s)
 }
 
+func TrimWSBuf(b []byte) []byte {
+	x, y := 0, len(b)
+	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
+		x++
+	}
+	for y != x && (b[y-1] == ' ' || b[y-1] == '\t') {
+		y--
+	}
+	return b[x:y]
+}
+
+func TrimWSStr(b string) string {
+	x, y := 0, len(b)
+	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
+		x++
+	}
+	for y != x && (b[y-1] == ' ' || b[y-1] == '\t') {
+		y--
+	}
+	return b[x:y]
+}
+
 func parseRange(srange string) (rmin, rmax int64, valid bool) {
 	rmin = 1
 	rmax = -1

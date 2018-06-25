@@ -31,6 +31,9 @@ func NewBufReaderSize(u io.Reader, s int) *BufReader {
 
 func (r *BufReader) SetReader(u io.Reader) {
 	r.u = u
+}
+
+func (r *BufReader) Reset() {
 	r.err = nil
 }
 

@@ -169,9 +169,9 @@ func mapCanonicalHeader(b []byte) string {
 }
 
 type MessageHead struct {
-	H     Headers       // message headers
+	H Headers // message headers
 	//HSort []string      // header keys sorted in order they appeared
-	B     ArticleReader // message body reader
+	B ArticleReader // message body reader
 }
 
 func (mh MessageHead) Close() error {
@@ -184,6 +184,7 @@ func (mh MessageHead) Close() error {
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
+	br.Reset()
 	if headlimit > 0 {
 		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
 	} else {
@@ -241,13 +242,20 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 				wb = b[:n-1]
 			}
 
+			//fmt.Printf("!hdr full line>%s\n", wb)
+
 			b = b[n+1:]
 			br.Discard(n + 1)
 
 			if len(wb) == 0 {
+				//fmt.Printf("!empty line - end of headers\n")
 				// empty line == end of headers
 				mh.B = br
-				br.SetReader(r)
+				e = nil
+				if headlimit > 0 {
+					br.Reset()
+					br.SetReader(r)
+				}
 				goto endHeaders
 			}
 
