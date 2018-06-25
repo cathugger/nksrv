@@ -170,7 +170,7 @@ func mapCanonicalHeader(b []byte) string {
 
 type MessageHead struct {
 	H     Headers       // message headers
-	HSort []string      // header keys sorted in order they appeared
+	//HSort []string      // header keys sorted in order they appeared
 	B     ArticleReader // message body reader
 }
 
@@ -196,7 +196,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	var currHeader string
 
 	est := estimateNumHeaders(br)
-	mh.HSort = make([]string, 0, est)
+	//mh.HSort = make([]string, 0, est)
 	// one buffer for string slice
 	Hbuf := make([]HeaderVal, 0, est)
 
@@ -207,7 +207,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 				mh.H[currHeader] = append(cs, hval)
 			} else {
 				// mark key in HSort array
-				mh.HSort = append(mh.HSort, currHeader)
+				//mh.HSort = append(mh.HSort, currHeader)
 				// do not include previous values, as in case of reallocation we don't need them
 				Hbuf = append(Hbuf[len(Hbuf):], hval)
 				// ensure that append will reallocate and not spill into Hbuf by forcing cap to 1
