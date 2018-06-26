@@ -134,7 +134,7 @@ func init() {
 	}
 }
 
-type HeaderVal string
+type HeaderVal = string
 type Headers map[string][]HeaderVal
 
 func (h Headers) GetFirst(x string) HeaderVal {
