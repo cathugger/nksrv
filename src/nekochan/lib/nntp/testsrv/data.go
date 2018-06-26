@@ -147,13 +147,13 @@ func makeOverview(s *server, a *article) {
 		}
 		return
 	}
-	a.over.subject = string(h.H.GetFirst("Subject"))
-	a.over.from = string(h.H.GetFirst("From"))
-	a.over.to = string(h.H.GetFirst("To"))
-	a.over.cc = string(h.H.GetFirst("Cc"))
-	a.over.date = string(h.H.GetFirst("Date"))
+	a.over.subject = h.H.GetFirst("Subject")
+	a.over.from = h.H.GetFirst("From")
+	a.over.to = h.H.GetFirst("To")
+	a.over.cc = h.H.GetFirst("Cc")
+	a.over.date = h.H.GetFirst("Date")
 	a.over.msgid = FullMsgIDStr(h.H.GetFirst("Message-ID"))
-	a.over.references = string(h.H.GetFirst("References"))
+	a.over.references = h.H.GetFirst("References")
 	a.over.bytes = fmt.Sprintf("%d", len(a.body))
 	a.over.lines = fmt.Sprintf("%d", numlines(a.body))
 	a.over.xref = fmt.Sprintf("%s %s:%d", s.name, a.group, a.number)

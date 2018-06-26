@@ -22,7 +22,7 @@ func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 }
 
 func getHdrMsgID(h nntp.Headers) FullMsgIDStr {
-	return FullMsgIDStr(nntp.TrimWSStr(string(h.GetFirst("Message-ID"))))
+	return FullMsgIDStr(nntp.TrimWSStr(h.GetFirst("Message-ID")))
 }
 
 // ! implementers MUST drain readers or bad things will happen
