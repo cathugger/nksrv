@@ -3,6 +3,8 @@ package nntp
 import (
 	"io"
 	"time"
+
+	"nekochan/lib/mail"
 )
 
 type FullMsgID []byte // msgid with < and >
@@ -10,11 +12,7 @@ type CoreMsgID []byte // msgid without < and >
 type FullMsgIDStr string
 type CoreMsgIDStr string
 
-type ArticleReader interface {
-	io.Reader
-	ReadByte() (byte, error)
-	Discard(n int) (int, error)
-}
+type ArticleReader = mail.ArticleReader
 
 type ReaderOpener interface {
 	OpenReader() ArticleReader

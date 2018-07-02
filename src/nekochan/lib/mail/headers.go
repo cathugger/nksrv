@@ -1,4 +1,4 @@
-package nntp
+package mail
 
 import (
 	"bytes"
@@ -6,8 +6,19 @@ import (
 	"io"
 	"sync"
 
+	au "nekochan/lib/asciiutils"
 	"nekochan/lib/bufreader"
 )
+
+type ArticleReader interface {
+	io.Reader
+	ReadByte() (byte, error)
+	Discard(n int) (int, error)
+}
+
+func ValidHeader(h []byte) bool {
+	return au.IsPrintableASCIISlice(h, ':')
+}
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
@@ -22,9 +33,9 @@ var hdrPool = sync.Pool{
 	},
 }
 
-func estimateNumHeaders(br *bufreader.BufReader) (n int) {
+func estimateNumHeaders(br *bufreader.BufReader) (n int, e error) {
 	br.CompactBuffer()
-	br.FillBuffer(0)
+	_, e = br.FillBufferUpto(0)
 	b := br.Buffered()
 	cont := 0 // cont -- spare addition incase header line doesn't end with '\n'
 	for i, c := range b {
@@ -54,6 +65,8 @@ var (
 	errInvalidContinuation = errors.New("invalid header continuation")
 )
 
+const maxCommonHdrLen = 32
+
 // common email headers statically allocated to avoid dynamic allocations
 // TODO actually analyse which are used and update accordingly
 var commonHeaders = map[string]string{
@@ -65,7 +78,7 @@ var commonHeaders = map[string]string{
 	// overchan
 	"X-Pubkey-Ed25519":           "X-PubKey-Ed25519",
 	"X-Signature-Ed25519-Sha512": "X-Signature-Ed25519-SHA512",
-	"X-Frontend-Pubkey":          "X-Frontend-PubKey",
+	"X-Frontend-Pubkey":          "X-Frontend-PubKey", // signature below
 	"X-Encrypted-Ip":             "X-Encrypted-IP",
 	"X-I2p-Desthash":             "X-I2P-Desthash",
 }
@@ -77,7 +90,7 @@ func init() {
 	}
 	// common headers which match their canonical versions
 	for _, v := range [...]string{
-		// kitchen-sink RFCs digestion
+		// kitchen-sink RFCs and other online sources digestion
 		"Also-Control",
 		"Approved",
 		"Archive",
@@ -105,8 +118,10 @@ func init() {
 		"Newsgroups",
 		"Organization",
 		"Path",
+		"Posting-Version",
 		"Received",
 		"References",
+		"Relay-Version",
 		"Return-Path",
 		"Reply-To",
 		"Sender",
@@ -120,13 +135,13 @@ func init() {
 		"X-Antivirus",
 		"X-Antivirus-Status",
 		"X-Complaints-To",
+		"X-Face",
 		"X-Mailer",
 		"X-Mozilla-News-Host",
 		"X-Newsreader",
 		"X-Trace",
-		"X-Face",
 		// overchan
-		"X-Frontend-Signature",
+		"X-Frontend-Signature", // pubkey above
 		"X-Tor-Poster",
 		"X-Sage",
 	} {
@@ -142,6 +157,63 @@ func (h Headers) GetFirst(x string) HeaderVal {
 		return s[0]
 	}
 	return ""
+}
+
+func (h Headers) Lookup(x string) []HeaderVal {
+	if y, ok := commonHeaders[x]; ok {
+		return h[y]
+	}
+	if s, ok := h[x]; ok {
+		return s
+	}
+
+	var bx [maxCommonHdrLen]byte
+	var b []byte
+	if len(x) <= maxCommonHdrLen {
+		b = bx[:len(x)]
+	} else {
+		b = make([]byte, len(x))
+	}
+
+	upper := true
+	for i := 0; i < len(x); i++ {
+		c := x[i]
+		if upper && c >= 'a' && c <= 'z' {
+			c = c - ('a' - 'A')
+		}
+		if !upper && c >= 'A' && c <= 'Z' {
+			c = c + ('a' - 'A')
+		}
+		b[i] = c
+		upper = c == '-'
+	}
+	// dont use commonHeaders there as there's no difference
+	return h[string(b)]
+}
+
+func FindCommonCanonicalForm(s string) string {
+	if len(s) > maxCommonHdrLen {
+		return "" // not common
+	}
+
+	if y, ok := commonHeaders[s]; ok {
+		return y
+	}
+
+	var b [maxCommonHdrLen]byte
+	upper := true
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if upper && c >= 'a' && c <= 'z' {
+			c = c - ('a' - 'A')
+		}
+		if !upper && c >= 'A' && c <= 'Z' {
+			c = c + ('a' - 'A')
+		}
+		b[i] = c
+		upper = c == '-'
+	}
+	return commonHeaders[string(b[:len(s)])]
 }
 
 // XXX can modify underlying storage
@@ -182,6 +254,119 @@ func (mh MessageHead) Close() error {
 	return nil
 }
 
+type HeaderAcceptor interface {
+	EatHeaderName(b []byte)
+	EatHeaderValue(b []byte)
+	FinishHeader()
+}
+
+func readHeadersInto(r io.Reader, ha HeaderAcceptor, headlimit int64) (B io.Reader, e error) {
+	br := bufPool.Get().(*bufreader.BufReader)
+	br.Drop()
+	br.Reset()
+	if headlimit > 0 {
+		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
+	} else {
+		br.SetReader(r)
+	}
+
+	hascurrent := false
+
+	finishCurrent := func() {
+		if hascurrent {
+			ha.FinishHeader()
+		}
+	}
+
+	for {
+		if br.Capacity() < 2000 {
+			br.CompactBuffer()
+		}
+		_, e = br.FillBufferAtleast(1)
+		b := br.Buffered()
+		for len(b) != 0 {
+			n := bytes.IndexByte(b, '\n')
+			if n < 0 {
+				if len(b) >= 2000 {
+					// uh oh
+					e = errTooLongHeader
+				}
+				break
+			}
+
+			var wb []byte
+			if n == 0 || b[n-1] != '\r' {
+				wb = b[:n]
+			} else {
+				wb = b[:n-1]
+			}
+
+			b = b[n+1:]
+			br.Discard(n + 1)
+
+			if len(wb) == 0 {
+				// empty line == end of headers
+				B = br
+				//e = nil // shallow error, if it's really bad it'll reemerge
+				if headlimit > 0 {
+					br.Reset()
+					br.SetReader(r)
+				}
+				goto endHeaders
+			}
+
+			// process header line
+			if wb[0] != ' ' && wb[0] != '\t' {
+				// not a continuation
+				// finish current, if any
+				finishCurrent()
+				// process it
+				n := bytes.IndexByte(wb, ':')
+				if n < 0 {
+					// no ':' -- illegal
+					e = errMissingColon
+					break
+				}
+				hn := n
+				// strip possible whitespace before ':'
+				for hn != 0 && (wb[hn-1] == ' ' || wb[hn-1] == '\t') {
+					hn--
+				}
+				// empty or invalid
+				if hn == 0 || !ValidHeader(wb[:hn]) {
+					e = errEmptyHeaderName
+					break
+				}
+
+				hascurrent = true
+				ha.EatHeaderName(wb[:hn])
+
+				n++
+				// skip one space after ':'
+				// XXX should we do this for '\t'?
+				if n < len(wb) && wb[n] == ' ' {
+					n++
+				}
+				ha.EatHeaderValue(wb[n:])
+			} else {
+				// a continuation
+				if !hascurrent {
+					// there was no previous header
+					e = errInvalidContinuation
+					break
+				}
+				ha.EatHeaderValue(wb)
+			}
+		}
+		if e != nil {
+			break
+		}
+	}
+endHeaders:
+	finishCurrent()
+	return
+}
+
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
@@ -197,7 +382,8 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 
 	var currHeader string
 
-	est := estimateNumHeaders(br)
+	var est int
+	est, e = estimateNumHeaders(br)
 	//mh.HSort = make([]string, 0, est)
 	// one buffer for string slice
 	Hbuf := make([]HeaderVal, 0, est)
@@ -221,10 +407,6 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	}
 
 	for {
-		if br.Capacity() < 2000 {
-			br.CompactBuffer()
-		}
-		_, e = br.FillBuffer(2000)
 		b := br.Buffered()
 		for len(b) != 0 {
 			n := bytes.IndexByte(b, '\n')
@@ -252,7 +434,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 				//fmt.Printf("!empty line - end of headers\n")
 				// empty line == end of headers
 				mh.B = br
-				e = nil
+				//e = nil // shallow error, if it's really bad it'll reemerge
 				if headlimit > 0 {
 					br.Reset()
 					br.SetReader(r)
@@ -278,7 +460,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 					hn--
 				}
 				// empty or invalid
-				if hn == 0 || !validHeader(wb[:hn]) {
+				if hn == 0 || !ValidHeader(wb[:hn]) {
 					e = errEmptyHeaderName
 					break
 				}
@@ -304,6 +486,12 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 		if e != nil {
 			break
 		}
+		// ensure atleast 2000 bytes space available
+		if br.Capacity() < 2000 {
+			br.CompactBuffer()
+		}
+		// pull stuff into buffer
+		_, e = br.FillBufferAtleast(1)
 	}
 endHeaders:
 	finishCurrent()

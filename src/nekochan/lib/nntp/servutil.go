@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	au "nekochan/lib/asciiutils"
 )
 
 func parseKeyword(b []byte) int {
@@ -41,23 +43,13 @@ func ToLowerASCII(b []byte) {
 	}
 }
 
-// NOTE ASCII space (32) is neither printable chatacter nor control character
-func isPrintableASCIISlice(s []byte, e byte) bool {
-	for _, c := range s {
-		if c <= 32 || c >= 127 || c == e {
-			return false
-		}
-	}
-	return true
-}
-
 func CutMessageID(id FullMsgID) CoreMsgID {
 	return CoreMsgID(id[1 : len(id)-1])
 }
 
 func ValidMessageID(id FullMsgID) bool {
 	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
-		len(id) <= 250 && isPrintableASCIISlice(CutMessageID(id), '>')
+		len(id) <= 250 && au.IsPrintableASCIISlice(CutMessageID(id), '>')
 }
 
 func ReservedMessageID(id FullMsgID) bool {
@@ -74,11 +66,7 @@ func validHeaderQuery(hq []byte) bool {
 	if hq[0] == ':' {
 		hq = hq[1:]
 	}
-	return isPrintableASCIISlice(hq, ':')
-}
-
-func validHeader(h []byte) bool {
-	return isPrintableASCIISlice(h, ':')
+	return au.IsPrintableASCIISlice(hq, ':')
 }
 
 func ValidGroupSlice(s []byte) bool {
@@ -105,28 +93,6 @@ func FullValidGroupSlice(s []byte) bool {
 		}
 	}
 	return !hasunicode || utf8.Valid(s)
-}
-
-func TrimWSBuf(b []byte) []byte {
-	x, y := 0, len(b)
-	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
-		x++
-	}
-	for y != x && (b[y-1] == ' ' || b[y-1] == '\t') {
-		y--
-	}
-	return b[x:y]
-}
-
-func TrimWSStr(b string) string {
-	x, y := 0, len(b)
-	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
-		x++
-	}
-	for y != x && (b[y-1] == ' ' || b[y-1] == '\t') {
-		y--
-	}
-	return b[x:y]
 }
 
 func parseRange(srange string) (rmin, rmax int64, valid bool) {

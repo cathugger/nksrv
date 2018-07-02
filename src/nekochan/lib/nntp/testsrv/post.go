@@ -1,7 +1,9 @@
 package testsrv
 
 import (
+	au "nekochan/lib/asciiutils"
 	. "nekochan/lib/logx"
+	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
 )
 
@@ -21,8 +23,8 @@ func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))
 }
 
-func getHdrMsgID(h nntp.Headers) FullMsgIDStr {
-	return FullMsgIDStr(nntp.TrimWSStr(h.GetFirst("Message-ID")))
+func getHdrMsgID(h mail.Headers) FullMsgIDStr {
+	return FullMsgIDStr(au.TrimWSString(h.GetFirst("Message-ID")))
 }
 
 // ! implementers MUST drain readers or bad things will happen
@@ -34,7 +36,7 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 	}
 	w.ResSendArticleToBePosted()
 	r := ro.OpenReader()
-	h, e := nntp.ReadHeaders(r, 2<<20)
+	h, e := mail.ReadHeaders(r, 2<<20)
 	p.Log.LogPrintf(DEBUG, "finished reading headers")
 	if e != nil {
 		p.Log.LogPrintf(WARN, "header parsing error: %v", e)
@@ -78,7 +80,7 @@ func (p *TestSrv) HandleIHave(w Responder, cs *ConnState, ro nntp.ReaderOpener, 
 	}
 	w.ResSendArticleToBeTransferred()
 	r := ro.OpenReader()
-	h, e := nntp.ReadHeaders(r, 2<<20)
+	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != mstr {
 		w.ResTransferRejected()
@@ -108,7 +110,7 @@ func (p *TestSrv) HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool 
 
 // + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
 func (p *TestSrv) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReader, msgid CoreMsgID) bool {
-	h, e := nntp.ReadHeaders(r, 2<<20)
+	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != unsafeCoreMsgIDToStr(msgid) {
 		w.ResArticleRejected(msgid)

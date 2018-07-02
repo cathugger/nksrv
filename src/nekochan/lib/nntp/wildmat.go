@@ -93,6 +93,7 @@ func estimateTranslatedSize(x []byte) (max int) {
 	return
 }
 
+// TODO benchmark and possibly replace with stripped down https://github.com/danwakefield/fnmatch
 func CompileWildmat(x []byte) (w Wildmat) {
 	b := bytes.NewBuffer(make([]byte, 0, 2+estimateTranslatedSize(x)))
 
@@ -152,7 +153,7 @@ func (w Wildmat) CheckString(s string) (result bool) {
 	return
 }
 
-func (w Wildmat) CheckSlice(s []byte) (result bool) {
+func (w Wildmat) CheckBytes(s []byte) (result bool) {
 	for i := range w {
 		if w[i].re.Match(s) {
 			result = w[i].result

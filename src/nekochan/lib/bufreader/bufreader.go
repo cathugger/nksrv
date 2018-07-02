@@ -140,6 +140,10 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
 	}
 }
 
+func (r *BufReader) Size() int {
+	return len(r.b)
+}
+
 func (r *BufReader) Buffered() []byte {
 	return r.b[r.r:r.w]
 }
@@ -160,17 +164,37 @@ func (r *BufReader) CompactBuffer() {
 	}
 }
 
-func (r *BufReader) FillBuffer(w int) (n int, e error) {
+func (r *BufReader) FillBufferAtleast(w int) (n int, e error) {
 	if r.r == r.w {
 		r.r = 0
 		r.w = 0
 	}
-	if w <= 0 {
-		w = len(r.b) - r.r
+	var x int
+	for r.w < len(r.b) && n < w {
+		if r.err != nil {
+			return n, r.readErr()
+		}
+		x, r.err = r.u.Read(r.b[r.w:])
+		if x <= 0 {
+			return n, r.readErr()
+		}
+		r.w += x
+		n += x
+	}
+	return
+}
+
+func (r *BufReader) FillBufferUpto(w int) (n int, e error) {
+	if r.r == r.w {
+		r.r = 0
+		r.w = 0
 	}
 	var x int
-	for r.w < len(r.b) && r.w-r.r < w {
+	for r.w < len(r.b) && (w <= 0 || r.w-r.r < w) {
 		if r.err != nil {
+			if w <= 0 && n != 0 {
+				break
+			}
 			return n, r.readErr()
 		}
 		x, r.err = r.u.Read(r.b[r.w:])
