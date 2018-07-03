@@ -101,7 +101,6 @@ func init() {
 		"Content-Description",
 		"Content-Disposition",
 		"Content-Language",
-		"Content-Length",
 		"Content-Transfer-Encoding",
 		"Content-Type",
 		"Control",
@@ -263,7 +262,7 @@ type HeaderAcceptor interface {
 func readHeadersInto(r io.Reader, ha HeaderAcceptor, headlimit int64) (B io.Reader, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
-	br.Reset()
+	br.ResetErr()
 	if headlimit > 0 {
 		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
 	} else {
@@ -309,7 +308,9 @@ func readHeadersInto(r io.Reader, ha HeaderAcceptor, headlimit int64) (B io.Read
 				B = br
 				//e = nil // shallow error, if it's really bad it'll reemerge
 				if headlimit > 0 {
-					br.Reset()
+					if br.QueuedErr() == io.EOF {
+						br.ResetErr()
+					}
 					br.SetReader(r)
 				}
 				goto endHeaders
@@ -370,7 +371,7 @@ endHeaders:
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
-	br.Reset()
+	br.ResetErr()
 	if headlimit > 0 {
 		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
 	} else {
@@ -436,7 +437,9 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 				mh.B = br
 				//e = nil // shallow error, if it's really bad it'll reemerge
 				if headlimit > 0 {
-					br.Reset()
+					if br.QueuedErr() == io.EOF {
+						br.ResetErr()
+					}
 					br.SetReader(r)
 				}
 				goto endHeaders

@@ -33,8 +33,12 @@ func (r *BufReader) SetReader(u io.Reader) {
 	r.u = u
 }
 
-func (r *BufReader) Reset() {
+func (r *BufReader) ResetErr() {
 	r.err = nil
+}
+
+func (r *BufReader) QueuedErr() error {
+	return r.err
 }
 
 func (r *BufReader) readErr() (err error) {
