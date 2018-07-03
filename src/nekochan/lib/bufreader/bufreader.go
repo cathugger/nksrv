@@ -44,7 +44,7 @@ func (r *BufReader) readErr() (err error) {
 }
 
 // implements io.Reader interface
-func (r *BufReader) Read(p []byte) (n int, err error) {
+func (r *BufReader) Read(p []byte) (n int, _ error) {
 	if r.r == r.w {
 		if r.err != nil {
 			return 0, r.readErr()
@@ -101,7 +101,7 @@ func (r *BufReader) UnreadByte(c byte) error {
 // reads into buffer supplied in p parameter until byte supplied in q parameter is found.
 // filled buffer contains last byte specified as q.
 // returns number of bytes written into p, and error, either generic or in case q was not found and p was filled.
-func (r *BufReader) ReadUntil(p []byte, q byte) (n int, err error) {
+func (r *BufReader) ReadUntil(p []byte, q byte) (n int, _ error) {
 	var x int
 	for {
 		if r.r == r.w {
@@ -164,7 +164,7 @@ func (r *BufReader) CompactBuffer() {
 	}
 }
 
-func (r *BufReader) FillBufferAtleast(w int) (n int, e error) {
+func (r *BufReader) FillBufferAtleast(w int) (n int, _ error) {
 	if r.r == r.w {
 		r.r = 0
 		r.w = 0
@@ -184,7 +184,7 @@ func (r *BufReader) FillBufferAtleast(w int) (n int, e error) {
 	return
 }
 
-func (r *BufReader) FillBufferUpto(w int) (n int, e error) {
+func (r *BufReader) FillBufferUpto(w int) (n int, _ error) {
 	if r.r == r.w {
 		r.r = 0
 		r.w = 0
@@ -209,7 +209,7 @@ func (r *BufReader) FillBufferUpto(w int) (n int, e error) {
 
 // skips specified ammount of bytes. if specified ammount is negative, read until fail.
 // returns skipped ammount of bytes and error if specified ammount could not be skipped.
-func (r *BufReader) Discard(n int) (s int, e error) {
+func (r *BufReader) Discard(n int) (s int, _ error) {
 	var x int
 	for {
 		if n >= 0 && r.w-r.r >= n {
