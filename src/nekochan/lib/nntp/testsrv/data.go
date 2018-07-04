@@ -144,6 +144,7 @@ func makeOverview(s *server, a *article) {
 	if e != nil && e != io.EOF /* EOF is expected because we dont have additional newline after headers */ {
 		panic(e)
 	}
+	h.Close()
 	numlines := func(b []byte) (n int) {
 		for _, c := range b {
 			if c == '\n' {

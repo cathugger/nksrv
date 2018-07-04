@@ -164,6 +164,10 @@ func testUnterminated(t *testing.T, asup, acon bool) {
 	if !bytes.Equal([]byte("aaa"), b) {
 		t.Errorf("result not equal. expected %q got %q", "aaa", b)
 	}
+	e = pr.NextPart()
+	if e != io.ErrUnexpectedEOF {
+		t.Errorf("b.ReadFrom(): expected ErrUnexpectedEOF error got %v", e)
+	}
 }
 
 func TestUnterminated(t *testing.T) {

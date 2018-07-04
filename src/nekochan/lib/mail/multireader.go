@@ -76,7 +76,6 @@ func (pr *PartReader) NextPart() error {
 		}
 
 		line := b[:i+1]
-		br.Discard(i + 1)
 		// we have line of some sort, check if its boundary
 		if !truncated && bytes.HasPrefix(line, pr.dashBoundary) {
 			// some sort of boundary maybe
@@ -96,6 +95,7 @@ func (pr *PartReader) NextPart() error {
 			}
 			if bytes.Equal(line, pr.nl) {
 				if !ending {
+					br.Discard(i + 1)
 					pr.partsRead++
 					return nil
 				} else {
@@ -108,11 +108,13 @@ func (pr *PartReader) NextPart() error {
 		}
 		if pr.partsRead == 0 {
 			// skip everything before first part
+			br.Discard(i + 1)
 			continue
 		}
-		if truncated || bytes.Equal(line, pr.nl) {
+		if !truncated && bytes.Equal(line, pr.nl) {
 			// newline after last part just before dashBoundary
 			expectNewPart = true
+			br.Discard(i + 1)
 			continue
 		}
 		return fmt.Errorf("truncated line or unexpected line %q", line)

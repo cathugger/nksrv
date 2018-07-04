@@ -125,11 +125,13 @@ endHeaders:
 type MessageHead struct {
 	H Headers // message headers
 	//HSort []string      // header keys sorted in order they appeared
-	B ArticleReader // message body reader
+	B *bufreader.BufReader // message body reader
 }
 
 func (mh MessageHead) Close() error {
 	if mh.B != nil {
+		mh.B.SetReader(nil)
+		mh.B.ResetErr()
 		bufPool.Put(mh.B)
 	}
 	return nil
