@@ -83,6 +83,16 @@ var normalmultipart = []struct {
 		parts:    [][]byte{[]byte("aaa"), []byte("bbb"), []byte("ccc")},
 	},
 	{
+		encoded:  []byte("\nXXX\n--X\n\n--X\n--X \n--X\nddd\n--X--  \nXXX"),
+		boundary: "X",
+		parts:    [][]byte{[]byte(""), []byte(""), []byte(""), []byte("ddd")},
+	},
+	{
+		encoded:  []byte("\nXXX\n--X\n\n--XY\n--X \n--X\nddd\n--X--  \nXXX"),
+		boundary: "X",
+		parts:    [][]byte{[]byte("\n--XY"), []byte(""), []byte("ddd")},
+	},
+	{
 		encoded:  []byte("\nXXX\n--X\naaa\n--X- \nbbb\n--X  \nccc\n--X--  \nXXX"),
 		boundary: "X",
 		parts:    [][]byte{[]byte("aaa\n--X- \nbbb"), []byte("ccc")},

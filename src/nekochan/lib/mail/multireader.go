@@ -97,6 +97,7 @@ func (pr *PartReader) NextPart() error {
 				if !ending {
 					br.Discard(i + 1)
 					pr.partsRead++
+					pr.rpart = 0
 					return nil
 				} else {
 					return io.EOF
