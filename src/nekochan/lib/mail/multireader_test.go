@@ -84,31 +84,41 @@ var normalmultipart = []struct {
 	},
 }
 
+func mkpreader(data []byte, boundary string, annoy bool) *PartReader {
+	var r io.Reader = bytes.NewReader(data)
+	if annoy {
+		r = annoyingReader{r}
+	}
+	return NewPartReader(r, boundary)
+}
+
+func doreading(r io.Reader, annoy bool) (b []byte, e error) {
+	buf := new(bytes.Buffer)
+	if annoy {
+		r = annoyingReader{r}
+	}
+	_, e = buf.ReadFrom(r)
+	b = buf.Bytes()
+	return
+}
+
 func doTestNormal(t *testing.T, annoysupplier, annoyconsumer bool) {
 	var e error
 	for i := range normalmultipart {
 		t.Logf("%d", i)
-		var r io.Reader = bytes.NewReader(normalmultipart[i].encoded)
-		if annoysupplier {
-			r = annoyingReader{r}
-		}
-		pr := NewPartReader(r, normalmultipart[i].boundary)
+		pr := mkpreader(normalmultipart[i].encoded, normalmultipart[i].boundary, annoysupplier)
 		for x := range normalmultipart[i].parts {
 			e = pr.NextPart()
 			if e != nil {
 				t.Errorf("pr.NextPart(): expected nil error got %v", e)
 			}
-			b := new(bytes.Buffer)
-			if annoyconsumer {
-				_, e = b.ReadFrom(annoyingReader{pr})
-			} else {
-				_, e = b.ReadFrom(pr)
-			}
+			var b []byte
+			b, e = doreading(pr, annoyconsumer)
 			if e != nil {
 				t.Errorf("b.ReadFrom(): expected nil error got %v", e)
 			}
-			if !bytes.Equal(normalmultipart[i].parts[x], b.Bytes()) {
-				t.Errorf("result not equal. expected %q got %q", normalmultipart[i].parts[x], b.Bytes())
+			if !bytes.Equal(normalmultipart[i].parts[x], b) {
+				t.Errorf("result not equal. expected %q got %q", normalmultipart[i].parts[x], b)
 			}
 		}
 		e = pr.NextPart()
@@ -132,4 +142,28 @@ func TestAnnoyingConsumer(t *testing.T) {
 
 func TestAnnoyingBoth(t *testing.T) {
 	doTestNormal(t, true, true)
+}
+
+func testUnterminated(t *testing.T, asup, acon bool) {
+	var e error
+	pr := mkpreader([]byte("--X\naaa\n--X"), "X", asup)
+	e = pr.NextPart()
+	if e != nil {
+		t.Errorf("pr.NextPart(): expected nil error got %v", e)
+	}
+	var b []byte
+	b, e = doreading(pr, acon)
+	if e != io.ErrUnexpectedEOF {
+		t.Errorf("b.ReadFrom(): expected ErrUnexpectedEOF error got %v", e)
+	}
+	if !bytes.Equal([]byte("aaa"), b) {
+		t.Errorf("result not equal. expected %q got %q", "aaa", b)
+	}
+}
+
+func TestUnterminated(t *testing.T) {
+	testUnterminated(t, false, false)
+	testUnterminated(t, false, true)
+	testUnterminated(t, true, false)
+	testUnterminated(t, true, true)
 }

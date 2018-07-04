@@ -265,12 +265,6 @@ func (pr *PartReader) checkAfterPrefix(b []byte) int {
 		}
 		return 0
 	}
-	if pr.partsRead == 0 && len(b) >= 1 && b[0] == '\n' {
-		// adopt to \n
-		pr.nl = pr.nl[1:]
-		pr.nlDashBoundary = pr.nlDashBoundary[1:]
-		pr.partsRead++
-	}
 	if len(b) < len(pr.nl) {
 		return 0
 	}
