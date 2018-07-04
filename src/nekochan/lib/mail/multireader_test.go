@@ -63,6 +63,11 @@ var normalmultipart = []struct {
 		parts:    [][]byte{[]byte("aaa")},
 	},
 	{
+		encoded:  []byte("\n--X\naaa\n--XY\nbbb\n--X--"),
+		boundary: "X",
+		parts:    [][]byte{[]byte("aaa\n--XY\nbbb")},
+	},
+	{
 		encoded:  []byte("\n--XX\n--X\naaa\n--X--\nabcdabcd\nabcd"),
 		boundary: "X",
 		parts:    [][]byte{[]byte("aaa")},
