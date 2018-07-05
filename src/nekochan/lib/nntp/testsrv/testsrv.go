@@ -456,7 +456,7 @@ func (p *TestSrv) ListNewsgroups(w io.Writer, wildmat []byte) {
 }
 
 func printOver(w io.Writer, num uint64, a *article) {
-	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", num,
+	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tXref: %s\n", num,
 		a.over.subject, a.over.from, a.over.date, a.over.msgid,
 		a.over.references, a.over.bytes, a.over.lines, a.over.xref)
 }

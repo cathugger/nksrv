@@ -196,7 +196,7 @@ func (r *BufReader) FillBufferUpto(w int) (n int, _ error) {
 	var x int
 	for r.w < len(r.b) && (w <= 0 || r.w-r.r < w) {
 		if r.err != nil {
-			if w <= 0 && n != 0 {
+			if w <= 0 {
 				break
 			}
 			return n, r.readErr()

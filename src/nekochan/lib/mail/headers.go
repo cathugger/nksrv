@@ -5,7 +5,6 @@ import (
 	"io"
 
 	au "nekochan/lib/asciiutils"
-	"nekochan/lib/bufreader"
 )
 
 type ArticleReader interface {
@@ -16,31 +15,6 @@ type ArticleReader interface {
 
 func ValidHeader(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
-}
-
-func estimateNumHeaders(br *bufreader.BufReader) (n int, e error) {
-	br.CompactBuffer()
-	_, e = br.FillBufferUpto(0)
-	b := br.Buffered()
-	cont := 0 // cont -- spare addition incase header line doesn't end with '\n'
-	for i, c := range b {
-		if c == '\n' {
-			if cont == 0 {
-				// \n\n or \n without any previous content -- end of headers
-				return
-			}
-			if i+1 < len(b) && (b[i+1] == ' ' || b[i+1] == '\t') {
-				// that's just continuation of previous header
-				continue
-			}
-			n++
-			cont = 0
-		} else {
-			cont = 1
-		}
-	}
-	n += cont
-	return
 }
 
 var (
