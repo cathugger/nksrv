@@ -10,7 +10,9 @@ import (
 )
 
 type PartReader struct {
-	br               *bufreader.BufReader
+	*bufreader.BufReader                      // current part reader
+	br                   *bufreader.BufReader // underlying reader
+
 	n                int   // ammount of readable data
 	err              error // queued error
 	rpart            int   // how much of current part was read
@@ -21,10 +23,24 @@ type PartReader struct {
 	partsRead        int
 }
 
+type wrapUnderlying struct {
+	*PartReader
+}
+
+func (w wrapUnderlying) Read(b []byte) (int, error) {
+	return w.read(b)
+}
+
 func NewPartReader(r io.Reader, boundary string) *PartReader {
 	b := []byte("\r\n--" + boundary + "--")
+
+	br := bufPool.Get().(*bufreader.BufReader)
+	br.Drop()
+	br.ResetErr()
+	br.SetReader(r)
+
 	return &PartReader{
-		br:               bufreader.NewBufReaderSize(r, 4096), /* TODO use pool */
+		br:               br,
 		dashBoundaryDash: b[2:],
 		dashBoundary:     b[2 : len(b)-2],
 		nlDashBoundary:   b[:len(b)-2],
@@ -36,7 +52,11 @@ func NewPartReader(r io.Reader, boundary string) *PartReader {
 // returns io.EOF if terminated
 // returns other error on read problem
 func (pr *PartReader) NextPart() error {
-	// XXX should we terminate current?
+	// terminate current
+	cr := pr.BufReader
+	if cr != nil {
+		cr.Discard(-1)
+	}
 	br := pr.br
 	truncated := false
 	expectNewPart := false
@@ -98,7 +118,7 @@ func (pr *PartReader) NextPart() error {
 					br.Discard(i + 1)
 					pr.partsRead++
 					pr.rpart = 0
-					return nil
+					break
 				} else {
 					return io.EOF
 				}
@@ -120,6 +140,33 @@ func (pr *PartReader) NextPart() error {
 		}
 		return fmt.Errorf("truncated line or unexpected line %q", line)
 	}
+
+	if cr == nil {
+		cr = bufPool.Get().(*bufreader.BufReader)
+		pr.BufReader = cr
+		cr.Drop()
+		cr.SetReader(wrapUnderlying{pr})
+	}
+	cr.ResetErr()
+	return nil
+}
+
+func (pr *PartReader) Close() error {
+	cr := pr.BufReader
+	if cr != nil {
+		cr.SetReader(nil)
+		cr.ResetErr()
+		bufPool.Put(cr)
+		pr.BufReader = nil
+	}
+	br := pr.br
+	if br != nil {
+		br.SetReader(nil)
+		br.ResetErr()
+		bufPool.Put(br)
+		pr.br = nil
+	}
+	return nil
 }
 
 func skipWS(b []byte) []byte {
@@ -138,7 +185,34 @@ func (pr *PartReader) checkPartEndEOF(line []byte) bool {
 	return len(line) == 0
 }
 
-func (pr *PartReader) Read(b []byte) (n int, e error) {
+func (pr *PartReader) ReadHeaders(headlimit int64) (H Headers, e error) {
+	cr := pr.BufReader
+
+	var r io.Reader
+	var lr *io.LimitedReader
+
+	if headlimit > 0 {
+		// change underlying reader to limit its consumption
+		// rough way to do this but should work probably
+		r = cr.GetReader()
+		lr = &io.LimitedReader{R: r, N: headlimit}
+		cr.SetReader(lr)
+	}
+
+	H, e = readHeaders(cr)
+
+	if headlimit > 0 {
+		// restore original reader
+		cr.SetReader(r)
+		if lr.N == 0 && cr.QueuedErr() == io.EOF {
+			cr.ResetErr()
+		}
+	}
+
+	return
+}
+
+func (pr *PartReader) read(b []byte) (n int, e error) {
 	br := pr.br
 	for pr.n == 0 {
 		// try looking in current buffer first

@@ -32,16 +32,20 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
 	br.ResetErr()
+
+	var lr *io.LimitedReader
 	if headlimit > 0 {
-		br.SetReader(&io.LimitedReader{R: r, N: headlimit})
+		lr = &io.LimitedReader{R: r, N: headlimit}
+		br.SetReader(lr)
 	} else {
 		br.SetReader(r)
 	}
 
 	mh.H, e = readHeaders(br)
+
 	if e == nil {
 		if headlimit > 0 {
-			if br.QueuedErr() == io.EOF {
+			if lr.N == 0 && br.QueuedErr() == io.EOF {
 				br.ResetErr()
 			}
 			br.SetReader(r)
@@ -52,6 +56,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 		br.ResetErr()
 		bufPool.Put(br)
 	}
+
 	return
 }
 

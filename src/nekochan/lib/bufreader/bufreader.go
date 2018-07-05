@@ -33,6 +33,11 @@ func (r *BufReader) SetReader(u io.Reader) {
 	r.u = u
 }
 
+// at this point there is no protection. is having u private really useful?
+func (r *BufReader) GetReader() io.Reader {
+	return r.u
+}
+
 func (r *BufReader) ResetErr() {
 	r.err = nil
 }
