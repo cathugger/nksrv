@@ -51,7 +51,7 @@ func NewPartReader(r io.Reader, boundary string) *PartReader {
 // returns nil incase next part can be read
 // returns io.EOF if terminated
 // returns other error on read problem
-func (pr *PartReader) NextPart() error {
+func (pr *PartReader) nextPart() error {
 	// terminate current
 	cr := pr.BufReader
 	if cr != nil {
@@ -149,6 +149,18 @@ func (pr *PartReader) NextPart() error {
 	}
 	cr.ResetErr()
 	return nil
+}
+
+func (pr *PartReader) NextPart() (e error) {
+	if pr.br == nil {
+		return pr.err
+	}
+	e = pr.nextPart()
+	if e != nil {
+		pr.Close()
+		pr.err = e
+	}
+	return
 }
 
 func (pr *PartReader) Close() error {
