@@ -389,9 +389,13 @@ func (p *TestSrv) ListNewGroups(w io.Writer, qt time.Time) {
 	}
 }
 
+func emptyWildmat(w []byte) bool {
+	return len(w) == 0 || (len(w) == 1 && w[0] == '*')
+}
+
 func (p *TestSrv) ListNewNews(w io.Writer, wildmat []byte, qt time.Time) {
 	var chk func(string) bool
-	if len(wildmat) == 0 {
+	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }
 	} else {
 		if nntp.ValidGroupSlice(wildmat) {
@@ -412,7 +416,7 @@ func (p *TestSrv) ListNewNews(w io.Writer, wildmat []byte, qt time.Time) {
 
 func (p *TestSrv) ListActiveGroups(w io.Writer, wildmat []byte) {
 	var chk func(string) bool
-	if len(wildmat) == 0 {
+	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }
 	} else {
 		if nntp.ValidGroupSlice(wildmat) {
@@ -435,7 +439,7 @@ func (p *TestSrv) ListActiveGroups(w io.Writer, wildmat []byte) {
 
 func (p *TestSrv) ListNewsgroups(w io.Writer, wildmat []byte) {
 	var chk func(string) bool
-	if len(wildmat) == 0 {
+	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }
 	} else {
 		if nntp.ValidGroupSlice(wildmat) {
