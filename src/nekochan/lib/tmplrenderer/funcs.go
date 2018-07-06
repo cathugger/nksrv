@@ -8,13 +8,35 @@ import (
 	"unicode/utf8"
 )
 
+func unixTime(u int64) time.Time {
+	return time.Unix(u, 0)
+}
+
 var funcs = map[string]interface{}{
 	"urlpath":    urlPath,
 	"truncatefn": truncatefn,
 	"filesize":   filesize,
-	"date":       date,
-	"fmtmsg":     fmtmsg,
-	"fmtmsgcat":  fmtmsgcat,
+	"date": func(u int64) string {
+		t := unixTime(u)
+		Y, M, D := t.Date()
+		h, m, s := t.Clock()
+		return fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", Y, M, D, h, m, s)
+	},
+	"dateGlobal": func(u int64) string {
+		t := unixTime(u).UTC()
+		Y, M, D := t.Date()
+		h, m, s := t.Clock()
+		return fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", Y, M, D, h, m, s)
+	},
+	"dateAlt": func(u int64) string {
+		t := unixTime(u)
+		Y, M, D := t.Date()
+		W := t.Weekday()
+		h, m, s := t.Clock()
+		return fmt.Sprintf("%s, %d %s %04d %02d:%02d:%02d", W, D, M, Y, h, m, s)
+	},
+	"fmtmsg":    fmtmsg,
+	"fmtmsgcat": fmtmsgcat,
 }
 
 func urlPath(p string) string {
@@ -68,11 +90,4 @@ func filesize(s int64) string {
 		return fmt.Sprintf("%.3f GiB", fs/(1<<30))
 	}
 	return fmt.Sprintf("%.6f TiB", fs/(1<<40))
-}
-
-func date(u int64) string {
-	t := time.Unix(u, 0)
-	Y, M, D := t.Date()
-	h, m, s := t.Hour(), t.Minute(), t.Second()
-	return fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d", Y, M, D, h, m, s)
 }

@@ -7,13 +7,13 @@ import (
 
 // cached publisher
 
-type ReaderAtWriter interface {
+type readerAtWriter interface {
 	io.ReaderAt
 	io.Writer
 }
 
 type CachePub struct {
-	f ReaderAtWriter
+	f readerAtWriter
 
 	mu   sync.RWMutex
 	cond *sync.Cond
@@ -26,7 +26,7 @@ type Reader struct {
 	n int64 // how much bytes we read
 }
 
-func NewCachePub(f ReaderAtWriter) (c *CachePub) {
+func NewCachePub(f readerAtWriter) (c *CachePub) {
 	c = &CachePub{f: f}
 	c.cond = sync.NewCond(c.mu.RLocker())
 	return
