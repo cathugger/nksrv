@@ -9,6 +9,12 @@ import (
 var readcases = []struct {
 	a, b string
 }{
+	{"", ""},
+	{"\n", "\n"},
+	{"\r\n", "\n"},
+	{"\n\n", "\n\n"},
+	{"\r\n\r\n", "\n\n"},
+	{"\r\n\r\n\r", "\n\n"},
 	{"aaa\n", "aaa\n"},
 	{"bbb", "bbb\n"},
 	{"ccc\r\n", "ccc\n"},
