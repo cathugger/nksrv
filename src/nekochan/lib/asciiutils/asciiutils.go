@@ -84,7 +84,7 @@ func TrimWSString(b string) string {
 	return b[x:y]
 }
 
-func TrimWSBuf(b []byte) []byte {
+func TrimWSBytes(b []byte) []byte {
 	x, y := 0, len(b)
 	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
 		x++
