@@ -2,14 +2,18 @@ package cachepub
 
 import (
 	"io"
-	"os"
 	"sync"
 )
 
 // cached publisher
 
+type ReaderAtWriter interface {
+	io.ReaderAt
+	io.Writer
+}
+
 type CachePub struct {
-	f *os.File
+	f ReaderAtWriter
 
 	mu   sync.RWMutex
 	cond *sync.Cond
@@ -22,16 +26,17 @@ type Reader struct {
 	n int64 // how much bytes we read
 }
 
-func NewCachePub(f *os.File) (c *CachePub) {
+func NewCachePub(f ReaderAtWriter) (c *CachePub) {
 	c = &CachePub{f: f}
 	c.cond = sync.NewCond(c.mu.RLocker())
 	return
 }
 
 func (c *CachePub) Write(b []byte) (n int, e error) {
+	n, e = c.f.Write(b)
+
 	c.mu.Lock()
 
-	n, e = c.f.Write(b)
 	c.n += int64(n)
 	if e != nil {
 		c.err = e
