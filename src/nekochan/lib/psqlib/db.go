@@ -34,6 +34,7 @@ var dbIb0InitStatements = []string{
 	pname   TEXT                        NOT NULL, /* extermal post identifier */
 	pid     BIGINT                      NOT NULL, /* internal post ID of this post. if pid==tid then this is OP */
 	tid     BIGINT                      NOT NULL, /* internal thread ID this post belongs to */
+	msgid   TEXT                        NOT NULL, /* Message-ID */
 	author  TEXT                        NOT NULL, /* author name */
 	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? */
 	email   TEXT                        NOT NULL, /* XXX should we even have this? */
@@ -41,7 +42,8 @@ var dbIb0InitStatements = []string{
 	pdate   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* date field used for sorting. may actually contain delivery (not creation) date */
 	message TEXT,                                 /* post message, in UTF-8 */
 	attrib  JSONB,                                /* extra attributes */
-	extras  JSONB,                                /* stuff not usually queried by frontends but needed to restore original message; also useless meta shit like poster address */
+	extras  JSONB,                                /* dunno if really need this field */
+	UNIQUE      (msgid),
 	UNIQUE      (bid,pname),
 	PRIMARY KEY (bid,pid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
@@ -53,9 +55,9 @@ var dbIb0InitStatements = []string{
 	fid      BIGSERIAL NOT NULL, /* internal file ID of this file */
 	bid      INTEGER   NOT NULL, /* internal board ID post of this file belongs to */
 	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
-	fname    TEXT      NOT NULL, /* filename of original file. not unique! */
 	ftype    TEXT      NOT NULL, /* file type */
 	fsize    BIGINT    NOT NULL, /* file size */
+	fname    TEXT      NOT NULL, /* filename of original file. not unique! */
 	thumb    TEXT      NOT NULL, /* filename of thumbnail. not unique! */
 	oname    TEXT      NOT NULL, /* original filename of this file */
 	filecfg  JSONB,              /* additional info about original file */
