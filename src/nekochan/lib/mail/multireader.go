@@ -12,6 +12,7 @@ import (
 type PartReader struct {
 	*bufreader.BufReader                      // current part reader
 	br                   *bufreader.BufReader // underlying reader
+	extbr                bool                 // whether br is external
 
 	n                int   // ammount of readable data
 	err              error // queued error
@@ -34,13 +35,19 @@ func (w wrapUnderlying) Read(b []byte) (int, error) {
 func NewPartReader(r io.Reader, boundary string) *PartReader {
 	b := []byte("\r\n--" + boundary + "--")
 
-	br := bufPool.Get().(*bufreader.BufReader)
-	br.Drop()
-	br.ResetErr()
-	br.SetReader(r)
+	br, extbr := r.(*bufreader.BufReader)
+	/* idk what should be actual limit but this should work */
+	if br == nil || br.Size() < 256 {
+		extbr = false
+		br = bufPool.Get().(*bufreader.BufReader)
+		br.Drop()
+		br.ResetErr()
+		br.SetReader(r)
+	}
 
 	return &PartReader{
 		br:               br,
+		extbr:            extbr,
 		dashBoundaryDash: b[2:],
 		dashBoundary:     b[2 : len(b)-2],
 		nlDashBoundary:   b[:len(b)-2],
@@ -173,9 +180,11 @@ func (pr *PartReader) Close() error {
 	}
 	br := pr.br
 	if br != nil {
-		br.SetReader(nil)
-		br.ResetErr()
-		bufPool.Put(br)
+		if !pr.extbr {
+			br.SetReader(nil)
+			br.ResetErr()
+			bufPool.Put(br)
+		}
 		pr.br = nil
 	}
 	return nil
@@ -197,7 +206,7 @@ func (pr *PartReader) checkPartEndEOF(line []byte) bool {
 	return len(line) == 0
 }
 
-func (pr *PartReader) ReadHeaders(headlimit int64) (H Headers, e error) {
+func (pr *PartReader) ReadHeaders(headlimit int) (H Headers, e error) {
 	cr := pr.BufReader
 
 	var r io.Reader
@@ -207,7 +216,7 @@ func (pr *PartReader) ReadHeaders(headlimit int64) (H Headers, e error) {
 		// change underlying reader to limit its consumption
 		// rough way to do this but should work probably
 		r = cr.GetReader()
-		lr = &io.LimitedReader{R: r, N: headlimit}
+		lr = &io.LimitedReader{R: r, N: int64(headlimit)}
 		cr.SetReader(lr)
 	}
 
