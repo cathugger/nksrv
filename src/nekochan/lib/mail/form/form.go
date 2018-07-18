@@ -25,6 +25,7 @@ var DefaultFormParser = FormParser{
 	MaxHeaderBytes: 16 * 1024,
 	MaxMemory:      1024 * 1024,
 	MaxFields:      1024,
+	MaxFileCount:   256,
 }
 
 type FileOpener interface {
@@ -40,7 +41,9 @@ type File struct {
 func (f File) Remove() {
 	fn := f.F.Name()
 	f.F.Close()
-	os.Remove(fn)
+	if fn != "" {
+		os.Remove(fn)
+	}
 }
 
 type Form struct {
@@ -48,19 +51,29 @@ type Form struct {
 	Files map[string][]File
 }
 
-var errFormTooBig = errors.New("form submission is too big")
-var errTooMuchFields = errors.New("form submission contains too much fields")
-var errTooMuchFiles = errors.New("form submission contains too much files")
+func (f Form) RemoveAll() {
+	for k, v := range f.Files {
+		for i := range v {
+			v[i].Remove()
+		}
+		delete(f.Files, k)
+	}
+}
+
+var (
+	errFormTooBig    = errors.New("form submission is too big")
+	errTooMuchFields = errors.New("form submission contains too much fields")
+	errTooMuchFiles  = errors.New("form submission contains too much files")
+)
+
+func ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (Form, error) {
+	return DefaultFormParser.ParseForm(r, boundary, textfields, filefields, fo)
+}
 
 func (fp *FormParser) ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (f Form, e error) {
 	defer func() {
 		if e != nil {
-			for k, v := range f.Files {
-				for i := range v {
-					v[i].Remove()
-				}
-				delete(f.Files, k)
-			}
+			f.RemoveAll()
 		}
 	}()
 	wantTextField := func(field string) bool {
@@ -97,13 +110,14 @@ func (fp *FormParser) ParseForm(r io.Reader, boundary string, textfields, filefi
 			if e != io.EOF {
 				return
 			}
-			break
+			e = nil
+			return
 		}
 		var H mail.Headers
 		H, e = pr.ReadHeaders(fp.MaxHeaderBytes)
 		if e != nil {
-			continue // broke part
-			// maybe error out instead of ignoring?
+			e = fmt.Errorf("failed reading part headers: %v", e)
+			return
 		}
 		cd := H.GetFirst("Content-Disposition")
 		var disp string
@@ -165,7 +179,9 @@ func (fp *FormParser) ParseForm(r io.Reader, boundary string, textfields, filefi
 			killfile := func() {
 				fn := fw.Name()
 				fw.Close()
-				os.Remove(fn)
+				if fn != "" {
+					os.Remove(fn)
+				}
 			}
 			n, e = io.CopyN(fw, pr, fbl+1)
 			if e != nil && e != io.EOF {
@@ -187,6 +203,4 @@ func (fp *FormParser) ParseForm(r io.Reader, boundary string, textfields, filefi
 			})
 		}
 	}
-	e = nil
-	return
 }
