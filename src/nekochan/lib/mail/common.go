@@ -13,7 +13,7 @@ var commonHeaders = map[string]string{
 	"X-Signature-Ed25519-Sha512": "X-Signature-Ed25519-SHA512",
 	"X-Frontend-Pubkey":          "X-Frontend-PubKey", // signature below
 	"X-Encrypted-Ip":             "X-Encrypted-IP",
-	"X-I2p-Desthash":             "X-I2P-Desthash",
+	"X-I2p-Desthash":             "X-I2P-DestHash",
 }
 
 func AddCommonKey(h string) {
