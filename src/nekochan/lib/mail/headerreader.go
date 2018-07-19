@@ -35,6 +35,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 
 	var lr *io.LimitedReader
 	if headlimit > 0 {
+		// TODO replace LimitedReader with something which returns something other than io.EOF
 		lr = &io.LimitedReader{R: r, N: headlimit}
 		br.SetReader(lr)
 	} else {

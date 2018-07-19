@@ -12,7 +12,7 @@ import (
 	"nekochan/lib/mail"
 )
 
-type FormParser struct {
+type ParserParams struct {
 	MaxHeaderBytes    int
 	MaxMemory         int
 	MaxFields         int
@@ -21,7 +21,7 @@ type FormParser struct {
 	MaxFileAllSize    int64
 }
 
-var DefaultFormParser = FormParser{
+var DefaultParserParams = ParserParams{
 	MaxHeaderBytes: 16 * 1024,
 	MaxMemory:      1024 * 1024,
 	MaxFields:      1024,
@@ -67,10 +67,10 @@ var (
 )
 
 func ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (Form, error) {
-	return DefaultFormParser.ParseForm(r, boundary, textfields, filefields, fo)
+	return DefaultParserParams.ParseForm(r, boundary, textfields, filefields, fo)
 }
 
-func (fp *FormParser) ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (f Form, e error) {
+func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (f Form, e error) {
 	defer func() {
 		if e != nil {
 			f.RemoveAll()
