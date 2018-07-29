@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	Path string `toml:"path"`
+	Dir  string `toml:"dir"`
 }
 
 type FStore struct {
@@ -58,15 +59,21 @@ func OpenFStore(cfg Config) (FStore, error) {
 		}
 	}
 
+	if cfg.Dir != "" {
+		s.root += cfg.Dir
+	} else {
+		s.root += "_tmp"
+	}
+
 	// cleanup tmpdir
-	os.RemoveAll(s.root + "_tmp")
+	os.RemoveAll(s.root)
 
 	return s, nil
 }
 
 func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
 	if !fs.initTemp {
-		err = os.MkdirAll(fs.root+"_tmp", 0700)
+		err = os.MkdirAll(fs.root, 0700)
 		if err != nil {
 			return nil, fmt.Errorf("error at os.MkdirAll: %v", err)
 		}
@@ -75,7 +82,7 @@ func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
 	}
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
-		name := filepath.Join(fs.root+"_tmp", pfx+nextSuffix()+ext)
+		name := filepath.Join(fs.root, pfx+nextSuffix()+ext)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
 			if nconflict++; nconflict > 10 {
