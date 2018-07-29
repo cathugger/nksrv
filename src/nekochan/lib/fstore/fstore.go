@@ -65,10 +65,14 @@ func OpenFStore(cfg Config) (FStore, error) {
 		s.root += "_tmp"
 	}
 
-	// cleanup tmpdir
-	os.RemoveAll(s.root)
-
 	return s, nil
+}
+
+func (fs *FStore) Clean() (e error) {
+	// cleanup tmpdir
+	e = os.RemoveAll(fs.root)
+	fs.initTemp = false
+	return
 }
 
 func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {

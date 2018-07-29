@@ -2,6 +2,7 @@ package mail
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"nekochan/lib/bufreader"
@@ -28,15 +29,34 @@ func (mh MessageHead) Close() error {
 	return nil
 }
 
+type limitedHeadReader struct {
+	R io.Reader // underlying
+	N int64     // remaining
+}
+
+var errHeadLimitReached = errors.New("read limit reached, head too large")
+
+func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
+	if int64(len(b)) > r.N {
+		b = b[0:r.N]
+	}
+	n, err = r.R.Read(b)
+	r.N -= int64(n)
+	if err == nil && r.N == 0 && n == 0 {
+		err = errHeadLimitReached
+	}
+	return
+}
+
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
 	br.ResetErr()
 
-	var lr *io.LimitedReader
+	var lr *limitedHeadReader
 	if headlimit > 0 {
 		// TODO replace LimitedReader with something which returns something other than io.EOF
-		lr = &io.LimitedReader{R: r, N: headlimit}
+		lr = &limitedHeadReader{R: r, N: headlimit}
 		br.SetReader(lr)
 	} else {
 		br.SetReader(r)
