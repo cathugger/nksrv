@@ -4,7 +4,6 @@ package psqlib
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 	"time"
 
@@ -12,39 +11,6 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 )
-
-// structures
-
-type boardAttributes struct {
-	Description    string   `json:"desc,omitempty"`
-	Info           string   `json:"info,omitempty"`
-	Tags           []string `json:"tags,omitempty"`
-	PageLimit      uint32   `json:"page_limit,omitempty"`
-	ThreadsPerPage uint32   `json:"threads_per_page,omitempty"`
-}
-
-var defaultBoardAttributes = boardAttributes{
-	ThreadsPerPage: 10,
-}
-
-type threadAttributes struct {
-	Locked bool `json:"locked"`
-}
-
-var defaultThreadAttributes = threadAttributes{}
-
-type postAttributes struct {
-	References []ib0.IBMessageReference `json:"refs"`
-}
-
-var defaultPostAttributes = postAttributes{}
-
-type thumbAttributes struct {
-	Width  uint32 `json:"w"`
-	Height uint32 `json:"h"`
-}
-
-var defaultThumbAttributes = thumbAttributes{}
 
 // functionality
 
@@ -90,7 +56,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, num uint32) (error, int) {
 	var err error
-	var bid uint32
+	var bid boardID
 	var jcfg, jcfg2 xtypes.JSONText
 
 	// XXX SQL needs more work
@@ -100,7 +66,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, 
 		Scan(&bid, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("board does not exist"), http.StatusNotFound
+			return errNoSuchBoard, http.StatusNotFound
 		}
 		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
@@ -112,7 +78,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, 
 	}
 
 	if battrs.PageLimit != 0 && num > battrs.PageLimit {
-		return errors.New("page does not exist"), http.StatusNotFound
+		return errNoSuchPage, http.StatusNotFound
 	}
 
 	page.Board = ib0.IBBoardInfo{
@@ -144,15 +110,15 @@ LIMIT $2 OFFSET $3`,
 	page.Available = uint32((allcount + uint64(battrs.ThreadsPerPage) - 1) / uint64(battrs.ThreadsPerPage))
 
 	type tpid struct {
-		tid  uint64
-		pids []uint64
+		tid  postID
+		pids []postID
 	}
 	var tpids []tpid
 
 	for rows.Next() {
 		var t ib0.IBThreadListPageThread
 		tattrib := defaultThreadAttributes
-		var tid uint64
+		var tid postID
 
 		err = rows.Scan(&tid, &t.ID, &jcfg)
 		if err != nil {
@@ -200,7 +166,7 @@ SELECT * FROM (
 		for rows.Next() {
 			var pi ib0.IBPostInfo
 			pattrib := defaultPostAttributes
-			var pid uint64
+			var pid postID
 			var pdate time.Time
 
 			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
@@ -289,7 +255,7 @@ ORDER BY fid ASC`,
 
 func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (error, int) {
 	var err error
-	var bid uint32
+	var bid boardID
 	var jcfg xtypes.JSONText
 
 	// XXX SQL needs more work
@@ -299,7 +265,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (e
 		Scan(&bid, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("board does not exist"), http.StatusNotFound
+			return errNoSuchBoard, http.StatusNotFound
 		}
 		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
@@ -326,11 +292,11 @@ ORDER BY bump DESC`,
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
 
-	var tids []uint64
+	var tids []postID
 	for rows.Next() {
 		var t ib0.IBThreadCatalogThread
 		tattrib := defaultThreadAttributes
-		var tid uint64
+		var tid postID
 		var bdate time.Time
 
 		err = rows.Scan(&tid, &t.ID, &jcfg, &bdate)
@@ -396,8 +362,8 @@ ORDER BY bump DESC`,
 
 func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid string) (error, int) {
 	var err error
-	var bid uint32
-	var tid uint64
+	var bid boardID
+	var tid postID
 	var jcfg, jcfg2 xtypes.JSONText
 
 	// XXX SQL needs more work
@@ -407,7 +373,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 		Scan(&bid, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("board does not exist"), http.StatusNotFound
+			return errNoSuchBoard, http.StatusNotFound
 		}
 		return sp.sqlError("boards row query scan", err), http.StatusInternalServerError
 	}
@@ -429,7 +395,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 		Scan(&tid, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("thread does not exist"), http.StatusNotFound
+			return errNoSuchThread, http.StatusNotFound
 		}
 		return sp.sqlError("thread query scan", err), http.StatusInternalServerError
 	}
@@ -452,12 +418,12 @@ ORDER BY pdate ASC,pid ASC`,
 		return sp.sqlError("posts query", err), http.StatusInternalServerError
 	}
 
-	pids := []uint64{tid}
+	pids := []postID{tid}
 
 	for rows.Next() {
 		var pi ib0.IBPostInfo
 		pattrib := defaultPostAttributes
-		var pid uint64
+		var pid postID
 		var pdate time.Time
 
 		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)

@@ -36,6 +36,7 @@ type File struct {
 	F           *os.File
 	ContentType string
 	FileName    string
+	Size        int64
 }
 
 func (f File) Remove() {
@@ -47,8 +48,8 @@ func (f File) Remove() {
 }
 
 type Form struct {
-	Value map[string][]string
-	Files map[string][]File
+	Values map[string][]string
+	Files  map[string][]File
 }
 
 func (f Form) RemoveAll() {
@@ -127,8 +128,7 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 		if e != nil || disp != "form-data" || name == "" {
 			continue
 		}
-		ct := H.GetFirst("Content-Type")
-		if ct == "" && fname == "" {
+		if fname == "" {
 			// not file
 			if !wantTextField(name) {
 				// don't need
@@ -150,7 +150,7 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 				return
 			}
 			memleft -= int(n)
-			f.Value[name] = append(f.Value[name], buf.String())
+			f.Values[name] = append(f.Values[name], buf.String())
 			buf.Reset()
 		} else {
 			if !wantFileField(name) {
@@ -199,7 +199,8 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 			f.Files[name] = append(f.Files[name], File{
 				F:           fw,
 				FileName:    fname,
-				ContentType: ct,
+				ContentType: H.GetFirst("Content-Type"),
+				Size:        n,
 			})
 		}
 	}

@@ -60,6 +60,18 @@ func (c *CachePub) Finish() {
 	// rely on os.File finalizer to close handle
 }
 
+func (c *CachePubc) Cancel(err error) {
+	if err == nil || err == io.EOF {
+		panic("wrong cancel usage")
+	}
+
+	c.mu.Lock()
+	c.err = err
+	c.mu.Unlock()
+
+	c.cond.Broadcast() // wake them up
+}
+
 func NewReader(c *CachePub) *Reader {
 	return &Reader{c: c}
 }
