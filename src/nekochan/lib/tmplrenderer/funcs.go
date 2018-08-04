@@ -13,27 +13,31 @@ var funcs = map[string]interface{}{
 	"urlpath":    urlPath,
 	"truncatefn": truncatefn,
 	"filesize":   filesize,
-	// RFC 3339
+	// normal display style, kinda inspired by RFC 3339
 	"date": func(u int64) string {
 		t := date.UnixTime(u)
 		Y, M, D := t.Date()
+		W := t.Weekday()
 		h, m, s := t.Clock()
-		return fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", Y, M, D, h, m, s)
+		return fmt.Sprintf("%04d-%02d-%02d (%s) %02d:%02d:%02d",
+			Y, M, D, W.String()[:3], h, m, s)
 	},
-	// ISO 8601
-	"dateGlobal": func(u int64) string {
-		t := date.UnixTimeUTC(u)
-		Y, M, D := t.Date()
-		h, m, s := t.Clock()
-		return fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", Y, M, D, h, m, s)
-	},
-	// RFC 2822 style
+	// alternate display style, kinda format of RFC 2822 Date header
 	"dateAlt": func(u int64) string {
 		t := date.UnixTime(u)
 		Y, M, D := t.Date()
 		W := t.Weekday()
 		h, m, s := t.Clock()
-		return fmt.Sprintf("%s, %d %s %04d %02d:%02d:%02d", W, D, M, Y, h, m, s)
+		return fmt.Sprintf("%s, %d %s %04d %02d:%02d:%02d",
+			W, D, M, Y, h, m, s)
+	},
+	// ISO 8601
+	"dateISO": func(u int64) string {
+		t := date.UnixTimeUTC(u)
+		Y, M, D := t.Date()
+		h, m, s := t.Clock()
+		return fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
+			Y, M, D, h, m, s)
 	},
 	"fmtmsg":    fmtmsg,
 	"fmtmsgcat": fmtmsgcat,

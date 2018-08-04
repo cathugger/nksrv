@@ -15,7 +15,7 @@
 {{- if .Subject}}<span class="subject">{{html .Subject}}</span>{{end}}
 <span class="name">{{html .Name}}</span>
 {{- if .Trip}}<span class="trip">{{html .Trip}}</span>{{end}}
-<time class="pdate" datetime="{{dateGlobal .Date}}" title="{{dateAlt .Date}}">{{date .Date}}</time>
+<time class="pdate" datetime="{{dateISO .Date}}" title="{{dateAlt .Date}}">{{date .Date}}</time>
 <a href="#p{{.ID}}">No.</a> {{.ID}}
 {{- range .BackReferences}} <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>{{end}}
 </p>
@@ -43,7 +43,7 @@ File: <a class="filelink" title="{{html .Original}}" href="{{$.N.FRoot}}/_src/{{
 {{- if .Subject}}<span class="subject">{{html .Subject}}</span>{{end}}
 <span class="name">{{html .Name}}</span>
 {{- if .Trip}}<span class="trip">{{html .Trip}}</span>{{end}}
-<time class="pdate" datetime="{{dateGlobal .Date}}" title="{{dateAlt .Date}}">{{date .Date}}</time>
+<time class="pdate" datetime="{{dateISO .Date}}" title="{{dateAlt .Date}}">{{date .Date}}</time>
 <a href="#p{{.ID}}">No.</a> {{.ID}}
 {{- range .BackReferences}} <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>{{end}}
 </p>
