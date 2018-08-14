@@ -12,8 +12,8 @@ type Hasher struct {
 
 const (
 	MaxBytes = 128
-	MaxBits  = MaxBytes * 8
 	MinBits  = 224
+	MaxBits  = MaxBytes * 8
 )
 
 var (

@@ -1,3 +1,3 @@
 #!/bin/sh
-export GOPATH=`realpath .`
+export GOPATH=`pwd`
 exec go get "$@"
