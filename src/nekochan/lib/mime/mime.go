@@ -19,6 +19,7 @@ func setExtensionType(ext, mimeType string) error {
 	if err != nil {
 		return err
 	}
+	// treat text files as UTF-8 by default
 	if strings.HasPrefix(mimeType, "text/") && param["charset"] == "" {
 		param["charset"] = "utf-8"
 	}
@@ -148,11 +149,11 @@ func mimeExtensionsByType(mimeType string) ([]string, error) {
 	return s, nil
 }
 
-func MIMEExtensionsByType(mimeType string) ([]string, error) {
+func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 	mimeLock.RLock()
-	ext, err := mimeExtensionsByType(mimeType)
+	ext, err = mimeExtensionsByType(mimeType)
 	mimeLock.RUnlock()
-	return ext, err
+	return
 }
 
 func LoadMIMEDatabase(dbfile string) error {

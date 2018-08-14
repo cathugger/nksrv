@@ -8,6 +8,7 @@ import (
 	"math"
 	"mime"
 	"os"
+	"strings"
 
 	"nekochan/lib/mail"
 )
@@ -196,6 +197,12 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 			}
 			filebytesleft -= n
 			fw.Seek(0, 0)
+
+			// users will only need this part
+			if i := strings.LastIndexAny(fname, "/\\"); i >= 0 {
+				fname = fname[i+1:]
+			}
+
 			f.Files[name] = append(f.Files[name], File{
 				F:           fw,
 				FileName:    fname,

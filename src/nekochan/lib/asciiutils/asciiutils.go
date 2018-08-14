@@ -46,6 +46,30 @@ func StartsWithFoldString(b, s string) bool {
 	return true
 }
 
+// checks if b ends with s in case-insensitive way
+func EndsWithFoldString(b, s string) bool {
+	if len(b) < len(s) {
+		// b cant end with s if b is shorter
+		return false
+	}
+	// use s length
+	for i := 1; i <= len(s); i++ {
+		ac, bc := b[len(b)-i], s[len(s)-i]
+		if ac == bc {
+			continue
+		}
+		if ac > bc {
+			// ensure ac < bc
+			ac, bc = bc, ac
+		}
+		if ac >= 'A' && ac <= 'Z' && ac+'a'-'A' == bc {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func UntilString(s string, c byte) string {
 	i := 0
 	for ; i < len(s) && s[i] != c; i++ {
