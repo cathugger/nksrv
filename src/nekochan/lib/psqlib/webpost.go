@@ -174,9 +174,9 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 }
 
 type fileInfo struct {
-	id       string
-	thumb    string
-	original string
+	id       string // storename
+	thumb    string // thumbnail
+	original string // original file name
 }
 
 func (sp *PSQLIB) PostNewThread(
@@ -244,8 +244,7 @@ func (sp *PSQLIB) PostNewThread(
 	// there still can be the case where there are left untracked files in file system. they could be manually scanned, and damage is low.
 
 	// process files
-	originals := make([]string, filecount)
-	storenames := make([]string, filecount)
+	fileInfos := make([]fileInfo, filecount)
 	x := 0
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
@@ -266,8 +265,8 @@ func (sp *PSQLIB) PostNewThread(
 
 			// TODO extract metadata, make thumbnails here
 
-			originals[x] = orig
-			storenames[x] = newfn
+			fileInfos[x].id = newfn
+			fileInfos[x].original = orig
 
 			x++
 		}
@@ -278,7 +277,7 @@ func (sp *PSQLIB) PostNewThread(
 	// perform insert
 	//sp.insertNewThread(bid,
 	//	ftitle, fmessage,
-	//	filecount, storenames, originals)
+	//	fileInfos)
 
 	return nil, 0
 }

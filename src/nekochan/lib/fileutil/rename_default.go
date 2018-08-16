@@ -13,7 +13,7 @@ func renameNoClobber(oldpath, newpath string) error {
 	_, err := os.Stat(newpath)
 	if err == nil || !os.IsNotExist(err) {
 		if err == nil {
-			err = os.ErrExist
+			return os.ErrExist
 		}
 		return err
 	}
