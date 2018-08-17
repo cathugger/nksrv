@@ -36,12 +36,11 @@ var dbIb0InitStatements = []string{
 	tid     BIGINT                      NOT NULL, /* internal thread ID this post belongs to */
 	msgid   TEXT                        NOT NULL, /* Message-ID */
 	author  TEXT                        NOT NULL, /* author name */
-	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? */
-	email   TEXT                        NOT NULL, /* XXX should we even have this? */
-	subject TEXT                        NOT NULL, /* message subject field */
+	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
+	title   TEXT                        NOT NULL, /* message title/subject field */
 	pdate   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* date field used for sorting. may actually contain delivery (not creation) date */
 	message TEXT,                                 /* post message, in UTF-8 */
-	attrib  JSONB,                                /* extra attributes */
+	attrib  JSONB,                                /* extra attributes which are optional */
 	extras  JSONB,                                /* dunno if really need this field */
 	UNIQUE      (msgid),
 	UNIQUE      (bid,pname),
@@ -94,64 +93,3 @@ func (sp *PSQLIB) CheckIb0() (initialised bool, versionerror error) {
 	}
 	return true, nil
 }
-
-// new thread without files
-var _ = `
-WITH
-	ub AS (
-		UPDATE ib0.boards
-		SET lastid = lastid+1
-		WHERE bname='testb'
-		RETURNING lastid,bid
-	),
-	ut AS (
-		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT bid,'0123456789ABCDEEF',lastid,NOW()
-		FROM ub
-		RETURNING bid,tid,bump
-	),
-	up AS (
-		INSERT INTO ib0.posts (bid,pname,pid,tid,author,trip,email,subject,pdate,message)
-		SELECT bid,'0123456789ABCDEEF',tid,tid,'','','','test subject',bump,'test message'
-		FROM ut
-		RETURNING pid
-	)
-SELECT * FROM up;
-`
-
-// new thread + bulk file insert
-var _ = `
-WITH
-	ub AS (
-		UPDATE ib0.boards
-		SET lastid = lastid+1
-		WHERE bname='testb'
-		RETURNING lastid,bid
-	),
-	ut AS (
-		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT bid,'0123456789ABCDEEF222',lastid,NOW()
-		FROM ub
-		RETURNING bid,tid,bump
-	),
-	up AS (
-		INSERT INTO ib0.posts (bid,pname,pid,tid,author,trip,email,subject,pdate,message)
-		SELECT bid,'0123456789ABCDEEF222',tid,tid,'','','','test subject',bump,'test message'
-		FROM ut
-		RETURNING bid,pid
-	),
-	uf AS (
-		INSERT INTO ib0.files (bid,pid,fname,thumb,oname)
-		SELECT *
-		FROM (
-			SELECT bid,pid
-			FROM up
-		) AS q0
-		CROSS JOIN (
-			VALUES
-				('fname1.jpg', 'tname1.jpg', 'oname1.jpg'),
-				('fname2.jpg', 'tname2.jpg', 'oname2.jpg')
-		) AS q1
-	)
-SELECT * FROM up
-`

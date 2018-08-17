@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 	"golang.org/x/crypto/blake2s"
@@ -100,8 +101,17 @@ func checkFileLimits(battrib *boardAttributes, f form.Form) (_ error, c int) {
 	return
 }
 
+type postInfo struct {
+	ID        string // message identifier, hash of MessageID
+	MessageID string // globally unique message identifier
+	Title     string
+	Author    string
+	Trip      string
+	Message   string
+}
+
 func checkThreadLimits(battrib *boardAttributes,
-	f form.Form, ftitle, fmessage string) (_ error, c int) {
+	f form.Form, pInfo postInfo) (_ error, c int) {
 
 	tlimits := &battrib.ThreadLimits
 
@@ -111,10 +121,10 @@ func checkThreadLimits(battrib *boardAttributes,
 		return e, 0
 	}
 
-	if len(ftitle) > int(tlimits.MaxTitleLength) {
+	if len(pInfo.Title) > int(tlimits.MaxTitleLength) {
 		return errTooLongTitle, 0
 	}
-	if len(fmessage) > int(tlimits.MaxMessageLength) {
+	if len(pInfo.Message) > int(tlimits.MaxMessageLength) {
 		return errTooLongMessage, 0
 	}
 
@@ -174,9 +184,9 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 }
 
 type fileInfo struct {
-	id       string // storename
-	thumb    string // thumbnail
-	original string // original file name
+	ID       string // storename
+	Thumb    string // thumbnail
+	Original string // original file name
 }
 
 func (sp *PSQLIB) PostNewThread(
@@ -197,13 +207,20 @@ func (sp *PSQLIB) PostNewThread(
 		return errInvalidSubmission, http.StatusBadRequest
 	}
 
+	xftitle := f.Values["title"][0]
+	xfmessage := f.Values["message"][0]
+	if !utf8.ValidString(xftitle) ||
+		!utf8.ValidString(xfmessage) {
+
+		return errBadSubmissionEncoding, http.StatusBadRequest
+	}
+
 	// get info about board, its limits and shit. does it even exists?
-	var bid boardID
 	var jcfg xtypes.JSONText
 
 	err = sp.db.DB.
-		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1", board).
-		Scan(&bid, &jcfg)
+		QueryRow("SELECT attrib FROM ib0.boards WHERE bname=$1", board).
+		Scan(&jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound
@@ -225,15 +242,18 @@ func (sp *PSQLIB) PostNewThread(
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
-	ftitle := norm.NFC.String(strings.TrimSpace(f.Values["title"][0]))
-	fmessage := norm.NFC.String(f.Values["message"][0])
+	var pInfo postInfo
+	pInfo.Title = norm.NFC.String(strings.TrimSpace(xftitle))
+	pInfo.Message = norm.NFC.String(xfmessage)
 
 	// check for specified limits
 	var filecount int
-	err, filecount = checkThreadLimits(&battrs, f, ftitle, fmessage)
+	err, filecount = checkThreadLimits(&battrs, f, pInfo)
 	if err != nil {
 		return err, http.StatusBadRequest
 	}
+
+	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
 	// at this point message should be checked
 	// we should calculate proper file names here
@@ -265,8 +285,8 @@ func (sp *PSQLIB) PostNewThread(
 
 			// TODO extract metadata, make thumbnails here
 
-			fileInfos[x].id = newfn
-			fileInfos[x].original = orig
+			fileInfos[x].ID = newfn
+			fileInfos[x].Original = orig
 
 			x++
 		}
@@ -275,9 +295,10 @@ func (sp *PSQLIB) PostNewThread(
 	// TODO
 
 	// perform insert
-	//sp.insertNewThread(bid,
-	//	ftitle, fmessage,
-	//	fileInfos)
+	err = sp.insertNewThread(board, pInfo, fileInfos)
+	if err != nil {
+		return err, http.StatusBadRequest
+	}
 
 	return nil, 0
 }

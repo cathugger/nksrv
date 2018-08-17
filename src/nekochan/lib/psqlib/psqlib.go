@@ -3,7 +3,9 @@ package psqlib
 // psql imageboard module
 
 import (
+	"database/sql"
 	"fmt"
+	"sync"
 
 	"nekochan/lib/altthumber"
 	"nekochan/lib/fstore"
@@ -20,6 +22,10 @@ type PSQLIB struct {
 	altthumb altthumber.AltThumber
 	ffo      formFileOpener
 	fpp      form.ParserParams
+
+	// newthread prepared statements and locking
+	ntStmts map[int]*sql.Stmt
+	ntMutex sync.RWMutex
 }
 
 type Config struct {
