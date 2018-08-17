@@ -1,8 +1,12 @@
 package psqlib
 
 import (
+	crand "crypto/rand"
+	"crypto/sha1"
 	"database/sql"
 	"encoding/base32"
+	"encoding/base64"
+	"encoding/hex"
 	"hash"
 	"io"
 	"net/http"
@@ -15,6 +19,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	au "nekochan/lib/asciiutils"
+	"nekochan/lib/date"
 	fu "nekochan/lib/fileutil"
 	"nekochan/lib/fstore"
 	. "nekochan/lib/logx"
@@ -191,10 +196,48 @@ type fileInfo struct {
 	Original string // original file name
 }
 
+type postedInfo struct {
+	Board     string
+	ThreadID  string
+	PostID    string
+	MessageID string
+}
+
+func (sp *PSQLIB) newMessageID() string {
+	var b [8]byte
+	u := uint64(date.NowTimeUTC().Unix()) + 4611686018427387914
+	b[7] = byte(u)
+	u >>= 8
+	b[6] = byte(u)
+	u >>= 8
+	b[5] = byte(u)
+	u >>= 8
+	b[4] = byte(u)
+	u >>= 8
+	b[3] = byte(u)
+	u >>= 8
+	b[2] = byte(u)
+	u >>= 8
+	b[1] = byte(u)
+	u >>= 8
+	b[0] = byte(u)
+
+	var r [8]byte
+	crand.Read(r[:])
+
+	return base64.RawURLEncoding.EncodeToString(b[:]) + "." +
+		base64.RawURLEncoding.EncodeToString(r[:]) + "@" + sp.instance
+}
+
+func todoHashPostID(coremsgid string) string {
+	b := sha1.Sum(unsafeStrToBytes("<" + coremsgid + ">"))
+	return hex.EncodeToString(b[:])
+}
+
 func (sp *PSQLIB) PostNewThread(
 	w http.ResponseWriter, r *http.Request, f form.Form,
 	board string) (
-	err error, _ int) {
+	rInfo postedInfo, err error, _ int) {
 
 	defer func() {
 		if err != nil {
@@ -206,7 +249,7 @@ func (sp *PSQLIB) PostNewThread(
 	if len(f.Values["title"]) != 1 ||
 		len(f.Values["message"]) != 1 {
 
-		return errInvalidSubmission, http.StatusBadRequest
+		return postedInfo{}, errInvalidSubmission, http.StatusBadRequest
 	}
 
 	xftitle := f.Values["title"][0]
@@ -214,7 +257,7 @@ func (sp *PSQLIB) PostNewThread(
 	if !utf8.ValidString(xftitle) ||
 		!utf8.ValidString(xfmessage) {
 
-		return errBadSubmissionEncoding, http.StatusBadRequest
+		return postedInfo{}, errBadSubmissionEncoding, http.StatusBadRequest
 	}
 
 	// get info about board, its limits and shit. does it even exists?
@@ -225,16 +268,16 @@ func (sp *PSQLIB) PostNewThread(
 		Scan(&jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errNoSuchBoard, http.StatusNotFound
+			return postedInfo{}, errNoSuchBoard, http.StatusNotFound
 		}
-		return sp.sqlError("boards row query scan", err),
+		return postedInfo{}, sp.sqlError("boards row query scan", err),
 			http.StatusInternalServerError
 	}
 
 	battrs := defaultBoardAttributes
 	err = jcfg.Unmarshal(&battrs)
 	if err != nil {
-		return sp.sqlError("board attr json unmarshal", err),
+		return postedInfo{}, sp.sqlError("board attr json unmarshal", err),
 			http.StatusInternalServerError
 	}
 
@@ -252,7 +295,7 @@ func (sp *PSQLIB) PostNewThread(
 	var filecount int
 	err, filecount = checkThreadLimits(&battrs, f, pInfo)
 	if err != nil {
-		return err, http.StatusBadRequest
+		return postedInfo{}, err, http.StatusBadRequest
 	}
 
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
@@ -277,13 +320,13 @@ func (sp *PSQLIB) PostNewThread(
 			var newfn string
 			newfn, err = makeInternalFileName(files[i].F, orig)
 			if err != nil {
-				return err, http.StatusInternalServerError
+				return postedInfo{}, err, http.StatusInternalServerError
 			}
 
 			// close file, as we won't read from it directly anymore
 			err = files[i].F.Close()
 			if err != nil {
-				return err, http.StatusInternalServerError
+				return postedInfo{}, err, http.StatusInternalServerError
 			}
 
 			// TODO extract metadata, make thumbnails here
@@ -295,13 +338,15 @@ func (sp *PSQLIB) PostNewThread(
 		}
 	}
 
-	// TODO
+	// lets think of post ID there
+	pInfo.MessageID = sp.newMessageID()
+	pInfo.ID = todoHashPostID(pInfo.MessageID)
 
 	// perform insert
 	sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 	err = sp.insertNewThread(board, pInfo, fileInfos)
 	if err != nil {
-		return err, http.StatusBadRequest
+		return postedInfo{}, err, http.StatusBadRequest
 	}
 
 	// move files
@@ -325,7 +370,11 @@ func (sp *PSQLIB) PostNewThread(
 		}
 	}
 
-	return nil, 0
+	rInfo.Board = board
+	rInfo.ThreadID = pInfo.ID
+	rInfo.PostID = pInfo.ID
+	rInfo.MessageID = pInfo.MessageID
+	return
 }
 
 func (sp *PSQLIB) PostNewReply(

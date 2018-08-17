@@ -1,6 +1,4 @@
-// +build !appengine,!appenginevm
-
-package testsrv
+package cntp0
 
 import (
 	"reflect"

@@ -22,10 +22,15 @@ type PSQLIB struct {
 	altthumb altthumber.AltThumber
 	ffo      formFileOpener
 	fpp      form.ParserParams
+	instance string
 
 	// newthread prepared statements and locking
 	ntStmts map[int]*sql.Stmt
 	ntMutex sync.RWMutex
+
+	// newpost prepared statements and locking
+	npStmts map[int]*sql.Stmt
+	npMutex sync.RWMutex
 }
 
 type Config struct {
@@ -65,6 +70,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	// TODO make configurable
 	p.fpp.MaxFileCount = 100
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
+	p.instance = "nekochan" // TODO config
 
 	return
 }

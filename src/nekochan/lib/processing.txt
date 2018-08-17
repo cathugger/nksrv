@@ -1,0 +1,21 @@
+when delivered via NNTP:
+0. receive from NNTP.
+1. store in file or ram whole.
+2. scan if valid. if not, ban and stop there.
+3. nntp process - rewrite top headers
+3.1. do not peek into insides, store in outgoing cache.
+3.1.1. broadcast thru NNTP.
+3.2. peek into insides, extract everything, add to database.
+3.2.1. broadcast thru non-NNTP channels.
+
+speedup?
+maybe we should instantly rewrite top headers first upon reception?
+would make disc IO smaller.
+probably yes.
+top header rewrite would only really change Path header and strip Xref.
+yes should do that, as it should be fast enough.
+at the same time we can check whether article is suitable for us and send
+rejection message before client finishes sending whole article -- double bonus.
+
+we still should broadcast article to other servers only when we have validated it.
+validation includes CNTP0, and possibly check to ensure that format matches our desired article structure (NOT SURE ABOUT THIS!).

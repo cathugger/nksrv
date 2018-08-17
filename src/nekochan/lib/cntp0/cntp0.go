@@ -1,5 +1,7 @@
 package cntp0
 
+// ID 0 should be used only for testing
+
 import (
 	"errors"
 	"hash"

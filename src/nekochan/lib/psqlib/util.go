@@ -1,6 +1,4 @@
-// +build !appengine,!appenginevm
-
-package nntp
+package psqlib
 
 import (
 	"reflect"

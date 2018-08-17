@@ -1,5 +1,7 @@
 package webib0
 
+// unused, TODO rethink/remove
+
 import (
 	"io"
 )

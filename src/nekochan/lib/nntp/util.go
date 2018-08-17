@@ -1,6 +1,4 @@
-// +build !appengine,!appenginevm
-
-package com0
+package nntp
 
 import (
 	"reflect"
