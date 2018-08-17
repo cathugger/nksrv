@@ -13,11 +13,10 @@ import (
 
 type Config struct {
 	Path string `toml:"path"`
-	Dir  string `toml:"dir"`
 }
 
 type FStore struct {
-	root     string
+	tmp      string
 	initTemp bool
 }
 
@@ -44,40 +43,42 @@ func nextSuffix() string {
 	return strconv.Itoa(int(1e9 + r%1e9))[1:]
 }
 
+const tmpDir = "_tmp"
+
 func OpenFStore(cfg Config) (FStore, error) {
 	var s FStore
 	i := len(cfg.Path)
 	if i > 0 && !os.IsPathSeparator(cfg.Path[i-1]) {
-		s.root = cfg.Path + string(os.PathSeparator)
+		s.tmp = cfg.Path + string(os.PathSeparator)
 	} else {
-		s.root = cfg.Path
+		s.tmp = cfg.Path
 	}
 	if i > 0 {
-		e := os.MkdirAll(s.root[:i-1], 0777)
+		e := os.MkdirAll(s.tmp[:i-1], 0777)
 		if e != nil {
 			return FStore{}, e
 		}
 	}
 
-	if cfg.Dir != "" {
-		s.root += cfg.Dir
-	} else {
-		s.root += "_tmp"
-	}
+	s.tmp += tmpDir
 
 	return s, nil
 }
 
-func (fs *FStore) Clean() (e error) {
+func (fs FStore) Main() string {
+	return fs.tmp[:len(fs.tmp)-len(tmpDir)]
+}
+
+func (fs *FStore) CleanTemp() (e error) {
 	// cleanup tmpdir
-	e = os.RemoveAll(fs.root)
+	e = os.RemoveAll(fs.tmp)
 	fs.initTemp = false
 	return
 }
 
 func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
 	if !fs.initTemp {
-		err = os.MkdirAll(fs.root, 0700)
+		err = os.MkdirAll(fs.tmp, 0700)
 		if err != nil {
 			return nil, fmt.Errorf("error at os.MkdirAll: %v", err)
 		}
@@ -86,7 +87,7 @@ func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
 	}
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
-		name := filepath.Join(fs.root, pfx+nextSuffix()+ext)
+		name := filepath.Join(fs.tmp, pfx+nextSuffix()+ext)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
 			if nconflict++; nconflict > 10 {

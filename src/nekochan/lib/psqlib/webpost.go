@@ -15,7 +15,9 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	au "nekochan/lib/asciiutils"
+	fu "nekochan/lib/fileutil"
 	"nekochan/lib/fstore"
+	. "nekochan/lib/logx"
 	"nekochan/lib/mail/form"
 )
 
@@ -266,6 +268,7 @@ func (sp *PSQLIB) PostNewThread(
 	// process files
 	fileInfos := make([]fileInfo, filecount)
 	x := 0
+	sp.log.LogPrint(DEBUG, "processing newthread files")
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		for i := range files {
@@ -295,9 +298,31 @@ func (sp *PSQLIB) PostNewThread(
 	// TODO
 
 	// perform insert
+	sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 	err = sp.insertNewThread(board, pInfo, fileInfos)
 	if err != nil {
 		return err, http.StatusBadRequest
+	}
+
+	// move files
+	sp.log.LogPrint(DEBUG, "moving newthread temporary files to their intended place")
+	x = 0
+	for _, fieldname := range FileFields {
+		files := f.Files[fieldname]
+		for i := range files {
+			from := files[i].F.Name()
+			to := sp.src.Main() + fileInfos[x].ID
+			sp.log.LogPrintf(DEBUG, "renaming %q -> %q", from, to)
+			xe := fu.RenameNoClobber(from, to)
+			if xe != nil {
+				if os.IsExist(xe) {
+					sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+				} else {
+					sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+				}
+				files[i].Remove()
+			}
+		}
 	}
 
 	return nil, 0

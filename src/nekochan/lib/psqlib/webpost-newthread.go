@@ -95,7 +95,7 @@ SELECT * FROM up`
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d, $%d, $%d)", x, x+1, x+2)
+			fmt.Fprintf(&b, "($%d, $%d, $%d)", x+0, x+1, x+2)
 			x += 3
 		}
 		b.WriteString(st2)
@@ -103,12 +103,12 @@ SELECT * FROM up`
 		st = b.String()
 	}
 
-	sp.log.LogPrintf(DEBUG, "will prepare newthread statement:\n%s\n", st)
+	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newthread statement preparation", err)
 	}
-	sp.log.LogPrint(DEBUG, "newthread statement prepared successfully")
+	sp.log.LogPrintf(DEBUG, "newthread(%d) statement prepared successfully", n)
 
 	sp.ntStmts[n] = s
 	return

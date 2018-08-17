@@ -49,13 +49,13 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	p.src.Clean()
+	p.src.CleanTemp()
 
 	p.thm, err = fstore.OpenFStore(cfg.ThmCfg)
 	if err != nil {
 		return nil, err
 	}
-	p.thm.Clean()
+	p.thm.CleanTemp()
 
 	p.altthumb = cfg.AltThumber
 
