@@ -259,48 +259,56 @@ func (sp *PSQLIB) commonNewPost(
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
 
-	// get info about board, its limits and shit. does it even exists?
 	var jcfg, jcfg2 xtypes.JSONText
 	var bid boardID
 	var tid postID
 
+	// get info about board, its limits and shit. does it even exists?
 	if thread == "" {
 		// new thread
-		err = sp.db.DB.
-			QueryRow("SELECT attrib,bid FROM ib0.boards WHERE bname=$1", board).
-			Scan(&jcfg, &bid)
+		q := "SELECT attrib,bid FROM ib0.boards WHERE bname=$1"
+		sp.log.LogPrintf(DEBUG, "executing board attrib query:\n%s\n", q)
+		err = sp.db.DB.QueryRow(q, board).Scan(&jcfg, &bid)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
 			}
-			return rInfo, sp.sqlError("boards row query scan", err),
+			return rInfo, sp.sqlError("board row query scan", err),
 				http.StatusInternalServerError
 		}
+		sp.log.LogPrintf(DEBUG, "got battrib(%q) bid(%d)", jcfg, bid)
 	} else {
 		// new post
-		q := `WITH
-	ba AS (
-		SELECT attrib,bid
-		FROM ib0.boards
-		WHERE bname=$1
-		LIMIT 1
-	),
-	ta AS (
-		SELECT ba.attrib,ba.bid,ts.attrib,ts.tid
-		FROM ba
-		LEFT JOIN ib0.threads ts
-		ON ba.bid=ts.bid
-		WHERE tname=$2
-	)
-SELECT * FROM ta`
+		/* q := `WITH
+			ba AS (
+				SELECT attrib,bid
+				FROM ib0.boards
+				WHERE bname=$1
+				LIMIT 1
+			),
+			ta AS (
+				SELECT ba.attrib,ba.bid,ts.attrib,ts.tid
+				FROM ba
+				LEFT JOIN ib0.threads ts
+				ON ba.bid=ts.bid
+				WHERE tname=$2
+			)
+		SELECT * FROM ta` */
+		q := `SELECT xb.attrib,xb.bid,xt.attrib,xt.tid
+FROM ib0.boards xb
+LEFT JOIN ib0.threads xt USING (bid)
+WHERE xb.bname=$1 AND xt.tname=$2`
+		sp.log.LogPrintf(DEBUG, "executing board x thread attrib query:\n%s\n", q)
 		err = sp.db.DB.QueryRow(q, board, thread).Scan(&jcfg, &bid, &jcfg2, &tid)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
 			}
-			return rInfo, sp.sqlError("boards row query scan", err),
+			return rInfo, sp.sqlError("board x thread row query scan", err),
 				http.StatusInternalServerError
 		}
+		sp.log.LogPrintf(DEBUG, "got battrib(%q) bid(%d) tattrib(%q) tid(%d)",
+			jcfg, bid, jcfg2, tid)
 		rInfo.Board = board
 		if tid == 0 {
 			return rInfo, errNoSuchThread, http.StatusNotFound
