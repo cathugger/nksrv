@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -111,10 +112,12 @@ func checkFileLimits(battrib *boardAttributes, f form.Form) (_ error, c int) {
 type postInfo struct {
 	ID        string // message identifier, hash of MessageID
 	MessageID string // globally unique message identifier
+	Date      time.Time
 	Title     string
 	Author    string
 	Trip      string
 	Message   string
+	Sage      bool
 }
 
 func checkThreadLimits(battrib *boardAttributes,
@@ -203,9 +206,9 @@ type postedInfo struct {
 	MessageID string // XXX will we actually use this for anything??
 }
 
-func (sp *PSQLIB) newMessageID() string {
+func (sp *PSQLIB) newMessageID(t int64) string {
 	var b [8]byte
-	u := uint64(date.NowTimeUTC().Unix()) + 4611686018427387914
+	u := uint64(t) + 4611686018427387914
 	b[7] = byte(u)
 	u >>= 8
 	b[6] = byte(u)
@@ -298,6 +301,7 @@ func (sp *PSQLIB) commonNewPost(
 	var jcfg, jcfg2 xtypes.JSONText
 	var bid boardID
 	var tid postID
+	var pid postID
 
 	// get info about board, its limits and shit. does it even exists?
 	if thread == "" {
@@ -427,26 +431,23 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		}
 	}
 
+	tu := date.NowTimeUnix()
+	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 	// lets think of post ID there
-	pInfo.MessageID = sp.newMessageID()
+	pInfo.MessageID = sp.newMessageID(tu)
 	pInfo.ID = todoHashPostID(pInfo.MessageID)
 
 	// perform insert
 	if thread == "" {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 		tid, err = sp.insertNewThread(bid, pInfo, fileInfos)
-		if err != nil {
-			return rInfo, err, http.StatusBadRequest
-		}
 	} else {
-		// TODO
-		/*
-			sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-			err = sp.insertNewReply(bid, tid, pInfo, fileInfos)
-			if err != nil {
-				return rInfo, err, http.StatusBadRequest
-			}
-		*/
+		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
+		pid, err = sp.insertNewReply(bid, tid, pInfo, fileInfos)
+		_ = pid // fuk u go
+	}
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
 	}
 
 	// move files

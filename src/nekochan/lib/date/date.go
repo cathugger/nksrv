@@ -14,6 +14,10 @@ func NowTimeUTC() time.Time {
 	return time.Now().UTC()
 }
 
+func NowTimeUnix() int64 {
+	return time.Now().Unix()
+}
+
 func UnixTime(u int64) time.Time {
 	return time.Unix(u, 0).In(tz)
 }

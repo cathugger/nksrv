@@ -29,7 +29,7 @@ type PSQLIB struct {
 	ntMutex sync.RWMutex
 
 	// newpost prepared statements and locking
-	npStmts map[int]*sql.Stmt
+	npStmts map[npTuple]*sql.Stmt
 	npMutex sync.RWMutex
 }
 

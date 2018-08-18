@@ -28,51 +28,35 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	// confirmed no statement is there yet.
 	// create new
 	var st string
-	if n == 0 {
-		st = `WITH
+	// header
+	sth := `WITH
 	ub AS (
 		UPDATE ib0.boards
 		SET lastid = lastid+1
-		WHERE bid=$1
+		WHERE bid = $1
 		RETURNING lastid
 	),
 	ut AS (
-		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT $1,$2,lastid,NOW()
+		INSERT INTO ib0.threads (bid,tid,tname,bump)
+		SELECT $1,lastid,$2,$3
 		FROM ub
-		RETURNING tid,bump
 	),
 	up AS (
-		INSERT INTO ib0.posts (bid,pname,msgid,pid,tid,title,author,trip,pdate,message)
-		SELECT $1,$2,$3,tid,tid,$4,$5,$6,bump,$7
-		FROM ut
+		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,msgid,title,author,trip,message)
+		SELECT $1,lastid,lastid,$2,$3,$4,$5,$6,$7,$8
+		FROM ub
 		RETURNING pid
-	)
+	)`
+	// footer
+	stf := `
 SELECT * FROM up`
+	if n == 0 {
+		st = sth + stf
 	} else {
 		// dynamically make statement with required places for files
 		var b strings.Builder
 
-		// header
-		st1 := `WITH
-	ub AS (
-		UPDATE ib0.boards
-		SET lastid = lastid+1
-		WHERE bid=$1
-		RETURNING lastid
-	),
-	ut AS (
-		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT $1,$2,lastid,NOW()
-		FROM ub
-		RETURNING tid,bump
-	),
-	up AS (
-		INSERT INTO ib0.posts (bid,pname,msgid,pid,tid,title,author,trip,pdate,message)
-		SELECT $1,$2,$3,tid,tid,$4,$5,$6,bump,$7
-		FROM ut
-		RETURNING pid
-	),
+		st1 := sth + `,
 	uf AS (
 		INSERT INTO ib0.files (bid,pid,fname,thumb,oname)
 		SELECT *
@@ -82,15 +66,9 @@ SELECT * FROM up`
 		) AS q0
 		CROSS JOIN (
 			VALUES `
-
-		// footer
-		st2 := `
-		) AS q1
-	)
-SELECT * FROM up`
-
 		b.WriteString(st1)
-		x := 8 // 7 args already, counting from 1
+
+		x := 9 // 8 args already, counting from 1
 		for i := 0; i < n; i++ {
 			if i != 0 {
 				b.WriteString(", ")
@@ -98,6 +76,10 @@ SELECT * FROM up`
 			fmt.Fprintf(&b, "($%d, $%d, $%d)", x+0, x+1, x+2)
 			x += 3
 		}
+
+		st2 := `
+		) AS q1
+	)` + stf
 		b.WriteString(st2)
 
 		st = b.String()
@@ -124,18 +106,19 @@ func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
 
 	var r *sql.Row
 	if len(fileInfos) == 0 {
-		r = stmt.QueryRow(bid, pInfo.ID, pInfo.MessageID,
+		r = stmt.QueryRow(bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
 			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
 	} else {
-		args := make([]interface{}, 7+(len(fileInfos)*3))
+		args := make([]interface{}, 8+(len(fileInfos)*3))
 		args[0] = bid
 		args[1] = pInfo.ID
-		args[2] = pInfo.MessageID
-		args[3] = pInfo.Title
-		args[4] = pInfo.Author
-		args[5] = pInfo.Trip
-		args[6] = pInfo.Message
-		x := 7
+		args[2] = pInfo.Date
+		args[3] = pInfo.MessageID
+		args[4] = pInfo.Title
+		args[5] = pInfo.Author
+		args[6] = pInfo.Trip
+		args[7] = pInfo.Message
+		x := 8
 		for i := range fileInfos {
 			args[x+0] = fileInfos[i].ID
 			args[x+1] = fileInfos[i].Thumb
