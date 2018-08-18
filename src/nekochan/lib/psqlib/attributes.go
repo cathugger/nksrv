@@ -49,7 +49,8 @@ type threadAttributes struct {
 var defaultThreadAttributes = threadAttributes{}
 
 type postAttributes struct {
-	References []ib0.IBMessageReference `json:"refs"`
+	References []ib0.IBMessageReference `json:"refs,omitempty"`
+	Sage       bool                     `json:"sage,omitempty"`
 }
 
 var defaultPostAttributes = postAttributes{}

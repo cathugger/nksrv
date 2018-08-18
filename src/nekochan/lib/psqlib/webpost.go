@@ -200,7 +200,7 @@ type postedInfo struct {
 	Board     string
 	ThreadID  string
 	PostID    string
-	MessageID string
+	MessageID string // XXX will we actually use this for anything??
 }
 
 func (sp *PSQLIB) newMessageID() string {
@@ -234,9 +234,8 @@ func todoHashPostID(coremsgid string) string {
 	return hex.EncodeToString(b[:])
 }
 
-func (sp *PSQLIB) PostNewThread(
-	w http.ResponseWriter, r *http.Request, f form.Form,
-	board string) (
+func (sp *PSQLIB) commonNewPost(
+	r *http.Request, f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
 
 	defer func() {
@@ -249,7 +248,7 @@ func (sp *PSQLIB) PostNewThread(
 	if len(f.Values["title"]) != 1 ||
 		len(f.Values["message"]) != 1 {
 
-		return postedInfo{}, errInvalidSubmission, http.StatusBadRequest
+		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
 
 	xftitle := f.Values["title"][0]
@@ -257,21 +256,55 @@ func (sp *PSQLIB) PostNewThread(
 	if !utf8.ValidString(xftitle) ||
 		!utf8.ValidString(xfmessage) {
 
-		return postedInfo{}, errBadSubmissionEncoding, http.StatusBadRequest
+		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
 
 	// get info about board, its limits and shit. does it even exists?
-	var jcfg xtypes.JSONText
+	var jcfg, jcfg2 xtypes.JSONText
+	var bid boardID
+	var tid postID
 
-	err = sp.db.DB.
-		QueryRow("SELECT attrib FROM ib0.boards WHERE bname=$1", board).
-		Scan(&jcfg)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return postedInfo{}, errNoSuchBoard, http.StatusNotFound
+	if thread == "" {
+		// new thread
+		err = sp.db.DB.
+			QueryRow("SELECT attrib,bid FROM ib0.boards WHERE bname=$1", board).
+			Scan(&jcfg, &bid)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return rInfo, errNoSuchBoard, http.StatusNotFound
+			}
+			return rInfo, sp.sqlError("boards row query scan", err),
+				http.StatusInternalServerError
 		}
-		return postedInfo{}, sp.sqlError("boards row query scan", err),
-			http.StatusInternalServerError
+	} else {
+		// new post
+		q := `WITH
+	ba AS (
+		SELECT attrib,bid
+		FROM ib0.boards
+		WHERE bname=$1
+		LIMIT 1
+	),
+	ta AS (
+		SELECT ba.attrib,ba.bid,ts.attrib,ts.tid
+		FROM ba
+		LEFT JOIN ib0.threads ts
+		ON ba.bid=ts.bid
+		WHERE tname=$2
+	)
+SELECT * FROM ta`
+		err = sp.db.DB.QueryRow(q, board, thread).Scan(&jcfg, &bid, &jcfg2, &tid)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return rInfo, errNoSuchBoard, http.StatusNotFound
+			}
+			return rInfo, sp.sqlError("boards row query scan", err),
+				http.StatusInternalServerError
+		}
+		rInfo.Board = board
+		if tid == 0 {
+			return rInfo, errNoSuchThread, http.StatusNotFound
+		}
 	}
 
 	battrs := defaultBoardAttributes
@@ -281,7 +314,18 @@ func (sp *PSQLIB) PostNewThread(
 			http.StatusInternalServerError
 	}
 
+	var tattrs threadAttributes
+	if thread != "" {
+		tattrs = defaultThreadAttributes
+		err = jcfg2.Unmarshal(&tattrs)
+		if err != nil {
+			return rInfo, sp.sqlError("thread attr json unmarshal", err),
+				http.StatusInternalServerError
+		}
+	}
+
 	// apply instance-specific limit tweaks
+	// TODO utilise tattrs
 	sp.applyInstanceThreadLimits(&battrs, board, r)
 
 	// use normalised forms
@@ -293,9 +337,10 @@ func (sp *PSQLIB) PostNewThread(
 
 	// check for specified limits
 	var filecount int
+	// TODO utilise tattrs
 	err, filecount = checkThreadLimits(&battrs, f, pInfo)
 	if err != nil {
-		return postedInfo{}, err, http.StatusBadRequest
+		return rInfo, err, http.StatusBadRequest
 	}
 
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
@@ -311,7 +356,7 @@ func (sp *PSQLIB) PostNewThread(
 	// process files
 	fileInfos := make([]fileInfo, filecount)
 	x := 0
-	sp.log.LogPrint(DEBUG, "processing newthread files")
+	sp.log.LogPrint(DEBUG, "processing form files")
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		for i := range files {
@@ -320,13 +365,13 @@ func (sp *PSQLIB) PostNewThread(
 			var newfn string
 			newfn, err = makeInternalFileName(files[i].F, orig)
 			if err != nil {
-				return postedInfo{}, err, http.StatusInternalServerError
+				return rInfo, err, http.StatusInternalServerError
 			}
 
 			// close file, as we won't read from it directly anymore
 			err = files[i].F.Close()
 			if err != nil {
-				return postedInfo{}, err, http.StatusInternalServerError
+				return rInfo, err, http.StatusInternalServerError
 			}
 
 			// TODO extract metadata, make thumbnails here
@@ -343,14 +388,25 @@ func (sp *PSQLIB) PostNewThread(
 	pInfo.ID = todoHashPostID(pInfo.MessageID)
 
 	// perform insert
-	sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-	err = sp.insertNewThread(board, pInfo, fileInfos)
-	if err != nil {
-		return postedInfo{}, err, http.StatusBadRequest
+	if thread == "" {
+		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
+		tid, err = sp.insertNewThread(bid, pInfo, fileInfos)
+		if err != nil {
+			return rInfo, err, http.StatusBadRequest
+		}
+	} else {
+		// TODO
+		/*
+			sp.log.LogPrint(DEBUG, "inserting reply post data to database")
+			err = sp.insertNewReply(bid, tid, pInfo, fileInfos)
+			if err != nil {
+				return rInfo, err, http.StatusBadRequest
+			}
+		*/
 	}
 
 	// move files
-	sp.log.LogPrint(DEBUG, "moving newthread temporary files to their intended place")
+	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
 	x = 0
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
@@ -370,15 +426,26 @@ func (sp *PSQLIB) PostNewThread(
 		}
 	}
 
-	rInfo.Board = board
-	rInfo.ThreadID = pInfo.ID
+	if thread == "" {
+		rInfo.ThreadID = pInfo.ID
+	} else {
+		rInfo.ThreadID = thread
+	}
 	rInfo.PostID = pInfo.ID
 	rInfo.MessageID = pInfo.MessageID
 	return
 }
 
-func (sp *PSQLIB) PostNewReply(
-	w http.ResponseWriter, r *http.Request, f form.Form,
-	board, thread string) {
+func (sp *PSQLIB) PostNewThread(
+	r *http.Request, f form.Form, board string) (
+	rInfo postedInfo, err error, _ int) {
 
+	return sp.commonNewPost(r, f, board, "")
+}
+
+func (sp *PSQLIB) PostNewReply(
+	r *http.Request, f form.Form, board, thread string) (
+	rInfo postedInfo, err error, _ int) {
+
+	return sp.commonNewPost(r, f, board, thread)
 }

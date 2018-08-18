@@ -33,18 +33,18 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	ub AS (
 		UPDATE ib0.boards
 		SET lastid = lastid+1
-		WHERE bname=$1
-		RETURNING lastid,bid
+		WHERE bid=$1
+		RETURNING lastid
 	),
 	ut AS (
 		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT bid,$2,lastid,NOW()
+		SELECT $1,$2,lastid,NOW()
 		FROM ub
-		RETURNING bid,tid,bump
+		RETURNING tid,bump
 	),
 	up AS (
 		INSERT INTO ib0.posts (bid,pname,msgid,pid,tid,title,author,trip,pdate,message)
-		SELECT bid,$2,$3,tid,tid,$4,$5,$6,bump,$7
+		SELECT $1,$2,$3,tid,tid,$4,$5,$6,bump,$7
 		FROM ut
 		RETURNING pid
 	)
@@ -58,26 +58,26 @@ SELECT * FROM up`
 	ub AS (
 		UPDATE ib0.boards
 		SET lastid = lastid+1
-		WHERE bname=$1
-		RETURNING lastid,bid
+		WHERE bid=$1
+		RETURNING lastid
 	),
 	ut AS (
 		INSERT INTO ib0.threads (bid,tname,tid,bump)
-		SELECT bid,$2,lastid,NOW()
+		SELECT $1,$2,lastid,NOW()
 		FROM ub
-		RETURNING bid,tid,bump
+		RETURNING tid,bump
 	),
 	up AS (
 		INSERT INTO ib0.posts (bid,pname,msgid,pid,tid,title,author,trip,pdate,message)
-		SELECT bid,$2,$3,tid,tid,$4,$5,$6,bump,$7
+		SELECT $1,$2,$3,tid,tid,$4,$5,$6,bump,$7
 		FROM ut
-		RETURNING bid,pid
+		RETURNING pid
 	),
 	uf AS (
 		INSERT INTO ib0.files (bid,pid,fname,thumb,oname)
 		SELECT *
 		FROM (
-			SELECT bid,pid
+			SELECT $1,pid
 			FROM up
 		) AS q0
 		CROSS JOIN (
@@ -114,8 +114,8 @@ SELECT * FROM up`
 	return
 }
 
-func (sp *PSQLIB) insertNewThread(board string, pInfo postInfo,
-	fileInfos []fileInfo) (err error) {
+func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
+	fileInfos []fileInfo) (tid postID, err error) {
 
 	stmt, err := sp.getNTStmt(len(fileInfos))
 	if err != nil {
@@ -124,11 +124,11 @@ func (sp *PSQLIB) insertNewThread(board string, pInfo postInfo,
 
 	var r *sql.Row
 	if len(fileInfos) == 0 {
-		r = stmt.QueryRow(board, pInfo.ID, pInfo.MessageID,
+		r = stmt.QueryRow(bid, pInfo.ID, pInfo.MessageID,
 			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
 	} else {
 		args := make([]interface{}, 7+(len(fileInfos)*3))
-		args[0] = board
+		args[0] = bid
 		args[1] = pInfo.ID
 		args[2] = pInfo.MessageID
 		args[3] = pInfo.Title
@@ -144,11 +144,9 @@ func (sp *PSQLIB) insertNewThread(board string, pInfo postInfo,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	var bid boardID
-	var tid postID
-	err = r.Scan(&bid, &tid) // XXX do we actually need bid and tid?
+	err = r.Scan(&tid)
 	if err != nil {
-		return sp.sqlError("newthread insert query scan", err)
+		return 0, sp.sqlError("newthread insert query scan", err)
 	}
 
 	// done
