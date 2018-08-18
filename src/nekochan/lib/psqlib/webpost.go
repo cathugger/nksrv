@@ -116,11 +116,11 @@ type postInfo struct {
 	Title     string
 	Author    string
 	Trip      string
-	Message   string
 	Sage      bool
+	Message   string
 }
 
-func checkThreadLimits(battrib *boardAttributes,
+func checkNewThreadLimits(battrib *boardAttributes,
 	f form.Form, pInfo postInfo) (_ error, c int) {
 
 	tlimits := &battrib.ThreadLimits
@@ -141,7 +141,14 @@ func checkThreadLimits(battrib *boardAttributes,
 	return
 }
 
-func (sp *PSQLIB) applyInstanceThreadLimits(
+func checkNewReplyLimits(battrib *boardAttributes, tattrib *threadAttributes,
+	f form.Form, pInfo postInfo) (_ error, c int) {
+
+	// TODO
+	return checkNewThreadLimits(battrib, f, pInfo)
+}
+
+func (sp *PSQLIB) applyInstanceBoardAttribLimits(
 	battrib *boardAttributes,
 	board string, r *http.Request) {
 
@@ -161,6 +168,13 @@ func (sp *PSQLIB) applyInstanceThreadLimits(
 
 		tlimits.MaxMessageLength = maxMessageLength
 	}
+}
+
+func (sp *PSQLIB) applyInstanceThreadAttribLimits(
+	tattrib *threadAttributes,
+	board, thread string, r *http.Request) {
+
+	// TODO actually put something there; also make configurable
 }
 
 var lowerBase32Set = "abcdefghijklmnopqrstuvwxyz234567"
@@ -361,6 +375,8 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		return postedInfo{}, sp.sqlError("board attr json unmarshal", err),
 			http.StatusInternalServerError
 	}
+	// apply instance-specific board attrib limit tweaks
+	sp.applyInstanceBoardAttribLimits(&battrs, board, r)
 
 	var tattrs threadAttributes
 	if thread != "" {
@@ -370,11 +386,9 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 			return rInfo, sp.sqlError("thread attr json unmarshal", err),
 				http.StatusInternalServerError
 		}
+		// apply instance-specific thread attrib limit tweaks
+		sp.applyInstanceThreadAttribLimits(&tattrs, board, thread, r)
 	}
-
-	// apply instance-specific limit tweaks
-	// TODO utilise tattrs
-	sp.applyInstanceThreadLimits(&battrs, board, r)
 
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
@@ -385,8 +399,11 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 	// check for specified limits
 	var filecount int
-	// TODO utilise tattrs
-	err, filecount = checkThreadLimits(&battrs, f, pInfo)
+	if thread == "" {
+		err, filecount = checkNewThreadLimits(&battrs, f, pInfo)
+	} else {
+		err, filecount = checkNewReplyLimits(&battrs, &tattrs, f, pInfo)
+	}
 	if err != nil {
 		return rInfo, err, http.StatusBadRequest
 	}
