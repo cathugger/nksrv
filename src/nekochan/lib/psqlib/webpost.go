@@ -234,6 +234,42 @@ func todoHashPostID(coremsgid string) string {
 	return hex.EncodeToString(b[:])
 }
 
+func readableText(s string) bool {
+	for _, c := range s {
+		if (c < 32 && c != '\n' && c != '\r' && c != '\t') || c == 127 {
+			return false
+		}
+	}
+	return true
+}
+
+func validFormText(s string) bool {
+	return utf8.ValidString(s) && readableText(s)
+}
+
+func optimiseTextMessage(msg string) (s string) {
+	s = strings.Replace(msg, "\r", "", -1) // CRLF -> LF
+	s = norm.NFC.String(s)
+	// TODO see if below is actually needed
+	//// if it ends with single newline after non-newline character, cut it out
+	//if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
+	//	s = s[:len(s)-1]
+	//}
+	// TODO we could process it a bit more but atm im lazy
+	return
+}
+
+var lineReplacer = strings.NewReplacer(
+	"\r", "",
+	"\n", " ",
+	"\t", " ")
+
+func optimiseFormLine(line string) (s string) {
+	s = lineReplacer.Replace(line)
+	s = norm.NFC.String(s)
+	return
+}
+
 func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
@@ -253,8 +289,8 @@ func (sp *PSQLIB) commonNewPost(
 
 	xftitle := f.Values["title"][0]
 	xfmessage := f.Values["message"][0]
-	if !utf8.ValidString(xftitle) ||
-		!utf8.ValidString(xfmessage) {
+	if !validFormText(xftitle) ||
+		!validFormText(xfmessage) {
 
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
@@ -340,8 +376,8 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	var pInfo postInfo
-	pInfo.Title = norm.NFC.String(strings.TrimSpace(xftitle))
-	pInfo.Message = norm.NFC.String(xfmessage)
+	pInfo.Title = strings.TrimSpace(optimiseFormLine(xftitle))
+	pInfo.Message = optimiseTextMessage(xfmessage)
 
 	// check for specified limits
 	var filecount int
