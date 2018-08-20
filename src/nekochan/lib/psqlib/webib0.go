@@ -54,16 +54,38 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	return nil, 0
 }
 
-func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, num uint32) (error, int) {
+/*
+func (sp *PSQLIB) xxxIBGetThreadListPage(page *ib0.IBThreadListPage,
+	board string, num uint32) (error, int) {
+
 	var err error
 	var bid boardID
+	var jcfg, jcfg2 xtypes.JSONText
+
+	st := `SELECT xb.bid,xb.attrib
+FROM ib0.boards xb
+LEFT JOIN ib0.threads xt USING (bid)
+LEFT JOIN (
+
+) AS xt USING (tid)`
+	rows, err := sp.db.DB.Query(
+
+}
+*/
+
+func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
+	board string, num uint32) (error, int) {
+
+	var err error
+	var bid boardID
+	var threadsPerPage, maxPages uint32
 	var jcfg, jcfg2 xtypes.JSONText
 
 	// XXX SQL needs more work
 
 	err = sp.db.DB.
-		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1", board).
-		Scan(&bid, &jcfg)
+		QueryRow("SELECT bid,attrib,threads_per_page,max_pages FROM ib0.boards WHERE bname=$1", board).
+		Scan(&bid, &jcfg, &threadsPerPage, &maxPages)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound
@@ -77,7 +99,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, 
 		return sp.sqlError("board attr json unmarshal", err), http.StatusInternalServerError
 	}
 
-	if battrs.PageLimit != 0 && num > battrs.PageLimit {
+	if maxPages != 0 && num > maxPages {
 		return errNoSuchPage, http.StatusNotFound
 	}
 
@@ -99,15 +121,15 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage, board string, 
 		`SELECT tid,tname,attrib
 FROM ib0.threads
 WHERE bid=$1
-ORDER BY bump DESC
+ORDER BY bump DESC,tid ASC
 LIMIT $2 OFFSET $3`,
-		bid, battrs.ThreadsPerPage, num*battrs.ThreadsPerPage)
+		bid, threadsPerPage, num*threadsPerPage)
 	if err != nil {
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
 
 	page.Number = num
-	page.Available = uint32((allcount + uint64(battrs.ThreadsPerPage) - 1) / uint64(battrs.ThreadsPerPage))
+	page.Available = uint32((allcount + uint64(threadsPerPage) - 1) / uint64(threadsPerPage))
 
 	type tpid struct {
 		tid  postID
@@ -145,19 +167,19 @@ LIMIT $2 OFFSET $3`,
 		// OP, then 5 last posts, sorted ascending
 		// TODO attachments
 		rows, err = sp.db.DB.Query(
-			`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
+			`SELECT pname,pid,pdate,author,trip,email,subject,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND pid=$2
 UNION ALL
-SELECT * FROM (
+SELECT pname,pid,pdate,author,trip,email,subject,message,attrib FROM (
 	SELECT * FROM (
-		SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
+		SELECT pname,pid,pdate,padded,author,trip,email,subject,message,attrib
 		FROM ib0.posts
 		WHERE bid=$1 AND tid=$2 AND pid!=$2
-		ORDER BY pdate DESC,pid DESC
+		ORDER BY padded DESC,pid DESC
 		LIMIT 5
 	) AS tt
-	ORDER BY pdate ASC,pid ASC
+	ORDER BY padded ASC,pid ASC
 ) AS ttt`, bid, tid)
 		if err != nil {
 			return sp.sqlError("posts query", err), http.StatusInternalServerError
@@ -169,7 +191,7 @@ SELECT * FROM (
 			var pid postID
 			var pdate time.Time
 
-			err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
+			err = rows.Scan(&pi.ID, &pid, &pdate, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, (*[]byte)(&pi.Message), &jcfg)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
@@ -286,7 +308,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (e
 		`SELECT tid,tname,attrib,bump
 FROM ib0.threads
 WHERE bid=$1
-ORDER BY bump DESC`,
+ORDER BY bump DESC,tid ASC`,
 		bid)
 	if err != nil {
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
@@ -360,7 +382,9 @@ ORDER BY bump DESC`,
 	return nil, 0
 }
 
-func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid string) (error, int) {
+func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
+	board string, threadid string) (error, int) {
+
 	var err error
 	var bid boardID
 	var tid postID
@@ -412,7 +436,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage, board string, threadid str
 		`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND tid=$2
-ORDER BY pdate ASC,pid ASC`,
+ORDER BY padded ASC,pid ASC`,
 		bid, tid)
 	if err != nil {
 		return sp.sqlError("posts query", err), http.StatusInternalServerError

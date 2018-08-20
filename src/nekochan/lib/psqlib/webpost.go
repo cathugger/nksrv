@@ -56,19 +56,17 @@ func matchExtension(fn, ext string) bool {
 		fn[len(fn)-len(ext)-1] == '.'
 }
 
-func allowedFileName(fname string, battrib *boardAttributes) bool {
-	tlimits := &battrib.ThreadLimits
-
+func allowedFileName(fname string, slimits *submissionLimits, reply bool) bool {
 	if strings.IndexByte(fname, '.') < 0 {
 		// we care only about extension anyway so fix that if theres none
 		fname = "."
 	}
-	iffound := tlimits.ExtWhitelist
+	iffound := slimits.ExtWhitelist
 	var list []string
-	if !tlimits.ExtWhitelist {
-		list = tlimits.ExtDeny
+	if !slimits.ExtWhitelist {
+		list = slimits.ExtDeny
 	} else {
-		list = tlimits.ExtAllow
+		list = slimits.ExtAllow
 	}
 	for _, e := range list {
 		if matchExtension(fname, e) {
@@ -78,30 +76,28 @@ func allowedFileName(fname string, battrib *boardAttributes) bool {
 	return !iffound
 }
 
-func checkFileLimits(battrib *boardAttributes, f form.Form) (_ error, c int) {
-	tlimits := &battrib.ThreadLimits
-
+func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (_ error, c int) {
 	var onesz, allsz uint64
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		c += len(files)
-		if tlimits.FileMaxNum != 0 && c > int(tlimits.FileMaxNum) {
+		if slimits.FileMaxNum != 0 && c > int(slimits.FileMaxNum) {
 			return errTooMuchFiles, 0
 		}
 		for i := range files {
 			onesz = uint64(files[i].Size)
-			if tlimits.FileMaxSizeSingle != 0 &&
-				onesz > tlimits.FileMaxSizeSingle {
+			if slimits.FileMaxSizeSingle != 0 &&
+				onesz > slimits.FileMaxSizeSingle {
 
 				return errTooBigFileSingle, 0
 			}
 
 			allsz += onesz
-			if tlimits.FileMaxSizeAll != 0 && allsz > tlimits.FileMaxSizeAll {
+			if slimits.FileMaxSizeAll != 0 && allsz > slimits.FileMaxSizeAll {
 				return errTooBigFileAll, 0
 			}
 
-			if !allowedFileName(files[i].FileName, battrib) {
+			if !allowedFileName(files[i].FileName, slimits, reply) {
 				return errFileTypeNotAllowed, 0
 			}
 		}
@@ -120,61 +116,49 @@ type postInfo struct {
 	Message   string
 }
 
-func checkNewThreadLimits(battrib *boardAttributes,
+func checkSubmissionLimits(slimits *submissionLimits, reply bool,
 	f form.Form, pInfo postInfo) (_ error, c int) {
 
-	tlimits := &battrib.ThreadLimits
-
 	var e error
-	e, c = checkFileLimits(battrib, f)
+	e, c = checkFileLimits(slimits, reply, f)
 	if e != nil {
 		return e, 0
 	}
 
-	if len(pInfo.Title) > int(tlimits.MaxTitleLength) {
+	if len(pInfo.Title) > int(slimits.MaxTitleLength) {
 		return errTooLongTitle, 0
 	}
-	if len(pInfo.Message) > int(tlimits.MaxMessageLength) {
+	if len(pInfo.Message) > int(slimits.MaxMessageLength) {
 		return errTooLongMessage, 0
 	}
 
 	return
 }
 
-func checkNewReplyLimits(battrib *boardAttributes, tattrib *threadAttributes,
-	f form.Form, pInfo postInfo) (_ error, c int) {
-
-	// TODO
-	return checkNewThreadLimits(battrib, f, pInfo)
-}
-
-func (sp *PSQLIB) applyInstanceBoardAttribLimits(
-	battrib *boardAttributes,
+func (sp *PSQLIB) applyInstanceSubmissionLimits(
+	slimits *submissionLimits, reply bool,
 	board string, r *http.Request) {
-
-	tlimits := &battrib.ThreadLimits
 
 	// TODO
 
 	// hardcoded instance limits, TODO make configurable
 	const maxTitleLength = 256
-	if tlimits.MaxTitleLength == 0 || tlimits.MaxTitleLength > maxTitleLength {
-		tlimits.MaxTitleLength = maxTitleLength
+	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxTitleLength {
+		slimits.MaxTitleLength = maxTitleLength
 	}
 
 	const maxMessageLength = 32 * 1024
-	if tlimits.MaxMessageLength == 0 ||
-		tlimits.MaxMessageLength > maxMessageLength {
+	if slimits.MaxMessageLength == 0 ||
+		slimits.MaxMessageLength > maxMessageLength {
 
-		tlimits.MaxMessageLength = maxMessageLength
+		slimits.MaxMessageLength = maxMessageLength
 	}
 }
 
-func (sp *PSQLIB) applyInstanceThreadAttribLimits(
-	tattrib *threadAttributes,
-	board, thread string, r *http.Request) {
+func (sp *PSQLIB) applyInstanceThreadOptions(threadOpts *threadOptions,
+	board string, r *http.Request) {
 
-	// TODO actually put something there; also make configurable
+	// TODO
 }
 
 var lowerBase32Set = "abcdefghijklmnopqrstuvwxyz234567"
@@ -288,7 +272,7 @@ func optimiseFormLine(line string) (s string) {
 }
 
 func (sp *PSQLIB) commonNewPost(
-	r *http.Request, f form.Form, board, thread string) (
+	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
 
 	defer func() {
@@ -312,17 +296,25 @@ func (sp *PSQLIB) commonNewPost(
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
 
-	var jcfg, jcfg2 xtypes.JSONText
+	var jcfg [5]xtypes.JSONText
 	var bid boardID
 	var tid postID
 	var pid postID
 
+	var postLimits submissionLimits
+	var threadOpts threadOptions
+
 	// get info about board, its limits and shit. does it even exists?
-	if thread == "" {
+	if !isReply {
+
 		// new thread
-		q := "SELECT attrib,bid FROM ib0.boards WHERE bname=$1"
-		sp.log.LogPrintf(DEBUG, "executing board attrib query:\n%s\n", q)
-		err = sp.db.DB.QueryRow(q, board).Scan(&jcfg, &bid)
+		q := `SELECT bid,post_limits,newthread_limits
+FROM ib0.boards
+WHERE bname=$1`
+
+		sp.log.LogPrintf(DEBUG, "executing board query:\n%s\n", q)
+
+		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jcfg[0], &jcfg[1])
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
@@ -330,30 +322,26 @@ func (sp *PSQLIB) commonNewPost(
 			return rInfo, sp.sqlError("board row query scan", err),
 				http.StatusInternalServerError
 		}
-		sp.log.LogPrintf(DEBUG, "got battrib(%q) bid(%d)", jcfg, bid)
+
+		sp.log.LogPrintf(DEBUG, "got bid(%d) post_limits(%q) newthread_limits(%q)",
+			bid, jcfg[0], jcfg[1])
+
+		rInfo.Board = board
+
+		postLimits = defaultNewThreadSubmissionLimits
+
 	} else {
+
 		// new post
-		/* q := `WITH
-			ba AS (
-				SELECT attrib,bid
-				FROM ib0.boards
-				WHERE bname=$1
-				LIMIT 1
-			),
-			ta AS (
-				SELECT ba.attrib,ba.bid,ts.attrib,ts.tid
-				FROM ba
-				LEFT JOIN ib0.threads ts
-				ON ba.bid=ts.bid
-				WHERE tname=$2
-			)
-		SELECT * FROM ta` */
-		q := `SELECT xb.attrib,xb.bid,xt.attrib,xt.tid
+		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
+		q := `SELECT xb.bid,xb.post_limits,xb.reply_limits,xt.tid,xt.reply_limits,xb.thread_opts,xt.thread_opts
 FROM ib0.boards xb
 LEFT JOIN ib0.threads xt USING (bid)
 WHERE xb.bname=$1 AND xt.tname=$2`
-		sp.log.LogPrintf(DEBUG, "executing board x thread attrib query:\n%s\n", q)
-		err = sp.db.DB.QueryRow(q, board, thread).Scan(&jcfg, &bid, &jcfg2, &tid)
+
+		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
+
+		err = sp.db.DB.QueryRow(q, board, thread).Scan(&bid, &jcfg[0], &jcfg[1], &tid, &jcfg[2], &jcfg[3], &jcfg[4])
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
@@ -361,34 +349,64 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 			return rInfo, sp.sqlError("board x thread row query scan", err),
 				http.StatusInternalServerError
 		}
-		sp.log.LogPrintf(DEBUG, "got battrib(%q) bid(%d) tattrib(%q) tid(%d)",
-			jcfg, bid, jcfg2, tid)
+
+		sp.log.LogPrintf(DEBUG,
+			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%d) t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q)",
+			bid, jcfg[0], jcfg[1], tid, jcfg[2], jcfg[3], jcfg[4])
+
 		rInfo.Board = board
+
 		if tid == 0 {
 			return rInfo, errNoSuchThread, http.StatusNotFound
 		}
+
+		rInfo.ThreadID = thread
+
+		postLimits = defaultReplySubmissionLimits
+
 	}
 
-	battrs := defaultBoardAttributes
-	err = jcfg.Unmarshal(&battrs)
+	// jcfg[0] - b.post_limits in all cases
+	err = jcfg[0].Unmarshal(&postLimits)
 	if err != nil {
-		return postedInfo{}, sp.sqlError("board attr json unmarshal", err),
+		return rInfo, sp.sqlError("jcfg[0] json unmarshal", err),
 			http.StatusInternalServerError
 	}
-	// apply instance-specific board attrib limit tweaks
-	sp.applyInstanceBoardAttribLimits(&battrs, board, r)
 
-	var tattrs threadAttributes
-	if thread != "" {
-		tattrs = defaultThreadAttributes
-		err = jcfg2.Unmarshal(&tattrs)
+	// jcfg[1] - either b.newthread_limits or b.reply_limits
+	err = jcfg[1].Unmarshal(&postLimits)
+	if err != nil {
+		return rInfo, sp.sqlError("jcfg[1] json unmarshal", err),
+			http.StatusInternalServerError
+	}
+
+	if isReply {
+		// jcfg[2] - t.reply_limits
+		err = jcfg[2].Unmarshal(&postLimits)
 		if err != nil {
-			return rInfo, sp.sqlError("thread attr json unmarshal", err),
+			return rInfo, sp.sqlError("jcfg[2] json unmarshal", err),
 				http.StatusInternalServerError
 		}
-		// apply instance-specific thread attrib limit tweaks
-		sp.applyInstanceThreadAttribLimits(&tattrs, board, thread, r)
+
+		// jcfg[3] - b.thread_opts
+		err = jcfg[3].Unmarshal(&threadOpts)
+		if err != nil {
+			return rInfo, sp.sqlError("jcfg[3] json unmarshal", err),
+				http.StatusInternalServerError
+		}
+
+		// jcfg[4] - t.thread_opts
+		err = jcfg[4].Unmarshal(&threadOpts)
+		if err != nil {
+			return rInfo, sp.sqlError("jcfg[4] json unmarshal", err),
+				http.StatusInternalServerError
+		}
+
+		sp.applyInstanceThreadOptions(&threadOpts, board, r)
 	}
+
+	// apply instance-specific limit tweaks
+	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board, r)
 
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
@@ -399,11 +417,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 	// check for specified limits
 	var filecount int
-	if thread == "" {
-		err, filecount = checkNewThreadLimits(&battrs, f, pInfo)
-	} else {
-		err, filecount = checkNewReplyLimits(&battrs, &tattrs, f, pInfo)
-	}
+	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo)
 	if err != nil {
 		return rInfo, err, http.StatusBadRequest
 	}
@@ -455,12 +469,13 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	pInfo.ID = todoHashPostID(pInfo.MessageID)
 
 	// perform insert
-	if thread == "" {
+	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 		tid, err = sp.insertNewThread(bid, pInfo, fileInfos)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		pid, err = sp.insertNewReply(bid, tid, pInfo, fileInfos)
+		pid, err = sp.insertNewReply(replyTargetInfo{bid, tid, threadOpts.BumpLimit},
+			pInfo, fileInfos)
 		_ = pid // fuk u go
 	}
 	if err != nil {
@@ -488,10 +503,8 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		}
 	}
 
-	if thread == "" {
+	if !isReply {
 		rInfo.ThreadID = pInfo.ID
-	} else {
-		rInfo.ThreadID = thread
 	}
 	rInfo.PostID = pInfo.ID
 	rInfo.MessageID = pInfo.MessageID
@@ -502,12 +515,12 @@ func (sp *PSQLIB) PostNewThread(
 	r *http.Request, f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return sp.commonNewPost(r, f, board, "")
+	return sp.commonNewPost(r, f, board, "", false)
 }
 
 func (sp *PSQLIB) PostNewReply(
 	r *http.Request, f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return sp.commonNewPost(r, f, board, thread)
+	return sp.commonNewPost(r, f, board, thread, true)
 }

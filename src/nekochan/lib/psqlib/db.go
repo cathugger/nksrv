@@ -12,19 +12,33 @@ var currIb0Version = ""
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
 	`CREATE TABLE ib0.boards (
-	bname  TEXT   NOT NULL,           /* external board identifier */
-	bid    SERIAL NOT NULL,           /* internal board ID */
-	attrib JSONB,                     /* board attributes */
-	lastid BIGINT DEFAULT 0 NOT NULL, /* used for post/thread IDs */
+	bname  TEXT    NOT NULL,           -- external board identifier
+	bid    SERIAL  NOT NULL,           -- internal board ID
+	lastid BIGINT  DEFAULT 0 NOT NULL, -- used for post/thread IDs
+
+	threads_per_page INTEGER, -- <=0 - infinite, this results in only single page
+	max_active_pages INTEGER, -- <=0 - all existing pages are active
+	max_pages        INTEGER, -- <=0 - unlimited, archive mode
+
+	post_limits      JSONB, /* allowed properties of post, sorta common for both OPs and replies */
+	newthread_limits JSONB, /* same as post_limits but for new threads. inherits from post_limits */
+	reply_limits     JSONB, /* same as post_limits but for replies. inherits from post_limits */
+	thread_opts      JSONB, /* options common for all threads. stuff like bump/file limits */
+	attrib           JSONB, /* board attributes */
+
 	UNIQUE      (bname),
 	PRIMARY KEY (bid)
 )`,
 	`CREATE TABLE ib0.threads (
-	bid    INTEGER                     NOT NULL, /* internal board ID this thread belongs to */
-	tname  TEXT                        NOT NULL, /* external thread identifier */
-	tid    BIGINT                      NOT NULL, /* internal thread ID */
-	bump   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* last bump time. decides position in pages/catalog */
-	attrib JSONB,                                /* extra attributes */
+	bid   INTEGER                     NOT NULL, /* internal board ID this thread belongs to */
+	tname TEXT                        NOT NULL, /* external thread identifier */
+	tid   BIGINT                      NOT NULL, /* internal thread ID */
+	bump  TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* last bump time. decides position in pages/catalog */
+
+	reply_limits JSONB, /* inherits from reply_limits of ib0.boards */
+	thread_opts  JSONB, /* inherits from thread_opts of ib0.boards */
+	attrib       JSONB, /* extra attributes */
+
 	UNIQUE      (bid,tname),
 	PRIMARY KEY (bid,tid),
 	FOREIGN KEY (bid) REFERENCES ib0.boards
@@ -34,14 +48,18 @@ var dbIb0InitStatements = []string{
 	pname   TEXT                        NOT NULL, /* extermal post identifier */
 	pid     BIGINT                      NOT NULL, /* internal post ID of this post. if pid==tid then this is OP */
 	tid     BIGINT                      NOT NULL, /* internal thread ID this post belongs to */
+	padded  TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* date field used for sorting. will actually contain delivery date */
+	pdate   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* real date field */
+	sage    BOOLEAN                     NOT NULL, /* if true this isn't bump */
+
 	msgid   TEXT                        NOT NULL, /* Message-ID */
 	author  TEXT                        NOT NULL, /* author name */
 	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
 	title   TEXT                        NOT NULL, /* message title/subject field */
-	pdate   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* date field used for sorting. may actually contain delivery (not creation) date */
 	message TEXT,                                 /* post message, in UTF-8 */
 	attrib  JSONB,                                /* extra attributes which are optional */
 	extras  JSONB,                                /* dunno if really need this field */
+
 	UNIQUE      (msgid),
 	UNIQUE      (bid,pname),
 	PRIMARY KEY (bid,pid),
@@ -62,6 +80,7 @@ var dbIb0InitStatements = []string{
 	filecfg  JSONB,              /* additional info about original file */
 	thumbcfg JSONB,              /* additional info about thumbnail */
 	extras   JSONB,              /* extra info not used for display but sometimes useful */
+
 	PRIMARY KEY (fid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
 	FOREIGN KEY (bid,pid) REFERENCES ib0.posts

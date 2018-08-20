@@ -14,6 +14,7 @@ type submissionLimits struct {
 	MaxMessageLength uint32 `json:"max_len_msg,omitempty"`
 
 	// files count and sizes
+	FileMinNum        uint32 `json:"file_min_num,omitempty"`
 	FileMaxNum        uint32 `json:"file_max_num,omitempty"`    // 0 - unlimited
 	FileMaxSizeSingle uint64 `json:"file_max_single,omitempty"` // 0 - unlimited
 	FileMaxSizeAll    uint64 `json:"file_max_all,omitempty"`    // 0 - unlimited
@@ -24,33 +25,47 @@ type submissionLimits struct {
 	ExtDeny      []string `json:"ext_deny,omitempty"`      // blacklist
 }
 
-type boardAttributes struct {
-	Description    string           `json:"desc,omitempty"`
-	Info           string           `json:"info,omitempty"`
-	Tags           []string         `json:"tags,omitempty"`
-	PageLimit      uint32           `json:"page_limit,omitempty"`
-	ThreadsPerPage uint32           `json:"threads_per_page,omitempty"`
-	ThreadLimits   submissionLimits `json:"threadlimits,omitempty"`
+var defaultReplySubmissionLimits = submissionLimits{
+	MaxTitleLength:   48,
+	MaxMessageLength: 2000,
+
+	FileMaxNum:     5,
+	FileMaxSizeAll: 8 * 1024 * 1024,
 }
 
-var defaultBoardAttributes = boardAttributes{
-	ThreadsPerPage: 10,
-	ThreadLimits: submissionLimits{
-		MaxTitleLength:   48,
-		MaxMessageLength: 2000,
-	},
+// :^)
+var defaultNewThreadSubmissionLimits = func(l submissionLimits) submissionLimits {
+	l.FileMinNum = 1
+	return l
+}(defaultReplySubmissionLimits)
+
+type boardAttributes struct {
+	Description string   `json:"desc,omitempty"`
+	Info        string   `json:"info,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+}
+
+var defaultBoardAttributes = boardAttributes{}
+
+type threadOptions struct {
+	///Locked     bool   `json:"locked,omitempty"`     // do not allow non-mod posts? or any posts at all??
+	///PostLimit  uint32 `json:"post_limit,omitempty"` // do not bump after thread has this much posts. is this behavior good?
+	BumpLimit uint32 `json:"bump_limit,omitempty"` // do not bump after thread has this much non-sage posts
+	FileLimit uint32 `json:"file_limit,omitempty"`
+}
+
+var defaultThreadOptions = threadOptions{
+	BumpLimit: 300,
+	FileLimit: 150,
 }
 
 type threadAttributes struct {
-	Locked      bool             `json:"locked,omitempty"`
-	ReplyLimits submissionLimits `json:"replylimits,omitempty"`
 }
 
 var defaultThreadAttributes = threadAttributes{}
 
 type postAttributes struct {
 	References []ib0.IBMessageReference `json:"refs,omitempty"`
-	Sage       bool                     `json:"sage,omitempty"`
 }
 
 var defaultPostAttributes = postAttributes{}

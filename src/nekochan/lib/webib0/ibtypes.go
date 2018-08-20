@@ -78,9 +78,10 @@ type IBPostInfo struct {
 
 // common thread fields
 type IBCommonThread struct {
-	ID      string       `json:"id"`                // thread ID
-	OP      IBPostInfo   `json:"op"`                // OP
-	Replies []IBPostInfo `json:"replies,omitempty"` // replies
+	ID      string                 `json:"id"`                // thread ID
+	OP      IBPostInfo             `json:"op"`                // OP
+	Replies []IBPostInfo           `json:"replies,omitempty"` // replies
+	Options map[string]interface{} `json:"opts,omitempty"`    // additional stuff
 }
 
 // thread in thread list page

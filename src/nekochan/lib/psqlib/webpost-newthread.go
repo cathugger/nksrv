@@ -42,8 +42,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		FROM ub
 	),
 	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,msgid,title,author,trip,message)
-		SELECT $1,lastid,lastid,$2,$3,$4,$5,$6,$7,$8
+		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,padded,sage,msgid,title,author,trip,message)
+		SELECT $1,lastid,lastid,$2,$3,NOW(),FALSE,$4,$5,$6,$7,$8
 		FROM ub
 		RETURNING pid
 	)`
@@ -109,7 +109,8 @@ func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
 		r = stmt.QueryRow(bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
 			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
 	} else {
-		args := make([]interface{}, 8+(len(fileInfos)*3))
+		x := 8
+		args := make([]interface{}, x+(len(fileInfos)*3))
 		args[0] = bid
 		args[1] = pInfo.ID
 		args[2] = pInfo.Date
@@ -118,7 +119,6 @@ func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
 		args[5] = pInfo.Author
 		args[6] = pInfo.Trip
 		args[7] = pInfo.Message
-		x := 8
 		for i := range fileInfos {
 			args[x+0] = fileInfos[i].ID
 			args[x+1] = fileInfos[i].Thumb

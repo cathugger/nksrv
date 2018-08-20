@@ -49,16 +49,36 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		st_bump := `
 	ut AS (
 		UPDATE ib0.threads
-		SET bump = $3
-		WHERE bid = $1 AND tid = $2 AND bump < $3
+		SET bump = (
+			SELECT pdate
+			FROM (
+				SELECT *
+				FROM (
+					SELECT pdate,pid
+					FROM ib0.posts
+					WHERE bid = $1 AND tid = $2 AND sage != TRUE -- currently we do not count sage posts against bump limit
+					UNION ALL
+					SELECT $3,lastid
+					FROM ub
+					ORDER BY pdate ASC,pid ASC
+					LIMIT $11
+					-- take bump posts, sorted by original date, only upto bump limit
+				) AS tt
+				WHERE sage != TRUE -- currently redundant but incase we start counting sage posts...
+				ORDER BY pdate DESC,pid DESC
+				LIMIT 1
+				-- and pick latest one
+			) AS xbump
+		)
+		WHERE bid = $1 AND tid = $2
 	),`
 		b.WriteString(st_bump)
 	}
 
 	st2 := `
 	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pdate,pname,msgid,title,author,trip,message)
-		SELECT $1,$2,lastid,$3,$4,$5,$6,$7,$8,$9
+		INSERT INTO ib0.posts (bid,tid,pid,pdate,padded,sage,pname,msgid,title,author,trip,message)
+		SELECT $1,$2,lastid,$3,NOW(),$4,$5,$6,$7,$8,$9,$10
 		FROM ub
 		RETURNING pid
 	)`
@@ -77,7 +97,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			VALUES `
 		b.WriteString(stf1)
 
-		x := 8 // 7 args already, counting from 1
+		x := 12 // 11 args already, counting from 1
 		for i := 0; i < t.n; i++ {
 			if i != 0 {
 				b.WriteString(", ")
@@ -99,18 +119,24 @@ SELECT * FROM up`
 
 	st := b.String()
 
-	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d,%t) statement:\n%s\n", t.n, t.sage, st)
+	sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
-		return nil, sp.sqlError("newthread statement preparation", err)
+		return nil, sp.sqlError("newreply statement preparation", err)
 	}
-	sp.log.LogPrintf(DEBUG, "newthread(%d,%t) statement prepared successfully", t.n, t.sage)
+	sp.log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.n, t.sage)
 
 	sp.npStmts[t] = s
 	return
 }
 
-func (sp *PSQLIB) insertNewReply(bid boardID, tid postID, pInfo postInfo,
+type replyTargetInfo struct {
+	bid       boardID
+	tid       postID
+	bumpLimit uint32
+}
+
+func (sp *PSQLIB) insertNewReply(rti replyTargetInfo, pInfo postInfo,
 	fileInfos []fileInfo) (pid postID, err error) {
 
 	stmt, err := sp.getNPStmt(npTuple{len(fileInfos), pInfo.Sage})
@@ -120,20 +146,22 @@ func (sp *PSQLIB) insertNewReply(bid boardID, tid postID, pInfo postInfo,
 
 	var r *sql.Row
 	if len(fileInfos) == 0 {
-		r = stmt.QueryRow(bid, tid, pInfo.Date, pInfo.ID, pInfo.MessageID,
-			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
+		r = stmt.QueryRow(rti.bid, rti.tid, pInfo.Date, pInfo.Sage, pInfo.ID,
+			pInfo.MessageID, pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
 	} else {
-		args := make([]interface{}, 9+(len(fileInfos)*3))
-		args[0] = bid
-		args[1] = tid
+		x := 11
+		args := make([]interface{}, x+(len(fileInfos)*3))
+		args[0] = rti.bid
+		args[1] = rti.tid
 		args[2] = pInfo.Date
-		args[3] = pInfo.ID
-		args[4] = pInfo.MessageID
-		args[5] = pInfo.Title
-		args[6] = pInfo.Author
-		args[7] = pInfo.Trip
-		args[8] = pInfo.Message
-		x := 9
+		args[3] = pInfo.Sage
+		args[4] = pInfo.ID
+		args[5] = pInfo.MessageID
+		args[6] = pInfo.Title
+		args[7] = pInfo.Author
+		args[8] = pInfo.Trip
+		args[9] = pInfo.Message
+		args[10] = rti.bumpLimit
 		for i := range fileInfos {
 			args[x+0] = fileInfos[i].ID
 			args[x+1] = fileInfos[i].Thumb
@@ -142,9 +170,9 @@ func (sp *PSQLIB) insertNewReply(bid boardID, tid postID, pInfo postInfo,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&tid)
+	err = r.Scan(&rti.tid)
 	if err != nil {
-		return 0, sp.sqlError("newpost insert query scan", err)
+		return 0, sp.sqlError("newreply insert query scan", err)
 	}
 
 	// done
