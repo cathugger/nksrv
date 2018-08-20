@@ -206,6 +206,7 @@ type postedInfo struct {
 
 func (sp *PSQLIB) newMessageID(t int64) string {
 	var b [8]byte
+	// TAI64
 	u := uint64(t) + 4611686018427387914
 	b[7] = byte(u)
 	u >>= 8
@@ -223,7 +224,7 @@ func (sp *PSQLIB) newMessageID(t int64) string {
 	u >>= 8
 	b[0] = byte(u)
 
-	var r [8]byte
+	var r [12]byte
 	crand.Read(r[:])
 
 	return base64.RawURLEncoding.EncodeToString(b[:]) + "." +
