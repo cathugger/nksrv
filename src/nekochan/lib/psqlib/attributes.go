@@ -51,12 +51,12 @@ type threadOptions struct {
 	///Locked     bool   `json:"locked,omitempty"`     // do not allow non-mod posts? or any posts at all??
 	///PostLimit  uint32 `json:"post_limit,omitempty"` // do not bump after thread has this much posts. is this behavior good?
 	BumpLimit uint32 `json:"bump_limit,omitempty"` // do not bump after thread has this much non-sage posts
-	FileLimit uint32 `json:"file_limit,omitempty"`
+	//FileLimit uint32 `json:"file_limit,omitempty"` // TODO decide should we count OP files or not. 4chan doesnt count but it always forces single file on OP. should investigate other imageboards.
 }
 
 var defaultThreadOptions = threadOptions{
 	BumpLimit: 300,
-	FileLimit: 150,
+	//FileLimit: 150,
 }
 
 type threadAttributes struct {
