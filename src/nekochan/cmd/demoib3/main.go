@@ -131,9 +131,10 @@ func main() {
 		runtime.Goexit()
 	}
 	rcfg := ir.Cfg{
-		HTMLRenderer:   rend,
-		StaticProvider: di.IBProviderDemo{},
-		FileProvider:   di.IBProviderDemo{},
+		HTMLRenderer:    rend,
+		StaticProvider:  di.IBProviderDemo{},
+		FileProvider:    di.IBProviderDemo{},
+		WebPostProvider: dbib,
 	}
 	rh := ir.NewIBRouter(rcfg)
 
