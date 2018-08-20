@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -250,14 +251,22 @@ func validFormText(s string) bool {
 }
 
 func optimiseTextMessage(msg string) (s string) {
-	s = strings.Replace(msg, "\r", "", -1) // CRLF -> LF
-	s = norm.NFC.String(s)
-	// TODO see if below is actually needed
-	//// if it ends with single newline after non-newline character, cut it out
-	//if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
-	//	s = s[:len(s)-1]
-	//}
-	// TODO we could process it a bit more but atm im lazy
+	// normalise using form C
+	s = norm.NFC.String(msg)
+	// trim line endings, and empty lines at the end
+	lines := strings.Split(s, "\n")
+	for i, v := range lines {
+		lines[i] = strings.TrimRightFunc(v, unicode.IsSpace)
+	}
+	for i := len(lines) - 1; i >= 0; i-- {
+		if lines[i] != "" {
+			break
+		}
+		lines = lines[:i]
+	}
+	s = strings.Join(lines, "\n")
+	// ensure we don't have any CR left
+	s = strings.Replace(s, "\r", "", -1)
 	return
 }
 
