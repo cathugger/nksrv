@@ -26,7 +26,10 @@ import (
 	"nekochan/lib/fstore"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail/form"
+	ib0 "nekochan/lib/webib0"
 )
+
+var FileFields = ib0.IBWebFormFileFields
 
 type formFileOpener struct {
 	*fstore.FStore
@@ -40,15 +43,8 @@ func (o formFileOpener) OpenFile() (*os.File, error) {
 
 // FIXME: this probably in future should go thru some sort of abstractation
 
-func (sp *PSQLIB) GetPostParams() (*form.ParserParams, form.FileOpener) {
+func (sp *PSQLIB) IBGetPostParams() (*form.ParserParams, form.FileOpener) {
 	return &sp.fpp, sp.ffo
-}
-
-var FileFields = []string{
-	"file", "file2", "file3", "file4",
-	"file5", "file6", "file7", "file8",
-	"file9", "file10", "file11", "file12",
-	"file13", "file14", "file15", "file16",
 }
 
 func matchExtension(fn, ext string) bool {
@@ -198,12 +194,7 @@ type fileInfo struct {
 	Original string // original file name
 }
 
-type postedInfo struct {
-	Board     string
-	ThreadID  string
-	PostID    string
-	MessageID string // XXX will we actually use this for anything??
-}
+type postedInfo = ib0.IBPostedInfo
 
 func (sp *PSQLIB) newMessageID(t int64) string {
 	var b [8]byte
@@ -291,15 +282,18 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
+	fntitle := ib0.IBWebFormTextTitle
+	fnmessage := ib0.IBWebFormTextMessage
+
 	// XXX more fields
-	if len(f.Values["title"]) != 1 ||
-		len(f.Values["message"]) != 1 {
+	if len(f.Values[fntitle]) != 1 ||
+		len(f.Values[fnmessage]) != 1 {
 
 		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
 
-	xftitle := f.Values["title"][0]
-	xfmessage := f.Values["message"][0]
+	xftitle := f.Values[fntitle][0]
+	xfmessage := f.Values[fnmessage][0]
 	if !validFormText(xftitle) ||
 		!validFormText(xfmessage) {
 
@@ -521,16 +515,18 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	return
 }
 
-func (sp *PSQLIB) PostNewThread(
+func (sp *PSQLIB) IBPostNewThread(
 	r *http.Request, f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {
 
 	return sp.commonNewPost(r, f, board, "", false)
 }
 
-func (sp *PSQLIB) PostNewReply(
+func (sp *PSQLIB) IBPostNewReply(
 	r *http.Request, f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
 
 	return sp.commonNewPost(r, f, board, thread, true)
 }
+
+var _ ib0.IBWebPostProvider = (*PSQLIB)(nil)

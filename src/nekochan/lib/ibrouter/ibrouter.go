@@ -3,6 +3,8 @@ package ibrouter
 // simple html and webapi server
 
 import (
+	"fmt"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,13 +13,15 @@ import (
 	fp "nekochan/lib/httpibfileprovider"
 	"nekochan/lib/renderer"
 	sp "nekochan/lib/staticprovider"
+	ib0 "nekochan/lib/webib0"
 )
 
 type Cfg struct {
-	HTMLRenderer   renderer.Renderer // handles everything else?
-	StaticProvider sp.StaticProvider
-	FileProvider   fp.HTTPFileProvider // handles _src and _thm
-	APIHandler     http.Handler        // handles _api
+	HTMLRenderer    renderer.Renderer // handles everything else?
+	StaticProvider  sp.StaticProvider
+	FileProvider    fp.HTTPFileProvider   // handles _src and _thm
+	APIHandler      http.Handler          // handles _api
+	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
 	// fallback?
 	// http posting?
 }
@@ -116,6 +120,54 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				t := r.Context().Value("t").(string)
 				cfg.HTMLRenderer.ServeThread(w, r, b, t)
 			}))
+	}
+
+	// TODO maybe should do it in more REST-ful way and add to html handler?
+	if cfg.WebPostProvider != nil {
+		h_post := handler.NewMethod()
+		h_post.Handle("POST", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			if e != nil {
+				http.Error(w, fmt.Sprintf("failed to parse content type: %v", e), http.StatusBadRequest)
+				return
+			}
+			if ct != "multipart/form-data" || param["boundary"] == "" {
+				http.Error(w, "bad Content-Type", http.StatusBadRequest)
+				return
+			}
+
+			fparam, fopener := cfg.WebPostProvider.IBGetPostParams()
+			textFields := []string{
+				ib0.IBWebFormTextTitle,
+				ib0.IBWebFormTextMessage,
+				"board",
+				"thread",
+			}
+			f, e := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
+			if e != nil {
+				// TODO
+				http.Error(w, fmt.Sprintf("error parsing form: %v", e), http.StatusBadRequest)
+				return
+			}
+			if len(f.Values["board"]) != 1 || len(f.Values["thread"]) > 1 {
+				http.Error(w, "invalid form params", http.StatusBadRequest)
+				return
+			}
+			board := f.Values["board"][0]
+			var rInfo ib0.IBPostedInfo
+			var err error
+			var code int
+			if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
+				rInfo, err, code = cfg.WebPostProvider.IBPostNewThread(r, f, board)
+			} else {
+				rInfo, err, code = cfg.WebPostProvider.IBPostNewReply(r, f, board, f.Values["thread"][0])
+			}
+			_ = rInfo // TODO actually utilise
+			if err != nil {
+				http.Error(w, fmt.Sprintf("error processing submission: %v", e), code)
+			}
+		}))
+		h.Handle("/_post", true, h_post)
 	}
 
 	return h_root
