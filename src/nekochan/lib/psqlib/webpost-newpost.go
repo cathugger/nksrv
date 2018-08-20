@@ -56,7 +56,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				FROM (
 					SELECT pdate,pid
 					FROM ib0.posts
-					WHERE bid = $1 AND tid = $2 AND sage != TRUE -- currently we do not count sage posts against bump limit
+					WHERE bid = $1 AND tid = $2 -- count sages against bump limit. because others do it like that :<
 					UNION ALL
 					SELECT $3,lastid
 					FROM ub
@@ -64,7 +64,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					LIMIT $11
 					-- take bump posts, sorted by original date, only upto bump limit
 				) AS tt
-				WHERE sage != TRUE -- currently redundant but incase we start counting sage posts...
+				WHERE sage != TRUE
 				ORDER BY pdate DESC,pid DESC
 				LIMIT 1
 				-- and pick latest one
