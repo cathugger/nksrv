@@ -49,16 +49,17 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		st_bump := `
 	ut AS (
 		UPDATE ib0.threads
-		SET bump = (
+		SET bump = pdate
+		FROM (
 			SELECT pdate
 			FROM (
 				SELECT *
 				FROM (
-					SELECT pdate,pid
+					SELECT pdate,pid,sage
 					FROM ib0.posts
 					WHERE bid = $1 AND tid = $2 -- count sages against bump limit. because others do it like that :<
 					UNION ALL
-					SELECT $3,lastid
+					SELECT $3,lastid,FALSE
 					FROM ub
 					ORDER BY pdate ASC,pid ASC
 					LIMIT $11
@@ -69,7 +70,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				LIMIT 1
 				-- and pick latest one
 			) AS xbump
-		)
+		) as xxbump
 		WHERE bid = $1 AND tid = $2
 	),`
 		b.WriteString(st_bump)
@@ -87,7 +88,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	if t.n != 0 {
 		stf1 := `,
 	uf AS (
-		INSERT INTO ib0.files (bid,pid,fname,thumb,oname)
+		INSERT INTO ib0.files (bid,pid,ftype,fsize,fname,thumb,oname)
 		SELECT *
 		FROM (
 			SELECT $1,pid
@@ -102,8 +103,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d, $%d, $%d)", x+0, x+1, x+2)
-			x += 3
+			fmt.Fprintf(&b, "($%d,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
+			x += 5
 		}
 
 		// footer
@@ -147,10 +148,12 @@ func (sp *PSQLIB) insertNewReply(rti replyTargetInfo, pInfo postInfo,
 	var r *sql.Row
 	if len(fileInfos) == 0 {
 		r = stmt.QueryRow(rti.bid, rti.tid, pInfo.Date, pInfo.Sage, pInfo.ID,
-			pInfo.MessageID, pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
+			pInfo.MessageID, pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message,
+			rti.bumpLimit)
 	} else {
 		x := 11
-		args := make([]interface{}, x+(len(fileInfos)*3))
+		xf := 5
+		args := make([]interface{}, x+(len(fileInfos)*xf))
 		args[0] = rti.bid
 		args[1] = rti.tid
 		args[2] = pInfo.Date
@@ -163,10 +166,12 @@ func (sp *PSQLIB) insertNewReply(rti replyTargetInfo, pInfo postInfo,
 		args[9] = pInfo.Message
 		args[10] = rti.bumpLimit
 		for i := range fileInfos {
-			args[x+0] = fileInfos[i].ID
-			args[x+1] = fileInfos[i].Thumb
-			args[x+2] = fileInfos[i].Original
-			x += 3
+			args[x+0] = fileInfos[i].Type
+			args[x+1] = fileInfos[i].Size
+			args[x+2] = fileInfos[i].ID
+			args[x+3] = fileInfos[i].Thumb
+			args[x+4] = fileInfos[i].Original
+			x += xf
 		}
 		r = stmt.QueryRow(args...)
 	}

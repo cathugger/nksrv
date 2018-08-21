@@ -143,10 +143,11 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				"board",
 				"thread",
 			}
-			f, e := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
-			if e != nil {
+			var err error
+			f, err := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
+			if err != nil {
 				// TODO
-				http.Error(w, fmt.Sprintf("error parsing form: %v", e), http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("error parsing form: %v", err), http.StatusBadRequest)
 				return
 			}
 			if len(f.Values["board"]) != 1 || len(f.Values["thread"]) > 1 {
@@ -155,7 +156,6 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			}
 			board := f.Values["board"][0]
 			var rInfo ib0.IBPostedInfo
-			var err error
 			var code int
 			if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
 				rInfo, err, code = cfg.WebPostProvider.IBPostNewThread(r, f, board)
@@ -164,10 +164,10 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			}
 			_ = rInfo // TODO actually utilise
 			if err != nil {
-				http.Error(w, fmt.Sprintf("error processing submission: %v", e), code)
+				http.Error(w, fmt.Sprintf("error processing submission: %v", err), code)
 			}
 		}))
-		h.Handle("/_post", true, h_post)
+		h.Handle("/_post", false, h_post)
 	}
 
 	return h_root

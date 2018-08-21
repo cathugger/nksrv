@@ -189,6 +189,8 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 }
 
 type fileInfo struct {
+	Type     string
+	Size     int64
 	ID       string // storename
 	Thumb    string // thumbnail
 	Original string // original file name
@@ -294,6 +296,9 @@ func (sp *PSQLIB) commonNewPost(
 
 	xftitle := f.Values[fntitle][0]
 	xfmessage := f.Values[fnmessage][0]
+
+	sp.log.LogPrintf(DEBUG, "form fields: xftitle(%q) xfmessage(%q)", xftitle, xfmessage)
+
 	if !validFormText(xftitle) ||
 		!validFormText(xfmessage) {
 
@@ -306,7 +311,7 @@ func (sp *PSQLIB) commonNewPost(
 	var pid postID
 
 	var postLimits submissionLimits
-	var threadOpts threadOptions
+	threadOpts := defaultThreadOptions
 
 	// get info about board, its limits and shit. does it even exists?
 	if !isReply {
@@ -418,6 +423,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	var pInfo postInfo
 	pInfo.Title = strings.TrimSpace(optimiseFormLine(xftitle))
 	pInfo.Message = optimiseTextMessage(xfmessage)
+	sp.log.LogPrintf(DEBUG, "form fields after processing: Title(%q) Message(%q)", pInfo.Title, pInfo.Message)
 
 	// check for specified limits
 	var filecount int

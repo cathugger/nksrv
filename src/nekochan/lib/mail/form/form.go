@@ -78,6 +78,10 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 			f.RemoveAll()
 		}
 	}()
+
+	f.Values = make(map[string][]string)
+	f.Files = make(map[string][]File)
+
 	wantTextField := func(field string) bool {
 		for _, v := range textfields {
 			if field == v {
@@ -107,7 +111,9 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 	}
 	var n int64
 	for {
+		//fmt.Fprintf(os.Stderr, "XXX before NextPart()\n")
 		e = pr.NextPart()
+		//fmt.Fprintf(os.Stderr, "XXX after NextPart() before ReadHeaders()\n")
 		if e != nil {
 			if e != io.EOF {
 				return
@@ -117,6 +123,7 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 		}
 		var H mail.Headers
 		H, e = pr.ReadHeaders(fp.MaxHeaderBytes)
+		//fmt.Fprintf(os.Stderr, "XXX after ReadHeaders()\n")
 		if e != nil {
 			e = fmt.Errorf("failed reading part headers: %v", e)
 			return
@@ -129,10 +136,13 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 		if e != nil || disp != "form-data" || name == "" {
 			continue
 		}
+		//fmt.Fprintf(os.Stderr, "XXX form params: name(%q) filename(%q)\n", name, fname)
 		if fname == "" {
+			//fmt.Fprintf(os.Stderr, "XXX form part is field\n")
 			// not file
 			if !wantTextField(name) {
 				// don't need
+				//fmt.Fprintf(os.Stderr, "XXX this field isn't needed\n")
 				continue
 			}
 			fieldsleft--
@@ -154,8 +164,10 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 			f.Values[name] = append(f.Values[name], buf.String())
 			buf.Reset()
 		} else {
+			//fmt.Fprintf(os.Stderr, "XXX form part is file\n")
 			if !wantFileField(name) {
 				// don't need lol
+				//fmt.Fprintf(os.Stderr, "XXX this file isn't needed\n")
 				continue
 			}
 			numfiles++
@@ -184,7 +196,9 @@ func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, file
 					os.Remove(fn)
 				}
 			}
+			//fmt.Fprintf(os.Stderr, "XXX before CopyN()\n")
 			n, e = io.CopyN(fw, pr, fbl+1)
+			//fmt.Fprintf(os.Stderr, "XXX after CopyN()\n")
 			if e != nil && e != io.EOF {
 				killfile()
 				e = fmt.Errorf("failed copying file: %v", e)

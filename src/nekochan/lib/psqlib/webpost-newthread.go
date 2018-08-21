@@ -58,7 +58,7 @@ SELECT * FROM up`
 
 		st1 := sth + `,
 	uf AS (
-		INSERT INTO ib0.files (bid,pid,fname,thumb,oname)
+		INSERT INTO ib0.files (bid,pid,ftype,fsize,fname,thumb,oname)
 		SELECT *
 		FROM (
 			SELECT $1,pid
@@ -73,8 +73,8 @@ SELECT * FROM up`
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d, $%d, $%d)", x+0, x+1, x+2)
-			x += 3
+			fmt.Fprintf(&b, "($%d,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
+			x += 5
 		}
 
 		st2 := `
@@ -110,7 +110,8 @@ func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
 			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
 	} else {
 		x := 8
-		args := make([]interface{}, x+(len(fileInfos)*3))
+		xf := 5
+		args := make([]interface{}, x+(len(fileInfos)*xf))
 		args[0] = bid
 		args[1] = pInfo.ID
 		args[2] = pInfo.Date
@@ -120,10 +121,12 @@ func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
 		args[6] = pInfo.Trip
 		args[7] = pInfo.Message
 		for i := range fileInfos {
-			args[x+0] = fileInfos[i].ID
-			args[x+1] = fileInfos[i].Thumb
-			args[x+2] = fileInfos[i].Original
-			x += 3
+			args[x+0] = fileInfos[i].Type
+			args[x+1] = fileInfos[i].Size
+			args[x+2] = fileInfos[i].ID
+			args[x+3] = fileInfos[i].Thumb
+			args[x+4] = fileInfos[i].Original
+			x += xf
 		}
 		r = stmt.QueryRow(args...)
 	}

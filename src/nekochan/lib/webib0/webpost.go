@@ -22,7 +22,7 @@ var IBWebFormFileFields = []string{
 
 var (
 	IBWebFormTextTitle   = "title"
-	IBWebFormTextMessage = "title"
+	IBWebFormTextMessage = "message"
 )
 
 type IBWebPostProvider interface {

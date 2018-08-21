@@ -162,7 +162,7 @@ func (r *BufReader) Capacity() int {
 		r.r = 0
 		r.w = 0
 	}
-	return len(r.b) - r.r
+	return len(r.b) - r.w
 }
 
 func (r *BufReader) CompactBuffer() {

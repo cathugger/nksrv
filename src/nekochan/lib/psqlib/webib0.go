@@ -167,13 +167,13 @@ LIMIT $2 OFFSET $3`,
 		// OP, then 5 last posts, sorted ascending
 		// TODO attachments
 		rows, err = sp.db.DB.Query(
-			`SELECT pname,pid,pdate,author,trip,email,subject,message,attrib
+			`SELECT pname,pid,pdate,author,trip,title,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND pid=$2
 UNION ALL
-SELECT pname,pid,pdate,author,trip,email,subject,message,attrib FROM (
+SELECT pname,pid,pdate,author,trip,title,message,attrib FROM (
 	SELECT * FROM (
-		SELECT pname,pid,pdate,padded,author,trip,email,subject,message,attrib
+		SELECT pname,pid,pdate,padded,author,trip,title,message,attrib
 		FROM ib0.posts
 		WHERE bid=$1 AND tid=$2 AND pid!=$2
 		ORDER BY padded DESC,pid DESC
@@ -191,7 +191,7 @@ SELECT pname,pid,pdate,author,trip,email,subject,message,attrib FROM (
 			var pid postID
 			var pdate time.Time
 
-			err = rows.Scan(&pi.ID, &pid, &pdate, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, (*[]byte)(&pi.Message), &jcfg)
+			err = rows.Scan(&pi.ID, &pid, &pdate, &pi.Name, &pi.Trip, &pi.Subject, (*[]byte)(&pi.Message), &jcfg)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
@@ -346,7 +346,7 @@ ORDER BY bump DESC,tid ASC`,
 		t := &page.Threads[i]
 		// XXX dumb code xd
 		err = sp.db.DB.
-			QueryRow("SELECT subject,message FROM ib0.posts WHERE bid=$1 AND pid=$2 LIMIT 1", bid, tid).
+			QueryRow("SELECT title,message FROM ib0.posts WHERE bid=$1 AND pid=$2 LIMIT 1", bid, tid).
 			Scan(&t.Subject, (*[]byte)(&t.Message))
 		if err != nil {
 			return sp.sqlError("posts row query scan", err), http.StatusInternalServerError
@@ -433,7 +433,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	}
 
 	rows, err := sp.db.DB.Query(
-		`SELECT pname,pid,author,trip,email,subject,pdate,message,attrib
+		`SELECT pname,pid,author,trip,title,pdate,message,attrib
 FROM ib0.posts
 WHERE bid=$1 AND tid=$2
 ORDER BY padded ASC,pid ASC`,
@@ -450,7 +450,7 @@ ORDER BY padded ASC,pid ASC`,
 		var pid postID
 		var pdate time.Time
 
-		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Email, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
+		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError

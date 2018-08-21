@@ -72,5 +72,8 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
 	p.instance = "nekochan" // TODO config
 
+	p.ntStmts = make(map[int]*sql.Stmt)
+	p.npStmts = make(map[npTuple]*sql.Stmt)
+
 	return
 }

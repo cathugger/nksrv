@@ -256,7 +256,7 @@ func (pr *PartReader) read(b []byte) (n int, e error) {
 			// read more
 			if br.Capacity() == 0 {
 				// cant read more, but can we fix this?
-				if br.Size() > len(b) {
+				if br.Size() > len(br.Buffered()) {
 					// do compaction
 					br.CompactBuffer()
 				} else {
@@ -264,7 +264,10 @@ func (pr *PartReader) read(b []byte) (n int, e error) {
 					return n, errors.New("too long boundary line")
 				}
 			}
+			//fmt.Fprintf(os.Stderr, "pr.n = 0 so we are refilling\n")
+			//var xxxx int
 			_, pr.err = br.FillBufferAtleast(1)
+			//fmt.Fprintf(os.Stderr, "refilled, (%d,%v)\n", xxxx, pr.err)
 		}
 	}
 	w := len(b)
@@ -276,6 +279,7 @@ func (pr *PartReader) read(b []byte) (n int, e error) {
 	pr.rpart += n
 	pr.n -= n
 	if pr.n != 0 {
+		//fmt.Fprintf(os.Stderr, "pr.n(%d) and we e = nil\n", pr.n)
 		// if we're able to return more data, don't prematurely err
 		e = nil
 	}
@@ -289,6 +293,7 @@ func (pr *PartReader) checkReadable() error {
 		blen := len(pr.dashBoundary)
 		if len(b) >= blen {
 			if bytes.Equal(b[:blen], pr.dashBoundary) {
+				// first part matched
 				switch pr.checkAfterPrefix(b[blen:]) {
 				case +1:
 					// it did match, signal EOF for this read
