@@ -78,6 +78,14 @@ func (r Responder) ResSendArticleToBePosted() {
 
 // 4** - temporary errors
 
+func (r Responder) ResInternalError(e error) {
+	if e != nil {
+		r.PrintfLine("403 internal error: %v")
+	} else {
+		r.PrintfLine("403 internal error")
+	}
+}
+
 func (r Responder) ResNoSuchNewsgroup() {
 	r.PrintfLine("411 I don't see any such newsgroup")
 }

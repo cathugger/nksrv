@@ -53,24 +53,21 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		FROM (
 			SELECT pdate
 			FROM (
-				SELECT *
-				FROM (
-					SELECT pdate,pid,sage
-					FROM ib0.posts
-					WHERE bid = $1 AND tid = $2 -- count sages against bump limit. because others do it like that :<
-					UNION ALL
-					SELECT $3,lastid,FALSE
-					FROM ub
-					ORDER BY pdate ASC,pid ASC
-					LIMIT $11
-					-- take bump posts, sorted by original date, only upto bump limit
-				) AS tt
-				WHERE sage != TRUE
-				ORDER BY pdate DESC,pid DESC
-				LIMIT 1
-				-- and pick latest one
-			) AS xbump
-		) as xxbump
+				SELECT pdate,pid,sage
+				FROM ib0.posts
+				WHERE bid = $1 AND tid = $2 -- count sages against bump limit. because others do it like that :<
+				UNION ALL
+				SELECT $3,lastid,FALSE
+				FROM ub
+				ORDER BY pdate ASC,pid ASC
+				LIMIT $11
+				-- take bump posts, sorted by original date, only upto bump limit
+			) AS tt
+			WHERE sage != TRUE
+			ORDER BY pdate DESC,pid DESC
+			LIMIT 1
+			-- and pick latest one
+		) as xbump
 		WHERE bid = $1 AND tid = $2
 	),`
 		b.WriteString(st_bump)

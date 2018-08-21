@@ -188,14 +188,6 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 	return
 }
 
-type fileInfo struct {
-	Type     string
-	Size     int64
-	ID       string // storename
-	Thumb    string // thumbnail
-	Original string // original file name
-}
-
 type postedInfo = ib0.IBPostedInfo
 
 func (sp *PSQLIB) newMessageID(t int64) string {
@@ -272,6 +264,14 @@ func optimiseFormLine(line string) (s string) {
 	s = lineReplacer.Replace(line)
 	s = norm.NFC.String(s)
 	return
+}
+
+type fileInfo struct {
+	Type     string
+	Size     int64
+	ID       string // storename
+	Thumb    string // thumbnail
+	Original string // original file name
 }
 
 func (sp *PSQLIB) commonNewPost(
@@ -467,6 +467,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 			fileInfos[x].ID = newfn
 			fileInfos[x].Original = orig
+			fileInfos[x].Size = files[i].Size
 
 			x++
 		}
