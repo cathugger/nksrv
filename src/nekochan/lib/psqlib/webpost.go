@@ -7,6 +7,7 @@ import (
 	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"hash"
 	"io"
 	"net/http"
@@ -460,7 +461,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 			// close file, as we won't read from it directly anymore
 			err = files[i].F.Close()
 			if err != nil {
-				return rInfo, err, http.StatusInternalServerError
+				return rInfo, fmt.Errorf("error closing file: %v", err), http.StatusInternalServerError
 			}
 
 			// TODO extract metadata, make thumbnails here

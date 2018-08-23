@@ -100,6 +100,8 @@ func (r *Reader) Read(b []byte) (n int, e error) {
 	}
 	if r.n >= wn {
 		e = we
+	} else if e == io.EOF {
+		e = io.ErrUnexpectedEOF
 	}
 
 	return
