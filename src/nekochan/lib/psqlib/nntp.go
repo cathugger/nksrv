@@ -1,7 +1,7 @@
 package psqlib
 
 import (
-	"io"
+	"errors"
 	"os"
 
 	//. "nekochan/lib/logx"
@@ -16,66 +16,6 @@ type groupState struct {
 	pid  postID
 }
 
-type nntpCopyer interface {
-	Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error)
-}
-
-type fullNNTPCopyer struct {
-	w  Responder
-	dw io.WriteCloser
-}
-
-func (c *fullNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
-	buf := make([]byte, 32*1024)
-
-	var nr, nw int
-	var er, ew error
-
-	// initialise if we successfuly read something
-	if c.dw == nil {
-		nr, er = src.Read(buf)
-		if nr <= 0 && er != nil {
-			// abort on error before initialisation if no data - avoid begining empty incomplete message
-			err = er
-			return
-		}
-		c.w.ResArticleFollows(num, msgid)
-		c.dw = c.w.DotWriter()
-	}
-
-	for {
-		if nr > 0 {
-			nw, ew = c.dw.Write(buf[:nr])
-			if nw > 0 {
-				written += int64(nw)
-			}
-			if ew != nil {
-				err = ew
-				break
-			}
-			if nr != nw {
-				err = io.ErrShortWrite
-				break
-			}
-		}
-		if er != nil {
-			if er != io.EOF {
-				// read EOF isn't error :>
-				err = er
-			}
-			break
-		}
-		nr, er = src.Read(buf)
-	}
-
-	if err == nil {
-		err = c.dw.Close()
-		c.dw = nil
-	}
-
-	return
-}
-
 type (
 	Responder    = nntp.Responder
 	FullMsgID    = nntp.FullMsgID
@@ -86,11 +26,16 @@ type (
 )
 
 func artnumInGroup(cs *ConnState, bid boardID, num uint64) uint64 {
-	if cg, ok := cs.CurrentGroup.(*groupState); ok && cg != nil && cg.bid == bid {
+	if cg, _ := cs.CurrentGroup.(*groupState); cg != nil && cg.bid == bid {
 		return num
 	} else {
 		return 0
 	}
+}
+
+func getGroupState(cs *ConnState) *groupState {
+	gs, _ := cs.CurrentGroup.(*groupState)
+	return gs
 }
 
 /*
@@ -123,199 +68,100 @@ func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))
 }
 
-func (sp *PSQLIB) GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
-	sid := unsafeCoreMsgIDToStr(msgid)
+var (
+	errNotExist        = os.ErrNotExist
+	errNoBoardSelected = errors.New("no board selected")
+)
 
-	fc := &fullNNTPCopyer{w: w}
-	e := sp.nntpObtainItemByMsgID(fc, cs, sid)
+func handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 	if e == nil {
 		// no error - handled successfuly
 		return true
 	}
-	if fc.dw != nil {
+	if !nc.IsClosed() {
 		// writer wasn't properly closed -- we should reset connection
 		w.Abort()
 		return true
 	}
 	// rest of errors are easier to handle
-	if e == os.ErrNotExist {
-		return false
+	if e == errNotExist {
+		return false // this is pretty convenient
+	} else if e == errNoBoardSelected {
+		w.ResNoNewsgroupSelected()
 	} else {
 		w.ResInternalError(e)
-		return true
 	}
+	return true
+}
+
+func (sp *PSQLIB) getArticleCommonByMsgID(nc nntpCopyer, w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	sid := unsafeCoreMsgIDToStr(msgid)
+	e := sp.nntpObtainItemByMsgID(nc, cs, sid)
+	return handleNNTPGetError(w, nc, e)
+}
+func (sp *PSQLIB) GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	nc := &fullNNTPCopyer{w: w}
+	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
+}
+func (sp *PSQLIB) GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	nc := &headNNTPCopyer{w: w}
+	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
+}
+func (sp *PSQLIB) GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	nc := &bodyNNTPCopyer{w: w}
+	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
+}
+func (sp *PSQLIB) GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	// notice: not reference
+	sc := statNNTPCopyer{w: w}
+	return sp.getArticleCommonByMsgID(sc, w, cs, msgid)
+}
+
+func (sp *PSQLIB) getArticleCommonByNum(nc nntpCopyer, w Responder, cs *ConnState, num uint64) bool {
+	e := sp.nntpObtainItemByNum(nc, cs, num)
+	return handleNNTPGetError(w, nc, e)
+}
+func (sp *PSQLIB) GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool {
+	nc := &fullNNTPCopyer{w: w}
+	return sp.getArticleCommonByNum(nc, w, cs, num)
+}
+func (sp *PSQLIB) GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool {
+	nc := &headNNTPCopyer{w: w}
+	return sp.getArticleCommonByNum(nc, w, cs, num)
+}
+func (sp *PSQLIB) GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool {
+	nc := &bodyNNTPCopyer{w: w}
+	return sp.getArticleCommonByNum(nc, w, cs, num)
+}
+func (sp *PSQLIB) GetArticleStatByNum(w Responder, cs *ConnState, num uint64) bool {
+	// notice: not reference
+	sc := statNNTPCopyer{w: w}
+	return sp.getArticleCommonByNum(sc, w, cs, num)
+}
+
+func (sp *PSQLIB) getArticleCommonByCurr(nc nntpCopyer, w Responder, cs *ConnState) bool {
+	e := sp.nntpObtainItemByCurr(nc, cs)
+	return handleNNTPGetError(w, nc, e)
+}
+func (sp *PSQLIB) GetArticleFullByCurr(w Responder, cs *ConnState) bool {
+	nc := &fullNNTPCopyer{w: w}
+	return sp.getArticleCommonByCurr(nc, w, cs)
+}
+func (sp *PSQLIB) GetArticleHeadByCurr(w Responder, cs *ConnState) bool {
+	nc := &headNNTPCopyer{w: w}
+	return sp.getArticleCommonByCurr(nc, w, cs)
+}
+func (sp *PSQLIB) GetArticleBodyByCurr(w Responder, cs *ConnState) bool {
+	nc := &bodyNNTPCopyer{w: w}
+	return sp.getArticleCommonByCurr(nc, w, cs)
+}
+func (sp *PSQLIB) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
+	// notice: not reference
+	sc := statNNTPCopyer{w: w}
+	return sp.getArticleCommonByCurr(sc, w, cs)
 }
 
 /*
-func (p *TestSrv) GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
-	sid := unsafeCoreMsgIDToStr(msgid)
-	a := s1.articles[sid]
-	if a == nil {
-		return false
-	}
-	w.ResHeadFollows(artnumInGroup(cs, a.group, a.number), a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.head)
-	dw.Close()
-	return true
-}
-
-func (p *TestSrv) GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
-	sid := unsafeCoreMsgIDToStr(msgid)
-	a := s1.articles[sid]
-	if a == nil {
-		return false
-	}
-	w.ResBodyFollows(artnumInGroup(cs, a.group, a.number), a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.body)
-	dw.Close()
-	return true
-}
-
-func (p *TestSrv) GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
-	sid := unsafeCoreMsgIDToStr(msgid)
-	a := s1.articles[sid]
-	if a == nil {
-		return false
-	}
-	w.ResArticleFound(artnumInGroup(cs, a.group, a.number), a.msgid)
-	return true
-}
-
-func getGroupState(cs *ConnState) *groupState {
-	gs, _ := cs.CurrentGroup.(*groupState)
-	return gs
-}
-
-func (p *TestSrv) GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[num]
-	if a == nil {
-		return false
-	}
-	w.ResArticleFollows(num, a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.head)
-	dw.Write(newline)
-	dw.Write(a.body)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[num]
-	if a == nil {
-		return false
-	}
-	w.ResHeadFollows(num, a1msgid)
-	dw := w.DotWriter()
-	dw.Write(a.head)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[num]
-	if a == nil {
-		return false
-	}
-	w.ResBodyFollows(num, a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.body)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleStatByNum(w Responder, cs *ConnState, num uint64) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[num]
-	if a == nil {
-		return false
-	}
-	w.ResArticleFound(num, a.msgid)
-	return true
-}
-
-func (p *TestSrv) GetArticleFullByCurr(w Responder, cs *ConnState) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
-		return false
-	}
-	w.ResArticleFollows(a.number, a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.head)
-	dw.Write(newline)
-	dw.Write(a.body)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleHeadByCurr(w Responder, cs *ConnState) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
-		return false
-	}
-	w.ResHeadFollows(a.number, a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.head)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleBodyByCurr(w Responder, cs *ConnState) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
-		return false
-	}
-	w.ResBodyFollows(a.number, a.msgid)
-	dw := w.DotWriter()
-	dw.Write(a.body)
-	dw.Close()
-	return true
-}
-func (p *TestSrv) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
-	gs := getGroupState(cs)
-	if gs == nil {
-		w.ResNoNewsgroupSelected()
-		return true
-	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
-		return false
-	}
-	w.ResArticleFound(a.number, a.msgid)
-	return true
-}
-
 func (p *TestSrv) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 	sgroup := unsafeBytesToStr(group)
 

@@ -88,11 +88,63 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(w nntpCopyer, cs *ConnState, msgid CoreM
 		Scan(&bid, &pid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return os.ErrNotExist
+			return errNotExist
 		}
-		return sp.sqlError("boards row query scan", err)
+		return sp.sqlError("posts row query scan", err)
 	}
-	return sp.nntpObtainItem(w, artnumInGroup(cs, bid, pid), msgid)
+	num := artnumInGroup(cs, bid, pid)
+	return sp.nntpObtainItemOrStat(w, num, msgid)
+}
+
+func (sp *PSQLIB) nntpObtainItemByNum(w nntpCopyer, cs *ConnState, num uint64) error {
+	gs := getGroupState(cs)
+	if gs == nil {
+		return errNoBoardSelected
+	}
+
+	var msgid CoreMsgIDStr
+	err := sp.db.DB.
+		QueryRow("SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1", gs.bid, num).
+		Scan(&msgid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errNotExist
+		}
+		return sp.sqlError("posts row query scan", err)
+	}
+	return sp.nntpObtainItemOrStat(w, num, msgid)
+}
+
+func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
+	gs := getGroupState(cs)
+	if gs == nil {
+		return errNoBoardSelected
+	}
+	if gs.pid <= 0 {
+		return errNotExist
+	}
+
+	var msgid CoreMsgIDStr
+	err := sp.db.DB.
+		QueryRow("SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1", gs.bid, gs.pid).
+		Scan(&msgid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errNotExist
+		}
+		return sp.sqlError("posts row query scan", err)
+	}
+	return sp.nntpObtainItemOrStat(w, gs.pid, msgid)
+}
+
+func (sp *PSQLIB) nntpObtainItemOrStat(w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+	if _, ok := w.(statNNTPCopyer); !ok {
+		return sp.nntpObtainItem(w, num, msgid)
+	} else {
+		// interface abuse
+		_, err := w.Copy(num, msgid, nil)
+		return err
+	}
 }
 
 func (sp *PSQLIB) nntpObtainItem(w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
