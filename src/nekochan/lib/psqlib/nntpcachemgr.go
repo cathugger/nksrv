@@ -48,7 +48,10 @@ func newNNTPCacheMgr() nntpCacheMgr {
 	}
 }
 
-func obtainFromCache(w nntpCopyer, filename string, off int64, num uint64, msgid CoreMsgIDStr) (bool, error) {
+func obtainFromCache(
+	w nntpCopyer, filename string, off int64,
+	num uint64, msgid CoreMsgIDStr) (bool, error) {
+
 	f, e := os.Open(filename)
 	if e != nil {
 		if os.IsNotExist(e) {
@@ -79,13 +82,14 @@ func (sp *PSQLIB) makeFilename(id CoreMsgIDStr) string {
 	return sp.nntpfs.Main() + enc + ".eml"
 }
 
-func (sp *PSQLIB) nntpObtainItemByMsgID(w nntpCopyer, cs *ConnState, msgid CoreMsgIDStr) error {
+func (sp *PSQLIB) nntpObtainItemByMsgID(
+	w nntpCopyer, cs *ConnState, msgid CoreMsgIDStr) error {
+
 	var bid boardID
 	var pid postID
 
-	err := sp.db.DB.
-		QueryRow("SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1", string(msgid)).
-		Scan(&bid, &pid)
+	q := "SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1"
+	err := sp.db.DB.QueryRow(q, string(msgid)).Scan(&bid, &pid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
@@ -96,16 +100,17 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(w nntpCopyer, cs *ConnState, msgid CoreM
 	return sp.nntpObtainItemOrStat(w, num, msgid)
 }
 
-func (sp *PSQLIB) nntpObtainItemByNum(w nntpCopyer, cs *ConnState, num uint64) error {
+func (sp *PSQLIB) nntpObtainItemByNum(
+	w nntpCopyer, cs *ConnState, num uint64) error {
+
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		return errNoBoardSelected
 	}
 
 	var msgid CoreMsgIDStr
-	err := sp.db.DB.
-		QueryRow("SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1", gs.bid, num).
-		Scan(&msgid)
+	q := "SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1"
+	err := sp.db.DB.QueryRow(q, gs.bid, num).Scan(&msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
@@ -117,7 +122,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(w nntpCopyer, cs *ConnState, num uint64) e
 
 func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		return errNoBoardSelected
 	}
 	if gs.pid <= 0 {
@@ -125,9 +130,8 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	}
 
 	var msgid CoreMsgIDStr
-	err := sp.db.DB.
-		QueryRow("SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1", gs.bid, gs.pid).
-		Scan(&msgid)
+	q := "SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1"
+	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
@@ -137,7 +141,9 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	return sp.nntpObtainItemOrStat(w, gs.pid, msgid)
 }
 
-func (sp *PSQLIB) nntpObtainItemOrStat(w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+func (sp *PSQLIB) nntpObtainItemOrStat(
+	w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+
 	if _, ok := w.(statNNTPCopyer); !ok {
 		return sp.nntpObtainItem(w, num, msgid)
 	} else {
@@ -147,7 +153,9 @@ func (sp *PSQLIB) nntpObtainItemOrStat(w nntpCopyer, num uint64, msgid CoreMsgID
 	}
 }
 
-func (sp *PSQLIB) nntpObtainItem(w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+func (sp *PSQLIB) nntpObtainItem(
+	w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+
 	var f *os.File
 	var err error
 	var o, oo *nntpCacheObj

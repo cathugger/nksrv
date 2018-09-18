@@ -1,7 +1,10 @@
 package psqlib
 
 import (
+	"database/sql"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 
 	//. "nekochan/lib/logx"
@@ -11,9 +14,9 @@ import (
 //var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 
 type groupState struct {
-	bstr string
-	bid  boardID
-	pid  postID
+	bname string
+	bid   boardID
+	pid   postID
 }
 
 type (
@@ -36,6 +39,10 @@ func artnumInGroup(cs *ConnState, bid boardID, num uint64) uint64 {
 func getGroupState(cs *ConnState) *groupState {
 	gs, _ := cs.CurrentGroup.(*groupState)
 	return gs
+}
+
+func isGroupSelected(gs *groupState) bool {
+	return gs != nil && gs.bid != 0
 }
 
 /*
@@ -161,13 +168,24 @@ func (sp *PSQLIB) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
 	return sp.getArticleCommonByCurr(sc, w, cs)
 }
 
-/*
-func (p *TestSrv) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
+func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 	sgroup := unsafeBytesToStr(group)
 
-	g := s1.groups[sgroup]
-	if g == nil {
-		return false
+	var bid uint32
+	var lo, hi uint64
+	q := `SELECT xb.bid,MIN(xp.pid),MAX(xp.pid)
+	FROM ib0.boards AS xb
+	LEFT JOIN ib0.posts AS xp
+	USING (bid)
+	WHERE xb.bname = $1
+	GROUP BY xb.bid`
+	err := sp.db.DB.QueryRow(q, sgroup).Scan(&bid, &lo, &hi)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		w.ResInternalError(sp.sqlError("board-posts row query scan", err))
+		return true
 	}
 
 	gs := getGroupState(cs)
@@ -175,113 +193,176 @@ func (p *TestSrv) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 		gs = &groupState{}
 		cs.CurrentGroup = gs
 	}
+	gs.bid = bid
+	if gs.bname != sgroup {
+		// sgroup is unsafe
+		gs.bname = string(group)
+	}
+	gs.pid = lo
 
-	gs.group = sgroup
-	gs.g = g
-
-	if len(g.articlesSort) != 0 {
-		gs.number = g.articlesSort[0]
-
-		lo, hi := g.articlesSort[0], g.articlesSort[len(g.articlesSort)-1]
+	if lo != 0 {
+		if hi < lo {
+			hi = lo
+		}
 		w.ResGroupSuccessfullySelected(hi-lo+1, lo, hi, sgroup)
 	} else {
-		gs.number = 0
-
-		w.ResGroupSuccessfullySelected(0, 0, 0, gs.group)
+		w.ResGroupSuccessfullySelected(0, 0, 0, sgroup)
 	}
 
 	return true
 }
-func (p *TestSrv) SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
+func (sp *PSQLIB) SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		if len(group) == 0 {
 			w.ResNoNewsgroupSelected()
 			return true
 		}
-		gs = &groupState{}
-		cs.CurrentGroup = gs
+		if gs == nil {
+			gs = &groupState{}
+			cs.CurrentGroup = gs
+		}
 	}
 
 	var sgroup string
 	if len(group) != 0 {
 		sgroup = unsafeBytesToStr(group)
 	} else {
-		sgroup = gs.group
+		sgroup = gs.bname
 	}
 
-	g := s1.groups[sgroup]
-	if g == nil {
+	// TODO optimise
+	q := `SELECT x1.bid,x2.lo,x2.hi,x3.pid
+	FROM ib0.boards AS x1
+	LEFT JOIN (
+		SELECT xb.bid AS bid,MIN(xp.pid) AS lo,MAX(xp.pid) AS hi
+		FROM ib0.boards AS xb
+		LEFT JOIN ib0.posts AS xp
+		USING (bid)
+		WHERE xb.bname = $1
+		GROUP BY xb.bid
+	) x2
+	ON x1.bid = x2.bid
+	LEFT JOIN (
+		SELECT xb.bid AS bid,xp.pid AS pid
+		FROM ib0.boards AS xb
+		LEFT JOIN ib0.posts AS xp
+		USING (bid)
+		WHERE xb.bname = $1
+			AND xp.pid >= $2 AND ($3 < 0 OR x3.pid <= $3)
+		ORDER BY xp.pid ASC
+	) x3
+	ON x1.bid = x3.bid
+	WHERE x1.bname = $1`
+	rows, err := sp.db.DB.Query(q, sgroup)
+	if err != nil {
+		w.ResInternalError(sp.sqlError("board-posts query", err))
+		return true
+	}
+	var dw io.WriteCloser
+	for rows.Next() {
+		var bid boardID
+		var lo, hi, pid postID
+		err = rows.Scan(&bid, &lo, &hi, &pid)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("board-post query rows scan", err)
+			if dw == nil {
+				w.ResInternalError(err)
+			} else {
+				w.Abort()
+			}
+			return true
+		}
+		if dw == nil {
+			// we have something. do switch, send info about group
+			gs.bid = bid
+			if gs.bname != sgroup {
+				// sgroup is unsafe
+				gs.bname = string(group)
+			}
+			gs.pid = lo
+
+			if lo != 0 {
+				if hi < lo {
+					hi = lo
+				}
+				w.ResArticleNumbersFollow(hi-lo+1, lo, hi, sgroup)
+			} else {
+				w.ResArticleNumbersFollow(0, 0, 0, sgroup)
+			}
+
+			dw = w.DotWriter()
+		}
+
+		if pid != 0 {
+			fmt.Fprintf(dw, "%d\n", pid)
+		}
+	}
+
+	if dw != nil {
+		dw.Close()
+		return true
+	} else {
 		return false
 	}
-
-	gs.group = g.name
-	gs.g = g
-
-	if len(g.articlesSort) != 0 {
-		gs.number = g.articlesSort[0]
-
-		lo, hi := g.articlesSort[0], g.articlesSort[len(g.articlesSort)-1]
-		w.ResArticleNumbersFollow(hi-lo+1, lo, hi, gs.group)
-	} else {
-		gs.number = 0
-
-		w.ResArticleNumbersFollow(0, 0, 0, gs.group)
-	}
-
-	dw := w.DotWriter()
-	for _, n := range g.articlesSort {
-		if n >= uint64(rmin) && (rmax < 0 || n <= uint64(rmax)) {
-			fmt.Fprintf(dw, "%d\n", n)
-		}
-	}
-	dw.Close()
-
-	return true
 }
-func (p *TestSrv) SelectNextArticle(w Responder, cs *ConnState) {
+func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return
 	}
-	x := gs.number
+	x := gs.pid
 	if x == 0 {
 		w.ResCurrentArticleNumberIsInvalid()
 		return
 	}
-	for _, n := range gs.g.articlesSort {
-		if n > x {
-			gs.number = n
-			a := gs.g.articles[n]
-			w.ResArticleFound(a.number, a.msgid)
+	var msgid CoreMsgIDStr
+	var npid postID
+	q := "SELECT pid,msgid FROM ib0.posts WHERE bid = $1 AND pid > $2 LIMIT 1"
+	err := sp.db.DB.QueryRow(q, gs.bid, x).Scan(&npid, &msgid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.ResNoNextArticleInThisGroup()
 			return
 		}
+		w.ResInternalError(sp.sqlError("posts row query scan", err))
+		return
 	}
-	w.ResNoNextArticleInThisGroup()
+	gs.pid = npid
+	w.ResArticleFound(npid, msgid)
+	return
 }
-func (p *TestSrv) SelectPrevArticle(w Responder, cs *ConnState) {
+func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return
 	}
-	x := gs.number
+	x := gs.pid
 	if x == 0 {
 		w.ResCurrentArticleNumberIsInvalid()
 		return
 	}
-	for i := len(gs.g.articlesSort) - 1; i >= 0; i-- {
-		n := gs.g.articlesSort[i]
-		if n < x {
-			gs.number = n
-			a := gs.g.articles[n]
-			w.ResArticleFound(a.number, a.msgid)
+	var msgid CoreMsgIDStr
+	var npid postID
+	q := "SELECT pid,msgid FROM ib0.posts WHERE bid = $1 AND pid < $2 LIMIT 1"
+	err := sp.db.DB.QueryRow(q, gs.bid, x).Scan(&npid, &msgid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.ResNoPrevArticleInThisGroup()
 			return
 		}
+		w.ResInternalError(sp.sqlError("posts row query scan", err))
+		return
 	}
-	w.ResNoPrevArticleInThisGroup()
+	gs.pid = npid
+	w.ResArticleFound(npid, msgid)
+	return
 }
+
+/*
 
 func (p *TestSrv) ListNewGroups(w io.Writer, qt time.Time) {
 	for _, gn := range s1.groupsSort {
