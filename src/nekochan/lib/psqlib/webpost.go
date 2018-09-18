@@ -159,10 +159,16 @@ func (sp *PSQLIB) applyInstanceThreadOptions(threadOpts *threadOptions,
 	// TODO
 }
 
-var lowerBase32Set = "abcdefghijklmnopqrstuvwxyz234567"
-var lowerBase32Enc = base32.
-	NewEncoding(lowerBase32Set).
+var lowerBase32HexSet = "0123456789abcdefghijklmnopqrstuv"
+var lowerBase32HexEnc = base32.
+	NewEncoding(lowerBase32HexSet).
 	WithPadding(base32.NoPadding)
+
+// custom sort-able base64 set
+var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+var sBase64Enc = base64.
+	NewEncoding(sBase64Set).
+	WithPadding(base64.NoPadding)
 
 func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 	var h hash.Hash
@@ -178,7 +184,7 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 
 	var b [32]byte
 	sum := h.Sum(b[:0])
-	s = lowerBase32Enc.EncodeToString(sum)
+	s = lowerBase32HexEnc.EncodeToString(sum)
 
 	// append extension, if any
 	if i := strings.LastIndexByte(fname, '.'); i >= 0 && i+1 < len(fname) {
@@ -214,10 +220,11 @@ func (sp *PSQLIB) newMessageID(t int64) string {
 	var r [12]byte
 	crand.Read(r[:])
 
-	return base64.RawURLEncoding.EncodeToString(b[:]) + "." +
-		base64.RawURLEncoding.EncodeToString(r[:]) + "@" + sp.instance
+	return sBase64Enc.EncodeToString(b[:]) + "." +
+		sBase64Enc.EncodeToString(r[:]) + "@" + sp.instance
 }
 
+// TODO: more algos
 func todoHashPostID(coremsgid string) string {
 	b := sha1.Sum(unsafeStrToBytes("<" + coremsgid + ">"))
 	return hex.EncodeToString(b[:])

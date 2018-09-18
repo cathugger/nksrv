@@ -60,7 +60,20 @@ func (c *CachePub) Finish() {
 	// rely on os.File finalizer to close handle
 }
 
-func (c *CachePubc) Cancel(err error) {
+// should be invoked by writer, after finishing writing
+// returns how much bytes it wrote to file
+func (c *CachePub) Wrote() int64 {
+	return c.n
+}
+
+func (c *CachePub) Error() (e error) {
+	c.mu.RLock()
+	e = c.err
+	c.mu.RUnlock()
+	return
+}
+
+func (c *CachePub) Cancel(err error) {
 	if err == nil || err == io.EOF {
 		panic("wrong cancel usage")
 	}
@@ -72,10 +85,11 @@ func (c *CachePubc) Cancel(err error) {
 	c.cond.Broadcast() // wake them up
 }
 
-func NewReader(c *CachePub) *Reader {
+func (c *CachePub) NewReader() *Reader {
 	return &Reader{c: c}
 }
 
+// non-thread-safe
 func (r *Reader) Read(b []byte) (n int, e error) {
 	r.c.mu.RLock()
 
@@ -105,4 +119,12 @@ func (r *Reader) Read(b []byte) (n int, e error) {
 	}
 
 	return
+}
+
+// non-thread-safe
+// should be invoked by reader, after getting read error
+// function name `Read` would conflict
+// returns how much bytes it read from CachePub
+func (r *Reader) FinishedReading() int64 {
+	return r.n
 }

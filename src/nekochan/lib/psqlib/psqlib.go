@@ -19,6 +19,8 @@ type PSQLIB struct {
 	log      Logger
 	src      fstore.FStore
 	thm      fstore.FStore
+	nntpfs   fstore.FStore
+	nntpmgr  nntpCacheMgr
 	altthumb altthumber.AltThumber
 	ffo      formFileOpener
 	fpp      form.ParserParams

@@ -134,7 +134,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		conn: c,
 		r:    r,
 		prov: s.prov,
-		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
+		w:    Responder{tp.NewWriter(bufio.NewWriter(c)), c},
 	}
 	cs.log = NewLogToX(s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
 	s.setupClientDefaults(cs)

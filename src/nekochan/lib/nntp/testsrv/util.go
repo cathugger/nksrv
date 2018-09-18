@@ -1,4 +1,4 @@
-package cntp0
+package testsrv
 
 import (
 	"reflect"

@@ -1,6 +1,7 @@
 package nntp
 
 import (
+	"io"
 	tp "net/textproto"
 
 	"nekochan/lib/bufreader"
@@ -10,6 +11,11 @@ import (
 // sugar because im lazy
 type Responder struct {
 	*tp.Writer
+	c io.Closer
+}
+
+func (r Responder) Abort() {
+	r.c.Close()
 }
 
 type ConnState struct {
