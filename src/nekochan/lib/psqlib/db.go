@@ -60,6 +60,7 @@ var dbIb0InitStatements = []string{
 	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
 	title   TEXT                        NOT NULL, /* message title/subject field */
 	message TEXT,                                 /* post message, in UTF-8 */
+	headers JSONB,                                -- map of lists of strings
 	attrib  JSONB,                                /* extra attributes which are optional */
 	extras  JSONB,                                /* dunno if really need this field */
 

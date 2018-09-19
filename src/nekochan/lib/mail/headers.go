@@ -32,6 +32,7 @@ type Headers map[string][]HeaderVal
 // case-sensitive
 func (h Headers) GetFirst(x string) HeaderVal {
 	if s, ok := h[x]; ok {
+		// assumption: will always have at least one value
 		return s[0]
 	}
 	return ""

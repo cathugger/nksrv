@@ -9,7 +9,10 @@ import (
 	"time"
 
 	//. "nekochan/lib/logx"
+	xtypes "github.com/jmoiron/sqlx/types"
+
 	au "nekochan/lib/asciiutils"
+	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
 )
 
@@ -379,7 +382,9 @@ func emptyWildmat(w []byte) bool {
 	return len(w) == 0 || (len(w) == 1 && w[0] == '*')
 }
 
-func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time) {
+func (sp *PSQLIB) ListNewNews(
+	aw AbstractResponder, wildmat []byte, qt time.Time) {
+
 	var rows *sql.Rows
 	var err error
 	var dw io.WriteCloser
@@ -404,9 +409,11 @@ func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
 			return
 		}
+
 		dw = aw.OpenDotWriter()
 		for rows.Next() {
 			var msgid CoreMsgID
+
 			err = rows.Scan(&msgid)
 			if err != nil {
 				rows.Close()
@@ -414,11 +421,13 @@ func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time
 				aw.Abort()
 				return
 			}
+
 			fmt.Fprintf(dw, "<%s>\n", msgid)
 		}
 	} else {
 		// TODO maybe we should use SQL LIKE to implement filtering?
 		wm := nntp.CompileWildmat(wildmat)
+
 		q := `SELECT xp.msgid,xb.bname
 	FROM ib0.posts AS xp
 	JOIN ib0.boards AS xb
@@ -429,10 +438,12 @@ func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
 			return
 		}
+
 		dw = aw.OpenDotWriter()
 		for rows.Next() {
 			var msgid CoreMsgID
 			var bname []byte
+
 			err = rows.Scan(&msgid, &bname)
 			if err != nil {
 				rows.Close()
@@ -440,6 +451,7 @@ func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time
 				aw.Abort()
 				return
 			}
+
 			if wm.CheckBytes(bname) {
 				fmt.Fprintf(dw, "<%s>\n", msgid)
 			}
@@ -471,10 +483,12 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
 		return
 	}
+
 	dw := aw.OpenDotWriter()
 	for rows.Next() {
 		var bname []byte
 		var lo, hi uint64
+
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
 			rows.Close()
@@ -482,9 +496,11 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 			aw.Abort()
 			return
 		}
+
 		if hi < lo {
 			hi = lo // paranoia
 		}
+
 		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
 	}
 	if err = rows.Err(); err != nil {
@@ -508,9 +524,11 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 
 	wmany := emptyWildmat(wildmat)
 	wmgrp := !wmany && nntp.ValidGroupSlice(wildmat)
+
 	if !wmany && !wmgrp {
 		wm = nntp.CompileWildmat(wildmat)
 	}
+
 	if !wmgrp {
 		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
 	FROM ib0.boards AS xb
@@ -531,10 +549,12 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 		aw.GetResponder().ResInternalError(sp.sqlError("list active query", err))
 		return
 	}
+
 	dw := aw.OpenDotWriter()
 	for rows.Next() {
 		var bname []byte
 		var lo, hi uint64
+
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
 			rows.Close()
@@ -542,12 +562,15 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 			aw.Abort()
 			return
 		}
+
 		if wm != nil && !wm.CheckBytes(bname) {
 			continue
 		}
+
 		if hi < lo {
 			hi = lo // paranoia
 		}
+
 		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
 	}
 	if err = rows.Err(); err != nil {
@@ -569,9 +592,11 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 
 	wmany := emptyWildmat(wildmat)
 	wmgrp := !wmany && nntp.ValidGroupSlice(wildmat)
+
 	if !wmany && !wmgrp {
 		wm = nntp.CompileWildmat(wildmat)
 	}
+
 	if !wmgrp {
 		q := `SELECT bname,bdesc FROM ib0.boards`
 		rows, err = sp.db.DB.Query(q)
@@ -583,9 +608,11 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 		aw.GetResponder().ResInternalError(sp.sqlError("list newsgroups query", err))
 		return
 	}
+
 	dw := aw.OpenDotWriter()
 	for rows.Next() {
 		var bname, bdesc string
+
 		err = rows.Scan(&bname, &bdesc)
 		if err != nil {
 			rows.Close()
@@ -593,14 +620,17 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 			aw.Abort()
 			return
 		}
+
 		if wm != nil && !wm.CheckString(bname) {
 			continue
 		}
+
 		bdesc = au.TrimWSString(bdesc)
-		// TODO should we do this? may be better for compatibility
 		if bdesc == "" {
+			// TODO should we do this? may be better for compatibility
 			bdesc = "-"
 		}
+
 		fmt.Fprintf(dw, "%s\t%s\n", bname, bdesc)
 	}
 	if err = rows.Err(); err != nil {
@@ -613,13 +643,24 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	dw.Close()
 }
 
-/*
-func printOver(w io.Writer, num uint64, a *article) {
-	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tXref: %s\n", num,
-		a.over.subject, a.over.from, a.over.date, a.over.msgid,
-		a.over.references, a.over.bytes, a.over.lines, a.over.xref)
+func (sp *PSQLIB) printOver(
+	w io.Writer, num uint64, pid uint64, msgid CoreMsgIDStr,
+	bname, title string, hdrs mail.Headers) {
+	/*
+		The first 8 fields MUST be the following, in order:
+			"0" or article number (see below)
+			Subject header content
+			From header content
+			Date header content
+			Message-ID header content
+			References header content
+			:bytes metadata item
+			:lines metadata item
+	*/
+	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s %s:%d\n", num,
+		title, hdrs.GetFirst("From"), hdrs.GetFirst("Date"), msgid,
+		hdrs.GetFirst("References"), "", "", sp.instance, bname, pid)
 }
-*/
 
 // + ok: 224{ResOverviewInformationFollows}
 // fail:
@@ -627,78 +668,170 @@ func printOver(w io.Writer, num uint64, a *article) {
 //   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 //   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 //   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-/*
-func (p *TestSrv) GetOverByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) GetOverByMsgID(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	sid := unsafeCoreMsgIDToStr(msgid)
-	a := s1.articles[sid]
-	if a == nil {
-		return false
+
+	var bid boardID
+	var bname string
+	var pid postID
+	var title string
+	var jcfg xtypes.JSONText
+
+	q := `SELECT xp.bid,xb.bname,xp.pid,xp.title,xp.headers
+	FROM ib0.posts AS xp
+	JOIN ib0.boards AS xb
+	USING (bid)
+	WHERE xp.msgid = $1
+	LIMIT 1`
+	err := sp.db.DB.QueryRow(q, sid).Scan(&bid, &bname, &pid, &title, &jcfg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		w.ResInternalError(sp.sqlError("overview query", err))
+		return true
 	}
-*/
-/*
-	The first 8 fields MUST be the following, in order:
-		"0" or article number (see below)
-		Subject header content
-		From header content
-		Date header content
-		Message-ID header content
-		References header content
-		:bytes metadata item
-		:lines metadata item
-*/
-/*
+
+	hdrs := make(mail.Headers)
+	err = jcfg.Unmarshal(&hdrs)
+	if err != nil {
+		w.ResInternalError(sp.sqlError("headers json unmarshal", err))
+		return true
+	}
+
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	printOver(dw, artnumInGroup(cs, a.group, a.number), a)
+	sp.printOver(dw, artnumInGroup(cs, bid, pid), pid, sid, bname, title, hdrs)
 	dw.Close()
 	return true
 }
-*/
-/*
-func (p *TestSrv) GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool {
+
+func (sp *PSQLIB) GetOverByRange(
+	w Responder, cs *ConnState, rmin, rmax int64) bool {
+
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	var ww io.WriteCloser = nil
-	for _, an := range gs.g.articlesSort {
-		if an >= uint64(rmin) && (rmax < 0 || an <= uint64(rmax)) {
-			if ww == nil {
-				w.ResOverviewInformationFollows()
-				ww = w.DotWriter()
-			}
-			a := gs.g.articles[an]
-			printOver(ww, a.number, a)
-		}
+
+	var dw io.WriteCloser
+
+	q := `SELECT pid,msgid,title,headers
+	FROM ib0.posts
+	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
+	ORDER BY pid ASC`
+	rows, err := sp.db.DB.Query(q, gs.bid, rmin, rmax)
+	if err != nil {
+		w.ResInternalError(sp.sqlError("overview query", err))
+		return true
 	}
-	if ww != nil {
-		ww.Close()
+
+	for rows.Next() {
+		var pid postID
+		var msgid CoreMsgIDStr
+		var title string
+		var jcfg xtypes.JSONText
+
+		err = rows.Scan(&pid, &msgid, &title, &jcfg)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("overview query rows scan", err)
+			if dw == nil {
+				w.ResInternalError(err)
+			} else {
+				w.Abort()
+			}
+			return true
+		}
+
+		hdrs := make(mail.Headers)
+		err = jcfg.Unmarshal(&hdrs)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("headers json unmarshal", err)
+			if dw == nil {
+				w.ResInternalError(err)
+			} else {
+				w.Abort()
+			}
+			return true
+		}
+
+		if dw == nil {
+			w.ResOverviewInformationFollows()
+			dw = w.DotWriter()
+		}
+
+		sp.printOver(dw, pid, pid, msgid, gs.bname, title, hdrs)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		err = sp.sqlError("overview query rows iteration", err)
+		if dw == nil {
+			w.ResInternalError(err)
+		} else {
+			w.Abort()
+		}
+		return true
+	}
+
+	if dw != nil {
+		dw.Close()
 		return true
 	} else {
 		return false
 	}
 }
-func (p *TestSrv) GetXOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool {
-	return p.GetOverByRange(w, cs, rmin, rmax)
+func (sp *PSQLIB) GetXOverByRange(
+	w Responder, cs *ConnState, rmin, rmax int64) bool {
+
+	return sp.GetOverByRange(w, cs, rmin, rmax)
 }
-func (p *TestSrv) GetOverByCurr(w Responder, cs *ConnState) bool {
+func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
+	if gs.pid == 0 {
 		return false
 	}
+
+	var msgid CoreMsgIDStr
+	var title string
+	var jcfg xtypes.JSONText
+
+	q := `SELECT msgid,title,headers
+	FROM ib0.posts
+	WHERE bid = $1 AND pid = $2
+	LIMIT 1`
+	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&msgid, &title, &jcfg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		w.ResInternalError(sp.sqlError("overview query", err))
+		return true
+	}
+
+	hdrs := make(mail.Headers)
+	err = jcfg.Unmarshal(&hdrs)
+	if err != nil {
+		w.ResInternalError(sp.sqlError("headers json unmarshal", err))
+		return true
+	}
+
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	printOver(dw, a.number, a)
+	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname, title, hdrs)
 	dw.Close()
 	return true
 }
 
+/*
 func (p *TestSrv) commonGetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
 	sid := unsafeCoreMsgIDToStr(msgid)
 	a := s1.articles[sid]
