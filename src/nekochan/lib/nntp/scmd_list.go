@@ -1,5 +1,20 @@
 package nntp
 
+import "io"
+
+type listCmdListOpener struct {
+	Responder
+}
+
+func (o listCmdListOpener) OpenDotWriter() io.WriteCloser {
+	o.Responder.ResListFollows()
+	return o.Responder.DotWriter()
+}
+
+func (o listCmdListOpener) GetResponder() Responder {
+	return o.Responder
+}
+
 func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 	var wildmat []byte
 	if len(args) != 0 {
@@ -15,10 +30,7 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.ResListFollows()
-	dw := c.w.DotWriter()
-	c.prov.ListActiveGroups(dw, wildmat)
-	dw.Close()
+	c.prov.ListActiveGroups(listCmdListOpener{c.w}, wildmat)
 
 	return true
 }
@@ -38,12 +50,22 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.ResListFollows()
-	dw := c.w.DotWriter()
-	c.prov.ListNewsgroups(dw, wildmat)
-	dw.Close()
+	c.prov.ListNewsgroups(listCmdListOpener{c.w}, wildmat)
 
 	return true
+}
+
+type cmdXGTitleOpener struct {
+	Responder
+}
+
+func (o cmdXGTitleOpener) OpenDotWriter() io.WriteCloser {
+	o.Responder.PrintfLine("282 data follows")
+	return o.Responder.DotWriter()
+}
+
+func (o cmdXGTitleOpener) GetResponder() Responder {
+	return o.Responder
 }
 
 // same as LIST NEWSGROUPS just with different return codes
@@ -62,10 +84,7 @@ func cmdXGTitle(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.PrintfLine("282 data follows")
-	dw := c.w.DotWriter()
-	c.prov.ListNewsgroups(dw, wildmat)
-	dw.Close()
+	c.prov.ListNewsgroups(cmdXGTitleOpener{c.w}, wildmat)
 
 	return true
 }

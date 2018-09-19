@@ -1,6 +1,9 @@
 package nntp
 
-import "strconv"
+import (
+	"io"
+	"strconv"
+)
 
 const (
 	articleFull = iota
@@ -154,6 +157,19 @@ func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 	return true
 }
 
+type cmdNewNewsOpener struct {
+	Responder
+}
+
+func (o cmdNewNewsOpener) OpenDotWriter() io.WriteCloser {
+	o.Responder.ResListOfNewArticlesFollows()
+	return o.Responder.DotWriter()
+}
+
+func (o cmdNewNewsOpener) GetResponder() Responder {
+	return o.Responder
+}
+
 func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	if !c.prov.SupportsNewNews() {
 		c.w.PrintfLine("503 unimplemented")
@@ -172,6 +188,7 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 
 	qt, valid := parseDateTime(c.w, args[1], args[2])
 	if !valid {
+		// parseDateTime responds for us
 		return true
 	}
 
@@ -180,12 +197,22 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.PrintfLine("230 list of new articles follows")
-	dw := c.w.DotWriter()
-	c.prov.ListNewNews(dw, wildmat, qt)
-	dw.Close()
+	c.prov.ListNewNews(cmdNewNewsOpener{c.w}, wildmat, qt)
 
 	return true
+}
+
+type cmdNewGroupsOpener struct {
+	Responder
+}
+
+func (o cmdNewGroupsOpener) OpenDotWriter() io.WriteCloser {
+	o.Responder.ResListOfNewNewsgroupsFollows()
+	return o.Responder.DotWriter()
+}
+
+func (o cmdNewGroupsOpener) GetResponder() Responder {
+	return o.Responder
 }
 
 func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
@@ -194,6 +221,7 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 	// NEWGROUPS [YY]YYMMDD hhmmss
 	qt, valid := parseDateTime(c.w, args[0], args[1])
 	if !valid {
+		// parseDateTime responds for us
 		return true
 	}
 
@@ -202,10 +230,7 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	c.w.PrintfLine("231 list of new groups follows")
-	dw := c.w.DotWriter()
-	c.prov.ListNewGroups(dw, qt)
-	dw.Close()
+	c.prov.ListNewGroups(cmdNewGroupsOpener{c.w}, qt)
 
 	return true
 }

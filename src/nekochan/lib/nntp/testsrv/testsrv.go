@@ -34,12 +34,13 @@ type TestSrv struct {
 }
 
 type (
-	Responder    = nntp.Responder
-	FullMsgID    = nntp.FullMsgID
-	CoreMsgID    = nntp.CoreMsgID
-	FullMsgIDStr = nntp.FullMsgIDStr
-	CoreMsgIDStr = nntp.CoreMsgIDStr
-	ConnState    = nntp.ConnState
+	Responder         = nntp.Responder
+	AbstractResponder = nntp.AbstractResponder
+	FullMsgID         = nntp.FullMsgID
+	CoreMsgID         = nntp.CoreMsgID
+	FullMsgIDStr      = nntp.FullMsgIDStr
+	CoreMsgIDStr      = nntp.CoreMsgIDStr
+	ConnState         = nntp.ConnState
 )
 
 func artnumInGroup(cs *ConnState, group string, num uint64) uint64 {
@@ -379,7 +380,10 @@ func (p *TestSrv) SelectPrevArticle(w Responder, cs *ConnState) {
 	w.ResNoPrevArticleInThisGroup()
 }
 
-func (p *TestSrv) ListNewGroups(w io.Writer, qt time.Time) {
+func (p *TestSrv) ListNewGroups(r AbstractResponder, qt time.Time) {
+	w := r.OpenDotWriter()
+	defer w.Close()
+
 	for _, gn := range s1.groupsSort {
 		g := s1.groups[gn]
 		if !qt.After(g.created) {
@@ -393,7 +397,10 @@ func emptyWildmat(w []byte) bool {
 	return len(w) == 0 || (len(w) == 1 && w[0] == '*')
 }
 
-func (p *TestSrv) ListNewNews(w io.Writer, wildmat []byte, qt time.Time) {
+func (p *TestSrv) ListNewNews(r AbstractResponder, wildmat []byte, qt time.Time) {
+	w := r.OpenDotWriter()
+	defer w.Close()
+
 	var chk func(string) bool
 	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }
@@ -414,7 +421,10 @@ func (p *TestSrv) ListNewNews(w io.Writer, wildmat []byte, qt time.Time) {
 	}
 }
 
-func (p *TestSrv) ListActiveGroups(w io.Writer, wildmat []byte) {
+func (p *TestSrv) ListActiveGroups(r AbstractResponder, wildmat []byte) {
+	w := r.OpenDotWriter()
+	defer w.Close()
+
 	var chk func(string) bool
 	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }
@@ -437,7 +447,10 @@ func (p *TestSrv) ListActiveGroups(w io.Writer, wildmat []byte) {
 	}
 }
 
-func (p *TestSrv) ListNewsgroups(w io.Writer, wildmat []byte) {
+func (p *TestSrv) ListNewsgroups(r AbstractResponder, wildmat []byte) {
+	w := r.OpenDotWriter()
+	defer w.Close()
+
 	var chk func(string) bool
 	if emptyWildmat(wildmat) {
 		chk = func(g string) bool { return true }

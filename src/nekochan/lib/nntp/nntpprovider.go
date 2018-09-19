@@ -18,6 +18,12 @@ type ReaderOpener interface {
 	OpenReader() ArticleReader
 }
 
+type AbstractResponder interface {
+	OpenDotWriter() io.WriteCloser
+	GetResponder() Responder
+	Abort()
+}
+
 type NNTPProvider interface {
 	SupportsNewNews() bool
 	SupportsOverByMsgID() bool
@@ -59,13 +65,13 @@ type NNTPProvider interface {
 	// - fail: 422{ResNoPrevArticleInThisGroup}
 	SelectPrevArticle(w Responder, cs *ConnState)
 
-	// + 230{ResListOfNewArticlesFollows}
-	ListNewNews(w io.Writer, wildmat []byte, qt time.Time) // SupportsNewNews()
+	// + 230{ResListOfNewArticlesFollows} ret: MsgID list
+	ListNewNews(w AbstractResponder, wildmat []byte, qt time.Time) // SupportsNewNews()
 	// + 231{ResListOfNewNewsgroupsFollows}
-	ListNewGroups(w io.Writer, qt time.Time)
-	// + 215{ResListOfNewsgroupsFollows}
-	ListActiveGroups(w io.Writer, wildmat []byte)
-	ListNewsgroups(w io.Writer, wildmat []byte)
+	ListNewGroups(w AbstractResponder, qt time.Time)
+	// + 215{ResListFollows}
+	ListActiveGroups(w AbstractResponder, wildmat []byte)
+	ListNewsgroups(w AbstractResponder, wildmat []byte)
 
 	// + ok: 224{ResOverviewInformationFollows}
 	// fail:
