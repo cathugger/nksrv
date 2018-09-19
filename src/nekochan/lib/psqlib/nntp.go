@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	//. "nekochan/lib/logx"
+	au "nekochan/lib/asciiutils"
 	"nekochan/lib/nntp"
 )
 
@@ -20,12 +22,13 @@ type groupState struct {
 }
 
 type (
-	Responder    = nntp.Responder
-	FullMsgID    = nntp.FullMsgID
-	CoreMsgID    = nntp.CoreMsgID
-	FullMsgIDStr = nntp.FullMsgIDStr
-	CoreMsgIDStr = nntp.CoreMsgIDStr
-	ConnState    = nntp.ConnState
+	Responder         = nntp.Responder
+	AbstractResponder = nntp.AbstractResponder
+	FullMsgID         = nntp.FullMsgID
+	CoreMsgID         = nntp.CoreMsgID
+	FullMsgIDStr      = nntp.FullMsgIDStr
+	CoreMsgIDStr      = nntp.CoreMsgIDStr
+	ConnState         = nntp.ConnState
 )
 
 func artnumInGroup(cs *ConnState, bid boardID, num uint64) uint64 {
@@ -299,6 +302,16 @@ func (sp *PSQLIB) SelectAndListGroup(w Responder, cs *ConnState, group []byte, r
 			fmt.Fprintf(dw, "%d\n", pid)
 		}
 	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		err = sp.sqlError("board-post query rows iteration", err)
+		if dw == nil {
+			w.ResInternalError(err)
+		} else {
+			w.Abort()
+		}
+		return true
+	}
 
 	if dw != nil {
 		dw.Close()
@@ -362,88 +375,245 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	return
 }
 
-/*
-
-func (p *TestSrv) ListNewGroups(w io.Writer, qt time.Time) {
-	for _, gn := range s1.groupsSort {
-		g := s1.groups[gn]
-		if !qt.After(g.created) {
-			lo, hi := g.articlesSort[0], g.articlesSort[len(g.articlesSort)-1]
-			fmt.Fprintf(w, "%s %d %d %c\n", gn, hi, lo, g.status)
-		}
-	}
-}
-
 func emptyWildmat(w []byte) bool {
 	return len(w) == 0 || (len(w) == 1 && w[0] == '*')
 }
 
-func (p *TestSrv) ListNewNews(w io.Writer, wildmat []byte, qt time.Time) {
-	var chk func(string) bool
-	if emptyWildmat(wildmat) {
-		chk = func(g string) bool { return true }
-	} else {
-		if nntp.ValidGroupSlice(wildmat) {
-			sw := unsafeBytesToStr(wildmat)
-			chk = func(g string) bool { return g == sw }
+func (sp *PSQLIB) ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time) {
+	var rows *sql.Rows
+	var err error
+	var dw io.WriteCloser
+
+	swildmat := unsafeBytesToStr(wildmat)
+	wmany := swildmat == "*"
+	wmgrp := !wmany && nntp.ValidGroupSlice(wildmat)
+
+	if wmany || wmgrp {
+		if wmany {
+			q := `SELECT msgid FROM ib0.posts WHERE padded > $1`
+			rows, err = sp.db.DB.Query(q, qt)
 		} else {
-			wm := nntp.CompileWildmat(wildmat)
-			chk = func(g string) bool { return wm.CheckString(g) }
+			q := `SELECT xp.msgid
+	FROM ib0.posts AS xp
+	JOIN ib0.boards AS xb
+	USING (bid)
+	WHERE xb.bname = $1 AND xp.padded > $2`
+			rows, err = sp.db.DB.Query(q, swildmat, qt)
 		}
+		if err != nil {
+			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
+			return
+		}
+		dw = aw.OpenDotWriter()
+		for rows.Next() {
+			var msgid CoreMsgID
+			err = rows.Scan(&msgid)
+			if err != nil {
+				rows.Close()
+				sp.sqlError("newnews query rows scan", err)
+				aw.Abort()
+				return
+			}
+			fmt.Fprintf(dw, "<%s>\n", msgid)
+		}
+	} else {
+		// TODO maybe we should use SQL LIKE to implement filtering?
+		wm := nntp.CompileWildmat(wildmat)
+		q := `SELECT xp.msgid,xb.bname
+	FROM ib0.posts AS xp
+	JOIN ib0.boards AS xb
+	USING (bid)
+	WHERE xp.added > $1`
+		rows, err = sp.db.DB.Query(q, qt)
+		if err != nil {
+			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
+			return
+		}
+		dw = aw.OpenDotWriter()
+		for rows.Next() {
+			var msgid CoreMsgID
+			var bname []byte
+			err = rows.Scan(&msgid, &bname)
+			if err != nil {
+				rows.Close()
+				sp.sqlError("newnews query rows scan", err)
+				aw.Abort()
+				return
+			}
+			if wm.CheckBytes(bname) {
+				fmt.Fprintf(dw, "<%s>\n", msgid)
+			}
+		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		sp.sqlError("newnews query rows iteration", err)
+		aw.Abort()
+		return
 	}
 
-	for id, a := range s1.articles {
-		if !qt.After(a.posted) && chk(a.group) {
-			fmt.Fprintf(w, "<%s>\n", id)
-		}
-	}
+	// TODO? maybe check error of close operation
+	dw.Close()
 }
 
-func (p *TestSrv) ListActiveGroups(w io.Writer, wildmat []byte) {
-	var chk func(string) bool
-	if emptyWildmat(wildmat) {
-		chk = func(g string) bool { return true }
-	} else {
-		if nntp.ValidGroupSlice(wildmat) {
-			sw := unsafeBytesToStr(wildmat)
-			chk = func(g string) bool { return g == sw }
-		} else {
-			wm := nntp.CompileWildmat(wildmat)
-			chk = func(g string) bool { return wm.CheckString(g) }
+func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
+	// name hiwm lowm status
+	// for now lets use status of "y"
+	// TODO put something else in status when needed
+	q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
+	FROM ib0.boards AS xb
+	LEFT JOIN ib0.posts AS xp
+	USING (bid)
+	WHERE xb.badded > $1
+	GROUP BY xb.bid`
+	rows, err := sp.db.DB.Query(q, qt)
+	if err != nil {
+		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
+		return
+	}
+	dw := aw.OpenDotWriter()
+	for rows.Next() {
+		var bname []byte
+		var lo, hi uint64
+		err = rows.Scan(&bname, &lo, &hi)
+		if err != nil {
+			rows.Close()
+			sp.sqlError("newgroups query rows scan", err)
+			aw.Abort()
+			return
 		}
+		if hi < lo {
+			hi = lo // paranoia
+		}
+		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		sp.sqlError("newgroups query rows iteration", err)
+		aw.Abort()
+		return
 	}
 
-	for _, gn := range s1.groupsSort {
-		if chk(gn) {
-			g := s1.groups[gn]
-			lo, hi := g.articlesSort[0], g.articlesSort[len(g.articlesSort)-1]
-			fmt.Fprintf(w, "%s %d %d %c\n", gn, hi, lo, g.status)
-		}
-	}
+	dw.Close()
 }
 
-func (p *TestSrv) ListNewsgroups(w io.Writer, wildmat []byte) {
-	var chk func(string) bool
-	if emptyWildmat(wildmat) {
-		chk = func(g string) bool { return true }
+func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
+	// name hiwm lowm status
+	// for now lets use status of "y"
+	// TODO put something else in status when needed
+
+	var rows *sql.Rows
+	var err error
+	var wm nntp.Wildmat
+
+	wmany := emptyWildmat(wildmat)
+	wmgrp := !wmany && nntp.ValidGroupSlice(wildmat)
+	if !wmany && !wmgrp {
+		wm = nntp.CompileWildmat(wildmat)
+	}
+	if !wmgrp {
+		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
+	FROM ib0.boards AS xb
+	LEFT JOIN ib0.posts AS xp
+	USING (bid)
+	GROUP BY xb.bid`
+		rows, err = sp.db.DB.Query(q)
 	} else {
-		if nntp.ValidGroupSlice(wildmat) {
-			sw := unsafeBytesToStr(wildmat)
-			chk = func(g string) bool { return g == sw }
-		} else {
-			wm := nntp.CompileWildmat(wildmat)
-			chk = func(g string) bool { return wm.CheckString(g) }
+		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
+	FROM ib0.boards AS xb
+	LEFT JOIN ib0.posts AS xp
+	USING (bid)
+	WHERE xb.bname = $1
+	GROUP BY xb.bid`
+		rows, err = sp.db.DB.Query(q, wildmat)
+	}
+	if err != nil {
+		aw.GetResponder().ResInternalError(sp.sqlError("list active query", err))
+		return
+	}
+	dw := aw.OpenDotWriter()
+	for rows.Next() {
+		var bname []byte
+		var lo, hi uint64
+		err = rows.Scan(&bname, &lo, &hi)
+		if err != nil {
+			rows.Close()
+			sp.sqlError("list active query rows scan", err)
+			aw.Abort()
+			return
 		}
+		if wm != nil && !wm.CheckBytes(bname) {
+			continue
+		}
+		if hi < lo {
+			hi = lo // paranoia
+		}
+		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		sp.sqlError("list active query rows iteration", err)
+		aw.Abort()
+		return
 	}
 
-	for _, gn := range s1.groupsSort {
-		if chk(gn) {
-			g := s1.groups[gn]
-			fmt.Fprintf(w, "%s\t%s\n", gn, g.info)
-		}
-	}
+	dw.Close()
 }
 
+func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
+	// name\tdescription
+
+	var rows *sql.Rows
+	var err error
+	var wm nntp.Wildmat
+
+	wmany := emptyWildmat(wildmat)
+	wmgrp := !wmany && nntp.ValidGroupSlice(wildmat)
+	if !wmany && !wmgrp {
+		wm = nntp.CompileWildmat(wildmat)
+	}
+	if !wmgrp {
+		q := `SELECT bname,bdesc FROM ib0.boards`
+		rows, err = sp.db.DB.Query(q)
+	} else {
+		q := `SELECT bname,bdesc FROM ib0.boards WHERE bname = $1`
+		rows, err = sp.db.DB.Query(q, wildmat)
+	}
+	if err != nil {
+		aw.GetResponder().ResInternalError(sp.sqlError("list newsgroups query", err))
+		return
+	}
+	dw := aw.OpenDotWriter()
+	for rows.Next() {
+		var bname, bdesc string
+		err = rows.Scan(&bname, &bdesc)
+		if err != nil {
+			rows.Close()
+			sp.sqlError("list newsgroups query rows scan", err)
+			aw.Abort()
+			return
+		}
+		if wm != nil && !wm.CheckString(bname) {
+			continue
+		}
+		bdesc = au.TrimWSString(bdesc)
+		// TODO should we do this? may be better for compatibility
+		if bdesc == "" {
+			bdesc = "-"
+		}
+		fmt.Fprintf(dw, "%s\t%s\n", bname, bdesc)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		sp.sqlError("list active newsgroups rows iteration", err)
+		aw.Abort()
+		return
+	}
+
+	dw.Close()
+}
+
+/*
 func printOver(w io.Writer, num uint64, a *article) {
 	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tXref: %s\n", num,
 		a.over.subject, a.over.from, a.over.date, a.over.msgid,

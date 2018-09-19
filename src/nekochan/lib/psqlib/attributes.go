@@ -40,9 +40,8 @@ var defaultNewThreadSubmissionLimits = func(l submissionLimits) submissionLimits
 }(defaultReplySubmissionLimits)
 
 type boardAttributes struct {
-	Description string   `json:"desc,omitempty"`
-	Info        string   `json:"info,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	Info string   `json:"info,omitempty"`
+	Tags []string `json:"tags,omitempty"`
 }
 
 var defaultBoardAttributes = boardAttributes{}

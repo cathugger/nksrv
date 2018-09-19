@@ -65,13 +65,13 @@ type NNTPProvider interface {
 	// - fail: 422{ResNoPrevArticleInThisGroup}
 	SelectPrevArticle(w Responder, cs *ConnState)
 
-	// + 230{ResListOfNewArticlesFollows} ret: MsgID list
-	ListNewNews(w AbstractResponder, wildmat []byte, qt time.Time) // SupportsNewNews()
-	// + 231{ResListOfNewNewsgroupsFollows}
-	ListNewGroups(w AbstractResponder, qt time.Time)
+	// + 230{ResListOfNewArticlesFollows} ret: list of FullMsgID
+	ListNewNews(aw AbstractResponder, wildmat []byte, qt time.Time) // SupportsNewNews()
+	// + 231{ResListOfNewNewsgroupsFollows} ret: list of {name hiwm lowm status}
+	ListNewGroups(aw AbstractResponder, qt time.Time)
 	// + 215{ResListFollows}
-	ListActiveGroups(w AbstractResponder, wildmat []byte)
-	ListNewsgroups(w AbstractResponder, wildmat []byte)
+	ListActiveGroups(aw AbstractResponder, wildmat []byte)
+	ListNewsgroups(aw AbstractResponder, wildmat []byte)
 
 	// + ok: 224{ResOverviewInformationFollows}
 	// fail:

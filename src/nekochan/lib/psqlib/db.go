@@ -16,7 +16,8 @@ var dbIb0InitStatements = []string{
 	bid    SERIAL  NOT NULL,           -- internal board ID
 	lastid BIGINT  DEFAULT 0 NOT NULL, -- used for post/thread IDs
 
-	dadded TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- date added to our node
+	badded TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- date added to our node
+	bdesc  TEXT NOT NULL, -- short description
 
 	threads_per_page INTEGER, -- <=0 - infinite, this results in only single page
 	max_active_pages INTEGER, -- <=0 - all existing pages are active

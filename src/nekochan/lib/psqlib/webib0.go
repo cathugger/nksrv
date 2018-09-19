@@ -19,7 +19,7 @@ import (
 func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	var err error
 
-	rows, err := sp.db.DB.Query("SELECT bname,attrib FROM ib0.boards")
+	rows, err := sp.db.DB.Query("SELECT bname,bdesc,attrib FROM ib0.boards")
 	if err != nil {
 		return sp.sqlError("boards query", err), http.StatusInternalServerError
 	}
@@ -31,7 +31,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 		var b ib0.IBBoardListBoard
 		cfg := defaultBoardAttributes
 
-		err = rows.Scan(&b.Name, &jcfg)
+		err = rows.Scan(&b.Name, &b.Description, &jcfg)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("boards query rows scan", err), http.StatusInternalServerError
@@ -43,7 +43,6 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 			return sp.sqlError("board json unmarshal", err), http.StatusInternalServerError
 		}
 
-		b.Description = cfg.Description
 		b.Tags = cfg.Tags
 		bl.Boards = append(bl.Boards, b)
 	}
@@ -80,12 +79,13 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	var bid boardID
 	var threadsPerPage, maxPages uint32
 	var jcfg, jcfg2 xtypes.JSONText
+	var bdesc string
 
 	// XXX SQL needs more work
 
 	err = sp.db.DB.
-		QueryRow("SELECT bid,attrib,threads_per_page,max_pages FROM ib0.boards WHERE bname=$1", board).
-		Scan(&bid, &jcfg, &threadsPerPage, &maxPages)
+		QueryRow("SELECT bid,bdesc,attrib,threads_per_page,max_pages FROM ib0.boards WHERE bname=$1", board).
+		Scan(&bid, &bdesc, &jcfg, &threadsPerPage, &maxPages)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound
@@ -105,7 +105,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 	page.Board = ib0.IBBoardInfo{
 		Name:        board,
-		Description: battrs.Description,
+		Description: bdesc,
 		Info:        battrs.Info,
 	}
 
@@ -279,12 +279,13 @@ func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (e
 	var err error
 	var bid boardID
 	var jcfg xtypes.JSONText
+	var bdesc string
 
 	// XXX SQL needs more work
 
 	err = sp.db.DB.
-		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1", board).
-		Scan(&bid, &jcfg)
+		QueryRow("SELECT bid,bdesc,attrib FROM ib0.boards WHERE bname=$1", board).
+		Scan(&bid, &bdesc, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound
@@ -300,7 +301,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(page *ib0.IBThreadCatalog, board string) (e
 
 	page.Board = ib0.IBBoardInfo{
 		Name:        board,
-		Description: battrs.Description,
+		Description: bdesc,
 		Info:        battrs.Info,
 	}
 
@@ -389,12 +390,13 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	var bid boardID
 	var tid postID
 	var jcfg, jcfg2 xtypes.JSONText
+	var bdesc string
 
 	// XXX SQL needs more work
 
 	err = sp.db.DB.
-		QueryRow("SELECT bid,attrib FROM ib0.boards WHERE bname=$1 LIMIT 1", board).
-		Scan(&bid, &jcfg)
+		QueryRow("SELECT bid,bdesc,attrib FROM ib0.boards WHERE bname=$1 LIMIT 1", board).
+		Scan(&bid, &bdesc, &jcfg)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound
@@ -410,7 +412,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 	page.Board = ib0.IBBoardInfo{
 		Name:        board,
-		Description: battrs.Description,
+		Description: bdesc,
 		Info:        battrs.Info,
 	}
 
