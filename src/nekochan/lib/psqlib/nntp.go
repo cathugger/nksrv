@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	//. "nekochan/lib/logx"
@@ -107,52 +108,74 @@ func handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 	return true
 }
 
-func (sp *PSQLIB) getArticleCommonByMsgID(nc nntpCopyer, w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) getArticleCommonByMsgID(
+	nc nntpCopyer, w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	sid := unsafeCoreMsgIDToStr(msgid)
 	e := sp.nntpObtainItemByMsgID(nc, cs, sid)
 	return handleNNTPGetError(w, nc, e)
 }
-func (sp *PSQLIB) GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) GetArticleFullByMsgID(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	nc := &fullNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
-func (sp *PSQLIB) GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) GetArticleHeadByMsgID(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	nc := &headNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
-func (sp *PSQLIB) GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) GetArticleBodyByMsgID(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	nc := &bodyNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
-func (sp *PSQLIB) GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
+func (sp *PSQLIB) GetArticleStatByMsgID(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
 	// notice: not reference
 	sc := statNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(sc, w, cs, msgid)
 }
 
-func (sp *PSQLIB) getArticleCommonByNum(nc nntpCopyer, w Responder, cs *ConnState, num uint64) bool {
+func (sp *PSQLIB) getArticleCommonByNum(
+	nc nntpCopyer, w Responder, cs *ConnState, num uint64) bool {
+
 	e := sp.nntpObtainItemByNum(nc, cs, num)
 	return handleNNTPGetError(w, nc, e)
 }
-func (sp *PSQLIB) GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool {
+func (sp *PSQLIB) GetArticleFullByNum(
+	w Responder, cs *ConnState, num uint64) bool {
+
 	nc := &fullNNTPCopyer{w: w}
 	return sp.getArticleCommonByNum(nc, w, cs, num)
 }
-func (sp *PSQLIB) GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool {
+func (sp *PSQLIB) GetArticleHeadByNum(
+	w Responder, cs *ConnState, num uint64) bool {
+
 	nc := &headNNTPCopyer{w: w}
 	return sp.getArticleCommonByNum(nc, w, cs, num)
 }
-func (sp *PSQLIB) GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool {
+func (sp *PSQLIB) GetArticleBodyByNum(
+	w Responder, cs *ConnState, num uint64) bool {
+
 	nc := &bodyNNTPCopyer{w: w}
 	return sp.getArticleCommonByNum(nc, w, cs, num)
 }
-func (sp *PSQLIB) GetArticleStatByNum(w Responder, cs *ConnState, num uint64) bool {
+func (sp *PSQLIB) GetArticleStatByNum(
+	w Responder, cs *ConnState, num uint64) bool {
+
 	// notice: not reference
 	sc := statNNTPCopyer{w: w}
 	return sp.getArticleCommonByNum(sc, w, cs, num)
 }
 
-func (sp *PSQLIB) getArticleCommonByCurr(nc nntpCopyer, w Responder, cs *ConnState) bool {
+func (sp *PSQLIB) getArticleCommonByCurr(
+	nc nntpCopyer, w Responder, cs *ConnState) bool {
+
 	e := sp.nntpObtainItemByCurr(nc, cs)
 	return handleNNTPGetError(w, nc, e)
 }
@@ -217,7 +240,9 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 
 	return true
 }
-func (sp *PSQLIB) SelectAndListGroup(w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
+func (sp *PSQLIB) SelectAndListGroup(
+	w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
+
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		if len(group) == 0 {
@@ -605,7 +630,8 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 		rows, err = sp.db.DB.Query(q, wildmat)
 	}
 	if err != nil {
-		aw.GetResponder().ResInternalError(sp.sqlError("list newsgroups query", err))
+		aw.GetResponder().
+			ResInternalError(sp.sqlError("list newsgroups query", err))
 		return
 	}
 
@@ -643,6 +669,10 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	dw.Close()
 }
 
+func replaceTab(s string) string {
+	return strings.Replace(s, "\t", " ", -1)
+}
+
 func (sp *PSQLIB) printOver(
 	w io.Writer, num uint64, pid uint64, msgid CoreMsgIDStr,
 	bname, title string, hdrs mail.Headers) {
@@ -657,9 +687,11 @@ func (sp *PSQLIB) printOver(
 			:bytes metadata item
 			:lines metadata item
 	*/
-	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s %s:%d\n", num,
-		title, hdrs.GetFirst("From"), hdrs.GetFirst("Date"), msgid,
-		hdrs.GetFirst("References"), "", "", sp.instance, bname, pid)
+	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s %s:%d\n",
+		num, replaceTab(title), replaceTab(hdrs.GetFirst("From")),
+		replaceTab(hdrs.GetFirst("Date")), msgid,
+		replaceTab(hdrs.GetFirst("References")), "", "",
+		sp.instance, bname, pid)
 }
 
 // + ok: 224{ResOverviewInformationFollows}
@@ -831,105 +863,245 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 	return true
 }
 
-/*
-func (p *TestSrv) commonGetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
+func (sp *PSQLIB) commonGetHdrByMsgID(
+	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
+
 	sid := unsafeCoreMsgIDToStr(msgid)
-	a := s1.articles[sid]
-	if a == nil {
-		return false
+	var shdr string
+	if len(hdr) == 0 || hdr[0] != ':' {
+		shdr = mail.UnsafeCanonicalHeader(hdr)
+	} else {
+		nntp.ToLowerASCII(hdr)
+		shdr = unsafeBytesToStr(hdr)
 	}
-	h, supported := a.over.GetByHdr(hdr)
-	if !supported {
-		w.PrintfLine("503 %q header unsupported", hdr)
+
+	var bid boardID
+	var pid postID
+	var err error
+	var h string
+
+	if shdr == "Message-ID" {
+		q := `SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1`
+		err = sp.db.DB.QueryRow(q, msgid).Scan(&bid, &pid)
+		if err == nil {
+			h = fmt.Sprintf("<%s>", sid)
+		}
+	} else if shdr == "Bytes" || shdr == ":bytes" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else if shdr == "Lines" || shdr == ":lines" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else {
+		q := `SELECT bid,pid,headers -> $2 ->> 0
+	FROM ib0.posts
+	WHERE msgid = $1
+	LIMIT 1`
+		err = sp.db.DB.QueryRow(q, msgid, shdr).Scan(&bid, &pid, &h)
+	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		w.ResInternalError(sp.sqlError("hdr query", err))
 		return true
 	}
+
 	if rfc {
 		w.ResHdrFollow()
 		dw := w.DotWriter()
-		fmt.Fprintf(dw, "%d %s\n", artnumInGroup(cs, a.group, a.number), h)
+		fmt.Fprintf(dw, "%d %s\n", artnumInGroup(cs, bid, pid), replaceTab(h))
 		dw.Close()
 	} else {
 		w.ResXHdrFollow()
 		dw := w.DotWriter()
-		fmt.Fprintf(dw, "<%s> %s\n", msgid, h)
+		fmt.Fprintf(dw, "<%s> %s\n", sid, replaceTab(h))
 		dw.Close()
 	}
 	return true
 }
-func (p *TestSrv) commonGetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64, rfc bool) bool {
+func (sp *PSQLIB) commonGetHdrByRange(
+	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64, rfc bool) bool {
+
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	var ww io.WriteCloser = nil
-	for _, an := range gs.g.articlesSort {
-		if an >= uint64(rmin) && (rmax < 0 || an <= uint64(rmax)) {
-			a := gs.g.articles[an]
-			h, supported := a.over.GetByHdr(hdr)
-			if !supported {
-				w.PrintfLine("503 %q header unsupported", hdr)
-				return true
-			}
-			if ww == nil {
-				if rfc {
-					w.ResHdrFollow()
-				} else {
-					w.ResXHdrFollow()
-				}
-				ww = w.DotWriter()
-			}
-			fmt.Fprintf(ww, "%d %s\n", an, h)
-		}
+
+	var shdr string
+	if len(hdr) == 0 || hdr[0] != ':' {
+		shdr = mail.UnsafeCanonicalHeader(hdr)
+	} else {
+		nntp.ToLowerASCII(hdr)
+		shdr = unsafeBytesToStr(hdr)
 	}
-	if ww != nil {
-		ww.Close()
+
+	var rows *sql.Rows
+	var err error
+
+	var q string
+	if shdr == "Message-ID" {
+		q = `SELECT pid,'<' || msgid || '>'
+	FROM ib0.posts
+	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
+	ORDER BY pid ASC`
+	} else if shdr == "Bytes" || shdr == ":bytes" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else if shdr == "Lines" || shdr == ":lines" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else {
+		q = `SELECT bid,pid,headers -> $4 ->> 0
+	FROM ib0.posts
+	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
+	ORDER BY pid ASC`
+	}
+	rows, err = sp.db.DB.Query(q, gs.bid, rmin, rmax, shdr)
+	if err != nil {
+		w.ResInternalError(sp.sqlError("hdr query", err))
+		return true
+	}
+
+	var dw io.WriteCloser
+
+	for rows.Next() {
+		var pid postID
+		var h string
+
+		err = rows.Scan(&pid, &h)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("hdr query rows scan", err)
+			if dw == nil {
+				w.ResInternalError(err)
+			} else {
+				w.Abort()
+			}
+			return true
+		}
+
+		if dw == nil {
+			if rfc {
+				w.ResHdrFollow()
+			} else {
+				w.ResXHdrFollow()
+			}
+			dw = w.DotWriter()
+		}
+
+		fmt.Fprintf(dw, "%d %s\n", pid, replaceTab(h))
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		err = sp.sqlError("hdr query rows iteration", err)
+		if dw == nil {
+			w.ResInternalError(err)
+		} else {
+			w.Abort()
+		}
+		return true
+	}
+
+	if dw != nil {
+		dw.Close()
 		return true
 	} else {
 		return false
 	}
 }
-func (p *TestSrv) commonGetHdrByCurr(w Responder, cs *ConnState, hdr []byte, rfc bool) bool {
+func (sp *PSQLIB) commonGetHdrByCurr(
+	w Responder, cs *ConnState, hdr []byte, rfc bool) bool {
+
 	gs := getGroupState(cs)
-	if gs == nil {
+	if !isGroupSelected(gs) {
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	a := gs.g.articles[gs.number]
-	if a == nil {
+	if gs.pid == 0 {
 		return false
 	}
-	h, supported := a.over.GetByHdr(hdr)
-	if !supported {
-		w.PrintfLine("503 %q header unsupported", hdr)
+
+	var shdr string
+	if len(hdr) == 0 || hdr[0] != ':' {
+		shdr = mail.UnsafeCanonicalHeader(hdr)
+	} else {
+		nntp.ToLowerASCII(hdr)
+		shdr = unsafeBytesToStr(hdr)
+	}
+
+	var err error
+	var h string
+
+	var row *sql.Row
+	if shdr == "Message-ID" {
+		q := `SELECT '<' || msgid || '>'
+	FROM ib0.posts
+	WHERE bid = $1 AND pid = $2
+	LIMIT 1`
+		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid)
+	} else if shdr == "Bytes" || shdr == ":bytes" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else if shdr == "Lines" || shdr == ":lines" {
+		// TODO
+		w.PrintfLine("503 %q header unsupported", shdr)
+		return true
+	} else {
+		q := `SELECT headers -> $3 ->> 0
+	FROM ib0.posts
+	WHERE bid = $1 AND pid = $2
+	LIMIT 1`
+		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
+	}
+	err = row.Scan(&h)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		w.ResInternalError(sp.sqlError("hdr query", err))
 		return true
 	}
+
 	if rfc {
 		w.ResHdrFollow()
 	} else {
 		w.ResXHdrFollow()
 	}
 	dw := w.DotWriter()
-	fmt.Fprintf(dw, "%d %s\n", a.number, h)
+	fmt.Fprintf(dw, "%d %s\n", gs.pid, replaceTab(h))
 	dw.Close()
 	return true
 }
-func (p *TestSrv) GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool {
-	return p.commonGetHdrByMsgID(w, cs, hdr, msgid, true)
+func (sp *PSQLIB) GetHdrByMsgID(
+	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool {
+
+	return sp.commonGetHdrByMsgID(w, cs, hdr, msgid, true)
 }
-func (p *TestSrv) GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
-	return p.commonGetHdrByRange(w, cs, hdr, rmin, rmax, true)
+func (sp *PSQLIB) GetHdrByRange(
+	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
+
+	return sp.commonGetHdrByRange(w, cs, hdr, rmin, rmax, true)
 }
-func (p *TestSrv) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
-	return p.commonGetHdrByCurr(w, cs, hdr, true)
+func (sp *PSQLIB) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
+	return sp.commonGetHdrByCurr(w, cs, hdr, true)
 }
-func (p *TestSrv) GetXHdrByMsgID(w Responder, hdr []byte, msgid CoreMsgID) bool {
-	return p.commonGetHdrByMsgID(w, nil, hdr, msgid, false)
+func (sp *PSQLIB) GetXHdrByMsgID(
+	w Responder, hdr []byte, msgid CoreMsgID) bool {
+
+	return sp.commonGetHdrByMsgID(w, nil, hdr, msgid, false)
 }
-func (p *TestSrv) GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
-	return p.commonGetHdrByRange(w, cs, hdr, rmin, rmax, false)
+func (sp *PSQLIB) GetXHdrByRange(
+	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
+
+	return sp.commonGetHdrByRange(w, cs, hdr, rmin, rmax, false)
 }
-func (p *TestSrv) GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
-	return p.commonGetHdrByCurr(w, cs, hdr, false)
+func (sp *PSQLIB) GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
+	return sp.commonGetHdrByCurr(w, cs, hdr, false)
 }
-*/

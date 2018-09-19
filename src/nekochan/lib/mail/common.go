@@ -5,9 +5,11 @@ package mail
 var commonHeaders = map[string]string{
 	// overrides
 	// RFCs digestion
-	"Message-Id":   "Message-ID",
-	"Content-Id":   "Content-ID",
-	"Mime-Version": "MIME-Version",
+	"Message-Id":        "Message-ID",
+	"Content-Id":        "Content-ID",
+	"Mime-Version":      "MIME-Version",
+	"Nntp-Posting-Date": "NNTP-Posting-Date",
+	"Nntp-Posting-Host": "NNTP-Posting-Host",
 	// overchan
 	"X-Pubkey-Ed25519":           "X-PubKey-Ed25519",
 	"X-Signature-Ed25519-Sha512": "X-Signature-Ed25519-SHA512",
@@ -42,6 +44,8 @@ func init() {
 		"Also-Control",
 		"Approved",
 		"Archive",
+		"Article-Names",
+		"Article-Updates",
 		"Bcc",
 		"Bytes",
 		"Cc",
@@ -53,6 +57,7 @@ func init() {
 		"Content-Type",
 		"Control",
 		"Date",
+		"Date-Received",
 		"Distribution",
 		"Expires",
 		"Face",
@@ -71,6 +76,7 @@ func init() {
 		"Relay-Version",
 		"Return-Path",
 		"Reply-To",
+		"See-Also",
 		"Sender",
 		"Subject",
 		"Summary",
@@ -122,13 +128,7 @@ func FindCommonCanonicalKey(s string) string {
 	return commonHeaders[string(b[:len(s)])]
 }
 
-// XXX can modify underlying storage
-func mapCanonicalHeader(b []byte) string {
-	// fast path: maybe its common header in form we want
-	if h, ok := commonHeaders[string(b)]; ok {
-		return h
-	}
-	// canonicalise
+func canonicaliseSlice(b []byte) {
 	upper := true
 	for i, c := range b {
 		if upper && c >= 'a' && c <= 'z' {
@@ -139,10 +139,35 @@ func mapCanonicalHeader(b []byte) string {
 		}
 		upper = c == '-'
 	}
+}
+
+// XXX can modify underlying storage
+func mapCanonicalHeader(b []byte) string {
+	// fast path: maybe its common header in form we want
+	if h, ok := commonHeaders[string(b)]; ok {
+		return h
+	}
+	// canonicalise
+	canonicaliseSlice(b)
 	// try to use static name again
 	if h, ok := commonHeaders[string(b)]; ok {
 		return h
 	}
 	// ohwell nothing we can do, just copy
 	return string(b)
+}
+
+func UnsafeCanonicalHeader(b []byte) string {
+	// fast path: maybe its common header in form we want
+	if h, ok := commonHeaders[string(b)]; ok {
+		return h
+	}
+	// canonicalise
+	canonicaliseSlice(b)
+	// try to use static name again
+	if h, ok := commonHeaders[string(b)]; ok {
+		return h
+	}
+	// ohwell nothing we can do, return unsafe slice
+	return unsafeBytesToStr(b)
 }

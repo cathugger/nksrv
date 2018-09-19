@@ -46,7 +46,7 @@ func (o *overview) GetByHdr(b []byte) (string, bool) {
 	case "lines", ":lines":
 		return o.lines, true
 	case "xref":
-		return o.references, true
+		return o.xref, true
 	case "to":
 		return o.to, true
 	case "cc":

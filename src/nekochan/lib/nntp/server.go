@@ -136,7 +136,8 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		prov: s.prov,
 		w:    Responder{tp.NewWriter(bufio.NewWriter(c)), c},
 	}
-	cs.log = NewLogToX(s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
+	cs.log = NewLogToX(
+		s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
 	s.setupClientDefaults(cs)
 
 	if cs.AllowPosting {
@@ -156,7 +157,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	s.unregisterConn(c)
 }
 
-func (s *NNTPServer) ListenAndServe(network, addr string, listenParam ListenParam) error {
+func (s *NNTPServer) ListenAndServe(
+	network, addr string, listenParam ListenParam) error {
+
 	raddr, err := net.ResolveTCPAddr(network, addr)
 	if err != nil {
 		s.log.LogPrintf(ERROR, "failed to resolve {%s}%s: %v", network, addr, err)
@@ -166,7 +169,8 @@ func (s *NNTPServer) ListenAndServe(network, addr string, listenParam ListenPara
 
 	tl, err := net.ListenTCP(network, raddr)
 	if err != nil {
-		s.log.LogPrintf(ERROR, "failed to listen on {%s}%s: %v", network, raddr, err)
+		s.log.LogPrintf(ERROR,
+			"failed to listen on {%s}%s: %v", network, raddr, err)
 		return err
 	}
 	s.log.LogPrintf(INFO, "listening on {%s}%s", network, raddr)
@@ -203,14 +207,16 @@ func (s *NNTPServer) Serve(l ListenerCW) error {
 				if max := 1 * time.Second; delay > max {
 					delay = max
 				}
-				s.log.LogPrintf(ERROR, "accept error: %v; retrying in %v", err, delay)
+				s.log.LogPrintf(
+					ERROR, "accept error: %v; retrying in %v", err, delay)
 				time.Sleep(delay)
 				continue
 			}
 			s.log.LogPrintf(ERROR, "accept error: %v; aborting", err)
 			return err
 		}
-		s.log.LogPrintf(NOTICE, "accepted %s on %s", c.RemoteAddr(), c.LocalAddr())
+		s.log.LogPrintf(
+			NOTICE, "accepted %s on %s", c.RemoteAddr(), c.LocalAddr())
 		// track it, we gonna need it when closing, as Serve() functions may prematurely return and thats OK
 		s.registerConn(c)
 		// spawn handler
