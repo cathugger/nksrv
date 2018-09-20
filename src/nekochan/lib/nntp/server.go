@@ -17,6 +17,7 @@ import (
 type ConnCW interface {
 	net.Conn
 	CloseWrite() error
+	SetLinger(sec int) error
 }
 
 // similar to net.Listener except with AcceptCW() function
@@ -62,6 +63,7 @@ func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 		}
 	}
 	// XXX incase c == nil, returns not nil interface but interface which points to nil
+	// hopefuly err gon b set then, so that faulty nil interface won't be used
 	return c, err
 }
 
@@ -148,9 +150,15 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	reason := cs.serveClient()
 
-	// XXX incase cHangup, we have no way to check if other side ACK'd data before killing socket.
-	if reason != cError && c.CloseWrite() == nil && reason == cGraceful {
-		r.Discard(1) // ignore return, it's error to send anything after quit command
+	/*
+		// XXX incase cHangup, we have no way to check if other side ACK'd data before killing socket.
+		if reason != cError && c.CloseWrite() == nil && reason == cGraceful {
+			r.Discard(1) // ignore return, it's error to send anything after quit command
+		}
+	*/
+	if reason != cError {
+		// let OS handle FIN signaling in background
+		c.SetLinger(-1)
 	}
 
 	c.Close()
@@ -280,6 +288,7 @@ func (c *ConnState) serveClient() int {
 					}
 				}
 				if e != nil {
+					// socket error while draining
 					if e == io.EOF {
 						return cHangup
 					} else {
