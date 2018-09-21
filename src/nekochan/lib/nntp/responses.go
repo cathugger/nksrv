@@ -131,11 +131,17 @@ func (r Responder) ResTransferNotWanted() {
 }
 
 func (r Responder) ResTransferFailed() {
-	r.PrintfLine("436 transfer failed")
+	// failed for whatever reason, can resend
+	r.PrintfLine("436 transfer failed, plz resend later")
 }
 
-func (r Responder) ResTransferRejected() {
-	r.PrintfLine("437 transfer rejected, don't wanna")
+func (r Responder) ResTransferRejected(e error) {
+	// article not wanted, don't resend
+	if e == nil {
+		r.PrintfLine("437 transfer rejected, don't wanna")
+	} else {
+		r.PrintfLine("437 transfer rejected, don't wanna (%v)", e)
+	}
 }
 
 func (r Responder) ResArticleNotWanted(msgid CoreMsgID) {

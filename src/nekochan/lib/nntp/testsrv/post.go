@@ -83,7 +83,7 @@ func (p *TestSrv) HandleIHave(w Responder, cs *ConnState, ro nntp.ReaderOpener, 
 	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != mstr {
-		w.ResTransferRejected()
+		w.ResTransferRejected(nil)
 		h.Close()
 		r.Discard(-1)
 		return true

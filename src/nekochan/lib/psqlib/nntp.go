@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	//. "nekochan/lib/logx"
-
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
@@ -51,30 +49,14 @@ func isGroupSelected(gs *groupState) bool {
 	return gs != nil && gs.bid != 0
 }
 
-func (PSQLIB) SupportsNewNews() bool {
-	return true
-}
-
-func (PSQLIB) SupportsOverByMsgID() bool {
-	return true
-}
-
-func (PSQLIB) SupportsHdr() bool {
-	return true
-}
+func (PSQLIB) SupportsNewNews() bool     { return true }
+func (PSQLIB) SupportsOverByMsgID() bool { return true }
+func (PSQLIB) SupportsHdr() bool         { return true }
 
 /*
-func (p *PSQLIB) SupportsIHave() bool {
-	return p.SupportIHave
-}
-
-func (p *PSQLIB) SupportsPost() bool {
-	return p.SupportPost
-}
-
-func (p *PSQLIB) SupportsStream() bool {
-	return p.SupportStream
-}
+func (p *PSQLIB) SupportsIHave() bool  { return p.SupportIHave }
+func (p *PSQLIB) SupportsPost() bool   { return p.SupportPost }
+func (p *PSQLIB) SupportsStream() bool { return p.SupportStream }
 */
 
 func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
@@ -928,9 +910,8 @@ func (sp *PSQLIB) commonGetHdrByRange(
 	var rows *sql.Rows
 	var err error
 
-	var q string
 	if shdr == "Message-ID" {
-		q = `SELECT pid,'<' || msgid || '>'
+		q := `SELECT pid,'<' || msgid || '>'
 	FROM ib0.posts
 	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
 	ORDER BY pid ASC`
@@ -944,7 +925,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		w.PrintfLine("503 %q header unsupported", shdr)
 		return true
 	} else {
-		q = `SELECT bid,pid,headers -> $4 ->> 0
+		q := `SELECT bid,pid,headers -> $4 ->> 0
 	FROM ib0.posts
 	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
 	ORDER BY pid ASC`

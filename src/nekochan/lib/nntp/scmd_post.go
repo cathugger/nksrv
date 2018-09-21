@@ -48,6 +48,7 @@ func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 
 	// check can waste server's resources too
 	// but if reading is allowed, then client can do the same in different way
+	// so allow it in that case
 	if !c.AllowPosting && !c.AllowReading {
 		c.w.ResAuthRequired()
 		return true
