@@ -1,7 +1,6 @@
 package demoib
 
 import (
-	"errors"
 	"io/ioutil"
 
 	"nekochan/lib/webib0"
@@ -21,8 +20,6 @@ func (DemoFile) Delete() {
 type DemoContext struct {
 	n int
 }
-
-var errTooMuchFiles = errors.New("too much files")
 
 func (c *DemoContext) MakeFile() (webib0.PostFile, error) {
 	c.n++
