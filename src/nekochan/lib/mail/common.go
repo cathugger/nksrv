@@ -4,12 +4,15 @@ package mail
 // TODO actually analyse which are used and update accordingly
 var commonHeaders = map[string]string{
 	// overrides
-	// RFCs digestion
-	"Message-Id":        "Message-ID",
-	"Content-Id":        "Content-ID",
-	"Mime-Version":      "MIME-Version",
-	"Nntp-Posting-Date": "NNTP-Posting-Date",
-	"Nntp-Posting-Host": "NNTP-Posting-Host",
+	// RFCs digestion, also observation of actual messages
+	"Message-Id":          "Message-ID",
+	"Content-Id":          "Content-ID",
+	"Mime-Version":        "MIME-Version",
+	"Nntp-Posting-Date":   "NNTP-Posting-Date",
+	"Nntp-Posting-Host":   "NNTP-Posting-Host",
+	"X-Mimeole":           "X-MimeOLE",
+	"X-Msmail-Priority":   "X-MSMail-Priority",
+	"X-Received-Body-Crc": "X-Received-Body-CRC",
 	// overchan
 	"X-Pubkey-Ed25519":           "X-PubKey-Ed25519",
 	"X-Signature-Ed25519-Sha512": "X-Signature-Ed25519-SHA512",
@@ -32,6 +35,8 @@ var commonHeadersList = [...]string{
 	"Article-Updates",
 	"Bcc",
 	"Bytes",
+	"Cancel-Key",
+	"Cancel-Lock",
 	"Cc",
 	"Comments",
 	"Content-Description",
@@ -47,6 +52,8 @@ var commonHeadersList = [...]string{
 	"Face",
 	"Followup-To",
 	"From",
+	"Importance",
+	"In-Reply-To",
 	"Injection-Date",
 	"Injection-Info",
 	"Keywords",
@@ -66,16 +73,21 @@ var commonHeadersList = [...]string{
 	"Summary",
 	"Supersedes",
 	"To",
-	"In-Reply-To",
 	"User-Agent",
 	"Xref",
 	"X-Antivirus",
 	"X-Antivirus-Status",
 	"X-Complaints-To",
+	"X-Complaints-Info",
 	"X-Face",
 	"X-Mailer",
 	"X-Mozilla-News-Host",
 	"X-Newsreader",
+	"X-Notice",
+	"X-Original-Bytes",
+	"X-Priority",
+	"X-Received",
+	"X-Received-Bytes",
 	"X-Trace",
 	// overchan
 	"X-Frontend-Signature", // pubkey above
