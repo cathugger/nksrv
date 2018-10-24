@@ -72,9 +72,9 @@ var writeHeaderMap = func() (m map[string]struct{}) {
 	return
 }()
 
-func writeHeaderLine(w io.Writer, h, s string) error {
+func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 	// TODO implement line folding
-	if len(h)+2+len(s) > 998 {
+	if !force && len(h)+2+len(s) > 998 {
 		return ErrHeaderLineTooLong
 	}
 	if _, e := fmt.Fprintf(w, "%s: %s\n", h, s); e != nil {
@@ -83,20 +83,20 @@ func writeHeaderLine(w io.Writer, h, s string) error {
 	return nil
 }
 
-func writeHeaderLines(w io.Writer, h string, v []string) error {
+func writeHeaderLines(w io.Writer, h string, v []string, force bool) error {
 	for _, s := range v {
-		if e := writeHeaderLine(w, h, s); e != nil {
+		if e := writeHeaderLine(w, h, s, force); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func WriteHeaders(w io.Writer, H Headers) (err error) {
+func WriteHeaders(w io.Writer, H Headers, force bool) (err error) {
 	// first try to put headers we know about in order
 	for _, x := range writeHeaderOrder {
 		if len(H[x]) != 0 {
-			err = writeHeaderLines(w, x, H[x])
+			err = writeHeaderLines(w, x, H[x], force)
 			if err != nil {
 				return
 			}
@@ -105,7 +105,7 @@ func WriteHeaders(w io.Writer, H Headers) (err error) {
 	// then try to put others in whatever order
 	for h, v := range H {
 		if _, inmap := writeHeaderMap[h]; !inmap {
-			err = writeHeaderLines(w, h, v)
+			err = writeHeaderLines(w, h, v, force)
 			if err != nil {
 				return
 			}

@@ -7,6 +7,7 @@ var commonHeaders = map[string]string{
 	// RFCs digestion, also observation of actual messages
 	"Message-Id":          "Message-ID",
 	"Content-Id":          "Content-ID",
+	"List-Id":             "List-ID",
 	"Mime-Version":        "MIME-Version",
 	"Nntp-Posting-Date":   "NNTP-Posting-Date",
 	"Nntp-Posting-Host":   "NNTP-Posting-Host",
