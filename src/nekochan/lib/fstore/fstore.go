@@ -12,12 +12,13 @@ import (
 )
 
 type Config struct {
-	Path string `toml:"path"`
+	Path string
 }
 
 type FStore struct {
-	tmp      string
-	initTemp bool
+	root     string
+	initMu   sync.Mutex
+	initDirs map[string]struct{}
 }
 
 // tempfile logic based on stdlib' io/ioutil/tempfile.go
@@ -45,49 +46,58 @@ func nextSuffix() string {
 
 const tmpDir = "_tmp"
 
-func OpenFStore(cfg Config) (FStore, error) {
-	var s FStore
+func OpenFStore(cfg Config) (s FStore, _ error) {
+	s.initDirs = make(map[string]struct{})
+
 	i := len(cfg.Path)
 	if i > 0 && !os.IsPathSeparator(cfg.Path[i-1]) {
-		s.tmp = cfg.Path + string(os.PathSeparator)
+		s.root = cfg.Path + string(os.PathSeparator)
 	} else {
-		s.tmp = cfg.Path
+		s.root = cfg.Path
 	}
 	if i > 0 {
-		e := os.MkdirAll(s.tmp[:i-1], 0777)
+		e := os.MkdirAll(s.root[:i-1], 0777)
 		if e != nil {
 			return FStore{}, e
 		}
 	}
 
-	s.tmp += tmpDir
-
 	return s, nil
 }
 
 func (fs FStore) Main() string {
-	return fs.tmp[:len(fs.tmp)-len(tmpDir)]
+	return fs.root
 }
 
-func (fs *FStore) CleanTemp() (e error) {
-	// cleanup tmpdir
-	e = os.RemoveAll(fs.tmp)
-	fs.initTemp = false
+func (fs *FStore) CleanDir(dir string) (e error) {
+	fs.initMu.Lock()
+	e = os.RemoveAll(fs.root + dir)
+	delete(fs.initDirs, dir)
+	fs.initMu.Unlock()
 	return
 }
 
-func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
-	if !fs.initTemp {
-		err = os.MkdirAll(fs.tmp, 0700)
+func (fs *FStore) CleanTemp() error {
+	return fs.CleanDir(tmpDir)
+}
+
+func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {
+	fulldir := fs.root + dir
+
+	fs.initMu.Lock()
+	if _, inited := fs.initDirs[dir]; !inited {
+		err = os.MkdirAll(fulldir, 0700)
 		if err != nil {
+			fs.initMu.Unlock()
 			return nil, fmt.Errorf("error at os.MkdirAll: %v", err)
 		}
-		// not mp-safe but multiple mkdir's wont hurt us
-		fs.initTemp = true
+		fs.initDirs[dir] = struct{}{}
 	}
+	fs.initMu.Unlock()
+
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
-		name := filepath.Join(fs.tmp, pfx+nextSuffix()+ext)
+		name := filepath.Join(fulldir, pfx+nextSuffix()+ext)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
 			if nconflict++; nconflict > 10 {
@@ -100,4 +110,8 @@ func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
 		break
 	}
 	return
+}
+
+func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
+	return fs.NewFile(tmpDir, pfx, ext)
 }
