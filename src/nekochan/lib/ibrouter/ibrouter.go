@@ -23,7 +23,6 @@ type Cfg struct {
 	APIHandler      http.Handler          // handles _api
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
 	// fallback?
-	// http posting?
 }
 
 func NewIBRouter(cfg Cfg) http.Handler {

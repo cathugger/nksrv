@@ -28,8 +28,8 @@ func NewJSONRenderer(prov ib0.IBProvider, cfg Config) (*JSONRenderer, error) {
 }
 
 type jsonErrorMsg struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
+	Code int    `json:"code,omitempty"`
+	Msg  string `json:"msg,omitempty"`
 }
 
 type jsonError struct {
@@ -93,4 +93,32 @@ func (j *JSONRenderer) ServeThread(w http.ResponseWriter, r *http.Request, board
 		return
 	}
 	e.Encode(&pag)
+}
+
+type postedStatus struct {
+	Success bool             `json:"success"`
+	Info    ib0.IBPostedInfo `json:"info"`
+
+	jsonErrorMsg
+}
+
+func (j *JSONRenderer) DressPostResult(
+	w http.ResponseWriter, pi ib0.IBPostedInfo, err error, code int) {
+
+	if err != nil && code != 0 {
+		w.WriteHeader(code)
+	}
+
+	e := j.prepareEncoder(w)
+
+	ps := postedStatus{
+		Success: err == nil,
+		Info:    pi,
+	}
+	if err != nil {
+		ps.Code = code
+		ps.Msg = err.Error()
+	}
+
+	e.Encode(&ps)
 }

@@ -7,10 +7,10 @@ import (
 )
 
 type IBPostedInfo struct {
-	Board     string
-	ThreadID  string
-	PostID    string
-	MessageID string // XXX will we actually use this for anything??
+	Board     string `json:"board"`
+	ThreadID  string `json:"thread_id"`
+	PostID    string `json:"post_id"`
+	MessageID string `json:"message_id"` // XXX will we actually use this for anything??
 }
 
 var IBWebFormFileFields = []string{

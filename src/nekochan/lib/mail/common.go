@@ -18,6 +18,71 @@ var commonHeaders = map[string]string{
 	"X-I2p-Desthash":             "X-I2P-DestHash",
 }
 
+var commonHeadersList = [...]string{
+	// kitchen-sink RFCs and other online sources digestion
+
+	// I really would like to use "cc" and "bcc" as in older RFCs
+	// but newer ones have it defined as "Cc" and "Bcc"
+	// and that's what is also used by most clients :<
+
+	"Also-Control",
+	"Approved",
+	"Archive",
+	"Article-Names",
+	"Article-Updates",
+	"Bcc",
+	"Bytes",
+	"Cc",
+	"Comments",
+	"Content-Description",
+	"Content-Disposition",
+	"Content-Language",
+	"Content-Transfer-Encoding",
+	"Content-Type",
+	"Control",
+	"Date",
+	"Date-Received",
+	"Distribution",
+	"Expires",
+	"Face",
+	"Followup-To",
+	"From",
+	"Injection-Date",
+	"Injection-Info",
+	"Keywords",
+	"Lines",
+	"Newsgroups",
+	"Organization",
+	"Path",
+	"Posting-Version",
+	"Received",
+	"References",
+	"Relay-Version",
+	"Return-Path",
+	"Reply-To",
+	"See-Also",
+	"Sender",
+	"Subject",
+	"Summary",
+	"Supersedes",
+	"To",
+	"In-Reply-To",
+	"User-Agent",
+	"Xref",
+	"X-Antivirus",
+	"X-Antivirus-Status",
+	"X-Complaints-To",
+	"X-Face",
+	"X-Mailer",
+	"X-Mozilla-News-Host",
+	"X-Newsreader",
+	"X-Trace",
+	// overchan
+	"X-Frontend-Signature", // pubkey above
+	"X-Tor-Poster",
+	"X-Sage",
+}
+
 func AddCommonKey(h string) {
 	if len(h) > maxCommonHdrLen {
 		panic("maxCommonHdrLen needs adjustment")
@@ -34,70 +99,12 @@ func AddCommonKeyOverride(h, o string) {
 }
 
 func init() {
-	// self-map overrides
+	// self-map overrides, to allow more efficient lookup
 	for _, v := range commonHeaders {
 		commonHeaders[v] = v
 	}
 	// common headers which match their canonical versions
-	for _, v := range [...]string{
-		// kitchen-sink RFCs and other online sources digestion
-		"Also-Control",
-		"Approved",
-		"Archive",
-		"Article-Names",
-		"Article-Updates",
-		"Bcc",
-		"Bytes",
-		"Cc",
-		"Comments",
-		"Content-Description",
-		"Content-Disposition",
-		"Content-Language",
-		"Content-Transfer-Encoding",
-		"Content-Type",
-		"Control",
-		"Date",
-		"Date-Received",
-		"Distribution",
-		"Expires",
-		"Face",
-		"Followup-To",
-		"From",
-		"Injection-Date",
-		"Injection-Info",
-		"Keywords",
-		"Lines",
-		"Newsgroups",
-		"Organization",
-		"Path",
-		"Posting-Version",
-		"Received",
-		"References",
-		"Relay-Version",
-		"Return-Path",
-		"Reply-To",
-		"See-Also",
-		"Sender",
-		"Subject",
-		"Summary",
-		"Supersedes",
-		"To",
-		"In-Reply-To",
-		"User-Agent",
-		"Xref",
-		"X-Antivirus",
-		"X-Antivirus-Status",
-		"X-Complaints-To",
-		"X-Face",
-		"X-Mailer",
-		"X-Mozilla-News-Host",
-		"X-Newsreader",
-		"X-Trace",
-		// overchan
-		"X-Frontend-Signature", // pubkey above
-		"X-Tor-Poster",
-		"X-Sage",
-	} {
+	for _, v := range commonHeadersList {
 		commonHeaders[v] = v
 	}
 }

@@ -145,7 +145,7 @@ func commonNewPost(
 	xftitle := f.Values[fntitle][0]
 	xfmessage := f.Values[fnmessage][0]
 
-	fmt.Fprintf(os.Stderr, "form fields: xftitle(%q) xfmessage(%q)",
+	fmt.Fprintf(os.Stderr, "form fields: xftitle(%q) xfmessage(%q)\n",
 		xftitle, xfmessage)
 
 	if !validFormText(xftitle) ||
@@ -177,7 +177,8 @@ func commonNewPost(
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	pTitle := strings.TrimSpace(optimiseFormLine(xftitle))
 	pMessage := optimiseTextMessage(xfmessage)
-	fmt.Fprintf(os.Stderr, "form fields after processing: Title{%q} Message{%q}",
+	fmt.Fprintf(os.Stderr,
+		"form fields after processing: Title{%q} Message{%q}\n",
 		pTitle, pMessage)
 
 	// at this point message should be checked
