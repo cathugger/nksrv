@@ -164,7 +164,8 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				rInfo, err, code = cfg.WebPostProvider.IBPostNewThread(r, f, board)
 				cfg.HTMLRenderer.DressPostResult(w, rInfo, true, err, code)
 			} else {
-				rInfo, err, code = cfg.WebPostProvider.IBPostNewReply(r, f, board, f.Values["thread"][0])
+				rInfo, err, code = cfg.WebPostProvider.
+					IBPostNewReply(r, f, board, f.Values["thread"][0])
 				cfg.HTMLRenderer.DressPostResult(w, rInfo, false, err, code)
 			}
 		}))

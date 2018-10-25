@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"nekochan/lib/handler"
+	"nekochan/lib/mail/form"
 	"nekochan/lib/renderer"
 	ib0 "nekochan/lib/webib0"
 )
@@ -17,6 +18,45 @@ type Cfg struct {
 	Renderer        renderer.Renderer     // handles everything else?
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
 	// fallback?
+}
+
+var textFields = []string{
+	ib0.IBWebFormTextTitle,
+	ib0.IBWebFormTextMessage,
+}
+
+func eatMessagePost(
+	w http.ResponseWriter, r *http.Request,
+	wpp ib0.IBWebPostProvider) (f form.Form, ok bool) {
+
+	ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if e != nil {
+		http.Error(
+			w, fmt.Sprintf("failed to parse content type: %v", e),
+			http.StatusBadRequest)
+		return
+	}
+	if ct != "multipart/form-data" || param["boundary"] == "" {
+		http.Error(w, "bad Content-Type", http.StatusBadRequest)
+		return
+	}
+
+	fparam, fopener := wpp.IBGetPostParams()
+	var err error
+	f, err = fparam.ParseForm(
+		r.Body, param["boundary"],
+		textFields, ib0.IBWebFormFileFields,
+		fopener)
+	if err != nil {
+		// TODO
+		http.Error(
+			w, fmt.Sprintf("error parsing form: %v", err),
+			http.StatusBadRequest)
+		return
+	}
+
+	ok = true
+	return
 }
 
 func NewAPIRouter(cfg Cfg) http.Handler {
@@ -64,32 +104,12 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				b := r.Context().Value("b").(string)
 				t := r.Context().Value("t").(string)
 
-				ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
-				if e != nil {
-					http.Error(w, fmt.Sprintf("failed to parse content type: %v", e), http.StatusBadRequest)
-					return
-				}
-				if ct != "multipart/form-data" || param["boundary"] == "" {
-					http.Error(w, "bad Content-Type", http.StatusBadRequest)
+				f, ok := eatMessagePost(w, r, cfg.WebPostProvider)
+				if !ok {
 					return
 				}
 
-				fparam, fopener := cfg.WebPostProvider.IBGetPostParams()
-				textFields := []string{
-					ib0.IBWebFormTextTitle,
-					ib0.IBWebFormTextMessage,
-				}
-				var err error
-				f, err := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
-				if err != nil {
-					// TODO
-					http.Error(w, fmt.Sprintf("error parsing form: %v", err), http.StatusBadRequest)
-					return
-				}
-
-				var rInfo ib0.IBPostedInfo
-				var code int
-				rInfo, err, code = cfg.WebPostProvider.
+				rInfo, err, code := cfg.WebPostProvider.
 					IBPostNewReply(r, f, b, t)
 
 				cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
@@ -103,32 +123,12 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				func(w http.ResponseWriter, r *http.Request) {
 					b := r.Context().Value("b").(string)
 
-					ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
-					if e != nil {
-						http.Error(w, fmt.Sprintf("failed to parse content type: %v", e), http.StatusBadRequest)
-						return
-					}
-					if ct != "multipart/form-data" || param["boundary"] == "" {
-						http.Error(w, "bad Content-Type", http.StatusBadRequest)
+					f, ok := eatMessagePost(w, r, cfg.WebPostProvider)
+					if !ok {
 						return
 					}
 
-					fparam, fopener := cfg.WebPostProvider.IBGetPostParams()
-					textFields := []string{
-						ib0.IBWebFormTextTitle,
-						ib0.IBWebFormTextMessage,
-					}
-					var err error
-					f, err := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
-					if err != nil {
-						// TODO
-						http.Error(w, fmt.Sprintf("error parsing form: %v", err), http.StatusBadRequest)
-						return
-					}
-
-					var rInfo ib0.IBPostedInfo
-					var code int
-					rInfo, err, code = cfg.WebPostProvider.
+					rInfo, err, code := cfg.WebPostProvider.
 						IBPostNewThread(r, f, b)
 
 					cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
