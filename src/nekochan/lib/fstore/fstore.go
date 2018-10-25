@@ -69,7 +69,20 @@ func (fs FStore) Main() string {
 	return fs.root
 }
 
-func (fs *FStore) CleanDir(dir string) (e error) {
+func (fs *FStore) MakeDir(dir string) (err error) {
+	fs.initMu.Lock()
+	defer fs.initMu.Unlock()
+
+	err = os.MkdirAll(fs.root+dir, 0700)
+	if err != nil {
+		return
+	}
+	fs.initDirs[dir] = struct{}{}
+
+	return
+}
+
+func (fs *FStore) RemoveDir(dir string) (e error) {
 	fs.initMu.Lock()
 	e = os.RemoveAll(fs.root + dir)
 	delete(fs.initDirs, dir)
@@ -78,7 +91,7 @@ func (fs *FStore) CleanDir(dir string) (e error) {
 }
 
 func (fs *FStore) CleanTemp() error {
-	return fs.CleanDir(tmpDir)
+	return fs.RemoveDir(tmpDir)
 }
 
 func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {

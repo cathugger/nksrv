@@ -3,6 +3,9 @@ package psqlib
 import (
 	"database/sql"
 	"fmt"
+	"io"
+	"os"
+	"path"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
@@ -191,6 +194,15 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	return
 }
 
+var (
+	nntpIncomingTempDir = "_tin"
+	nntpIncomingDir     = "_in"
+)
+
+func (sp *PSQLIB) nntpSendIncomingArticle(name string, info nntpParsedInfo) {
+	// TODO
+}
+
 // + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
 // cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
 func (sp *PSQLIB) HandleIHave(
@@ -224,7 +236,7 @@ func (sp *PSQLIB) HandleIHave(
 	}()
 	mh, err = mail.ReadHeaders(r, 2<<20)
 	if err != nil {
-		err = fmt.Errorf("failed reading headers: %v")
+		err = fmt.Errorf("failed reading headers: %v", err)
 		w.ResTransferRejected(err)
 		return true
 	}
@@ -234,10 +246,63 @@ func (sp *PSQLIB) HandleIHave(
 		return true
 	}
 
-	_ = info
-	// TODO process
-	err = fmt.Errorf("unimplemented")
-	w.ResInternalError(err)
+	// TODO file should start with current timestamp/increasing counter
+	f, err := sp.nntpfs.NewFile(nntpIncomingTempDir, "", ".eml")
+	if err != nil {
+		err = fmt.Errorf("error on making temporary file: %v", err)
+		w.ResInternalError(err)
+		return true
+	}
+	defer func() {
+		if err != nil {
+			n := f.Name()
+			f.Close()
+			os.Remove(n)
+		}
+	}()
+
+	err = mail.WriteHeaders(f, mh.H, false)
+	if err != nil {
+		if err == mail.ErrHeaderLineTooLong {
+			w.ResTransferRejected(err)
+		} else {
+			err = fmt.Errorf("error writing headers: %v", err)
+			w.ResInternalError(err)
+		}
+		return true
+	}
+
+	fmt.Fprintf(f, "\n") // TODO check err
+
+	// TODO make limit configurable
+	const limit = 256 << 20
+	n, err := io.CopyN(f, mh.B, limit+1)
+	if err != nil {
+		err = fmt.Errorf("error writing body: %v", err)
+		w.ResInternalError(err)
+		return true
+	}
+	if n > limit {
+		err = fmt.Errorf("message body too large, up to %d allowed", limit)
+		w.ResTransferRejected(err)
+	}
+	err = f.Close()
+	if err != nil {
+		err = fmt.Errorf("error writing body: %v", err)
+		w.ResInternalError(err)
+		return true
+	}
+
+	newname := path.Join(sp.nntpfs.Main()+nntpIncomingDir, path.Base(f.Name()))
+	err = os.Rename(f.Name(), newname)
+	if err != nil {
+		err = sp.sqlError("incoming file move", err)
+		w.ResInternalError(err)
+		return true
+	}
+
+	sp.nntpSendIncomingArticle(newname, info)
+
 	return true
 }
 
