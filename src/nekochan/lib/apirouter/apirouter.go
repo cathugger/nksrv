@@ -90,7 +90,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				rInfo, err, code = cfg.WebPostProvider.
 					IBPostNewReply(r, f, b, t)
 
-				cfg.Renderer.DressPostResult(w, rInfo, err, code)
+				cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
 			}))
 	}
 	h_bcontent.Handle("/threads/{{t}}", false, h_threads)
@@ -128,7 +128,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					rInfo, err, code = cfg.WebPostProvider.
 						IBPostNewThread(r, f, b)
 
-					cfg.Renderer.DressPostResult(w, rInfo, err, code)
+					cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
 				})))
 	}
 

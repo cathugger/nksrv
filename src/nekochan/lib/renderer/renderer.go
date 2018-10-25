@@ -13,5 +13,5 @@ type Renderer interface {
 	ServeThreadListPage(w http.ResponseWriter, r *http.Request, board string, page uint32)
 	ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string)
 	ServeThread(w http.ResponseWriter, r *http.Request, board, thread string)
-	DressPostResult(w http.ResponseWriter, pi ib0.IBPostedInfo, err error, code int)
+	DressPostResult(w http.ResponseWriter, pi ib0.IBPostedInfo, newthread bool, err error, code int)
 }

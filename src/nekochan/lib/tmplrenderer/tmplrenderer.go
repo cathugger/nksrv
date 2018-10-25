@@ -31,6 +31,10 @@ const (
 	tmplThreadCatalogErr
 	tmplThread
 	tmplThreadErr
+	tmplCreatedThread
+	tmplCreatedThreadErr
+	tmplCreatedPost
+	tmplCreatedPostErr
 	tmplMax
 )
 
@@ -43,6 +47,10 @@ var names = [tmplMax]string{
 	"thread_catalog_err",
 	"thread",
 	"thread_err",
+	"created_thread",
+	"created_thread_err",
+	"created_post",
+	"created_post_err",
 }
 
 type msgFmtTOML struct {
@@ -242,6 +250,7 @@ type TmplRendererCfg struct {
 	Logger      LoggerX
 }
 
+// TODO utilize this
 type NodeInfo struct {
 	Name  string
 	Root  string
@@ -484,8 +493,32 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 }
 
 func (tr *TmplRenderer) DressPostResult(
-	w http.ResponseWriter, pi ib0.IBPostedInfo, err error, code int) {
+	w http.ResponseWriter, pi ib0.IBPostedInfo, newthread bool,
+	err error, code int) {
 
-	// TODO
-	panic("TODO")
+	l := &struct {
+		D ib0.IBPostedInfo
+		E error
+		C int
+		N NodeInfo
+		R *TmplRenderer
+	}{
+		D: pi,
+		E: err,
+		C: code,
+		R: tr,
+	}
+	if newthread {
+		if err == nil {
+			outTmpl(w, tr, tmplCreatedThread, 200, l)
+		} else {
+			outTmpl(w, tr, tmplCreatedThreadErr, code, l)
+		}
+	} else {
+		if err == nil {
+			outTmpl(w, tr, tmplCreatedPost, 200, l)
+		} else {
+			outTmpl(w, tr, tmplCreatedPostErr, code, l)
+		}
+	}
 }

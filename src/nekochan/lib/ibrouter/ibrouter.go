@@ -123,6 +123,10 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 	// TODO maybe should do it in more REST-ful way and add to html handler?
 	if cfg.WebPostProvider != nil {
+		if cfg.HTMLRenderer == nil {
+			panic("WebPostProvider requires HTMLRenderer")
+		}
+
 		h_post := handler.NewMethod()
 		h_post.Handle("POST", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -158,12 +162,10 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			var code int
 			if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
 				rInfo, err, code = cfg.WebPostProvider.IBPostNewThread(r, f, board)
+				cfg.HTMLRenderer.DressPostResult(w, rInfo, true, err, code)
 			} else {
 				rInfo, err, code = cfg.WebPostProvider.IBPostNewReply(r, f, board, f.Values["thread"][0])
-			}
-			_ = rInfo // TODO actually utilise
-			if err != nil {
-				http.Error(w, fmt.Sprintf("error processing submission: %v", err), code)
+				cfg.HTMLRenderer.DressPostResult(w, rInfo, false, err, code)
 			}
 		}))
 		h.Handle("/_post", false, h_post)
