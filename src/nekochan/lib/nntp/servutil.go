@@ -146,7 +146,9 @@ func stoi(x []byte) (n int) {
 }
 
 func parseDateSlice(date []byte) (Y, M, D int, valid bool) {
-	if len(date) < 5 || len(date) > 12 || !isNumberSlice(date) {
+	if len(date) < 6 || len(date) == 7 || len(date) > 12 ||
+		!isNumberSlice(date) {
+
 		return Y, M, D, false
 	}
 
@@ -181,7 +183,7 @@ func parseTimeSlice(t []byte) (h, m, s int, valid bool) {
 	h = int(t[0])*10 + int(t[1])
 	m = int(t[2])*10 + int(t[3])
 	s = int(t[4])*10 + int(t[5])
-	return h, m, s, h <= 24 && m < 60
+	return h, m, s, h <= 24 && m < 60 && s <= 61
 }
 
 func parseDateTime(w Responder, ds, ts []byte) (t time.Time, v bool) {
