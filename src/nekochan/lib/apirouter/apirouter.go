@@ -44,12 +44,14 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				}
 				cfg.Renderer.ServeThreadListPage(w, r, b, uint32(n))
 			})))
+
 	h_bcontent.Handle("/catalog", false,
 		handler.NewMethod().Handle("GET", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				cfg.Renderer.ServeThreadCatalog(w, r, b)
 			})))
+
 	h_threads := handler.NewMethod().Handle("GET", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			b := r.Context().Value("b").(string)
@@ -90,10 +92,11 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				rInfo, err, code = cfg.WebPostProvider.
 					IBPostNewReply(r, f, b, t)
 
-				cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
+				cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
 			}))
 	}
 	h_bcontent.Handle("/threads/{{t}}", false, h_threads)
+
 	if cfg.WebPostProvider != nil {
 		h_bcontent.Handle("/", false,
 			handler.NewMethod().Handle("POST", http.HandlerFunc(
@@ -128,7 +131,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					rInfo, err, code = cfg.WebPostProvider.
 						IBPostNewThread(r, f, b)
 
-					cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
+					cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
 				})))
 	}
 
