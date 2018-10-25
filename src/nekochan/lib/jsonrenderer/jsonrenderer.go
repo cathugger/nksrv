@@ -36,7 +36,9 @@ type jsonError struct {
 	Err jsonErrorMsg `json:"error"`
 }
 
-func (j *JSONRenderer) prepareEncoder(w http.ResponseWriter, code int) *json.Encoder {
+func (j *JSONRenderer) prepareEncoder(
+	w http.ResponseWriter, code int) *json.Encoder {
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if code != 0 {
@@ -65,7 +67,9 @@ func (j *JSONRenderer) ServeBoardList(w http.ResponseWriter, r *http.Request) {
 	e.Encode(&list)
 }
 
-func (j *JSONRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Request, board string, page uint32) {
+func (j *JSONRenderer) ServeThreadListPage(
+	w http.ResponseWriter, r *http.Request, board string, page uint32) {
+
 	e := j.prepareEncoder(w, 0)
 	var pag ib0.IBThreadListPage
 	err, code := j.p.IBGetThreadListPage(&pag, board, page)
@@ -76,7 +80,9 @@ func (j *JSONRenderer) ServeThreadListPage(w http.ResponseWriter, r *http.Reques
 	e.Encode(&pag)
 }
 
-func (j *JSONRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string) {
+func (j *JSONRenderer) ServeThreadCatalog(
+	w http.ResponseWriter, r *http.Request, board string) {
+
 	e := j.prepareEncoder(w, 0)
 	var pag ib0.IBThreadCatalog
 	err, code := j.p.IBGetThreadCatalog(&pag, board)
@@ -87,7 +93,9 @@ func (j *JSONRenderer) ServeThreadCatalog(w http.ResponseWriter, r *http.Request
 	e.Encode(&pag)
 }
 
-func (j *JSONRenderer) ServeThread(w http.ResponseWriter, r *http.Request, board, thread string) {
+func (j *JSONRenderer) ServeThread(
+	w http.ResponseWriter, r *http.Request, board, thread string) {
+
 	e := j.prepareEncoder(w, 0)
 	var pag ib0.IBThreadPage
 	err, code := j.p.IBGetThread(&pag, board, thread)
