@@ -11,7 +11,7 @@ var commonHeaders = map[string]string{
 	"Mime-Version":        "MIME-Version",
 	"Nntp-Posting-Date":   "NNTP-Posting-Date",
 	"Nntp-Posting-Host":   "NNTP-Posting-Host",
-	"X-Mimeole":           "X-MimeOLE",
+	"X-Mimeole":           "X-MIMEOLE",
 	"X-Msmail-Priority":   "X-MSMail-Priority",
 	"X-Received-Body-Crc": "X-Received-Body-CRC",
 	// overchan

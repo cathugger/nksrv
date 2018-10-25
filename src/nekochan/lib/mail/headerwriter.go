@@ -14,11 +14,14 @@ var writeHeaderOrder = [...]string{
 	"Subject",
 	"Date",
 	"Control",
+	"Also-Control",
 	"X-Sage",
 	// addressing
 	"From",
 	"Sender",
+	"Reply-To",
 	"Newsgroups",
+	"Followup-To",
 	"To",
 	"Cc",
 	"Bcc",
@@ -31,6 +34,7 @@ var writeHeaderOrder = [...]string{
 	"Organization",
 	"Keywords",
 	"Summary",
+	"Comments",
 	// info about network
 	"Path",
 	// info from injection node
