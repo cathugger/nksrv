@@ -105,7 +105,7 @@ type NNTPProvider interface {
 	// + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
 	// cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
 	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CoreMsgID) bool // SupportsIHave()
-	// + ok: 238{ResPleaseSend} fail: 431{ResCantAccept} 438{ResArticleNotWanted[false]}
+	// + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
 	HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsStream()
 	// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
 	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CoreMsgID) bool // SupportsStream()

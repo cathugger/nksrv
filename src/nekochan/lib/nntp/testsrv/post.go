@@ -95,16 +95,16 @@ func (p *TestSrv) HandleIHave(w Responder, cs *ConnState, ro nntp.ReaderOpener, 
 	return true
 }
 
-// + ok: 238{ResPleaseSend} fail: 431{ResCantAccept} 438{ResArticleNotWanted[false]}
+// + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
 func (p *TestSrv) HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool {
 	if !p.TransferPermit {
-		w.ResCantAccept(msgid)
+		w.ResArticleWantLater(msgid)
 		return true
 	}
 	if s1.articles[unsafeCoreMsgIDToStr(msgid)] != nil {
 		return false
 	}
-	w.ResPleaseSend(msgid)
+	w.ResArticleWanted(msgid)
 	return true
 }
 

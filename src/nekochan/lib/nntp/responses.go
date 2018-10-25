@@ -54,7 +54,7 @@ func (r Responder) ResTransferSuccess() {
 	r.PrintfLine("235 got it :>")
 }
 
-func (r Responder) ResPleaseSend(msgid CoreMsgID) {
+func (r Responder) ResArticleWanted(msgid CoreMsgID) {
 	r.PrintfLine("238 <%s>", msgid)
 }
 
@@ -122,7 +122,7 @@ func (r Responder) ResNoArticleWithThatMsgID() {
 	r.PrintfLine("430 no article with that Message-ID")
 }
 
-func (r Responder) ResCantAccept(msgid CoreMsgID) {
+func (r Responder) ResArticleWantLater(msgid CoreMsgID) {
 	r.PrintfLine("431 <%s>", msgid)
 }
 
