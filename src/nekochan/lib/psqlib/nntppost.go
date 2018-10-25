@@ -95,7 +95,8 @@ var (
 	nntpIncomingDir     = "_in"
 )
 
-func (sp *PSQLIB) nntpSendIncomingArticle(name string, info nntpParsedInfo) {
+func (sp *PSQLIB) nntpSendIncomingArticle(
+	name string, H mail.Headers, info nntpParsedInfo) {
 	// TODO
 }
 
@@ -202,7 +203,7 @@ func (sp *PSQLIB) HandleIHave(
 		return true
 	}
 
-	sp.nntpSendIncomingArticle(newname, info)
+	sp.nntpSendIncomingArticle(newname, mh.H, info)
 
 	return true
 }
