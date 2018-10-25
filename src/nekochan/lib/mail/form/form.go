@@ -68,11 +68,18 @@ var (
 	errTooMuchFiles  = errors.New("form submission contains too much files")
 )
 
-func ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (Form, error) {
-	return DefaultParserParams.ParseForm(r, boundary, textfields, filefields, fo)
+func ParseForm(
+	r io.Reader, boundary string, textfields, filefields []string,
+	fo FileOpener) (Form, error) {
+
+	return DefaultParserParams.ParseForm(
+		r, boundary, textfields, filefields, fo)
 }
 
-func (fp *ParserParams) ParseForm(r io.Reader, boundary string, textfields, filefields []string, fo FileOpener) (f Form, e error) {
+func (fp *ParserParams) ParseForm(
+	r io.Reader, boundary string, textfields, filefields []string,
+	fo FileOpener) (f Form, e error) {
+
 	defer func() {
 		if e != nil {
 			f.RemoveAll()

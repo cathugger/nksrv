@@ -50,13 +50,17 @@ func (j *JSONRenderer) prepareEncoder(
 	return e
 }
 
-func returnError(w http.ResponseWriter, e *json.Encoder, err error, code int) {
+func returnError(
+	w http.ResponseWriter, e *json.Encoder, err error, code int) {
+
 	w.WriteHeader(code)
 	jerr := jsonError{Err: jsonErrorMsg{Code: code, Msg: err.Error()}}
 	e.Encode(&jerr)
 }
 
-func (j *JSONRenderer) ServeBoardList(w http.ResponseWriter, r *http.Request) {
+func (j *JSONRenderer) ServeBoardList(
+	w http.ResponseWriter, r *http.Request) {
+
 	e := j.prepareEncoder(w, 0)
 	var list ib0.IBBoardList
 	err, code := j.p.IBGetBoardList(&list)
