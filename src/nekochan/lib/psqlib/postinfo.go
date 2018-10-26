@@ -15,6 +15,9 @@ type postInfo struct {
 
 	MI messageInfo
 	FI []fileInfo
+
+	H mail.Headers
+	L partInfo
 }
 
 type messageInfo struct {
@@ -26,11 +29,12 @@ type messageInfo struct {
 }
 
 type fileInfo struct {
-	Type     string
-	Size     int64
-	ID       string // storename
-	Thumb    string // thumbnail
-	Original string // original file name
+	Type        string
+	ContentType string
+	Size        int64
+	ID          string // storename
+	Thumb       string // thumbnail
+	Original    string // original file name
 }
 
 //// layout should be:
@@ -41,19 +45,19 @@ type fileInfo struct {
 
 {
 	"h": {"h1": ["v1","v2"]},
-	"v": 0
+	"b": 0
 }
 
 {
 	"h": {"h1": ["v1","v2"]},
-	"v": [
+	"b": [
 		{
 			"h": {"h1": ["v1","v2"]},
-			"v": 0
+			"b": 0
 		},
 		{
 			"h": {"h1": ["v1","v2"]},
-			"v": 1
+			"b": 1
 		},
 		2
 	]
@@ -78,7 +82,7 @@ func (i *bodyObject) UnmarshalJSON(b []byte) (err error) {
 		i.Data = poi
 		return
 	}
-	var parts []partInfoInner
+	var parts []partInfo
 	err = json.Unmarshal(b, &parts)
 	if err == nil {
 		i.Data = parts
@@ -91,7 +95,7 @@ func (i *bodyObject) UnmarshalJSON(b []byte) (err error) {
 			i.Data = nil
 			return
 		} else {
-			return fmt.Errorf("unexpected unmarshal result type: %T", null)
+			return fmt.Errorf("bodyObject: unexpected unmarshal: %#v", null)
 		}
 	}
 	// error
@@ -102,7 +106,7 @@ type partInfoInner struct {
 	ContentType string       `json:"t,omitempty"`
 	Binary      bool         `json:"x,omitempty"`
 	Headers     mail.Headers `json:"h,omitempty"`
-	Body        bodyObject   `json:"b,omitempty"`
+	Body        bodyObject   `json:"b"`
 }
 
 func (i *partInfoInner) onlyBody() bool {

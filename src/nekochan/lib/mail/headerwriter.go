@@ -62,6 +62,8 @@ var writeHeaderOrder = [...]string{
 	"MIME-Version",
 	"Content-Type",
 	"Content-Transfer-Encoding",
+	"Content-Disposition",
+	"Content-Description",
 	"Content-Language",
 	"Bytes",
 	"Lines",
