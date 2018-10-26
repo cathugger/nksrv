@@ -1,7 +1,6 @@
 package psqlib
 
 import (
-	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"mime"
 	qp "mime/quotedprintable"
 	"strings"
+	"unicode/utf8"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
@@ -133,7 +133,8 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 }
 
 func devourTransferArticle(
-	H mail.Headers, info nntpParsedInfo, r io.Reader) error {
+	H mail.Headers, info nntpParsedInfo, r io.Reader) (
+	pi postInfo, err error) {
 
 	ismultipart := strings.HasPrefix(info.ContentType, "multipart/")
 
@@ -151,44 +152,78 @@ func devourTransferArticle(
 		binary = false
 	} else if au.EqualFoldString(cte, "base64") {
 		if ismultipart {
-			return errors.New("multipart x base64 not allowed")
+			err = errors.New("multipart x base64 not allowed")
+			return
 		}
 		r = base64.NewDecoder(base64.StdEncoding, r)
 		binary = true
 	} else if au.EqualFoldString(cte, "quoted-printable") {
 		if ismultipart {
-			return errors.New("multipart x quoted-printable not allowed")
+			err = errors.New("multipart x quoted-printable not allowed")
+			return
 		}
 		r = qp.NewReader(r)
 		binary = false
 	} else if au.EqualFoldString(cte, "binary") {
 		binary = true
 	} else {
-		return fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
+		err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
+		return
 	}
+
+	// we won't need this anymore
+	delete(H, "Content-Transfer-Encoding")
 
 	_ = binary
 
 	if !ismultipart {
-		if strings.HasPrefix(info.ContentType, "text/") {
+		if info.ContentType == "" ||
+			strings.HasPrefix(info.ContentType, "text/") {
+
 			// try processing as main text
 			// TODO make configurable
 			const defaultTextBuf = 2048
 			const maxTextBuf = (32 << 10) - 1
-			b := bytes.NewBuffer(make([]byte, 0, defaultTextBuf))
-			n, err := io.CopyN(b, r, maxTextBuf+1)
+			b := &strings.Builder{}
+			b.Grow(defaultTextBuf)
+			var n int64
+			n, err = io.CopyN(b, r, maxTextBuf+1)
 			if err != nil {
-				return fmt.Errorf("error reading body: %v", err)
+				err = fmt.Errorf("error reading body: %v", err)
+				return
 			}
+			str := b.String()
 			if n <= maxTextBuf {
 				// it fit
+				cset := ""
+				if info.ContentType != "" {
+					cset = info.ContentParams["charset"]
+				}
+				// expect UTF-8 in most cases
+				if strings.IndexByte(str, 0) < 0 &&
+					(((cset == "" ||
+						au.EqualFoldString(cset, "UTF-8") ||
+						au.EqualFoldString(cset, "US-ASCII")) &&
+						utf8.ValidString(str)) ||
+						(au.EqualFoldString(cset, "ISO-8859-1") &&
+							au.Is7BitString(str))) {
+
+					// normal processing - no need to have copy
+					pi.MI.Message = str
+					pi.L.Body.Data = postObjectIndex(0)
+					pi.L.Binary = binary
+					panic("TODO")
+				} else {
+					// not UTF-8
+					panic("TODO")
+				}
+
 				panic("TODO")
-				return nil
-			} else {
-				// didn't fit, therefore we can't use this as main text
-				r = io.MultiReader(b, r)
-				// proceed with attachment processing
+				return
 			}
+			// can't put in message
+			// proceed with attachment processing
+			r = io.MultiReader(strings.NewReader(str), r)
 		}
 		// attachment
 		panic("TODO")

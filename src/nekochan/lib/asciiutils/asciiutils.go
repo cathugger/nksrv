@@ -128,3 +128,21 @@ func IsPrintableASCIISlice(s []byte, e byte) bool {
 	}
 	return true
 }
+
+func Is7BitBytes(s []byte) bool {
+	for _, c := range s {
+		if c >= 0x80 {
+			return false
+		}
+	}
+	return true
+}
+
+func Is7BitString(s string) bool {
+	for _, c := range []byte(s) {
+		if c >= 0x80 {
+			return false
+		}
+	}
+	return true
+}
