@@ -134,40 +134,42 @@ type replyTargetInfo struct {
 	bumpLimit uint32
 }
 
-func (sp *PSQLIB) insertNewReply(rti replyTargetInfo, pInfo postInfo,
-	fileInfos []fileInfo) (pid postID, err error) {
+func (sp *PSQLIB) insertNewReply(
+	rti replyTargetInfo, pInfo postInfo) (pid postID, err error) {
 
-	stmt, err := sp.getNPStmt(npTuple{len(fileInfos), pInfo.Sage})
+	stmt, err := sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
 	if err != nil {
 		return
 	}
 
 	var r *sql.Row
-	if len(fileInfos) == 0 {
-		r = stmt.QueryRow(rti.bid, rti.tid, pInfo.Date, pInfo.Sage, pInfo.ID,
-			pInfo.MessageID, pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message,
+	if len(pInfo.FI) == 0 {
+		r = stmt.QueryRow(
+			rti.bid, rti.tid, pInfo.Date, pInfo.MI.Sage,
+			pInfo.ID, pInfo.MessageID,
+			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message,
 			rti.bumpLimit)
 	} else {
 		x := 11
 		xf := 5
-		args := make([]interface{}, x+(len(fileInfos)*xf))
+		args := make([]interface{}, x+(len(pInfo.FI)*xf))
 		args[0] = rti.bid
 		args[1] = rti.tid
 		args[2] = pInfo.Date
-		args[3] = pInfo.Sage
+		args[3] = pInfo.MI.Sage
 		args[4] = pInfo.ID
 		args[5] = pInfo.MessageID
-		args[6] = pInfo.Title
-		args[7] = pInfo.Author
-		args[8] = pInfo.Trip
-		args[9] = pInfo.Message
+		args[6] = pInfo.MI.Title
+		args[7] = pInfo.MI.Author
+		args[8] = pInfo.MI.Trip
+		args[9] = pInfo.MI.Message
 		args[10] = rti.bumpLimit
-		for i := range fileInfos {
-			args[x+0] = fileInfos[i].Type
-			args[x+1] = fileInfos[i].Size
-			args[x+2] = fileInfos[i].ID
-			args[x+3] = fileInfos[i].Thumb
-			args[x+4] = fileInfos[i].Original
+		for i := range pInfo.FI {
+			args[x+0] = pInfo.FI[i].Type
+			args[x+1] = pInfo.FI[i].Size
+			args[x+2] = pInfo.FI[i].ID
+			args[x+3] = pInfo.FI[i].Thumb
+			args[x+4] = pInfo.FI[i].Original
 			x += xf
 		}
 		r = stmt.QueryRow(args...)

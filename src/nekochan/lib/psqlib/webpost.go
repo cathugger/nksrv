@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -103,19 +102,8 @@ func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (_ erro
 	return
 }
 
-type postInfo struct {
-	ID        string // message identifier, hash of MessageID
-	MessageID string // globally unique message identifier
-	Date      time.Time
-	Title     string
-	Author    string
-	Trip      string
-	Sage      bool
-	Message   string
-}
-
 func checkSubmissionLimits(slimits *submissionLimits, reply bool,
-	f form.Form, pInfo postInfo) (_ error, c int) {
+	f form.Form, mInfo messageInfo) (_ error, c int) {
 
 	var e error
 	e, c = checkFileLimits(slimits, reply, f)
@@ -123,10 +111,10 @@ func checkSubmissionLimits(slimits *submissionLimits, reply bool,
 		return e, 0
 	}
 
-	if len(pInfo.Title) > int(slimits.MaxTitleLength) {
+	if len(mInfo.Title) > int(slimits.MaxTitleLength) {
 		return errTooLongTitle, 0
 	}
-	if len(pInfo.Message) > int(slimits.MaxMessageLength) {
+	if len(mInfo.Message) > int(slimits.MaxMessageLength) {
 		return errTooLongMessage, 0
 	}
 
@@ -272,14 +260,6 @@ func optimiseFormLine(line string) (s string) {
 	s = lineReplacer.Replace(line)
 	s = norm.NFC.String(s)
 	return
-}
-
-type fileInfo struct {
-	Type     string
-	Size     int64
-	ID       string // storename
-	Thumb    string // thumbnail
-	Original string // original file name
 }
 
 func (sp *PSQLIB) commonNewPost(
@@ -429,13 +409,15 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	var pInfo postInfo
-	pInfo.Title = strings.TrimSpace(optimiseFormLine(xftitle))
-	pInfo.Message = optimiseTextMessage(xfmessage)
-	sp.log.LogPrintf(DEBUG, "form fields after processing: Title(%q) Message(%q)", pInfo.Title, pInfo.Message)
+	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
+	pInfo.MI.Message = optimiseTextMessage(xfmessage)
+	sp.log.LogPrintf(DEBUG,
+		"form fields after processing: Title(%q) Message(%q)",
+		pInfo.MI.Title, pInfo.MI.Message)
 
 	// check for specified limits
 	var filecount int
-	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo)
+	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo.MI)
 	if err != nil {
 		return rInfo, err, http.StatusBadRequest
 	}
@@ -451,7 +433,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// there still can be the case where there are left untracked files in file system. they could be manually scanned, and damage is low.
 
 	// process files
-	fileInfos := make([]fileInfo, filecount)
+	pInfo.FI = make([]fileInfo, filecount)
 	x := 0
 	sp.log.LogPrint(DEBUG, "processing form files")
 	for _, fieldname := range FileFields {
@@ -473,9 +455,9 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 			// TODO extract metadata, make thumbnails here
 
-			fileInfos[x].ID = newfn
-			fileInfos[x].Original = orig
-			fileInfos[x].Size = files[i].Size
+			pInfo.FI[x].ID = newfn
+			pInfo.FI[x].Original = orig
+			pInfo.FI[x].Size = files[i].Size
 
 			x++
 		}
@@ -490,11 +472,11 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		tid, err = sp.insertNewThread(bid, pInfo, fileInfos)
+		tid, err = sp.insertNewThread(bid, pInfo)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		pid, err = sp.insertNewReply(replyTargetInfo{bid, tid, threadOpts.BumpLimit},
-			pInfo, fileInfos)
+		pid, err = sp.insertNewReply(
+			replyTargetInfo{bid, tid, threadOpts.BumpLimit}, pInfo)
 		_ = pid // fuk u go
 	}
 	if err != nil {
@@ -508,7 +490,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		files := f.Files[fieldname]
 		for i := range files {
 			from := files[i].F.Name()
-			to := sp.src.Main() + fileInfos[x].ID
+			to := sp.src.Main() + pInfo.FI[x].ID
 			sp.log.LogPrintf(DEBUG, "renaming %q -> %q", from, to)
 			xe := fu.RenameNoClobber(from, to)
 			if xe != nil {

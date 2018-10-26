@@ -96,36 +96,38 @@ SELECT * FROM up`
 	return
 }
 
-func (sp *PSQLIB) insertNewThread(bid boardID, pInfo postInfo,
-	fileInfos []fileInfo) (tid postID, err error) {
+func (sp *PSQLIB) insertNewThread(
+	bid boardID, pInfo postInfo) (tid postID, err error) {
 
-	stmt, err := sp.getNTStmt(len(fileInfos))
+	stmt, err := sp.getNTStmt(len(pInfo.FI))
 	if err != nil {
 		return
 	}
 
 	var r *sql.Row
-	if len(fileInfos) == 0 {
-		r = stmt.QueryRow(bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
-			pInfo.Title, pInfo.Author, pInfo.Trip, pInfo.Message)
+	if len(pInfo.FI) == 0 {
+		r = stmt.QueryRow(
+			bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
+			pInfo.MI.Title, pInfo.MI.Author,
+			pInfo.MI.Trip, pInfo.MI.Message)
 	} else {
 		x := 8
 		xf := 5
-		args := make([]interface{}, x+(len(fileInfos)*xf))
+		args := make([]interface{}, x+(len(pInfo.FI)*xf))
 		args[0] = bid
 		args[1] = pInfo.ID
 		args[2] = pInfo.Date
 		args[3] = pInfo.MessageID
-		args[4] = pInfo.Title
-		args[5] = pInfo.Author
-		args[6] = pInfo.Trip
-		args[7] = pInfo.Message
-		for i := range fileInfos {
-			args[x+0] = fileInfos[i].Type
-			args[x+1] = fileInfos[i].Size
-			args[x+2] = fileInfos[i].ID
-			args[x+3] = fileInfos[i].Thumb
-			args[x+4] = fileInfos[i].Original
+		args[4] = pInfo.MI.Title
+		args[5] = pInfo.MI.Author
+		args[6] = pInfo.MI.Trip
+		args[7] = pInfo.MI.Message
+		for i := range pInfo.FI {
+			args[x+0] = pInfo.FI[i].Type
+			args[x+1] = pInfo.FI[i].Size
+			args[x+2] = pInfo.FI[i].ID
+			args[x+3] = pInfo.FI[i].Thumb
+			args[x+4] = pInfo.FI[i].Original
 			x += xf
 		}
 		r = stmt.QueryRow(args...)
