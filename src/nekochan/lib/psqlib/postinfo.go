@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"nekochan/lib/mail"
@@ -34,55 +35,98 @@ type fileInfo struct {
 
 //// layout should be:
 
-type partInfo struct {
-	// which part it refers to? 0 means main message, 1 means first attachment
-	Index int `json:"i,omitempty"`
-	// it's common enough to put it there. will be empty for non-mp msgs
-	ContentType string `json:"t,omitempty"`
-	// whether encoding was binary. helps decide txt vs base64 use
-	Binary bool `json:"b,omitempty"`
-	// headers other than Content-Type and Content-Transfer-Encoding
-	Headers mail.Headers `json:"h,omitempty"`
+/*
+
+0
+
+{
+	"h": {"h1": ["v1","v2"]},
+	"v": 0
 }
 
-func (pi *partInfo) onlyIndex() bool {
-	return !pi.Binary && pi.ContentType == "" && len(pi.Headers) == 0
+{
+	"h": {"h1": ["v1","v2"]},
+	"v": [
+		{
+			"h": {"h1": ["v1","v2"]},
+			"v": 0
+		},
+		{
+			"h": {"h1": ["v1","v2"]},
+			"v": 1
+		},
+		2
+	]
 }
 
-type layoutInfo struct {
-	data interface{}
+*/
+
+type postObjectIndex = uint32
+
+type bodyObject struct {
+	Data interface{}
 }
 
-func (i layoutInfo) MarshalJSON() (b []byte, err error) {
-	if pi, ok := i.data.(*partInfo); ok {
-		if pi.onlyIndex() {
-			return json.Marshal(&pi.Index)
+func (i *bodyObject) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i.Data)
+}
+
+func (i *bodyObject) UnmarshalJSON(b []byte) (err error) {
+	var poi postObjectIndex
+	err = json.Unmarshal(b, &poi)
+	if err == nil {
+		i.Data = poi
+		return
+	}
+	var parts []partInfoInner
+	err = json.Unmarshal(b, &parts)
+	if err == nil {
+		i.Data = parts
+		return
+	}
+	var null interface{}
+	err = json.Unmarshal(b, &null)
+	if err == nil {
+		if null == nil {
+			i.Data = nil
+			return
 		} else {
-			return json.Marshal(&pi)
+			return fmt.Errorf("unexpected unmarshal result type: %T", null)
 		}
 	}
-	if ll, ok := i.data.([]layoutInfo); ok {
-		return json.Marshal(ll)
-	}
-	panic("unrecognised type")
+	// error
+	return
 }
 
-func (i *layoutInfo) UnmarshalJSON(b []byte) (err error) {
-	var pi partInfo
-	err = json.Unmarshal(b, &pi.Index)
+type partInfoInner struct {
+	ContentType string       `json:"t,omitempty"`
+	Binary      bool         `json:"x,omitempty"`
+	Headers     mail.Headers `json:"h,omitempty"`
+	Body        bodyObject   `json:"b,omitempty"`
+}
+
+func (i *partInfoInner) onlyBody() bool {
+	return i.ContentType == "" && !i.Binary && len(i.Headers) == 0
+}
+
+type partInfo struct {
+	partInfoInner
+}
+
+func (i *partInfo) MarshalJSON() ([]byte, error) {
+	if i.onlyBody() {
+		return json.Marshal(i.Body) // array or integer
+	}
+	return json.Marshal(i.partInfoInner)
+}
+
+func (i *partInfo) UnmarshalJSON(b []byte) (err error) {
+	err = json.Unmarshal(b, &i.partInfoInner)
 	if err == nil {
-		i.data = &pi
 		return
 	}
-	err = json.Unmarshal(b, &pi)
+	err = json.Unmarshal(b, &i.Body)
 	if err == nil {
-		i.data = &pi
-		return
-	}
-	var ll []layoutInfo
-	err = json.Unmarshal(b, &ll)
-	if err == nil {
-		i.data = ll
 		return
 	}
 	// error
