@@ -1,6 +1,10 @@
 package psqlib
 
-import "mime"
+import (
+	"mime"
+
+	"nekochan/lib/mail"
+)
 
 func attachmentDisposition(original string) string {
 	return mime.FormatMediaType(
@@ -49,7 +53,7 @@ func WebPostToLayout(i *postInfo) {
 	xparts := make([]partInfo, nparts)
 	x := 0
 	if hastext {
-		xparts[0].Headers["Content-Type"] = []string{plainType}
+		xparts[0].ContentType = plainType
 		xparts[0].Body.Data = postObjectIndex(0)
 		x++
 	}
@@ -57,9 +61,12 @@ func WebPostToLayout(i *postInfo) {
 		if len(i.FI[a].ContentType) == 0 {
 			panic("Content-Type not set")
 		}
-		xparts[x].Headers["Content-Type"] = []string{i.FI[x].ContentType}
-		xparts[x].Headers["Content-Disposition"] =
-			[]string{attachmentDisposition(i.FI[x].Original)}
+		xparts[x].ContentType = i.FI[x].ContentType
+		xparts[x].Headers = mail.Headers{
+			"Content-Disposition": []string{
+				attachmentDisposition(i.FI[x].Original),
+			},
+		}
 		xparts[x].Body.Data = postObjectIndex(1 + a)
 		xparts[x].Binary = true
 		x++
