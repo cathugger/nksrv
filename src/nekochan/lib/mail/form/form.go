@@ -36,7 +36,7 @@ type FileOpener interface {
 type File struct {
 	F           *os.File
 	ContentType string
-	FileName    string
+	FileName    string // Windows and UNIX paths are stripped
 	Size        int64
 }
 

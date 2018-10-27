@@ -98,6 +98,9 @@ func mimeTypeByExtension(ext string) string {
 	return ""
 }
 
+// MIMETypeByExtension takes extension (without dot)
+// and returns first MIME type for it. If no extension, pass empty string.
+// Returns empty string on failure.
 func MIMETypeByExtension(ext string) string {
 	mimeLock.RLock()
 	typ := mimeTypeByExtension(ext)
@@ -116,6 +119,9 @@ func mimeIsCanonical(ext, typ string) bool {
 	return false
 }
 
+// MIMEIsCanonical tells whether ext is one of MIME type typ extensions.
+// Canonical means that this extension is gettable by MIME type.
+// Some extensions lead to certain MIME types which aren't official.
 func MIMEIsCanonical(ext, typ string) bool {
 	mimeLock.RLock()
 	can := mimeIsCanonical(ext, typ)
@@ -133,6 +139,8 @@ func mimeCanonicalTypeByExtension(ext string) string {
 	return ""
 }
 
+// MIMECanonicalTypeByExtension returns canonical MIME type
+// for given extension.
 func MIMECanonicalTypeByExtension(ext string) string {
 	mimeLock.RLock()
 	typ := mimeCanonicalTypeByExtension(ext)
@@ -149,6 +157,8 @@ func mimeExtensionsByType(mimeType string) ([]string, error) {
 	return s, nil
 }
 
+// MIMEExtensionsByType takes MIME type and returns extensions (without dot)
+// for it.
 func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 	mimeLock.RLock()
 	ext, err = mimeExtensionsByType(mimeType)
@@ -156,6 +166,11 @@ func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 	return
 }
 
+// LoadMIMEDatabase loads MIME database from specified path.
+// Extensions may start with "." which will be ignored.
+// Specify wildcard extensions with "*", empty extensions as ".",
+// start non-canonical extensions with "!".
+// "!" alone can be used for empty non-canonical extension.
 func LoadMIMEDatabase(dbfile string) error {
 	mimeLock.Lock()
 	defer mimeLock.Unlock()

@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"hash"
 	"io"
 	"net/http"
 	"os"
@@ -158,9 +157,8 @@ var sBase64Enc = base64.
 	NewEncoding(sBase64Set).
 	WithPadding(base64.NoPadding)
 
-func makeInternalFileName(f *os.File, fi fileInfo) (nfi fileInfo, e error) {
-	var h hash.Hash
-	h, e = blake2s.New256([]byte(nil))
+func makeFileHash(f *os.File) (s string, e error) {
+	h, e := blake2s.New256([]byte(nil))
 	if e != nil {
 		return
 	}
@@ -172,7 +170,16 @@ func makeInternalFileName(f *os.File, fi fileInfo) (nfi fileInfo, e error) {
 
 	var b [32]byte
 	sum := h.Sum(b[:0])
-	s := lowerBase32HexEnc.EncodeToString(sum)
+	s = lowerBase32HexEnc.EncodeToString(sum)
+
+	return
+}
+
+func makeInternalFileName(f *os.File, fi fileInfo) (nfi fileInfo, e error) {
+	s, e := makeFileHash(f)
+	if e != nil {
+		return
+	}
 
 	// prefer info from file name, try figuring out content-type from it
 	// if that fails, try looking into content-type, try figure out filename
@@ -296,7 +303,8 @@ func (sp *PSQLIB) commonNewPost(
 	xftitle := f.Values[fntitle][0]
 	xfmessage := f.Values[fnmessage][0]
 
-	sp.log.LogPrintf(DEBUG, "form fields: xftitle(%q) xfmessage(%q)", xftitle, xfmessage)
+	sp.log.LogPrintf(DEBUG,
+		"form fields: xftitle(%q) xfmessage(%q)", xftitle, xfmessage)
 
 	if !validFormText(xftitle) ||
 		!validFormText(xfmessage) {
