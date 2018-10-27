@@ -3,6 +3,7 @@ package psqlib
 import (
 	"mime"
 
+	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
 )
 
@@ -11,10 +12,11 @@ func attachmentDisposition(original string) string {
 		"inline", map[string]string{"filename": original})
 }
 
-const plainType = "text/plain; charset=UTF-8"
+const plainUTF8Type = "text/plain; charset=UTF-8"
 
 func WebPostToLayout(i *postInfo) {
 	hastext := len(i.MI.Message) != 0
+	text8bit := !au.Is7BitString(i.MI.Message)
 
 	if len(i.FI) == 0 {
 		if !hastext {
@@ -22,7 +24,9 @@ func WebPostToLayout(i *postInfo) {
 			i.L.Body.Data = nil
 		} else {
 			i.L.Body.Data = postObjectIndex(0)
-			i.H["Content-Type"] = []string{plainType}
+			if text8bit {
+				i.H["Content-Type"] = []string{plainUTF8Type}
+			}
 		}
 		return
 	}
@@ -53,7 +57,9 @@ func WebPostToLayout(i *postInfo) {
 	xparts := make([]partInfo, nparts)
 	x := 0
 	if hastext {
-		xparts[0].ContentType = plainType
+		if text8bit {
+			xparts[0].ContentType = plainUTF8Type
+		}
 		xparts[0].Body.Data = postObjectIndex(0)
 		x++
 	}

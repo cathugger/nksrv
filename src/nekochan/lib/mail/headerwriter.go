@@ -78,6 +78,24 @@ var writeHeaderMap = func() (m map[string]struct{}) {
 	return
 }()
 
+var writePartHeaderOrder = []string{
+	"Content-ID",
+	"Content-Type",
+	"Content-Transfer-Encoding",
+	"Content-Disposition",
+	"Content-Description",
+	"Content-Language",
+}
+
+// mask map of above
+var writePartHeaderMap = func() (m map[string]struct{}) {
+	m = make(map[string]struct{})
+	for _, x := range writePartHeaderOrder {
+		m[x] = struct{}{}
+	}
+	return
+}()
+
 func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 	// TODO implement line folding
 	if !force && len(h)+2+len(s) > 998 {
@@ -111,6 +129,29 @@ func WriteHeaders(w io.Writer, H Headers, force bool) (err error) {
 	// then try to put others in whatever order
 	for h, v := range H {
 		if _, inmap := writeHeaderMap[h]; !inmap {
+			err = writeHeaderLines(w, h, v, force)
+			if err != nil {
+				return
+			}
+		}
+	}
+	// done
+	return
+}
+
+func WritePartHeaders(w io.Writer, H Headers, force bool) (err error) {
+	// first try to put headers we know about in order
+	for _, x := range writePartHeaderOrder {
+		if len(H[x]) != 0 {
+			err = writeHeaderLines(w, x, H[x], force)
+			if err != nil {
+				return
+			}
+		}
+	}
+	// then try to put others in whatever order
+	for h, v := range H {
+		if _, inmap := writePartHeaderMap[h]; !inmap {
 			err = writeHeaderLines(w, h, v, force)
 			if err != nil {
 				return
