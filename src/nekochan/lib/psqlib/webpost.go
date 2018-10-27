@@ -231,7 +231,7 @@ func validFormText(s string) bool {
 	return utf8.ValidString(s) && readableText(s)
 }
 
-func optimiseTextMessage(msg string) (s string) {
+func normalizeTextMessage(msg string) (s string) {
 	// normalise using form C
 	s = norm.NFC.String(msg)
 	// trim line endings, and empty lines at the end
@@ -410,7 +410,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	var pInfo postInfo
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
-	pInfo.MI.Message = optimiseTextMessage(xfmessage)
+	pInfo.MI.Message = normalizeTextMessage(xfmessage)
 	sp.log.LogPrintf(DEBUG,
 		"form fields after processing: Title(%q) Message(%q)",
 		pInfo.MI.Title, pInfo.MI.Message)
