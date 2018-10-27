@@ -158,7 +158,7 @@ var sBase64Enc = base64.
 	NewEncoding(sBase64Set).
 	WithPadding(base64.NoPadding)
 
-func makeInternalFileName(f *os.File, fname string) (s string, e error) {
+func makeInternalFileName(f *os.File, fi fileInfo) (nfi fileInfo, e error) {
 	var h hash.Hash
 	h, e = blake2s.New256([]byte(nil))
 	if e != nil {
@@ -172,13 +172,22 @@ func makeInternalFileName(f *os.File, fname string) (s string, e error) {
 
 	var b [32]byte
 	sum := h.Sum(b[:0])
-	s = lowerBase32HexEnc.EncodeToString(sum)
+	s := lowerBase32HexEnc.EncodeToString(sum)
+
+	// prefer info from file name, try figuring out content-type from it
+	// if that fails, try looking into content-type, try figure out filename
+	// if both fail, just use given type and given filename
+	// TODO
 
 	// append extension, if any
+	fname := fi.Original
 	if i := strings.LastIndexByte(fname, '.'); i >= 0 && i+1 < len(fname) {
 		// TODO de-duplicate equivalent extensions (jpeg->jpg)?
 		s += strings.ToLower(fname[i:]) // append extension including dot
 	}
+
+	nfi = fi
+	nfi.ID = s
 
 	return
 }
@@ -265,6 +274,8 @@ func optimiseFormLine(line string) (s string) {
 func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
+
+	var pInfo postInfo
 
 	defer func() {
 		if err != nil {
@@ -408,7 +419,6 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
-	var pInfo postInfo
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
 	pInfo.MI.Message = normalizeTextMessage(xfmessage)
 	sp.log.LogPrintf(DEBUG,
@@ -439,10 +449,10 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		for i := range files {
-			orig := files[i].FileName
+			pInfo.FI[x].Original = files[i].FileName
+			pInfo.FI[x].Size = files[i].Size
 
-			var newfn string
-			newfn, err = makeInternalFileName(files[i].F, orig)
+			pInfo.FI[x], err = makeInternalFileName(files[i].F, pInfo.FI[x])
 			if err != nil {
 				return rInfo, err, http.StatusInternalServerError
 			}
@@ -454,10 +464,6 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 			}
 
 			// TODO extract metadata, make thumbnails here
-
-			pInfo.FI[x].ID = newfn
-			pInfo.FI[x].Original = orig
-			pInfo.FI[x].Size = files[i].Size
 
 			x++
 		}

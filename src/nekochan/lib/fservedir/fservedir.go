@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	mm "nekochan/lib/emime"
 	"nekochan/lib/fserve"
-	mm "nekochan/lib/mime"
 )
 
 var _ fserve.FServe = FServeDir{}

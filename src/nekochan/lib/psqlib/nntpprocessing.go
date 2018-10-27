@@ -284,18 +284,27 @@ func (sp *PSQLIB) devourTransferArticle(
 
 		// if this point is reached, we'll need to add this as attachment
 
+		// new
 		f, err := sp.src.TempFile("nntp-", "")
 		if err != nil {
 			return
 		}
+		// copy
 		n, err = io.Copy(f, r)
 		if err != nil {
 			return
 		}
+		// close
 		err = f.Close()
 		if err != nil {
 			return
 		}
+
+		//fidx := len(pi.FI)
+		//pi.FI = append(pi.FI, fileInfo{})
+		//fhs = append(fhs, f)
+		// calc filename
+
 		panic("TODO")
 		_ = hideattachment
 		return
