@@ -28,8 +28,24 @@ type messageInfo struct {
 	Message string
 }
 
+type FTypeT int
+
+const (
+	FTypeFile FTypeT = iota
+	FTypeMsg
+	FTypeText
+	FTypeImage
+)
+
+var FTypeS = map[FTypeT]string{
+	FTypeFile:  "file",
+	FTypeMsg:   "msg",
+	FTypeText:  "text",
+	FTypeImage: "image",
+}
+
 type fileInfo struct {
-	Type        string
+	Type        FTypeT
 	ContentType string
 	Size        int64
 	ID          string // storename

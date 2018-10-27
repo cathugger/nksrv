@@ -181,7 +181,7 @@ func (sp *PSQLIB) HandleIHave(
 	// TODO make limit configurable
 	const limit = 256 << 20
 	n, err := io.CopyN(f, mh.B, limit+1)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		err = fmt.Errorf("error writing body: %v", err)
 		w.ResInternalError(err)
 		return true

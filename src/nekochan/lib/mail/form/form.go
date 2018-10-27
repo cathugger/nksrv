@@ -34,7 +34,7 @@ type FileOpener interface {
 }
 
 type File struct {
-	F           *os.File
+	F           *os.File // File is seeked to 0 position
 	ContentType string
 	FileName    string // Windows and UNIX paths are stripped
 	Size        int64
@@ -141,6 +141,7 @@ func (fp *ParserParams) ParseForm(
 		disp, dispParam, e = mime.ParseMediaType(cd)
 		name, fname := dispParam["name"], dispParam["filename"]
 		if e != nil || disp != "form-data" || name == "" {
+			// XXX log error? or maybe return error?
 			continue
 		}
 		//fmt.Fprintf(os.Stderr, "XXX form params: name(%q) filename(%q)\n", name, fname)
@@ -217,7 +218,12 @@ func (fp *ParserParams) ParseForm(
 				return
 			}
 			filebytesleft -= n
-			fw.Seek(0, 0)
+			_, e = fw.Seek(0, 0)
+			if e != nil {
+				killfile()
+				e = fmt.Errorf("failed seeking file: %v", e)
+				return
+			}
 
 			// users will only need this part
 			if i := strings.LastIndexAny(fname, "/\\"); i >= 0 {

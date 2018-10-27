@@ -72,11 +72,12 @@ var dbIb0InitStatements = []string{
 )`,
 	`CREATE INDEX ON ib0.posts (bid)`,
 	`CREATE INDEX ON ib0.posts (bid,tid)`,
+	`CREATE TYPE ftype_t AS ENUM ('file', 'msg', 'text', 'image')`,
 	`CREATE TABLE ib0.files (
 	fid      BIGSERIAL NOT NULL, /* internal file ID of this file */
 	bid      INTEGER   NOT NULL, /* internal board ID post of this file belongs to */
 	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
-	ftype    TEXT      NOT NULL, /* file type */
+	ftype    ftype_t   NOT NULL, /* file type */
 	fsize    BIGINT    NOT NULL, /* file size */
 	fname    TEXT      NOT NULL, /* filename of original file. not unique! */
 	thumb    TEXT      NOT NULL, /* filename of thumbnail. not unique! */

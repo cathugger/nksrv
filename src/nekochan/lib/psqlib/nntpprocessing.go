@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	au "nekochan/lib/asciiutils"
+	"nekochan/lib/emime"
 	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
 
@@ -147,38 +148,51 @@ func (sp *PSQLIB) devourTransferArticle(
 	XH mail.Headers, info nntpParsedInfo, xr io.Reader) (
 	pi postInfo, err error) {
 
-	ismultipart := strings.HasPrefix(info.ContentType, "multipart/")
+	var tmpfilenames []string
 
-	var cte string
+	xismultipart := strings.HasPrefix(info.ContentType, "multipart/")
+
+	var xcte string
 	if len(XH["Content-Transfer-Encoding"]) != 0 {
-		cte = XH["Content-Transfer-Encoding"][0]
+		xcte = XH["Content-Transfer-Encoding"][0]
 	}
 
 	var xbinary bool
 
-	if cte == "" ||
-		au.EqualFoldString(cte, "7bit") ||
-		au.EqualFoldString(cte, "8bit") {
+	prepareReader := func(
+		cte string, ismultipart bool, r io.Reader) (
+		_ io.Reader, binary bool, err error) {
 
-		xbinary = false
-	} else if au.EqualFoldString(cte, "base64") {
-		if ismultipart {
-			err = errors.New("multipart x base64 not allowed")
+		if cte == "" ||
+			au.EqualFoldString(cte, "7bit") ||
+			au.EqualFoldString(cte, "8bit") {
+
+			binary = false
+		} else if au.EqualFoldString(cte, "base64") {
+			if ismultipart {
+				err = errors.New("multipart x base64 not allowed")
+				return
+			}
+			r = base64.NewDecoder(base64.StdEncoding, r)
+			binary = true
+		} else if au.EqualFoldString(cte, "quoted-printable") {
+			if ismultipart {
+				err = errors.New("multipart x quoted-printable not allowed")
+				return
+			}
+			r = qp.NewReader(r)
+			binary = false
+		} else if au.EqualFoldString(cte, "binary") {
+			binary = true
+		} else {
+			err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
 			return
 		}
-		xr = base64.NewDecoder(base64.StdEncoding, xr)
-		xbinary = true
-	} else if au.EqualFoldString(cte, "quoted-printable") {
-		if ismultipart {
-			err = errors.New("multipart x quoted-printable not allowed")
-			return
-		}
-		xr = qp.NewReader(xr)
-		xbinary = false
-	} else if au.EqualFoldString(cte, "binary") {
-		xbinary = true
-	} else {
-		err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
+		return r, binary, err
+	}
+
+	xr, xbinary, err = prepareReader(xcte, xismultipart, xr)
+	if err != nil {
 		return
 	}
 
@@ -196,7 +210,9 @@ func (sp *PSQLIB) devourTransferArticle(
 		// is used when message is properly decoded
 		hideattachment := false
 
-		if !textprocessed && (ct == "" || strings.HasPrefix(ct, "text/")) {
+		if !textprocessed && len(H["Content-Disposition"]) == 0 &&
+			(ct == "" || strings.HasPrefix(ct, "text/")) {
+
 			// try processing as main text
 			// even if we fail, don't try doing it with other part
 			textprocessed = true
@@ -209,7 +225,7 @@ func (sp *PSQLIB) devourTransferArticle(
 			b.Grow(defaultTextBuf)
 
 			n, err = io.CopyN(b, r, maxTextBuf+1)
-			if err != nil {
+			if err != nil && err != io.EOF {
 				err = fmt.Errorf("error reading body: %v", err)
 				return
 			}
@@ -290,7 +306,20 @@ func (sp *PSQLIB) devourTransferArticle(
 			return
 		}
 		// copy
+		if !binary {
+			r = au.NewUnixTextReader(r)
+		}
 		n, err = io.Copy(f, r)
+		if err != nil {
+			return
+		}
+		// seek to 0
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			return
+		}
+		// hash it
+		h, err := makeFileHash(f)
 		if err != nil {
 			return
 		}
@@ -299,19 +328,68 @@ func (sp *PSQLIB) devourTransferArticle(
 		if err != nil {
 			return
 		}
+		// determine with what filename should we store it
+		cdis := ""
+		if len(H["Content-Disposition"]) != 0 {
+			cdis = H["Content-Disposition"][0]
+		}
+		oname := ""
+		if cdis != "" {
+			_, params, e := mime.ParseMediaType(cdis)
+			if e == nil && params["filename"] != "" {
+				oname = params["filename"]
+				if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
+					oname = oname[i+1:]
+				}
+			}
+		}
+		ext := ""
+		if oname != "" {
+			if i := strings.LastIndexByte(oname, '.'); i >= 0 && i+1 < len(oname) {
 
-		//fidx := len(pi.FI)
-		//pi.FI = append(pi.FI, fileInfo{})
-		//fhs = append(fhs, f)
-		// calc filename
+				ext = oname[i+1:]
+			}
+		}
+		if ct == "" {
+			ct = "text/plain"
+		}
+		if ext == "" || !emime.MIMEIsCanonical(ext, ct) {
+			// attempt finding better extension
+			mexts, e := emime.MIMEExtensionsByType(ct)
+			if e == nil && len(mexts) != 0 {
+				ext = mexts[0] // expect first to be good enough
+			}
+		}
+		// ohwell, at this point we should probably have something
+		// even if we don't, that's okay
+		var iname string
+		if ext != "" {
+			iname = h + "." + ext
+		} else {
+			iname = h
+		}
+		// incase we have no info about original filename, give it something
+		if oname == "" {
+			oname = iname
+		}
 
-		panic("TODO")
-		_ = hideattachment
+		fidx := len(pi.FI)
+		pi.FI = append(pi.FI, fileInfo{
+			ContentType: ct,
+			Size:        n,
+			ID:          iname,
+			Original:    oname,
+		})
+		if hideattachment {
+			pi.FI[fidx].Type = FTypeMsg
+		}
+		tmpfilenames = append(tmpfilenames, f.Name())
+
+		obj.Data = postObjectIndex(fidx)
 		return
-
 	}
 
-	if !ismultipart {
+	if !xismultipart {
 		pi.L.Body, err =
 			guttleBody(xr, XH, info.ContentType, info.ContentParams, xbinary)
 		pi.L.Binary = xbinary

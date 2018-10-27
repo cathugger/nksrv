@@ -171,7 +171,8 @@ func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 // Specify wildcard extensions with "*", empty extensions as ".",
 // start non-canonical extensions with "!".
 // "!" alone can be used for empty non-canonical extension.
-func LoadMIMEDatabase(dbfile string) error {
+// Types like "application/octet-stream" should use non-canonical extensions.
+func LoadMIMEDatabase(dbfile string) (err error) {
 	mimeLock.Lock()
 	defer mimeLock.Unlock()
 
@@ -183,7 +184,7 @@ func LoadMIMEDatabase(dbfile string) error {
 	}
 	f, err := os.Open(dbfile)
 	if err != nil {
-		return err
+		return
 	}
 	defer f.Close()
 
@@ -198,11 +199,14 @@ func LoadMIMEDatabase(dbfile string) error {
 			if ext[0] == '#' || ext[0] == '/' {
 				break
 			}
-			setExtensionType(ext, mimeType)
+			e := setExtensionType(ext, mimeType)
+			if err == nil {
+				err = e
+			}
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return err
+	if e := scanner.Err(); e != nil {
+		err = e
 	}
-	return nil
+	return
 }

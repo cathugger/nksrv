@@ -21,6 +21,7 @@ import (
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/date"
+	"nekochan/lib/emime"
 	fu "nekochan/lib/fileutil"
 	"nekochan/lib/fstore"
 	. "nekochan/lib/logx"
@@ -152,11 +153,13 @@ var lowerBase32HexEnc = base32.
 	WithPadding(base32.NoPadding)
 
 // custom sort-able base64 set
-var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+	"_abcdefghijklmnopqrstuvwxyz"
 var sBase64Enc = base64.
 	NewEncoding(sBase64Set).
 	WithPadding(base64.NoPadding)
 
+// expects file to be seeked at 0
 func makeFileHash(f *os.File) (s string, e error) {
 	h, e := blake2s.New256([]byte(nil))
 	if e != nil {
@@ -175,28 +178,57 @@ func makeFileHash(f *os.File) (s string, e error) {
 	return
 }
 
-func makeInternalFileName(f *os.File, fi fileInfo) (nfi fileInfo, e error) {
-	s, e := makeFileHash(f)
-	if e != nil {
+// expects file to be seeked at 0
+func generateFileConfig(
+	f *os.File, ct string, fi fileInfo) (_ fileInfo, err error) {
+
+	s, err := makeFileHash(f)
+	if err != nil {
 		return
 	}
 
 	// prefer info from file name, try figuring out content-type from it
 	// if that fails, try looking into content-type, try figure out filename
 	// if both fail, just use given type and given filename
-	// TODO
 
 	// append extension, if any
-	fname := fi.Original
-	if i := strings.LastIndexByte(fname, '.'); i >= 0 && i+1 < len(fname) {
-		// TODO de-duplicate equivalent extensions (jpeg->jpg)?
-		s += strings.ToLower(fname[i:]) // append extension including dot
+	oname := fi.Original
+	ext := ""
+	if i := strings.LastIndexByte(oname, '.'); i >= 0 && i+1 < len(oname) {
+		ext = oname[i+1:]
+	}
+	ctype := emime.MIMECanonicalTypeByExtension(ext)
+	if ctype == "" && ct != "" {
+		mexts, e := emime.MIMEExtensionsByType(ct)
+		if e == nil {
+			if len(mexts) != 0 {
+				ext = mexts[0]
+			}
+		} else {
+			// bad ct
+			ct = ""
+		}
+	}
+	if ctype == "" {
+		if ct != "" {
+			ctype = ct
+		} else {
+			ctype = "application/octet-stream"
+		}
 	}
 
-	nfi = fi
-	nfi.ID = s
+	if len(ext) != 0 {
+		s += "." + ext
+	}
 
-	return
+	fi.ID = s
+	fi.ContentType = ctype
+	// yeh this is actually possible
+	if oname == "" {
+		fi.Original = s
+	}
+
+	return fi, err
 }
 
 type postedInfo = ib0.IBPostedInfo
@@ -460,7 +492,8 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 			pInfo.FI[x].Original = files[i].FileName
 			pInfo.FI[x].Size = files[i].Size
 
-			pInfo.FI[x], err = makeInternalFileName(files[i].F, pInfo.FI[x])
+			pInfo.FI[x], err = generateFileConfig(
+				files[i].F, files[i].ContentType, pInfo.FI[x])
 			if err != nil {
 				return rInfo, err, http.StatusInternalServerError
 			}

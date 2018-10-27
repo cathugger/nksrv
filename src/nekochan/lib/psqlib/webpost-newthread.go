@@ -123,7 +123,7 @@ func (sp *PSQLIB) insertNewThread(
 		args[6] = pInfo.MI.Trip
 		args[7] = pInfo.MI.Message
 		for i := range pInfo.FI {
-			args[x+0] = pInfo.FI[i].Type
+			args[x+0] = FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
