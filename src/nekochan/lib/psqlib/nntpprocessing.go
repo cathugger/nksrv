@@ -588,6 +588,10 @@ func (sp *PSQLIB) nntpProcessArticle(
 		return
 	}
 
+	if len(pi.FI) != len(tfns) {
+		panic("len(pi.FI) != len(tfns)")
+	}
+
 	// TODO
 	sp.log.LogPrintf(DEBUG,
 		"nntpProcessArticle: pi: %#v; tfns: %#v", pi, tfns)
