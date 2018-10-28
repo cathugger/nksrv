@@ -7,11 +7,13 @@ import (
 	"io"
 	"mime"
 	qp "mime/quotedprintable"
+	nmail "net/mail"
 	"os"
 	"strings"
 	"unicode/utf8"
 
 	au "nekochan/lib/asciiutils"
+	"nekochan/lib/date"
 	"nekochan/lib/emime"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
@@ -577,6 +579,18 @@ func isSubjectEmpty(s string) bool {
 	 */
 }
 
+type failCharsetError string
+
+func (f failCharsetError) Error() string {
+	return fmt.Sprintf("unknown charset: %q", string(f))
+}
+
+func failCharsetReader(charset string, input io.Reader) (io.Reader, error) {
+	return nil, failCharsetError(charset)
+}
+
+var mimeWordDecoder = mime.WordDecoder{CharsetReader: failCharsetReader}
+
 func (sp *PSQLIB) nntpProcessArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
@@ -610,18 +624,37 @@ func (sp *PSQLIB) nntpProcessArticle(
 		panic("len(pi.FI) != len(tfns)")
 	}
 
-	pi.Date = info.PostedDate
+	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	if len(H["Subject"]) != 0 {
 		sh := H["Subject"][0]
 		ssub := au.TrimWSString(sh)
 		if !isSubjectEmpty(ssub) {
-			pi.Title = ssub
-			if pi.Title == sh && len(H["Subject"]) == 1 {
+			if len(H["MIME-Version"]) != 0 {
+				// undo MIME hacks
+				dsub, e := mimeWordDecoder.Decode(ssub)
+				if e == nil {
+					ssub = dsub
+				}
+			}
+			pi.MI.Title = ssub
+			if pi.MI.Title == sh && len(H["Subject"]) == 1 {
 				// no need to duplicate
 				delete(H, "Subject")
 			}
 		}
+	}
+
+	if len(H["From"]) != 0 {
+		a, e := nmail.ParseAddress(H["From"][0])
+		if e == nil {
+			// XXX should we filter out "Anonymous" names? would save some bytes
+			pi.MI.Author = a.Name
+		}
+	}
+
+	if len(H["X-Sage"]) != 0 {
+		pi.MI.Sage = true
 	}
 
 	// TODO
