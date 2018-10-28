@@ -556,6 +556,7 @@ func (sp *PSQLIB) devourTransferArticle(
 		pi.H = XH
 		pi.L.Binary = xbinary
 		pi.L.Body.Data = pis
+		return // done there
 	}
 
 	// if we reached this point we're not doing multipart
@@ -658,8 +659,8 @@ func (sp *PSQLIB) nntpProcessArticle(
 	}
 
 	// TODO
-	sp.log.LogPrintf(DEBUG,
-		"nntpProcessArticle: pi: %#v; tfns: %#v", pi, tfns)
+	sp.log.LogPrintf(DEBUG, "nntpProcessArticle: pi: %#v", pi)
+	sp.log.LogPrintf(DEBUG, "nntpProcessArticle: tfns: %#v", tfns)
 
 	for _, fn := range tfns {
 		os.Remove(fn)
