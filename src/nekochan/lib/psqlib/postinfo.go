@@ -46,7 +46,7 @@ var FTypeS = map[FTypeT]string{
 
 type fileInfo struct {
 	Type        FTypeT
-	ContentType string
+	ContentType string // MIME type (without parameters)
 	Size        int64
 	ID          string // storename
 	Thumb       string // thumbnail
@@ -84,6 +84,7 @@ type fileInfo struct {
 type postObjectIndex = uint32
 
 type bodyObject struct {
+	// one of postObjectIndex, []partInfo, nil
 	Data interface{}
 }
 

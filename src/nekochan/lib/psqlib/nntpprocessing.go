@@ -229,7 +229,7 @@ func (sp *PSQLIB) nntpProcessArticleText(
 	if n <= maxTextBuf {
 		// it fit
 		cset := ""
-		if ct != "" {
+		if ct != "" && cpar != nil {
 			cset = cpar["charset"]
 		}
 
@@ -362,6 +362,16 @@ func (sp *PSQLIB) nntpProcessArticleAttachment(
 			ext = mexts[0] // expect first to be good enough
 		}
 	}
+	// special fallbacks, better than nothing
+	if ext == "" {
+		if strings.HasPrefix(ct, "text/") ||
+			strings.HasPrefix(ct, "multipart/") {
+
+			ext = "txt"
+		} else if strings.HasPrefix(ct, "message/") {
+			ext = "eml"
+		}
+	}
 	// ohwell, at this point we should probably have something
 	// even if we don't, that's okay
 	var iname string
@@ -388,12 +398,15 @@ func (sp *PSQLIB) devourTransferArticle(
 	XH mail.Headers, info nntpParsedInfo, xr io.Reader) (
 	pi postInfo, tmpfilenames []string, err error) {
 
+	cleanTmpFiles := func() {
+		for _, fn := range tmpfilenames {
+			os.Remove(fn)
+		}
+		tmpfilenames = []string(nil)
+	}
 	defer func() {
 		if err != nil {
-			for _, fn := range tmpfilenames {
-				os.Remove(fn)
-			}
-			tmpfilenames = []string(nil)
+			cleanTmpFiles()
 		}
 	}()
 
@@ -403,16 +416,15 @@ func (sp *PSQLIB) devourTransferArticle(
 	if len(XH["Content-Transfer-Encoding"]) != 0 {
 		xcte = XH["Content-Transfer-Encoding"][0]
 	}
+	// we won't need this anymore
+	delete(XH, "Content-Transfer-Encoding")
 
 	var xbinary bool
-
-	xr, xbinary, err = nntpProcessArticlePrepareReader(xcte, xismultipart, xr)
+	xr, xbinary, err =
+		nntpProcessArticlePrepareReader(xcte, xismultipart, xr)
 	if err != nil {
 		return
 	}
-
-	// we won't need this anymore
-	delete(XH, "Content-Transfer-Encoding")
 
 	textprocessed := false
 
@@ -461,18 +473,88 @@ func (sp *PSQLIB) devourTransferArticle(
 		return
 	}
 
-	if !xismultipart {
-		pi.L.Body, err =
-			guttleBody(xr, XH, info.ContentType, info.ContentParams, xbinary)
-		pi.L.Binary = xbinary
-		// since this is toplvl dont set ContentType or other headers
-	} else {
+	if xismultipart && info.ContentParams["boundary"] != "" {
+		pr := mail.NewPartReader(xr, info.ContentParams["boundary"])
+		var pis []partInfo
+		for {
+			err = pr.NextPart()
+			if err != nil {
+				break
+			}
+			var PH mail.Headers
+			PH, err = pr.ReadHeaders(8 << 10)
+			if err != nil {
+				err = fmt.Errorf("pr.ReadHeaders: %v", err)
+				break
+			}
+
+			var partI partInfo
+
+			var pct string
+			if len(PH["Content-Type"]) != 0 {
+				pct = PH["Content-Type"][0]
+			}
+			delete(PH, "Content-Type")
+
+			var pxct string
+			var pxctparam map[string]string
+			if pct != "" {
+				var e error
+				pxct, pxctparam, e = mime.ParseMediaType(pct)
+				if e != nil {
+					pxct = "invalid"
+					pxctparam = map[string]string(nil)
+				}
+			}
+
+			var pcte string
+			if len(PH["Content-Transfer-Encoding"]) != 0 {
+				pcte = PH["Content-Transfer-Encoding"][0]
+			}
+			delete(PH, "Content-Transfer-Encoding")
+
+			pismultipart := strings.HasPrefix(pct, "multipart/")
+
+			var pxr io.Reader
+			var pbinary bool
+			pxr, pbinary, err =
+				nntpProcessArticlePrepareReader(pcte, pismultipart, pr)
+
+			partI.ContentType = pxct
+			partI.Binary = pbinary
+			partI.Headers = PH
+			partI.Body, err =
+				guttleBody(pxr, PH, pxct, pxctparam, pbinary)
+			if err != nil {
+				err = fmt.Errorf("guttleBody: %v", err)
+				break
+			}
+			pis = append(pis, partI)
+		}
+		pr.Close()
+		if err != io.EOF {
+			err = fmt.Errorf("failed to parse multipart: %v", err)
+			return
+		}
+
+		// no more parts
+		err = nil
 		// we're not going to save parameters of this
 		XH["Content-Type"][0] =
 			au.TrimWSString(au.UntilString(XH["Content-Type"][0], ';'))
-		// TODO
-		panic("TODO")
+		// fill in
+		pi.H = XH
+		pi.L.Binary = xbinary
+		pi.L.Body.Data = pis
 	}
+
+	// if we reached this point we're not doing multipart
+
+	pi.H = XH
+	// since this is toplvl dont set ContentType or other headers
+	pi.L.Binary = xbinary
+	pi.L.Body, err =
+		guttleBody(xr, XH, info.ContentType, info.ContentParams, xbinary)
 
 	return
 }

@@ -1,6 +1,6 @@
 package asciiutils
 
-// strcasecmp
+// EqualFoldString is basically strcasecmp.
 func EqualFoldString(a, b string) bool {
 	if len(a) != len(b) {
 		return false
@@ -22,7 +22,7 @@ func EqualFoldString(a, b string) bool {
 	return true
 }
 
-// checks if b starts with s in case-insensitive way
+// StartsWithFoldString checks if b starts with s in case-insensitive way.
 func StartsWithFoldString(b, s string) bool {
 	if len(b) < len(s) {
 		// b cant start with s if b is shorter
@@ -46,7 +46,7 @@ func StartsWithFoldString(b, s string) bool {
 	return true
 }
 
-// checks if b ends with s in case-insensitive way
+// EndsWithFoldString checks if b ends with s in case-insensitive way.
 func EndsWithFoldString(b, s string) bool {
 	if len(b) < len(s) {
 		// b cant end with s if b is shorter

@@ -157,7 +157,7 @@ func checksumPart(res io.Writer, pr *mail.PartReader, d Digest) error {
 	hasher := d.Hasher()
 	w := hasher.h
 
-	H, err := pr.ReadHeaders(256 * 1024)
+	H, err := pr.ReadHeaders(8 * 1024)
 	if err != nil {
 		return err
 	}

@@ -20,11 +20,12 @@ type MessageHead struct {
 	B *bufreader.BufReader // message body reader
 }
 
-func (mh MessageHead) Close() error {
+func (mh *MessageHead) Close() error {
 	if mh.B != nil {
 		mh.B.SetReader(nil)
 		mh.B.ResetErr()
 		bufPool.Put(mh.B)
+		mh.B = nil
 	}
 	return nil
 }
@@ -50,7 +51,7 @@ func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
 
 // ReadHeaders reads headers, also returning buffered reader.
 // If error was encountered while reading headers, it is returned.
-func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
+func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
 	br.ResetErr()
@@ -64,9 +65,10 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 		br.SetReader(r)
 	}
 
-	mh.H, e = readHeaders(br)
+	mh.H, err = readHeaders(br)
 
-	if e == nil {
+	// if we get error that means that error has occured before reaching body
+	if err == nil {
 		if headlimit > 0 {
 			if lr.N == 0 && br.QueuedErr() == io.EOF {
 				br.ResetErr()
