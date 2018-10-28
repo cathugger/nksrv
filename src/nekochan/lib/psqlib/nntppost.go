@@ -115,7 +115,8 @@ func (sp *PSQLIB) HandleIHave(
 		}
 	}()
 	mh, err = mail.ReadHeaders(r, 2<<20)
-	if err != nil {
+	defer mh.Close()
+	if err != nil && err != io.EOF {
 		err = fmt.Errorf("failed reading headers: %v", err)
 		w.ResTransferRejected(err)
 		return true
@@ -204,19 +205,3 @@ func (sp *PSQLIB) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReade
 	r.Discard(-1)
 	return true
 }
-
-/*
-	h, e := mail.ReadHeaders(r, 2<<20)
-	mid := getHdrMsgID(h.H)
-	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != unsafeCoreMsgIDToStr(msgid) {
-		w.ResArticleRejected(msgid)
-		h.Close()
-		r.Discard(-1)
-		return true
-	}
-	h.B.Discard(-1)
-	h.Close()
-	r.Discard(-1) // ensure
-	w.ResArticleTransferedOK(msgid)
-	return true
-*/

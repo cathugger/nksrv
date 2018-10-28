@@ -64,12 +64,13 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		return nil, err
 	}
 	p.thm.CleanTemp()
-	
+
 	p.nntpfs, err = fstore.OpenFStore(cfg.NNTPFSCfg)
 	if err != nil {
 		return nil, err
 	}
-	p.thm.RemoveDir(nntpIncomingTempDir)
+	p.nntpfs.RemoveDir(nntpIncomingTempDir)
+	p.nntpfs.MakeDir(nntpIncomingDir)
 
 	p.altthumb = cfg.AltThumber
 

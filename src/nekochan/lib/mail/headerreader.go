@@ -48,6 +48,9 @@ func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
 	return
 }
 
+// ReadHeaders reads headers, also returning buffered reader.
+// Even if ReadHeaders returns non-nil error,
+// resulting MessageHead must be closed.
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
@@ -64,19 +67,13 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, e error) {
 
 	mh.H, e = readHeaders(br)
 
-	if e == nil {
-		if headlimit > 0 {
-			if lr.N == 0 && br.QueuedErr() == io.EOF {
-				br.ResetErr()
-			}
-			br.SetReader(r)
+	if (e == nil || e == io.EOF) && headlimit > 0 {
+		if lr.N == 0 && br.QueuedErr() == io.EOF {
+			br.ResetErr()
 		}
-		mh.B = br
-	} else {
-		br.SetReader(nil)
-		br.ResetErr()
-		bufPool.Put(br)
+		br.SetReader(r)
 	}
+	mh.B = br
 
 	return
 }

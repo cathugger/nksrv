@@ -480,7 +480,7 @@ func (sp *PSQLIB) devourTransferArticle(
 func (sp *PSQLIB) nntpProcessArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
-	defer os.Remove(name)
+	//defer os.Remove(name)
 
 	f, err := os.Open(name)
 	if err != nil {
@@ -492,12 +492,12 @@ func (sp *PSQLIB) nntpProcessArticle(
 
 	// TODO skip headers because we already have them
 	mh, err := mail.ReadHeaders(f, 2<<20)
-	if err != nil {
+	defer mh.Close()
+	if err != nil && err != io.EOF {
 		sp.log.LogPrintf(WARN,
 			"nntpProcessArticle: failed reading headers: %v", err)
 		return
 	}
-	defer mh.Close()
 
 	pi, tfns, err := sp.devourTransferArticle(H, info, mh.B)
 	if err != nil {
