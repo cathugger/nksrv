@@ -481,14 +481,13 @@ func (sp *PSQLIB) devourTransferArticle(
 			if err != nil {
 				break
 			}
+
 			var PH mail.Headers
 			PH, err = pr.ReadHeaders(8 << 10)
 			if err != nil {
 				err = fmt.Errorf("pr.ReadHeaders: %v", err)
 				break
 			}
-
-			var partI partInfo
 
 			var pct string
 			if len(PH["Content-Type"]) != 0 {
@@ -520,7 +519,8 @@ func (sp *PSQLIB) devourTransferArticle(
 			pxr, pbinary, err =
 				nntpProcessArticlePrepareReader(pcte, pismultipart, pr)
 
-			partI.ContentType = pxct
+			var partI partInfo
+			partI.ContentType = pct
 			partI.Binary = pbinary
 			partI.Headers = PH
 			partI.Body, err =
