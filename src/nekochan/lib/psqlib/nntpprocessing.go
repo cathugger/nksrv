@@ -20,6 +20,33 @@ import (
 	"golang.org/x/text/encoding/ianaindex"
 )
 
+// mandatory headers for transmission. POST uses separate system
+var hdrNNTPMandatory = [...]struct {
+	h string // header
+	o bool   // optional (allow absence?)
+}{
+	// NetNews stuff specified in {RFC 5536}
+	{"Message-ID", true}, // special handling
+	{"From", false},
+	{"Date", false},
+	{"Newsgroups", false},
+	{"Path", true},    // more lax than {RFC 5536}
+	{"Subject", true}, // more lax than {RFC 5536} (no subject is much better than "none")
+
+	// {RFC 5322}
+	{"Sender", true},
+	{"Reply-To", true},
+	{"To", true},
+	{"Cc", true},
+	{"Bcc", true},
+	{"In-Reply-To", true},
+	{"References", true},
+
+	// some extras we process
+	{"Injection-Date", true},
+	{"NNTP-Posting-Date", true},
+}
+
 func (sp *PSQLIB) nntpDigestTransferHead(
 	w Responder, H mail.Headers, unsafe_sid CoreMsgIDStr) (
 	info nntpParsedInfo, ok bool) {
@@ -138,7 +165,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 }
 
 func optimalTextMessageString(s string) string {
-	s = strings.Replace(s, "\r", "", -1)
+	// not removing \r because they should be removed already
 	// last \n isn't needed if char before it exists and it isn't \n
 	if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
 		s = s[:len(s)-1]
@@ -242,9 +269,7 @@ func (sp *PSQLIB) nntpProcessArticleText(
 					// we don't care about binary mode
 					// because this is just converted copy
 					// so might aswell normalize and optimize it further
-					dstr = normalizeTextMessage(dstr)
-
-					rstr = dstr
+					rstr = normalizeTextMessage(dstr)
 					msgattachment = true
 					// proceed with processing as attachment
 				} else {

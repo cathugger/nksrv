@@ -11,33 +11,6 @@ import (
 	"nekochan/lib/nntp"
 )
 
-// mandatory headers for transmission. POST uses separate system
-var hdrNNTPMandatory = [...]struct {
-	h string // header
-	o bool   // optional (allow absence?)
-}{
-	// NetNews stuff specified in {RFC 5536}
-	{"Message-ID", true}, // special handling
-	{"From", false},
-	{"Date", false},
-	{"Newsgroups", false},
-	{"Path", true},    // more lax than {RFC 5536}
-	{"Subject", true}, // more lax than {RFC 5536} (no subject is much better than "none")
-
-	// {RFC 5322}
-	{"Sender", true},
-	{"Reply-To", true},
-	{"To", true},
-	{"Cc", true},
-	{"Bcc", true},
-	{"In-Reply-To", true},
-	{"References", true},
-
-	// some extras we process
-	{"Injection-Date", true},
-	{"NNTP-Posting-Date", true},
-}
-
 func validMsgID(s FullMsgIDStr) bool {
 	return nntp.ValidMessageID(unsafeStrToBytes(string(s)))
 }
@@ -101,6 +74,13 @@ func (sp *PSQLIB) nntpSendIncomingArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
 	sp.nntpProcessArticle(name, H, info)
+}
+
+func (sp *PSQLIB) HandlePost(
+	w Responder, cs *ConnState, ro nntp.ReaderOpener) bool {
+
+	// TODO
+	return false
 }
 
 // + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}

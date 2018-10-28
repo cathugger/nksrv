@@ -14,7 +14,7 @@ import (
 	"nekochan/lib/nntp"
 )
 
-//var _ nntp.NNTPProvider = (*PSQLIB)(nil)
+var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 
 type groupState struct {
 	bname string
@@ -53,11 +53,9 @@ func (PSQLIB) SupportsNewNews() bool     { return true }
 func (PSQLIB) SupportsOverByMsgID() bool { return true }
 func (PSQLIB) SupportsHdr() bool         { return true }
 
-/*
-func (p *PSQLIB) SupportsIHave() bool  { return p.SupportIHave }
-func (p *PSQLIB) SupportsPost() bool   { return p.SupportPost }
-func (p *PSQLIB) SupportsStream() bool { return p.SupportStream }
-*/
+func (p *PSQLIB) SupportsIHave() bool  { return true }
+func (p *PSQLIB) SupportsPost() bool   { return false } // TODO
+func (p *PSQLIB) SupportsStream() bool { return false } // TODO
 
 func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))

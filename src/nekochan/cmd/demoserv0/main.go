@@ -38,6 +38,7 @@ func main() {
 	}
 
 	srv := nntp.NewNNTPServer(prov, lgr)
+
 	err = srv.ListenAndServe("tcp4", "127.0.0.1:6633", nntp.ListenParam{})
 	if err != nil {
 		mlg.LogPrintf(ERROR, "ListenAndServe returned: %v", err)
