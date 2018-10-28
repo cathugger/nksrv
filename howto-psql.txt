@@ -1,0 +1,6 @@
+digest of commonly used for testing psql commands before I forget
+
+drop database:
+dropdb -U tester0 nekochan0
+recreate it:
+createdb -U postgres -O tester0 nekochan0
