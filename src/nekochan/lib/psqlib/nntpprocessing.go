@@ -480,7 +480,7 @@ func (sp *PSQLIB) devourTransferArticle(
 func (sp *PSQLIB) nntpProcessArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
-	//defer os.Remove(name)
+	defer os.Remove(name)
 
 	f, err := os.Open(name)
 	if err != nil {
