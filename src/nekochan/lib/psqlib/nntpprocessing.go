@@ -146,7 +146,7 @@ func optimalTextMessageString(s string) (x string) {
 	return
 }
 
-func prepareReader(
+func nntpProcessArticlePrepareReader(
 	cte string, ismultipart bool, r io.Reader) (
 	_ io.Reader, binary bool, err error) {
 
@@ -178,7 +178,96 @@ func prepareReader(
 	return r, binary, err
 }
 
-func (sp *PSQLIB) nntpProcessAttachment(
+func (sp *PSQLIB) nntpProcessArticleText(
+	r io.Reader, binary bool, ct string, cpar map[string]string) (
+	_ io.Reader, rstr string, finished bool, msgattachment bool, err error) {
+
+	// TODO make configurable
+	const defaultTextBuf = 512
+	const maxTextBuf = (32 << 10) - 1
+
+	b := &strings.Builder{}
+	b.Grow(defaultTextBuf)
+
+	if !binary {
+		r = au.NewUnixTextReader(r)
+	}
+	n, err := io.CopyN(b, r, maxTextBuf+1)
+	if err != nil && err != io.EOF {
+		err = fmt.Errorf("error reading body: %v", err)
+		return
+	}
+
+	str := b.String()
+	if n <= maxTextBuf {
+		// it fit
+		cset := ""
+		if ct != "" {
+			cset = cpar["charset"]
+		}
+
+		if strings.IndexByte(str, 0) < 0 {
+
+			// expect UTF-8 in most cases
+			if ((cset == "" ||
+				au.EqualFoldString(cset, "UTF-8") ||
+				au.EqualFoldString(cset, "US-ASCII")) &&
+				utf8.ValidString(str)) ||
+				(au.EqualFoldString(cset, "ISO-8859-1") &&
+					au.Is7BitString(str)) {
+
+				// normal processing - no need to have copy
+				if !binary {
+					str = optimalTextMessageString(str)
+				}
+				return r, str, true, false, nil
+
+			} else if cset == "" {
+				// fallback to ISO-8859-1
+				cset = "ISO-8859-1"
+			}
+		}
+
+		// attempt to decode
+		if cset != "" &&
+			!au.EqualFoldString(cset, "UTF-8") &&
+			!au.EqualFoldString(cset, "US-ASCII") {
+
+			cod, e := ianaindex.MIME.Encoding(cset)
+			if e == nil {
+				dec := cod.NewDecoder()
+				dstr, e := dec.String(str)
+				// should not result in null characters
+				if e == nil && strings.IndexByte(dstr, 0) < 0 {
+					// we don't care about binary mode
+					// because this is just converted copy
+					// so might aswell normalize and optimize it further
+					dstr = normalizeTextMessage(dstr)
+
+					rstr = dstr
+					msgattachment = true
+					// proceed with processing as attachment
+				} else {
+					// ignore
+				}
+			} else {
+				// ignore
+			}
+		}
+
+		// since we've read whole string, don't chain
+		r = strings.NewReader(str)
+
+	} else {
+		// can't put in message
+		// proceed with attachment processing
+		r = io.MultiReader(strings.NewReader(str), r)
+	}
+
+	return r, rstr, false, msgattachment, nil
+}
+
+func (sp *PSQLIB) nntpProcessArticleAttachment(
 	H mail.Headers, r io.Reader, binary bool, ct string) (
 	fi fileInfo, fn string, err error) {
 
@@ -288,7 +377,7 @@ func (sp *PSQLIB) devourTransferArticle(
 
 	var xbinary bool
 
-	xr, xbinary, err = prepareReader(xcte, xismultipart, xr)
+	xr, xbinary, err = nntpProcessArticlePrepareReader(xcte, xismultipart, xr)
 	if err != nil {
 		return
 	}
@@ -302,10 +391,8 @@ func (sp *PSQLIB) devourTransferArticle(
 		r io.Reader, H mail.Headers, ct string, cpar map[string]string,
 		binary bool) (obj bodyObject, err error) {
 
-		var n int64
-
 		// is used when message is properly decoded
-		hideattachment := false
+		msgattachment := false
 
 		if !textprocessed && len(H["Content-Disposition"]) == 0 &&
 			(ct == "" || strings.HasPrefix(ct, "text/")) {
@@ -314,103 +401,35 @@ func (sp *PSQLIB) devourTransferArticle(
 			// even if we fail, don't try doing it with other part
 			textprocessed = true
 
-			// TODO make configurable
-			const defaultTextBuf = 512
-			const maxTextBuf = (32 << 10) - 1
-
-			b := &strings.Builder{}
-			b.Grow(defaultTextBuf)
-
-			n, err = io.CopyN(b, r, maxTextBuf+1)
-			if err != nil && err != io.EOF {
-				err = fmt.Errorf("error reading body: %v", err)
+			var str string
+			var finished bool
+			r, str, finished, msgattachment, err =
+				sp.nntpProcessArticleText(r, binary, ct, cpar)
+			if err != nil {
 				return
 			}
-
-			str := b.String()
-			if n <= maxTextBuf {
-				// it fit
-				cset := ""
-				if ct != "" {
-					cset = cpar["charset"]
-				}
-
-				if strings.IndexByte(str, 0) < 0 {
-
-					// expect UTF-8 in most cases
-					if ((cset == "" ||
-						au.EqualFoldString(cset, "UTF-8") ||
-						au.EqualFoldString(cset, "US-ASCII")) &&
-						utf8.ValidString(str)) ||
-						(au.EqualFoldString(cset, "ISO-8859-1") &&
-							au.Is7BitString(str)) {
-
-						// normal processing - no need to have copy
-						if !binary {
-							str = optimalTextMessageString(str)
-						}
-						pi.MI.Message = str
-						obj.Data = postObjectIndex(0)
-						return
-
-					} else if cset == "" {
-						// fallback to ISO-8859-1
-						cset = "ISO-8859-1"
-					}
-				}
-
-				// attempt to decode
-				if cset != "" &&
-					!au.EqualFoldString(cset, "UTF-8") &&
-					!au.EqualFoldString(cset, "US-ASCII") {
-
-					cod, e := ianaindex.MIME.Encoding(cset)
-					if e == nil {
-						dec := cod.NewDecoder()
-						dstr, e := dec.String(str)
-						// should not result in null characters
-						if e == nil && strings.IndexByte(dstr, 0) < 0 {
-							// we don't care about binary mode
-							// because this is just converted copy
-							// so might aswell normalize and optimize it further
-							dstr = normalizeTextMessage(dstr)
-							pi.MI.Message = dstr
-							hideattachment = true
-							// proceed with processing as attachment
-						} else {
-							// ignore
-						}
-					} else {
-						// ignore
-					}
-				}
-
-				// since we've read whole string, don't chain
-				r = strings.NewReader(str)
-
-			} else {
-				// can't put in message
-				// proceed with attachment processing
-				r = io.MultiReader(strings.NewReader(str), r)
+			pi.MI.Message = str
+			if finished {
+				obj.Data = postObjectIndex(0)
+				return
 			}
 		}
 
 		// if this point is reached, we'll need to add this as attachment
 
-		fi, fn, err := sp.nntpProcessAttachment(H, r, binary, ct)
+		fi, fn, err := sp.nntpProcessArticleAttachment(H, r, binary, ct)
 		if err != nil {
 			return
 		}
 
-		if hideattachment {
+		if msgattachment {
 			fi.Type = FTypeMsg
 		}
 
-		fidx := len(pi.FI)
 		pi.FI = append(pi.FI, fi)
 		tmpfilenames = append(tmpfilenames, fn)
 
-		obj.Data = postObjectIndex(fidx)
+		obj.Data = postObjectIndex(len(pi.FI))
 		return
 	}
 
