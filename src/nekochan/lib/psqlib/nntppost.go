@@ -57,14 +57,6 @@ func (sp *PSQLIB) nntpCheckArticleExists(
 	}
 }
 
-type nntpParsedInfo struct {
-	MessageID     CoreMsgIDStr
-	PostedDate    int64
-	Newsgroup     string
-	ContentType   string
-	ContentParams map[string]string
-}
-
 var (
 	nntpIncomingTempDir = "_tin"
 	nntpIncomingDir     = "_in"

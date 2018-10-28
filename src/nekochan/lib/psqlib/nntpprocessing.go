@@ -47,6 +47,14 @@ var hdrNNTPMandatory = [...]struct {
 	{"NNTP-Posting-Date", true},
 }
 
+type nntpParsedInfo struct {
+	MessageID     CoreMsgIDStr
+	PostedDate    int64
+	Newsgroup     string
+	ContentType   string
+	ContentParams map[string]string
+}
+
 func (sp *PSQLIB) nntpDigestTransferHead(
 	w Responder, H mail.Headers, unsafe_sid CoreMsgIDStr) (
 	info nntpParsedInfo, ok bool) {
@@ -559,6 +567,16 @@ func (sp *PSQLIB) devourTransferArticle(
 	return
 }
 
+func isSubjectEmpty(s string) bool {
+	return s == "" || au.EqualFoldString(s, "None") ||
+		au.EqualFoldString(s, "no subject") ||
+		au.StartsWithFoldString(s, "Re: ")
+	/*
+	 * XXX tbh unsure about "Re: " but to precisely check that,
+	 * would need to peek into post it refers to
+	 */
+}
+
 func (sp *PSQLIB) nntpProcessArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
@@ -590,6 +608,20 @@ func (sp *PSQLIB) nntpProcessArticle(
 
 	if len(pi.FI) != len(tfns) {
 		panic("len(pi.FI) != len(tfns)")
+	}
+
+	pi.Date = info.PostedDate
+
+	if len(H["Subject"]) != 0 {
+		sh := H["Subject"][0]
+		ssub := au.TrimWSString(sh)
+		if !isSubjectEmpty(ssub) {
+			pi.Title = ssub
+			if pi.Title == sh && len(H["Subject"]) == 1 {
+				// no need to duplicate
+				delete(H, "Subject")
+			}
+		}
 	}
 
 	// TODO
