@@ -87,6 +87,7 @@ func main() {
 		Logger:     lgr,
 		SrcCfg:     fstore.Config{"_demo/demoib0/src"},
 		ThmCfg:     fstore.Config{"_demo/demoib0/thm"},
+		NNTPFSCfg:  fstore.Config{"_demo/demoib0/nntp"},
 		AltThumber: di.DemoAltThumber{},
 	})
 	if err != nil {

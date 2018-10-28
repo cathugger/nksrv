@@ -40,6 +40,7 @@ type Config struct {
 	Logger     LoggerX
 	SrcCfg     fstore.Config
 	ThmCfg     fstore.Config
+	NNTPFSCfg  fstore.Config
 	AltThumber altthumber.AltThumber
 }
 
@@ -63,6 +64,12 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		return nil, err
 	}
 	p.thm.CleanTemp()
+	
+	p.nntpfs, err = fstore.OpenFStore(cfg.NNTPFSCfg)
+	if err != nil {
+		return nil, err
+	}
+	p.thm.RemoveDir(nntpIncomingTempDir)
 
 	p.altthumb = cfg.AltThumber
 
