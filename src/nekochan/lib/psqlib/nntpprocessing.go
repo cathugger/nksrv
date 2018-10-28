@@ -7,11 +7,13 @@ import (
 	"io"
 	"mime"
 	qp "mime/quotedprintable"
+	"os"
 	"strings"
 	"unicode/utf8"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/emime"
+	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
 
@@ -144,11 +146,138 @@ func optimalTextMessageString(s string) (x string) {
 	return
 }
 
+func prepareReader(
+	cte string, ismultipart bool, r io.Reader) (
+	_ io.Reader, binary bool, err error) {
+
+	if cte == "" ||
+		au.EqualFoldString(cte, "7bit") ||
+		au.EqualFoldString(cte, "8bit") {
+
+		binary = false
+	} else if au.EqualFoldString(cte, "base64") {
+		if ismultipart {
+			err = errors.New("multipart x base64 not allowed")
+			return
+		}
+		r = base64.NewDecoder(base64.StdEncoding, r)
+		binary = true
+	} else if au.EqualFoldString(cte, "quoted-printable") {
+		if ismultipart {
+			err = errors.New("multipart x quoted-printable not allowed")
+			return
+		}
+		r = qp.NewReader(r)
+		binary = false
+	} else if au.EqualFoldString(cte, "binary") {
+		binary = true
+	} else {
+		err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
+		return
+	}
+	return r, binary, err
+}
+
+func (sp *PSQLIB) nntpProcessAttachment(
+	H mail.Headers, r io.Reader, binary bool, ct string) (
+	fi fileInfo, fn string, err error) {
+
+	// new
+	f, err := sp.src.TempFile("nntp-", "")
+	if err != nil {
+		return
+	}
+	// copy
+	if !binary {
+		r = au.NewUnixTextReader(r)
+	}
+	n, err := io.Copy(f, r)
+	if err != nil {
+		return
+	}
+	// seek to 0
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return
+	}
+	// hash it
+	h, err := makeFileHash(f)
+	if err != nil {
+		return
+	}
+	// close
+	err = f.Close()
+	if err != nil {
+		return
+	}
+	// determine with what filename should we store it
+	cdis := ""
+	if len(H["Content-Disposition"]) != 0 {
+		cdis = H["Content-Disposition"][0]
+	}
+	oname := ""
+	if cdis != "" {
+		_, params, e := mime.ParseMediaType(cdis)
+		if e == nil && params["filename"] != "" {
+			oname = params["filename"]
+			if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
+				oname = oname[i+1:]
+			}
+		}
+	}
+	ext := ""
+	if oname != "" {
+		if i := strings.LastIndexByte(
+			oname, '.'); i >= 0 && i+1 < len(oname) {
+
+			ext = oname[i+1:]
+		}
+	}
+	if ct == "" {
+		ct = "text/plain"
+	}
+	if ext == "" || !emime.MIMEIsCanonical(ext, ct) {
+		// attempt finding better extension
+		mexts, e := emime.MIMEExtensionsByType(ct)
+		if e == nil && len(mexts) != 0 {
+			ext = mexts[0] // expect first to be good enough
+		}
+	}
+	// ohwell, at this point we should probably have something
+	// even if we don't, that's okay
+	var iname string
+	if ext != "" {
+		iname = h + "." + ext
+	} else {
+		iname = h
+	}
+	// incase we have no info about original filename, give it something
+	if oname == "" {
+		oname = iname
+	}
+
+	fi = fileInfo{
+		ContentType: ct,
+		Size:        n,
+		ID:          iname,
+		Original:    oname,
+	}
+	fn = f.Name()
+	return
+}
+
 func (sp *PSQLIB) devourTransferArticle(
 	XH mail.Headers, info nntpParsedInfo, xr io.Reader) (
-	pi postInfo, err error) {
+	pi postInfo, tmpfilenames []string, err error) {
 
-	var tmpfilenames []string
+	defer func() {
+		if err != nil {
+			for _, fn := range tmpfilenames {
+				os.Remove(fn)
+			}
+			tmpfilenames = []string(nil)
+		}
+	}()
 
 	xismultipart := strings.HasPrefix(info.ContentType, "multipart/")
 
@@ -158,38 +287,6 @@ func (sp *PSQLIB) devourTransferArticle(
 	}
 
 	var xbinary bool
-
-	prepareReader := func(
-		cte string, ismultipart bool, r io.Reader) (
-		_ io.Reader, binary bool, err error) {
-
-		if cte == "" ||
-			au.EqualFoldString(cte, "7bit") ||
-			au.EqualFoldString(cte, "8bit") {
-
-			binary = false
-		} else if au.EqualFoldString(cte, "base64") {
-			if ismultipart {
-				err = errors.New("multipart x base64 not allowed")
-				return
-			}
-			r = base64.NewDecoder(base64.StdEncoding, r)
-			binary = true
-		} else if au.EqualFoldString(cte, "quoted-printable") {
-			if ismultipart {
-				err = errors.New("multipart x quoted-printable not allowed")
-				return
-			}
-			r = qp.NewReader(r)
-			binary = false
-		} else if au.EqualFoldString(cte, "binary") {
-			binary = true
-		} else {
-			err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
-			return
-		}
-		return r, binary, err
-	}
 
 	xr, xbinary, err = prepareReader(xcte, xismultipart, xr)
 	if err != nil {
@@ -300,90 +397,18 @@ func (sp *PSQLIB) devourTransferArticle(
 
 		// if this point is reached, we'll need to add this as attachment
 
-		// new
-		f, err := sp.src.TempFile("nntp-", "")
+		fi, fn, err := sp.nntpProcessAttachment(H, r, binary, ct)
 		if err != nil {
 			return
 		}
-		// copy
-		if !binary {
-			r = au.NewUnixTextReader(r)
-		}
-		n, err = io.Copy(f, r)
-		if err != nil {
-			return
-		}
-		// seek to 0
-		_, err = f.Seek(0, 0)
-		if err != nil {
-			return
-		}
-		// hash it
-		h, err := makeFileHash(f)
-		if err != nil {
-			return
-		}
-		// close
-		err = f.Close()
-		if err != nil {
-			return
-		}
-		// determine with what filename should we store it
-		cdis := ""
-		if len(H["Content-Disposition"]) != 0 {
-			cdis = H["Content-Disposition"][0]
-		}
-		oname := ""
-		if cdis != "" {
-			_, params, e := mime.ParseMediaType(cdis)
-			if e == nil && params["filename"] != "" {
-				oname = params["filename"]
-				if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
-					oname = oname[i+1:]
-				}
-			}
-		}
-		ext := ""
-		if oname != "" {
-			if i := strings.LastIndexByte(oname, '.'); i >= 0 && i+1 < len(oname) {
 
-				ext = oname[i+1:]
-			}
-		}
-		if ct == "" {
-			ct = "text/plain"
-		}
-		if ext == "" || !emime.MIMEIsCanonical(ext, ct) {
-			// attempt finding better extension
-			mexts, e := emime.MIMEExtensionsByType(ct)
-			if e == nil && len(mexts) != 0 {
-				ext = mexts[0] // expect first to be good enough
-			}
-		}
-		// ohwell, at this point we should probably have something
-		// even if we don't, that's okay
-		var iname string
-		if ext != "" {
-			iname = h + "." + ext
-		} else {
-			iname = h
-		}
-		// incase we have no info about original filename, give it something
-		if oname == "" {
-			oname = iname
+		if hideattachment {
+			fi.Type = FTypeMsg
 		}
 
 		fidx := len(pi.FI)
-		pi.FI = append(pi.FI, fileInfo{
-			ContentType: ct,
-			Size:        n,
-			ID:          iname,
-			Original:    oname,
-		})
-		if hideattachment {
-			pi.FI[fidx].Type = FTypeMsg
-		}
-		tmpfilenames = append(tmpfilenames, f.Name())
+		pi.FI = append(pi.FI, fi)
+		tmpfilenames = append(tmpfilenames, fn)
 
 		obj.Data = postObjectIndex(fidx)
 		return
@@ -393,12 +418,52 @@ func (sp *PSQLIB) devourTransferArticle(
 		pi.L.Body, err =
 			guttleBody(xr, XH, info.ContentType, info.ContentParams, xbinary)
 		pi.L.Binary = xbinary
-		panic("TODO")
+		// since this is toplvl dont set ContentType or other headers
 	} else {
 		// we're not going to save parameters of this
 		XH["Content-Type"][0] =
 			au.TrimWSString(au.UntilString(XH["Content-Type"][0], ';'))
 		// TODO
 		panic("TODO")
+	}
+
+	return
+}
+
+func (sp *PSQLIB) nntpProcessArticle(
+	name string, H mail.Headers, info nntpParsedInfo) {
+
+	defer os.Remove(name)
+
+	f, err := os.Open(name)
+	if err != nil {
+		sp.log.LogPrintf(WARN,
+			"nntpProcessArticle: failed to open: %v", err)
+		return
+	}
+	defer f.Close()
+
+	// TODO skip headers because we already have them
+	mh, err := mail.ReadHeaders(f, 2<<20)
+	if err != nil {
+		sp.log.LogPrintf(WARN,
+			"nntpProcessArticle: failed reading headers: %v", err)
+		return
+	}
+	defer mh.Close()
+
+	pi, tfns, err := sp.devourTransferArticle(H, info, mh.B)
+	if err != nil {
+		sp.log.LogPrintf(WARN,
+			"nntpProcessArticle: devourTransferArticle failed: %v", err)
+		return
+	}
+
+	// TODO
+	sp.log.LogPrintf(DEBUG,
+		"nntpProcessArticle: pi: %#v; tfns: %#v", pi, tfns)
+
+	for _, fn := range tfns {
+		os.Remove(fn)
 	}
 }

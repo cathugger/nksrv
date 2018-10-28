@@ -99,7 +99,8 @@ var (
 
 func (sp *PSQLIB) nntpSendIncomingArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
-	// TODO
+
+	sp.nntpProcessArticle(name, H, info)
 }
 
 // + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
