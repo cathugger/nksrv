@@ -54,7 +54,7 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 			p.Log.LogPrintf(DEBUG, "header[%q]: %v", x, v)
 		}
 	}
-	if !p.PostingAccept || (len(mid) != 0 && (!validMsgID(mid) || reservedMsgID(mid) || s1.articles[cutMsgID(mid)] != nil)) {
+	if !p.PostingAccept || e == nil || (len(mid) != 0 && (!validMsgID(mid) || reservedMsgID(mid) || s1.articles[cutMsgID(mid)] != nil)) {
 		w.ResPostingFailed()
 		h.Close()
 		r.Discard(-1)

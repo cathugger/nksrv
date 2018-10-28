@@ -54,7 +54,7 @@ func (r *BufReader) readErr() (err error) {
 
 // implements io.Reader interface
 func (r *BufReader) Read(p []byte) (n int, _ error) {
-	if r.r == r.w {
+	for r.r == r.w {
 		if r.err != nil {
 			return 0, r.readErr()
 		}
@@ -63,8 +63,8 @@ func (r *BufReader) Read(p []byte) (n int, _ error) {
 			return r.u.Read(p)
 		}
 		n, r.err = r.u.Read(r.b)
-		if n <= 0 {
-			return 0, r.readErr()
+		if n < 0 {
+			panic("negative read")
 		}
 		r.r = 0
 		r.w = n
@@ -75,14 +75,14 @@ func (r *BufReader) Read(p []byte) (n int, _ error) {
 }
 
 func (r *BufReader) ReadByte() (byte, error) {
-	if r.r == r.w {
+	for r.r == r.w {
 		if r.err != nil {
 			return 0, r.readErr()
 		}
 		var n int
 		n, r.err = r.u.Read(r.b)
-		if n <= 0 {
-			return 0, r.readErr()
+		if n < 0 {
+			panic("negative read")
 		}
 		r.r = 0
 		r.w = n
@@ -107,19 +107,21 @@ func (r *BufReader) UnreadByte(c byte) error {
 	return nil
 }
 
-// reads into buffer supplied in p parameter until byte supplied in q parameter is found.
-// filled buffer contains last byte specified as q.
-// returns number of bytes written into p, and error, either generic or in case q was not found and p was filled.
+// ReadUntil reads into buffer supplied in p parameter
+// until byte supplied in q parameter is found.
+// Filled buffer contains last byte specified as q.
+// Returns number of bytes written into p, and error,
+// either generic or in case q was not found and p was filled.
 func (r *BufReader) ReadUntil(p []byte, q byte) (n int, _ error) {
 	var x int
 	for {
-		if r.r == r.w {
+		for r.r == r.w {
 			if r.err != nil {
 				return n, r.readErr()
 			}
 			x, r.err = r.u.Read(r.b)
-			if x <= 0 {
-				return n, r.readErr()
+			if x < 0 {
+				panic("negative read")
 			}
 			r.r = 0
 			r.w = x
@@ -173,6 +175,9 @@ func (r *BufReader) CompactBuffer() {
 	}
 }
 
+// FillBufferAtleast tries to fill buffer up to wanted amount.
+// It returns amount of bytes added.
+// It returns error if it couldn't fulfill request to fill buffer.
 func (r *BufReader) FillBufferAtleast(w int) (n int, _ error) {
 	if r.r == r.w {
 		r.r = 0
@@ -184,8 +189,8 @@ func (r *BufReader) FillBufferAtleast(w int) (n int, _ error) {
 			return n, r.readErr()
 		}
 		x, r.err = r.u.Read(r.b[r.w:])
-		if x <= 0 {
-			return n, r.readErr()
+		if x < 0 {
+			panic("negative read")
 		}
 		r.w += x
 		n += x
@@ -193,6 +198,8 @@ func (r *BufReader) FillBufferAtleast(w int) (n int, _ error) {
 	return
 }
 
+// FillBufferUpto attempts to fill buffer up to specified amount.
+// It returns number of bytes added, which may be less than requested.
 func (r *BufReader) FillBufferUpto(w int) (n int, _ error) {
 	if r.r == r.w {
 		r.r = 0
@@ -201,14 +208,16 @@ func (r *BufReader) FillBufferUpto(w int) (n int, _ error) {
 	var x int
 	for r.w < len(r.b) && (w <= 0 || r.w-r.r < w) {
 		if r.err != nil {
-			if w <= 0 {
+			// if we have pending error but we succeeded filling in a bit,
+			// then don't report it back
+			if n > 0 || w <= 0 {
 				break
 			}
 			return n, r.readErr()
 		}
 		x, r.err = r.u.Read(r.b[r.w:])
-		if x <= 0 {
-			return n, r.readErr()
+		if x < 0 {
+			panic("negative read")
 		}
 		r.w += x
 		n += x
@@ -239,8 +248,8 @@ func (r *BufReader) Discard(n int) (s int, _ error) {
 		}
 
 		x, r.err = r.u.Read(r.b)
-		if x <= 0 {
-			return s, r.readErr()
+		if x < 0 {
+			panic("negative read")
 		}
 		r.r = 0
 		r.w = x

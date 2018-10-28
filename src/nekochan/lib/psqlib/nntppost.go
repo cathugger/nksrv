@@ -115,12 +115,12 @@ func (sp *PSQLIB) HandleIHave(
 		}
 	}()
 	mh, err = mail.ReadHeaders(r, 2<<20)
-	defer mh.Close()
-	if err != nil && err != io.EOF {
+	if err != nil {
 		err = fmt.Errorf("failed reading headers: %v", err)
 		w.ResTransferRejected(err)
 		return true
 	}
+	defer mh.Close()
 
 	info, ok := sp.nntpDigestTransferHead(w, mh.H, unsafe_sid)
 	if !ok {

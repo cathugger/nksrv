@@ -28,12 +28,12 @@ func main() {
 	defer f.Close()
 
 	mh, err := mail.ReadHeaders(f, 2<<20)
-	defer mh.Close()
-	if err != nil && err != io.EOF {
+	if err != nil {
 		mlg.LogPrintf(CRITICAL,
 			"failed reading headers: %v", err)
 		return
 	}
+	defer mh.Close()
 
 	mlg.LogPrintf(INFO, "Headers: %#v", mh.H)
 	mlg.LogPrintf(INFO, "Body:")
