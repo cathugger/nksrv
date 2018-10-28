@@ -137,13 +137,13 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	return
 }
 
-func optimalTextMessageString(s string) (x string) {
-	x = strings.Replace(s, "\r", "", -1)
+func optimalTextMessageString(s string) string {
+	s = strings.Replace(s, "\r", "", -1)
 	// last \n isn't needed if char before it exists and it isn't \n
-	if len(x) > 1 && x[len(x)-1] == '\n' && x[len(x)-2] != '\n' {
-		x = x[:len(x)-1]
+	if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
+		s = s[:len(s)-1]
 	}
-	return
+	return s
 }
 
 func nntpProcessArticlePrepareReader(
@@ -276,22 +276,27 @@ func (sp *PSQLIB) nntpProcessArticleAttachment(
 	if err != nil {
 		return
 	}
+	// get name
+	fn = f.Name()
 	// copy
 	if !binary {
 		r = au.NewUnixTextReader(r)
 	}
 	n, err := io.Copy(f, r)
 	if err != nil {
+		f.Close()
 		return
 	}
 	// seek to 0
 	_, err = f.Seek(0, 0)
 	if err != nil {
+		f.Close()
 		return
 	}
 	// hash it
 	h, err := makeFileHash(f)
 	if err != nil {
+		f.Close()
 		return
 	}
 	// close
@@ -351,7 +356,6 @@ func (sp *PSQLIB) nntpProcessArticleAttachment(
 		ID:          iname,
 		Original:    oname,
 	}
-	fn = f.Name()
 	return
 }
 
@@ -418,6 +422,7 @@ func (sp *PSQLIB) devourTransferArticle(
 		// if this point is reached, we'll need to add this as attachment
 
 		fi, fn, err := sp.nntpProcessArticleAttachment(H, r, binary, ct)
+		tmpfilenames = append(tmpfilenames, fn)
 		if err != nil {
 			return
 		}
@@ -425,9 +430,7 @@ func (sp *PSQLIB) devourTransferArticle(
 		if msgattachment {
 			fi.Type = FTypeMsg
 		}
-
 		pi.FI = append(pi.FI, fi)
-		tmpfilenames = append(tmpfilenames, fn)
 
 		obj.Data = postObjectIndex(len(pi.FI))
 		return
