@@ -91,7 +91,7 @@ func (sp *PSQLIB) HandleIHave(
 		return true
 	}
 	if exists {
-		// article exists
+		// article exists, false for default message
 		return false
 	}
 
@@ -116,6 +116,7 @@ func (sp *PSQLIB) HandleIHave(
 
 	info, ok := sp.nntpDigestTransferHead(w, mh.H, unsafe_sid)
 	if !ok {
+		// nntpDigestTransferHead sends report
 		return true
 	}
 
@@ -127,6 +128,7 @@ func (sp *PSQLIB) HandleIHave(
 		return true
 	}
 	defer func() {
+		// CAUTION depends on err being set
 		if err != nil {
 			n := f.Name()
 			f.Close()
@@ -160,10 +162,15 @@ func (sp *PSQLIB) HandleIHave(
 		w.ResInternalError(err)
 		return true
 	}
+	// check if limit exceeded
 	if n > limit {
 		err = fmt.Errorf("message body too large, up to %d allowed", limit)
 		w.ResTransferRejected(err)
+		return true
 	}
+
+	// XXX should we have option to call f.Sync()?
+	// would this level of reliability be worth performance degradation?
 	err = f.Close()
 	if err != nil {
 		err = fmt.Errorf("error writing body: %v", err)
@@ -181,6 +188,8 @@ func (sp *PSQLIB) HandleIHave(
 
 	sp.nntpSendIncomingArticle(newname, mh.H, info)
 
+	// we're done there, signal success
+	w.ResTransferSuccess()
 	return true
 }
 

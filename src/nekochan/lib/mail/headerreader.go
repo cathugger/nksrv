@@ -50,7 +50,8 @@ func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
 }
 
 // ReadHeaders reads headers, also returning buffered reader.
-// If error was encountered while reading headers, it is returned.
+// Users should call mh.Close after they used mh.B. If err is returned,
+// closing isn't required.
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()

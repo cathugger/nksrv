@@ -62,6 +62,7 @@ var dbIb0InitStatements = []string{
 	message TEXT,                                 /* post message, in UTF-8 */
 	headers JSONB,                                -- map of lists of strings
 	attrib  JSONB,                                /* extra attributes which are optional */
+	layout  JSONB,                                /* multipart msg and attachment layout */
 	extras  JSONB,                                /* dunno if really need this field */
 
 	UNIQUE      (msgid),
@@ -79,12 +80,12 @@ var dbIb0InitStatements = []string{
 	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
 	ftype    ftype_t   NOT NULL, /* file type */
 	fsize    BIGINT    NOT NULL, /* file size */
-	fname    TEXT      NOT NULL, /* filename of original file. not unique! */
+	fname    TEXT      NOT NULL, /* internal file name of original file. not unique! */
 	thumb    TEXT      NOT NULL, /* filename of thumbnail. not unique! */
-	oname    TEXT      NOT NULL, /* original filename of this file */
-	filecfg  JSONB,              /* additional info about original file */
-	thumbcfg JSONB,              /* additional info about thumbnail */
-	extras   JSONB,              /* extra info not used for display but sometimes useful */
+	oname    TEXT      NOT NULL, /* original file name of this file */
+	filecfg  JSONB,              /* additional info about original file. like metadata */
+	thumbcfg JSONB,              /* additional info about thumbnail. like width/height */
+	extras   JSONB,              /* extra info not used for display but sometimes useful. undecided. */
 
 	PRIMARY KEY (fid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
