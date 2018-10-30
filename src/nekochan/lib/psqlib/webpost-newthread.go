@@ -8,7 +8,7 @@ import (
 	. "nekochan/lib/logx"
 )
 
-const postTQMsgArgCount = 8
+const postTQMsgArgCount = 10
 const postTQFileArgCount = 5
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -45,8 +45,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		FROM ub
 	),
 	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,padded,sage,msgid,title,author,trip,message)
-		SELECT $1,lastid,lastid,$2,$3,NOW(),FALSE,$4,$5,$6,$7,$8
+		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,padded,sage,msgid,title,author,trip,message,headers,layout)
+		SELECT $1,lastid,lastid,$2,$3,NOW(),FALSE,$4,$5,$6,$7,$8,$9,$10
 		FROM ub
 		RETURNING pid
 	)`
@@ -125,6 +125,8 @@ func (sp *PSQLIB) insertNewThread(
 		args[5] = pInfo.MI.Author
 		args[6] = pInfo.MI.Trip
 		args[7] = pInfo.MI.Message
+		args[8] = pInfo.H
+		args[9] = &pInfo.L
 		for i := range pInfo.FI {
 			args[x+0] = FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size

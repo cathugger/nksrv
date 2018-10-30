@@ -13,7 +13,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 11
+const postRQMsgArgCount = 13
 const postRQFileArgCount = 5
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -78,8 +78,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 
 	st2 := `
 	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pdate,padded,sage,pname,msgid,title,author,trip,message)
-		SELECT $2,$3,lastid,$4,NOW(),$5,$6,$7,$8,$9,$10,$11
+		INSERT INTO ib0.posts (bid,tid,pid,pdate,padded,sage,pname,msgid,title,author,trip,message,headers,layout)
+		SELECT $2,$3,lastid,$4,NOW(),$5,$6,$7,$8,$9,$10,$11,$12,$13
 		FROM ub
 		RETURNING pid
 	)`
@@ -166,6 +166,8 @@ func (sp *PSQLIB) insertNewReply(
 		args[8] = pInfo.MI.Author
 		args[9] = pInfo.MI.Trip
 		args[10] = pInfo.MI.Message
+		args[11] = pInfo.H
+		args[12] = &pInfo.L
 		for i := range pInfo.FI {
 			args[x+0] = FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
