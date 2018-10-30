@@ -5,9 +5,9 @@ import "io"
 var nl = []byte("\n")
 
 type SplitWriter struct {
-	W io.Writer
-	N int
-	I int
+	W io.Writer // underlying writer
+	N int       // max width of lines, should be something like 76 or 156
+	I int       // usually should be initialized to 0
 }
 
 func (w *SplitWriter) Write(b []byte) (n int, err error) {
