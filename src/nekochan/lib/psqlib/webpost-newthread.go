@@ -8,6 +8,9 @@ import (
 	. "nekochan/lib/logx"
 )
 
+const postTQMsgArgCount = 8
+const postTQFileArgCount = 5
+
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	sp.ntMutex.RLock()
 	s = sp.ntStmts[n]
@@ -68,13 +71,13 @@ SELECT * FROM up`
 			VALUES `
 		b.WriteString(st1)
 
-		x := 9 // 8 args already, counting from 1
+		x := postTQMsgArgCount + 1 // counting from 1
 		for i := 0; i < n; i++ {
 			if i != 0 {
 				b.WriteString(", ")
 			}
 			fmt.Fprintf(&b, "($%d,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
-			x += 5
+			x += postTQFileArgCount
 		}
 
 		st2 := `
@@ -111,8 +114,8 @@ func (sp *PSQLIB) insertNewThread(
 			pInfo.MI.Title, pInfo.MI.Author,
 			pInfo.MI.Trip, pInfo.MI.Message)
 	} else {
-		x := 8
-		xf := 5
+		x := postTQMsgArgCount
+		xf := postTQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
 		args[0] = bid
 		args[1] = pInfo.ID

@@ -13,6 +13,9 @@ type npTuple struct {
 	sage bool
 }
 
+const postRQMsgArgCount = 11
+const postRQFileArgCount = 5
+
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	sp.ntMutex.RLock()
 	s = sp.npStmts[t]
@@ -40,7 +43,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	ub AS (
 		UPDATE ib0.boards
 		SET lastid = lastid+1
-		WHERE bid = $1
+		WHERE bid = $2
 		RETURNING lastid
 	),`
 	b.WriteString(st1)
@@ -55,12 +58,12 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			FROM (
 				SELECT pdate,pid,sage
 				FROM ib0.posts
-				WHERE bid = $1 AND tid = $2 -- count sages against bump limit. because others do it like that :<
+				WHERE bid = $2 AND tid = $3 -- count sages against bump limit. because others do it like that :<
 				UNION ALL
-				SELECT $3,lastid,FALSE
+				SELECT $4,lastid,FALSE
 				FROM ub
 				ORDER BY pdate ASC,pid ASC
-				LIMIT $11
+				LIMIT $1
 				-- take bump posts, sorted by original date, only upto bump limit
 			) AS tt
 			WHERE sage != TRUE
@@ -68,7 +71,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			LIMIT 1
 			-- and pick latest one
 		) as xbump
-		WHERE bid = $1 AND tid = $2
+		WHERE bid = $2 AND tid = $3
 	),`
 		b.WriteString(st_bump)
 	}
@@ -76,7 +79,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	st2 := `
 	up AS (
 		INSERT INTO ib0.posts (bid,tid,pid,pdate,padded,sage,pname,msgid,title,author,trip,message)
-		SELECT $1,$2,lastid,$3,NOW(),$4,$5,$6,$7,$8,$9,$10
+		SELECT $2,$3,lastid,$4,NOW(),$5,$6,$7,$8,$9,$10,$11
 		FROM ub
 		RETURNING pid
 	)`
@@ -95,13 +98,13 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			VALUES `
 		b.WriteString(stf1)
 
-		x := 12 // 11 args already, counting from 1
+		x := postRQMsgArgCount + 1 // counting from 1
 		for i := 0; i < t.n; i++ {
 			if i != 0 {
 				b.WriteString(", ")
 			}
 			fmt.Fprintf(&b, "($%d,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
-			x += 5
+			x += postRQFileArgCount
 		}
 
 		// footer
@@ -145,25 +148,24 @@ func (sp *PSQLIB) insertNewReply(
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
-			rti.bid, rti.tid, pInfo.Date, pInfo.MI.Sage,
+			rti.bumpLimit, rti.bid, rti.tid, pInfo.Date, pInfo.MI.Sage,
 			pInfo.ID, pInfo.MessageID,
-			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message,
-			rti.bumpLimit)
+			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message)
 	} else {
-		x := 11
-		xf := 5
+		x := postRQMsgArgCount
+		xf := postRQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
-		args[0] = rti.bid
-		args[1] = rti.tid
-		args[2] = pInfo.Date
-		args[3] = pInfo.MI.Sage
-		args[4] = pInfo.ID
-		args[5] = pInfo.MessageID
-		args[6] = pInfo.MI.Title
-		args[7] = pInfo.MI.Author
-		args[8] = pInfo.MI.Trip
-		args[9] = pInfo.MI.Message
-		args[10] = rti.bumpLimit
+		args[0] = rti.bumpLimit
+		args[1] = rti.bid
+		args[2] = rti.tid
+		args[3] = pInfo.Date
+		args[4] = pInfo.MI.Sage
+		args[5] = pInfo.ID
+		args[6] = pInfo.MessageID
+		args[7] = pInfo.MI.Title
+		args[8] = pInfo.MI.Author
+		args[9] = pInfo.MI.Trip
+		args[10] = pInfo.MI.Message
 		for i := range pInfo.FI {
 			args[x+0] = FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
@@ -174,7 +176,7 @@ func (sp *PSQLIB) insertNewReply(
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&rti.tid)
+	err = r.Scan(&pid)
 	if err != nil {
 		return 0, sp.sqlError("newreply insert query scan", err)
 	}
