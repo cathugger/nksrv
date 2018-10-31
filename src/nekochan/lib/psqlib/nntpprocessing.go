@@ -390,10 +390,10 @@ func (sp *PSQLIB) nntpProcessArticleAttachment(
 	} else {
 		iname = h
 	}
-	// incase we have no info about original filename, give it something
-	if oname == "" {
-		oname = iname
-	}
+	// don't make up original name, it's ok not to have anything in it
+	//if oname == "" {
+	//	oname = iname
+	//}
 
 	fi = fileInfo{
 		ContentType: ct,

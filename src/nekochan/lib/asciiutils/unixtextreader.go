@@ -25,6 +25,7 @@ func (t *UnixTextReader) Read(b []byte) (n int, e error) {
 		b[0] = '\n'
 		n = 1
 		e = io.EOF
+		t.s = sNL
 		return
 	}
 	var i, x int
@@ -53,9 +54,12 @@ func (t *UnixTextReader) Read(b []byte) (n int, e error) {
 		}
 	}
 	if e == io.EOF && t.s != sNL {
+		// needs additional newline at the end
 		if len(b) > n {
-			b[n] = '\n' // additional newline
+			// can insert
+			b[n] = '\n'
 			n++
+			t.s = sNL
 		} else {
 			// can't end stuff there
 			e = nil

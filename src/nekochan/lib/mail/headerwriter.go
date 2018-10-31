@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 )
 
 var ErrHeaderLineTooLong = errors.New("header line is too long")
@@ -117,22 +118,32 @@ func writeHeaderLines(w io.Writer, h string, v []string, force bool) error {
 }
 
 func WriteHeaders(w io.Writer, H Headers, force bool) (err error) {
+	n := 0
 	// first try to put headers we know about in order
-	for _, x := range writeHeaderOrder {
-		if len(H[x]) != 0 {
-			err = writeHeaderLines(w, x, H[x], force)
+	for _, h := range writeHeaderOrder {
+		if len(H[h]) != 0 {
+			n++
+			err = writeHeaderLines(w, h, H[h], force)
 			if err != nil {
 				return
 			}
 		}
 	}
-	// then try to put others in whatever order
-	for h, v := range H {
-		if _, inmap := writeHeaderMap[h]; !inmap {
-			err = writeHeaderLines(w, h, v, force)
-			if err != nil {
-				return
-			}
+	if len(H) <= n {
+		return
+	}
+	// then put rest, sorted
+	l := make([]string, 0, len(H)-n)
+	for k := range H {
+		if _, inmap := writeHeaderMap[k]; !inmap {
+			l = append(l, k)
+		}
+	}
+	sort.Strings(l)
+	for _, h := range l {
+		err = writeHeaderLines(w, h, H[h], force)
+		if err != nil {
+			return
 		}
 	}
 	// done
@@ -140,22 +151,32 @@ func WriteHeaders(w io.Writer, H Headers, force bool) (err error) {
 }
 
 func WritePartHeaders(w io.Writer, H Headers, force bool) (err error) {
+	n := 0
 	// first try to put headers we know about in order
-	for _, x := range writePartHeaderOrder {
-		if len(H[x]) != 0 {
-			err = writeHeaderLines(w, x, H[x], force)
+	for _, h := range writePartHeaderOrder {
+		if len(H[h]) != 0 {
+			n++
+			err = writeHeaderLines(w, h, H[h], force)
 			if err != nil {
 				return
 			}
 		}
 	}
-	// then try to put others in whatever order
-	for h, v := range H {
-		if _, inmap := writePartHeaderMap[h]; !inmap {
-			err = writeHeaderLines(w, h, v, force)
-			if err != nil {
-				return
-			}
+	if len(H) <= n {
+		return
+	}
+	// then put rest, sorted
+	l := make([]string, 0, len(H)-n)
+	for k := range H {
+		if _, inmap := writePartHeaderMap[k]; !inmap {
+			l = append(l, k)
+		}
+	}
+	sort.Strings(l)
+	for _, h := range l {
+		err = writeHeaderLines(w, h, H[h], force)
+		if err != nil {
+			return
 		}
 	}
 	// done
