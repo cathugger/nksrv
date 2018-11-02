@@ -1,7 +1,9 @@
 package psqlib
 
 import (
+	"fmt"
 	"mime"
+	gmail "net/mail"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
@@ -14,9 +16,55 @@ func attachmentDisposition(original string) string {
 
 const plainUTF8Type = "text/plain; charset=UTF-8"
 
-func WebPostToLayout(i *postInfo) {
+func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr) postInfo {
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
+
+	if i.H != nil {
+		panic("header should be nil at this point")
+	}
+
+	i.H = make(mail.Headers)
+
+	// we don't really need to store Message-ID there
+
+	// we don't really need to store Subject there
+
+	// From
+	// XXX should we hardcode "Anonymous" incase Author is empty?
+	i.H["From"] = []string{(&gmail.Address{
+		Name:    i.MI.Author,
+		Address: "poster@" + sp.instance,
+	}).String()}
+
+	// Newsgroups
+	i.H["Newsgroups"] = []string{board}
+
+	// Date
+	{
+		dd := i.Date
+		Y, M, D := dd.Date()
+		h, m, s := dd.Clock()
+		i.H["Date"] = []string{fmt.Sprintf(
+			"%02d %s %04d %02d:%02d:%02d GMT",
+			D, M.String()[:3], Y, h, m, s)}
+	}
+
+	// References
+	if ref != "" {
+		i.H["References"] = []string{fmt.Sprintf("<%s>", ref)}
+	}
+
+	// X-Sage
+	if i.MI.Sage && ref != "" {
+		// NOTE: some impls specifically check for "1"
+		i.H["X-Sage"] = []string{"1"}
+	}
+
+	// Path
+	i.H["Path"] = []string{sp.instance + "!.POSTED!not-for-mail"}
+
+	// now deal with layout
 
 	if len(i.FI) == 0 {
 		if !hastext {
@@ -28,7 +76,7 @@ func WebPostToLayout(i *postInfo) {
 				i.H["Content-Type"] = []string{plainUTF8Type}
 			}
 		}
-		return
+		return i
 	}
 
 	// {RFC 2183}
@@ -47,7 +95,7 @@ func WebPostToLayout(i *postInfo) {
 			[]string{attachmentDisposition(i.FI[0].Original)}
 		i.L.Body.Data = postObjectIndex(1)
 		i.L.Binary = true
-		return
+		return i
 	}
 
 	nparts := len(i.FI)
@@ -79,4 +127,5 @@ func WebPostToLayout(i *postInfo) {
 	}
 	i.H["Content-Type"] = []string{"multipart/mixed"}
 	i.L.Body.Data = xparts
+	return i
 }

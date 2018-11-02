@@ -348,6 +348,7 @@ func (sp *PSQLIB) commonNewPost(
 	var bid boardID
 	var tid postID
 	var pid postID
+	var ref CoreMsgIDStr
 
 	var postLimits submissionLimits
 	threadOpts := defaultThreadOptions
@@ -382,14 +383,19 @@ WHERE bname=$1`
 
 		// new post
 		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
-		q := `SELECT xb.bid,xb.post_limits,xb.reply_limits,xt.tid,xt.reply_limits,xb.thread_opts,xt.thread_opts
+		q := `SELECT xb.bid,xb.post_limits,xb.reply_limits,
+	xt.tid,xt.reply_limits,xb.thread_opts,xt.thread_opts,xp.msgid
 FROM ib0.boards xb
-LEFT JOIN ib0.threads xt USING (bid)
+LEFT JOIN ib0.threads xt
+ON xb.bid=xt.bid
+INNER JOIN ib0.posts xp
+ON xt.bid=xp.bid AND xt.tid=xp.pid
 WHERE xb.bname=$1 AND xt.tname=$2`
 
 		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
-		err = sp.db.DB.QueryRow(q, board, thread).Scan(&bid, &jcfg[0], &jcfg[1], &tid, &jcfg[2], &jcfg[3], &jcfg[4])
+		err = sp.db.DB.QueryRow(q, board, thread).Scan(
+			&bid, &jcfg[0], &jcfg[1], &tid, &jcfg[2], &jcfg[3], &jcfg[4], &ref)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
@@ -399,8 +405,9 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		}
 
 		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%d) t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q)",
-			bid, jcfg[0], jcfg[1], tid, jcfg[2], jcfg[3], jcfg[4])
+			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%d) "+
+				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%q)",
+			bid, jcfg[0], jcfg[1], tid, jcfg[2], jcfg[3], jcfg[4], ref)
 
 		rInfo.Board = board
 
@@ -474,6 +481,11 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
+	// fill in info about post
+	tu := date.NowTimeUnix()
+	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
+	pInfo = sp.fillWebPostDetails(pInfo, board, ref)
+
 	// at this point message should be checked
 	// we should calculate proper file names here
 	// should we move files before or after writing to database?
@@ -510,8 +522,6 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		}
 	}
 
-	tu := date.NowTimeUnix()
-	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 	// lets think of post ID there
 	pInfo.MessageID = sp.newMessageID(tu)
 	pInfo.ID = todoHashPostID(pInfo.MessageID)

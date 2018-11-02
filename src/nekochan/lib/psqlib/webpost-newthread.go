@@ -102,6 +102,10 @@ SELECT * FROM up`
 func (sp *PSQLIB) insertNewThread(
 	bid boardID, pInfo postInfo) (tid postID, err error) {
 
+	if len(pInfo.H) == 0 {
+		panic("post should have header filled")
+	}
+
 	stmt, err := sp.getNTStmt(len(pInfo.FI))
 	if err != nil {
 		return

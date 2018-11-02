@@ -140,6 +140,10 @@ type replyTargetInfo struct {
 func (sp *PSQLIB) insertNewReply(
 	rti replyTargetInfo, pInfo postInfo) (pid postID, err error) {
 
+	if len(pInfo.H) == 0 {
+		panic("post should have header filled")
+	}
+
 	stmt, err := sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
 	if err != nil {
 		return
