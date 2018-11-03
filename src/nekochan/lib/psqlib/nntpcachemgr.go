@@ -182,7 +182,7 @@ func (sp *PSQLIB) nntpObtainItem(
 	// neither file nor wip object exist, so make new
 	f, err = sp.nntpfs.TempFile("", "")
 	if err != nil {
-		return fmt.Errorf("failed making temporary file: %v")
+		return fmt.Errorf("failed making temporary file: %v", err)
 	}
 	cpub = cachepub.NewCachePub(f)
 	o = &nntpCacheObj{p: cpub}

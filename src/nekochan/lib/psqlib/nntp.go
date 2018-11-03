@@ -49,9 +49,9 @@ func isGroupSelected(gs *groupState) bool {
 	return gs != nil && gs.bid != 0
 }
 
-func (PSQLIB) SupportsNewNews() bool     { return true }
-func (PSQLIB) SupportsOverByMsgID() bool { return true }
-func (PSQLIB) SupportsHdr() bool         { return true }
+func (*PSQLIB) SupportsNewNews() bool     { return true }
+func (*PSQLIB) SupportsOverByMsgID() bool { return true }
+func (*PSQLIB) SupportsHdr() bool         { return true }
 
 func (p *PSQLIB) SupportsIHave() bool  { return true }
 func (p *PSQLIB) SupportsPost() bool   { return false } // TODO
