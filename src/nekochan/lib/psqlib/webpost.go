@@ -569,6 +569,10 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	return
 }
 
+func (sp *PSQLIB) IBPostNewBoard(bi ib0.IBNewBoardInfo) (err error, code int) {
+	panic("TODO")
+}
+
 func (sp *PSQLIB) IBPostNewThread(
 	r *http.Request, f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {

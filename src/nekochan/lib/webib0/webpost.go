@@ -25,12 +25,25 @@ var (
 	IBWebFormTextMessage = "message"
 )
 
+type IBNewBoardInfo struct {
+	Name           string `json:"bname"`
+	Description    string `json:"bdesc,omitempty"`
+	ThreadsPerPage int32  `json:"threads_per_page,omitempty"` // <= 0 - infinite
+	MaxActivePages int32  `json:"max_active_pages,omitempty"` // <= 0 - all pages are active
+	MaxPages       int32  `json:"max_pages,omitempty"`        // <= 0 - unlimited
+	// TODO more fields
+}
+
 type IBWebPostProvider interface {
 	IBGetPostParams() (*form.ParserParams, form.FileOpener)
+
+	IBPostNewBoard(bi IBNewBoardInfo) (err error, code int)
+
 	IBPostNewThread(
 		r *http.Request, f form.Form, board string) (
-		rInfo IBPostedInfo, err error, _ int)
+		rInfo IBPostedInfo, err error, code int)
+
 	IBPostNewReply(
 		r *http.Request, f form.Form, board, thread string) (
-		rInfo IBPostedInfo, err error, _ int)
+		rInfo IBPostedInfo, err error, code int)
 }

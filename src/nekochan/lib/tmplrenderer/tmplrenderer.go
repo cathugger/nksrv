@@ -492,6 +492,12 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 	outTmpl(w, tr, tmplThreadCatalog, 200, l)
 }
 
+func (tr *TmplRenderer) DressNewBoardResult(
+	w http.ResponseWriter, err error, code int) {
+
+	panic("TODO")
+}
+
 func (tr *TmplRenderer) DressPostResult(
 	w http.ResponseWriter, pi ib0.IBPostedInfo, newthread bool,
 	err error, code int) {

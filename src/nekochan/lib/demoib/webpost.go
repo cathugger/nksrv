@@ -206,6 +206,12 @@ func commonNewPost(
 	return
 }
 
+func (IBProviderDemo) IBPostNewBoard(
+	bi ib0.IBNewBoardInfo) (err error, code int) {
+
+	return nil, 0
+}
+
 func (IBProviderDemo) IBPostNewThread(
 	r *http.Request, f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {

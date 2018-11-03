@@ -110,6 +110,12 @@ func (j *JSONRenderer) ServeThread(
 	e.Encode(&pag)
 }
 
+func (j *JSONRenderer) DressNewBoardResult(
+	w http.ResponseWriter, err error, code int) {
+
+	panic("TODO")
+}
+
 func (j *JSONRenderer) DressPostResult(
 	w http.ResponseWriter, pi ib0.IBPostedInfo, newthread bool,
 	err error, code int) {
