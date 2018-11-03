@@ -493,7 +493,7 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 }
 
 func (tr *TmplRenderer) DressNewBoardResult(
-	w http.ResponseWriter, err error, code int) {
+	w http.ResponseWriter, created bool, err error, code int) {
 
 	panic("TODO")
 }

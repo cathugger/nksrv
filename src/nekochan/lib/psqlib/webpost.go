@@ -569,8 +569,27 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	return
 }
 
-func (sp *PSQLIB) IBPostNewBoard(bi ib0.IBNewBoardInfo) (err error, code int) {
-	panic("TODO")
+func (sp *PSQLIB) IBPostNewBoard(
+	bi ib0.IBNewBoardInfo) (created bool, err error, code int) {
+
+	q := `INSERT INTO ib0.boards (
+	bname,badded,bdesc,threads_per_page,max_active_pages,max_pages)
+VALUES ($1,NOW(),$2,$3,$4,$5)
+ON CONFLICT DO NOTHING
+RETURNING bid`
+	var bid boardID
+	e := sp.db.DB.QueryRow(q, bi.Name, bi.Description,
+		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages).Scan(&bid)
+	if e != nil {
+		if e == sql.ErrNoRows {
+			code = http.StatusConflict
+			return
+		}
+		err = sp.sqlError("board insertion query row scan", e)
+		code = http.StatusInternalServerError
+		return
+	}
+	return true, nil, 0
 }
 
 func (sp *PSQLIB) IBPostNewThread(

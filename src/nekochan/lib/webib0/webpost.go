@@ -37,7 +37,7 @@ type IBNewBoardInfo struct {
 type IBWebPostProvider interface {
 	IBGetPostParams() (*form.ParserParams, form.FileOpener)
 
-	IBPostNewBoard(bi IBNewBoardInfo) (err error, code int)
+	IBPostNewBoard(bi IBNewBoardInfo) (created bool, err error, code int)
 
 	IBPostNewThread(
 		r *http.Request, f form.Form, board string) (

@@ -15,7 +15,8 @@ type Renderer interface {
 	ServeThreadCatalog(w http.ResponseWriter, r *http.Request, board string)
 	ServeThread(w http.ResponseWriter, r *http.Request, board, thread string)
 
-	DressNewBoardResult(w http.ResponseWriter, err error, code int)
+	DressNewBoardResult(
+		w http.ResponseWriter, created bool, err error, code int)
 	DressPostResult(w http.ResponseWriter, pi ib0.IBPostedInfo,
 		newthread bool, err error, code int)
 }
