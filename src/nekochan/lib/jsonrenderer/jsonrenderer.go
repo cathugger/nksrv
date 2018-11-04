@@ -111,7 +111,28 @@ func (j *JSONRenderer) ServeThread(
 }
 
 func (j *JSONRenderer) DressNewBoardResult(
-	w http.ResponseWriter, created bool, err error, code int) {
+	w http.ResponseWriter, created bool, bname string, err error, code int) {
+
+	e := j.prepareEncoder(w, code)
+
+	r := &struct {
+		Success bool   `json:"success"`
+		BName   string `json:"bname"`
+
+		jsonErrorMsg
+	}{
+		Success: created,
+		BName:   bname,
+
+		jsonErrorMsg: jsonErrorMsg{
+			Code: code,
+		},
+	}
+	if err != nil {
+		r.Msg = err.Error()
+	}
+
+	e.Encode(r)
 
 	panic("TODO")
 }
