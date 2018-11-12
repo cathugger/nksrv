@@ -5,15 +5,12 @@ package mail
 var commonHeaders = map[string]string{
 	// overrides
 	// RFCs digestion, also observation of actual messages
-	"Message-Id":          "Message-ID",
-	"Content-Id":          "Content-ID",
-	"List-Id":             "List-ID",
-	"Mime-Version":        "MIME-Version",
-	"Nntp-Posting-Date":   "NNTP-Posting-Date",
-	"Nntp-Posting-Host":   "NNTP-Posting-Host",
-	"X-Mimeole":           "X-MIMEOLE",
-	"X-Msmail-Priority":   "X-MSMail-Priority",
-	"X-Received-Body-Crc": "X-Received-Body-CRC",
+	"Message-Id":        "Message-ID",
+	"Content-Id":        "Content-ID",
+	"List-Id":           "List-ID",
+	"Mime-Version":      "MIME-Version",
+	"Nntp-Posting-Date": "NNTP-Posting-Date",
+	"Nntp-Posting-Host": "NNTP-Posting-Host",
 	// overchan
 	"X-Pubkey-Ed25519":           "X-PubKey-Ed25519",
 	"X-Signature-Ed25519-Sha512": "X-Signature-Ed25519-SHA512",
@@ -161,20 +158,25 @@ func canonicaliseSlice(b []byte) {
 	}
 }
 
-// XXX can modify underlying storage
-func mapCanonicalHeader(b []byte) string {
+// unsafeMapCanonicalOriginalHeaders maps header name to its
+// canonical form, also returning original header form
+// if we can't be sure of its canonical form. May modify buffer.
+func unsafeMapCanonicalOriginalHeaders(b []byte) (string, string) {
 	// fast path: maybe its common header in form we want
 	if h, ok := commonHeaders[string(b)]; ok {
-		return h
+		return h, ""
 	}
+	// save original form
+	orig := string(b)
 	// canonicalise
 	canonicaliseSlice(b)
 	// try to use static name again
 	if h, ok := commonHeaders[string(b)]; ok {
-		return h
+		// if it works, then we're sure of its canonical form
+		return h, ""
 	}
 	// ohwell nothing we can do, just copy
-	return string(b)
+	return string(b), orig
 }
 
 func UnsafeCanonicalHeader(b []byte) string {

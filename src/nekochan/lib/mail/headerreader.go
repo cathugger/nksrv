@@ -116,7 +116,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 
 	H = make(Headers)
 
-	var currHeader string
+	var currHeader, origHeader string
 
 	var est int
 	est, e = estimateNumHeaders(br)
@@ -126,7 +126,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 
 	finishCurrent := func() {
 		if len(currHeader) != 0 {
-			hval := HeaderVal(h.Bytes())
+			hval := HeaderVal{H: origHeader, V: string(h.Bytes())}
 			if cs, ok := H[currHeader]; ok {
 				H[currHeader] = append(cs, hval)
 			} else {
@@ -194,11 +194,12 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 					e = errEmptyHeaderName
 					break
 				}
-				currHeader = mapCanonicalHeader(wb[:hn])
+				currHeader, origHeader =
+					unsafeMapCanonicalOriginalHeaders(wb[:hn])
 
 				n++
 				// skip one space after ':'
-				// XXX should we do this for '\t'?
+				// XXX should we do this for '\t'? probably not.
 				if n < len(wb) && wb[n] == ' ' {
 					n++
 				}

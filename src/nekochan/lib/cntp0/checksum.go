@@ -86,7 +86,7 @@ func MakeChecksum(res io.Writer, m mail.MessageHead, d Digest) error {
 
 		fmt.Fprintf(w, "%d\n", ll)
 		for i := 0; i < ll; i++ {
-			w.Write(unsafeStrToBytes(xx[i]))
+			w.Write(unsafeStrToBytes(xx[i].V))
 			w.Write(newline)
 		}
 	})
@@ -195,7 +195,7 @@ func checksumPart(res io.Writer, pr *mail.PartReader, d Digest) error {
 
 		fmt.Fprintf(w, "%d\n", ll)
 		for i := 0; i < ll; i++ {
-			w.Write(unsafeStrToBytes(xx[i]))
+			w.Write(unsafeStrToBytes(xx[i].V))
 			w.Write(newline)
 		}
 	})

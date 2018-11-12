@@ -26,14 +26,17 @@ var (
 
 const maxCommonHdrLen = 32
 
-type HeaderVal = string
+type HeaderVal struct {
+	V string // value
+	H string // original name, optional, needed only incase non-canonical form
+}
 type Headers map[string][]HeaderVal
 
 // case-sensitive
-func (h Headers) GetFirst(x string) HeaderVal {
+func (h Headers) GetFirst(x string) string {
 	if s, ok := h[x]; ok {
 		// assumption: will always have at least one value
-		return s[0]
+		return s[0].V
 	}
 	return ""
 }

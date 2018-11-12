@@ -85,12 +85,12 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// ignore other headers than first
 	if len(H["Content-Type"]) != 0 {
 		H["Content-Type"] = H["Content-Type"][:1]
-		H["Content-Type"][0] = au.TrimWSString(H["Content-Type"][0])
+		H["Content-Type"][0].V = au.TrimWSString(H["Content-Type"][0].V)
 	}
 	if len(H["Content-Transfer-Encoding"]) != 0 {
 		H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
-		H["Content-Transfer-Encoding"][0] =
-			au.TrimWSString(H["Content-Transfer-Encoding"][0])
+		H["Content-Transfer-Encoding"][0].V =
+			au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
 	}
 
 	// Message-ID validation
@@ -98,9 +98,10 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 	if len(hmsgids) != 0 {
 
-		hmsgids[0] = au.TrimWSString(hmsgids[0]) // yes we modify header there
+		// yes we modify header there
+		hmsgids[0].V = au.TrimWSString(hmsgids[0].V)
 
-		hid := FullMsgIDStr(hmsgids[0])
+		hid := FullMsgIDStr(hmsgids[0].V)
 
 		if !validMsgID(hid) {
 			err = fmt.Errorf("invalid article Message-ID %q", hid)
@@ -122,13 +123,12 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 	} else {
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
-		H["Message-ID"] = []string{fmsgids}
+		H["Message-ID"] = []mail.HeaderVal{{V: fmsgids}}
 		info.MessageID = cutMsgID(FullMsgIDStr(fmsgids))
 	}
 
 	// Date
-	hdate := H["Date"][0]
-	pdate, err := mail.ParseDate(hdate)
+	pdate, err := mail.ParseDate(H["Date"][0].V)
 	if err != nil {
 		err = fmt.Errorf("error parsing Date header: %v", err)
 		w.ResTransferRejected(err)
@@ -140,7 +140,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// checking for too old may help to clean up message reject/ban filters
 
 	// Newsgroups
-	hgroup := au.TrimWSString(H["Newsgroups"][0])
+	hgroup := au.TrimWSString(H["Newsgroups"][0].V)
 	// normally allowed multiple ones, separated by `,` and space,
 	// but we only support single-board posts
 	if !nntp.ValidGroupSlice(unsafeStrToBytes(hgroup)) {
@@ -162,7 +162,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// Content-Type
 	if len(H["Content-Type"]) != 0 {
 		info.ContentType, info.ContentParams, err =
-			mime.ParseMediaType(H["Content-Type"][0])
+			mime.ParseMediaType(H["Content-Type"][0].V)
 		if err != nil {
 			err = fmt.Errorf("error parsing Content-Type header: %v", err)
 			w.ResTransferRejected(err)
@@ -342,7 +342,7 @@ func (sp *PSQLIB) nntpProcessArticleAttachment(
 	// determine with what filename should we store it
 	cdis := ""
 	if len(H["Content-Disposition"]) != 0 {
-		cdis = H["Content-Disposition"][0]
+		cdis = H["Content-Disposition"][0].V
 	}
 	oname := ""
 	if cdis != "" {
@@ -424,7 +424,7 @@ func (sp *PSQLIB) devourTransferArticle(
 
 	var xcte string
 	if len(XH["Content-Transfer-Encoding"]) != 0 {
-		xcte = XH["Content-Transfer-Encoding"][0]
+		xcte = XH["Content-Transfer-Encoding"][0].V
 	}
 	// we won't need this anymore
 	delete(XH, "Content-Transfer-Encoding")
@@ -501,7 +501,7 @@ func (sp *PSQLIB) devourTransferArticle(
 
 			var pct string
 			if len(PH["Content-Type"]) != 0 {
-				pct = PH["Content-Type"][0]
+				pct = PH["Content-Type"][0].V
 			}
 			delete(PH, "Content-Type")
 
@@ -518,7 +518,7 @@ func (sp *PSQLIB) devourTransferArticle(
 
 			var pcte string
 			if len(PH["Content-Transfer-Encoding"]) != 0 {
-				pcte = PH["Content-Transfer-Encoding"][0]
+				pcte = PH["Content-Transfer-Encoding"][0].V
 			}
 			delete(PH, "Content-Transfer-Encoding")
 
@@ -550,8 +550,8 @@ func (sp *PSQLIB) devourTransferArticle(
 		// no more parts
 		err = nil
 		// we're not going to save parameters of this
-		XH["Content-Type"][0] =
-			au.TrimWSString(au.UntilString(XH["Content-Type"][0], ';'))
+		XH["Content-Type"][0].V =
+			au.TrimWSString(au.UntilString(XH["Content-Type"][0].V, ';'))
 		// fill in
 		pi.H = XH
 		pi.L.Binary = xbinary
@@ -628,7 +628,7 @@ func (sp *PSQLIB) nntpProcessArticle(
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	if len(H["Subject"]) != 0 {
-		sh := H["Subject"][0]
+		sh := H["Subject"][0].V
 		ssub := au.TrimWSString(sh)
 		if !isSubjectEmpty(ssub) {
 			if len(H["MIME-Version"]) != 0 {
@@ -647,7 +647,7 @@ func (sp *PSQLIB) nntpProcessArticle(
 	}
 
 	if len(H["From"]) != 0 {
-		a, e := nmail.ParseAddress(H["From"][0])
+		a, e := nmail.ParseAddress(H["From"][0].V)
 		if e == nil {
 			// XXX should we filter out "Anonymous" names? would save some bytes
 			pi.MI.Author = a.Name

@@ -108,9 +108,13 @@ func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 	return nil
 }
 
-func writeHeaderLines(w io.Writer, h string, v []string, force bool) error {
-	for _, s := range v {
-		if e := writeHeaderLine(w, h, s, force); e != nil {
+func writeHeaderLines(w io.Writer, h string, v []HeaderVal, force bool) error {
+	for _, x := range v {
+		hh := h
+		if x.H != "" {
+			hh = x.H
+		}
+		if e := writeHeaderLine(w, hh, x.V, force); e != nil {
 			return e
 		}
 	}

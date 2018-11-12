@@ -829,17 +829,21 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 	return true
 }
 
-func (sp *PSQLIB) commonGetHdrByMsgID(
-	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
-
-	sid := unsafeCoreMsgIDToStr(msgid)
-	var shdr string
+func canonicalHeaderQueryStr(hdr []byte) (shdr string) {
 	if len(hdr) == 0 || hdr[0] != ':' {
 		shdr = mail.UnsafeCanonicalHeader(hdr)
 	} else {
 		nntp.ToLowerASCII(hdr)
 		shdr = unsafeBytesToStr(hdr)
 	}
+	return
+}
+
+func (sp *PSQLIB) commonGetHdrByMsgID(
+	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
+
+	sid := unsafeCoreMsgIDToStr(msgid)
+	shdr := canonicalHeaderQueryStr(hdr)
 
 	var bid boardID
 	var pid postID
@@ -851,6 +855,16 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		err = sp.db.DB.QueryRow(q, msgid).Scan(&bid, &pid)
 		if err == nil {
 			h = fmt.Sprintf("<%s>", sid)
+		}
+	} else if shdr == "Subject" {
+		q := `SELECT bid,pid,title,headers -> $2 ->> 0
+	FROM ib0.posts
+	WHERE msgid = $1
+	LIMIT 1`
+		var title string
+		err = sp.db.DB.QueryRow(q, msgid, shdr).Scan(&bid, &pid, &title, &h)
+		if err == nil && h == "" {
+			h = title
 		}
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
@@ -886,6 +900,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		fmt.Fprintf(dw, "<%s> %s\n", sid, replaceTab(h))
 		dw.Close()
 	}
+
 	return true
 }
 func (sp *PSQLIB) commonGetHdrByRange(
@@ -897,23 +912,43 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		return true
 	}
 
-	var shdr string
-	if len(hdr) == 0 || hdr[0] != ':' {
-		shdr = mail.UnsafeCanonicalHeader(hdr)
-	} else {
-		nntp.ToLowerASCII(hdr)
-		shdr = unsafeBytesToStr(hdr)
+	shdr := canonicalHeaderQueryStr(hdr)
+
+	var rowsscan = func(r *sql.Rows, pid *postID, h *string) error {
+		return r.Scan(pid, h)
 	}
 
 	var rows *sql.Rows
 	var err error
 
 	if shdr == "Message-ID" {
+
 		q := `SELECT pid,'<' || msgid || '>'
 	FROM ib0.posts
 	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
 	ORDER BY pid ASC`
+
 		rows, err = sp.db.DB.Query(q, gs.bid, rmin, rmax)
+
+	} else if shdr == "Subject" {
+
+		q := `SELECT pid,title,headers -> $4 ->> 0
+	FROM ib0.posts
+	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
+	ORDER BY pid ASC`
+
+		rows, err = sp.db.DB.
+			Query(q, gs.bid, rmin, rmax, shdr)
+
+		rowsscan = func(r *sql.Rows, pid *postID, h *string) error {
+			var title string
+			e := r.Scan(pid, &title, h)
+			if e == nil && *h == "" {
+				*h = title
+			}
+			return err
+		}
+
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
 		w.PrintfLine("503 %q header unsupported", shdr)
@@ -923,11 +958,14 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		w.PrintfLine("503 %q header unsupported", shdr)
 		return true
 	} else {
-		q := `SELECT bid,pid,headers -> $4 ->> 0
+
+		q := `SELECT pid,headers -> $4 ->> 0
 	FROM ib0.posts
 	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
 	ORDER BY pid ASC`
+
 		rows, err = sp.db.DB.Query(q, gs.bid, rmin, rmax, shdr)
+
 	}
 	if err != nil {
 		w.ResInternalError(sp.sqlError("hdr query", err))
@@ -940,7 +978,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		var pid postID
 		var h string
 
-		err = rows.Scan(&pid, &h)
+		err = rowsscan(rows, &pid, &h)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("hdr query rows scan", err)
@@ -993,24 +1031,43 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		return false
 	}
 
-	var shdr string
-	if len(hdr) == 0 || hdr[0] != ':' {
-		shdr = mail.UnsafeCanonicalHeader(hdr)
-	} else {
-		nntp.ToLowerASCII(hdr)
-		shdr = unsafeBytesToStr(hdr)
+	shdr := canonicalHeaderQueryStr(hdr)
+
+	var rowscan = func(r *sql.Row, h *string) error {
+		return r.Scan(h)
 	}
 
 	var err error
 	var h string
-
 	var row *sql.Row
+
 	if shdr == "Message-ID" {
+
 		q := `SELECT '<' || msgid || '>'
 	FROM ib0.posts
 	WHERE bid = $1 AND pid = $2
 	LIMIT 1`
+
 		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid)
+
+	} else if shdr == "Subject" {
+
+		q := `SELECT title,headers -> $3 ->> 0
+	FROM ib0.posts
+	WHERE bid = $1 AND pid = $2
+	LIMIT 1`
+
+		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
+
+		rowscan = func(r *sql.Row, h *string) error {
+			var title string
+			e := r.Scan(&title, h)
+			if e == nil && *h == "" {
+				*h = title
+			}
+			return e
+		}
+
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
 		w.PrintfLine("503 %q header unsupported", shdr)
@@ -1020,13 +1077,16 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		w.PrintfLine("503 %q header unsupported", shdr)
 		return true
 	} else {
+
 		q := `SELECT headers -> $3 ->> 0
 	FROM ib0.posts
 	WHERE bid = $1 AND pid = $2
 	LIMIT 1`
+
 		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
+
 	}
-	err = row.Scan(&h)
+	err = rowscan(row, &h)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -1040,9 +1100,11 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	} else {
 		w.ResXHdrFollow()
 	}
+
 	dw := w.DotWriter()
 	fmt.Fprintf(dw, "%d %s\n", gs.pid, replaceTab(h))
 	dw.Close()
+
 	return true
 }
 func (sp *PSQLIB) GetHdrByMsgID(

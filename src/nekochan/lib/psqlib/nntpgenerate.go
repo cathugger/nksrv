@@ -74,12 +74,12 @@ ORDER BY jf.fid`
 
 	// ensure Message-ID
 	if len(pi.H["Message-ID"]) == 0 {
-		pi.H["Message-ID"] = []string{fmt.Sprintf("<%s>", msgid)}
+		pi.H["Message-ID"] = []mail.HeaderVal{{V: fmt.Sprintf("<%s>", msgid)}}
 	}
 
 	// ensure Subject
 	if len(pi.H["Subject"]) == 0 && pi.MI.Title != "" {
-		pi.H["Subject"] = []string{pi.MI.Title}
+		pi.H["Subject"] = []mail.HeaderVal{{V: pi.MI.Title}}
 	}
 
 	generateBody := func(
@@ -142,16 +142,16 @@ ORDER BY jf.fid`
 			var pb string
 			if !ismp {
 				if pis[i].ContentType != "" {
-					pis[i].Headers["Content-Type"] = []string{pis[i].ContentType}
+					pis[i].Headers["Content-Type"] = []mail.HeaderVal{{V: pis[i].ContentType}}
 				}
 				// XXX should we announce 8bit text?
 				if pis[i].Binary {
 					pis[i].Headers["Content-Transfer-Encoding"] =
-						[]string{"base64"}
+						[]mail.HeaderVal{{V: "base64"}}
 				}
 			} else {
-				pis[i].Headers["Content-Type"] = []string{""}
-				pis[i].Headers["Content-Type"][0], pb, err =
+				pis[i].Headers["Content-Type"] = []mail.HeaderVal{{}}
+				pis[i].Headers["Content-Type"][0].V, pb, err =
 					modifyMultipartType(pis[i].ContentType)
 				if err != nil {
 					return
@@ -177,15 +177,15 @@ ORDER BY jf.fid`
 	if !ismp {
 		// XXX should we announce 8bit text?
 		if pi.L.Binary {
-			pi.H["Content-Transfer-Encoding"] = []string{"base64"}
+			pi.H["Content-Transfer-Encoding"] = []mail.HeaderVal{{V: "base64"}}
 		}
 	} else {
 		if len(pi.H["Content-Type"]) == 0 {
 			return errNoContentType
 		}
 		pi.H["Content-Type"] = pi.H["Content-Type"][:1]
-		pi.H["Content-Type"][0], bnd, err =
-			modifyMultipartType(pi.H["Content-Type"][0])
+		pi.H["Content-Type"][0].V, bnd, err =
+			modifyMultipartType(pi.H["Content-Type"][0].V)
 		if err != nil {
 			return
 		}
