@@ -111,9 +111,8 @@ func processMessageText(
 			cset = cpar["charset"]
 		}
 
-		UorA :=
-			au.EqualFoldString(cset, "UTF-8") ||
-				au.EqualFoldString(cset, "US-ASCII")
+		UorA := au.EqualFoldString(cset, "UTF-8") ||
+			au.EqualFoldString(cset, "US-ASCII")
 
 		if strings.IndexByte(str, 0) < 0 {
 
