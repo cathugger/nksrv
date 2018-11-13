@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"encoding/json"
 	"errors"
 
 	au "nekochan/lib/asciiutils"
@@ -19,15 +20,37 @@ var (
 
 const maxCommonHdrLen = 32
 
-type HeaderVal struct {
-	V string // value
-	H string // original name, optional, needed only incase non-canonical form
+type HeaderValInner struct {
+	V string `json:"v"` // value
+	H string `json:"h"` // original name, optional, needed only incase non-canonical form
 }
+
+type HeaderVal struct {
+	HeaderValInner
+}
+
+func (hv HeaderVal) MarshalJSON() ([]byte, error) {
+	if hv.H == "" {
+		return json.Marshal(hv.V)
+	} else {
+		return json.Marshal(hv.HeaderValInner)
+	}
+}
+
+func (hv *HeaderVal) UnmarshalJSON(b []byte) (err error) {
+	err = json.Unmarshal(b, &hv.V)
+	if err == nil {
+		hv.H = ""
+		return
+	}
+	return json.Unmarshal(b, &hv.HeaderValInner)
+}
+
 type HeaderVals []HeaderVal
 type Headers map[string]HeaderVals
 
 func OneHeaderVal(v string) HeaderVals {
-	return HeaderVals{{V: v}}
+	return HeaderVals{{HeaderValInner: HeaderValInner{V: v}}}
 }
 
 // case-sensitive

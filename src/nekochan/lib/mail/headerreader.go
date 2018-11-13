@@ -126,7 +126,10 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 
 	finishCurrent := func() {
 		if len(currHeader) != 0 {
-			hval := HeaderVal{H: origHeader, V: string(h.Bytes())}
+			hval := HeaderVal{HeaderValInner: HeaderValInner{
+				H: origHeader,
+				V: string(h.Bytes()),
+			}}
 			if cs, ok := H[currHeader]; ok {
 				H[currHeader] = append(cs, hval)
 			} else {
