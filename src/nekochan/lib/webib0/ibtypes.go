@@ -13,9 +13,9 @@ package webib0
 
 // board list member
 type IBBoardListBoard struct {
-	Name        string   `json:"name"` // short name
-	Description string   `json:"desc"` // description
-	Tags        []string `json:"tags"` // tags
+	Name        string   `json:"name"`           // short name
+	Description string   `json:"desc"`           // description
+	Tags        []string `json:"tags,omitempty"` // tags
 }
 
 // board list page

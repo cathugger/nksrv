@@ -117,7 +117,8 @@ func (sp *PSQLIB) insertNewThread(
 		r = stmt.QueryRow(
 			bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
 			pInfo.MI.Title, pInfo.MI.Author,
-			pInfo.MI.Trip, pInfo.MI.Message)
+			pInfo.MI.Trip, pInfo.MI.Message,
+			pInfo.H, &pInfo.L)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount

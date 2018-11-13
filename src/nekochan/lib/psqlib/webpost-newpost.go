@@ -155,7 +155,8 @@ func (sp *PSQLIB) insertNewReply(
 		r = stmt.QueryRow(
 			rti.bumpLimit, rti.bid, rti.tid, pInfo.Date, pInfo.MI.Sage,
 			pInfo.ID, pInfo.MessageID,
-			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message)
+			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message,
+			pInfo.H, &pInfo.L)
 	} else {
 		x := postRQMsgArgCount
 		xf := postRQFileArgCount

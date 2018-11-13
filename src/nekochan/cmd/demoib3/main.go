@@ -10,11 +10,11 @@ import (
 	"runtime"
 	"syscall"
 
+	ar "nekochan/lib/apirouter"
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
 	"nekochan/lib/fstore"
 	ir "nekochan/lib/ibrouter"
-	ar "nekochan/lib/apirouter"
 	rj "nekochan/lib/jsonrenderer"
 	"nekochan/lib/logx"
 	"nekochan/lib/psql"
@@ -140,7 +140,7 @@ func main() {
 		StaticProvider:  di.IBProviderDemo{},
 		FileProvider:    di.IBProviderDemo{},
 		WebPostProvider: dbib,
-		APIHandler: ah,
+		APIHandler:      ah,
 	}
 	rh := ir.NewIBRouter(rcfg)
 
