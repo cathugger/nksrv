@@ -141,7 +141,7 @@ ORDER BY jf.fid`
 				base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
 		}
 
-		_, err := io.Copy(w, r)
+		_, err = io.Copy(w, r)
 		if err != nil {
 			err = fmt.Errorf("error copying: %v", err)
 		}
