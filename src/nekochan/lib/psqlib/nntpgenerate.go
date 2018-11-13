@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	crand "crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -11,8 +12,11 @@ import (
 
 	au "nekochan/lib/asciiutils"
 	ht "nekochan/lib/hashtools"
+	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	"nekochan/lib/mailib"
+
+	xtypes "github.com/jmoiron/sqlx/types"
 )
 
 func randomBoundary() string {
@@ -40,7 +44,7 @@ func (sp *PSQLIB) nntpGenerate(
 	// fetch info about post. some of info we don't care about
 	q := `SELECT jp.title,jp.message,jp.headers,jp.layout,jf.fname
 FROM ib0.posts AS jp
-JOIN ib0.files AS jf
+LEFT JOIN ib0.files AS jf
 USING (bid,pid)
 WHERE jp.msgid = $1
 ORDER BY jf.fid`
@@ -51,22 +55,51 @@ ORDER BY jf.fid`
 
 	pi := mailib.PostInfo{}
 
+	havesomething := false
+
 	for rows.Next() {
-		var fi mailib.FileInfo
+		havesomething = true
+
+		var jH, jL xtypes.JSONText
+		var fid sql.NullString
 
 		// XXX is it okay to overwrite stuff there?
-		err = rows.Scan(&pi.MI.Title, &pi.MI.Message, &pi.H, &pi.L, &fi.ID)
+		err = rows.Scan(&pi.MI.Title, &pi.MI.Message, &jH, &jL, &fid)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("posts x files query rows scan", err)
 		}
 
-		if fi.ID != "" {
-			pi.FI = append(pi.FI, fi)
+		sp.log.LogPrintf(DEBUG,
+			"nntpGenerate: PxF: title(%q) msg(%q) H(%q) L(%q) id(%v)",
+			pi.MI.Title, pi.MI.Message, jH, jL, fid)
+
+		err = jH.Unmarshal(&pi.H)
+		if err != nil {
+			rows.Close()
+			return sp.sqlError("jH unmarshal", err)
+		}
+
+		err = jL.Unmarshal(&pi.L)
+		if err != nil {
+			rows.Close()
+			return sp.sqlError("jL unmarshal", err)
+		}
+
+		sp.log.LogPrintf(DEBUG,
+			"nntpGenerate: unmarshaled H(%#v) L(%#v)",
+			pi.H, &pi.L)
+
+		if fid.Valid && fid.String != "" {
+			pi.FI = append(pi.FI, mailib.FileInfo{ID: fid.String})
 		}
 	}
 	if err = rows.Err(); err != nil {
 		return sp.sqlError("posts x files query rows iteration", err)
+	}
+
+	if !havesomething {
+		return errNotExist
 	}
 
 	// ensure Message-ID
@@ -108,7 +141,7 @@ ORDER BY jf.fid`
 				base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
 		}
 
-		_, err = io.Copy(w, r)
+		_, err := io.Copy(w, r)
 		if err != nil {
 			err = fmt.Errorf("error copying: %v", err)
 		}

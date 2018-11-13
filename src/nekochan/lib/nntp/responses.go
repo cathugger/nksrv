@@ -84,7 +84,7 @@ func (r Responder) ResSendArticleToBePosted() error {
 
 func (r Responder) ResInternalError(e error) error {
 	if e != nil {
-		return r.PrintfLine("403 internal error: %v")
+		return r.PrintfLine("403 internal error: %v", e)
 	} else {
 		return r.PrintfLine("403 internal error")
 	}

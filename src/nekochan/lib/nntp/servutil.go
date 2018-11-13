@@ -140,7 +140,7 @@ func isNumberSlice(x []byte) bool {
 
 func stoi(x []byte) (n int) {
 	for _, c := range x {
-		n = n*10 + int(c)
+		n = n*10 + int(c-'0')
 	}
 	return
 }
@@ -152,8 +152,8 @@ func parseDateSlice(date []byte) (Y, M, D int, valid bool) {
 		return Y, M, D, false
 	}
 
-	D = int(date[len(date)-2])*10 + int(date[len(date)-1])
-	M = int(date[len(date)-4])*10 + int(date[len(date)-3])
+	D = int(date[len(date)-2]-'0')*10 + int(date[len(date)-1]-'0')
+	M = int(date[len(date)-4]-'0')*10 + int(date[len(date)-3]-'0')
 	if len(date) != 6 {
 		Y = stoi(date[:len(date)-4])
 	} else {
@@ -180,9 +180,9 @@ func parseTimeSlice(t []byte) (h, m, s int, valid bool) {
 	if len(t) != 6 || !isNumberSlice(t) {
 		return h, m, s, false
 	}
-	h = int(t[0])*10 + int(t[1])
-	m = int(t[2])*10 + int(t[3])
-	s = int(t[4])*10 + int(t[5])
+	h = int(t[0]-'0')*10 + int(t[1]-'0')
+	m = int(t[2]-'0')*10 + int(t[3]-'0')
+	s = int(t[4]-'0')*10 + int(t[5]-'0')
 	return h, m, s, h <= 24 && m < 60 && s <= 61
 }
 

@@ -138,7 +138,7 @@ func (i *PartInfo) MarshalJSON() ([]byte, error) {
 	if i.onlyBody() {
 		return json.Marshal(i.Body) // array or integer
 	}
-	return json.Marshal(i.PartInfoInner)
+	return json.Marshal(&i.PartInfoInner)
 }
 
 func (i *PartInfo) UnmarshalJSON(b []byte) (err error) {

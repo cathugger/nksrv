@@ -10,6 +10,7 @@ import (
 	"time"
 
 	au "nekochan/lib/asciiutils"
+	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	"nekochan/lib/nntp"
 )
@@ -66,10 +67,14 @@ var (
 	errNoBoardSelected = errors.New("no board selected")
 )
 
-func handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
+func (sp *PSQLIB) handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 	if e == nil {
 		// no error - handled successfuly
 		return true
+	}
+	notexist := os.IsNotExist(e)
+	if !notexist {
+		sp.log.LogPrintf(ERROR, "handleNNTPGetError: err: %v", e)
 	}
 	if !nc.IsClosed() {
 		// writer wasn't properly closed -- we should reset connection
@@ -77,7 +82,7 @@ func handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 		return true
 	}
 	// rest of errors are easier to handle
-	if e == errNotExist {
+	if notexist {
 		return false // this is pretty convenient
 	} else if e == errNoBoardSelected {
 		w.ResNoNewsgroupSelected()
@@ -92,7 +97,7 @@ func (sp *PSQLIB) getArticleCommonByMsgID(
 
 	sid := unsafeCoreMsgIDToStr(msgid)
 	e := sp.nntpObtainItemByMsgID(nc, cs, sid)
-	return handleNNTPGetError(w, nc, e)
+	return sp.handleNNTPGetError(w, nc, e)
 }
 func (sp *PSQLIB) GetArticleFullByMsgID(
 	w Responder, cs *ConnState, msgid CoreMsgID) bool {
@@ -124,7 +129,7 @@ func (sp *PSQLIB) getArticleCommonByNum(
 	nc nntpCopyer, w Responder, cs *ConnState, num uint64) bool {
 
 	e := sp.nntpObtainItemByNum(nc, cs, num)
-	return handleNNTPGetError(w, nc, e)
+	return sp.handleNNTPGetError(w, nc, e)
 }
 func (sp *PSQLIB) GetArticleFullByNum(
 	w Responder, cs *ConnState, num uint64) bool {
@@ -156,7 +161,7 @@ func (sp *PSQLIB) getArticleCommonByCurr(
 	nc nntpCopyer, w Responder, cs *ConnState) bool {
 
 	e := sp.nntpObtainItemByCurr(nc, cs)
-	return handleNNTPGetError(w, nc, e)
+	return sp.handleNNTPGetError(w, nc, e)
 }
 func (sp *PSQLIB) GetArticleFullByCurr(w Responder, cs *ConnState) bool {
 	nc := &fullNNTPCopyer{w: w}
@@ -259,12 +264,12 @@ func (sp *PSQLIB) SelectAndListGroup(
 		LEFT JOIN ib0.posts AS xp
 		USING (bid)
 		WHERE xb.bname = $1
-			AND xp.pid >= $2 AND ($3 < 0 OR x3.pid <= $3)
+			AND xp.pid >= $2 AND ($3 < 0 OR xp.pid <= $3)
 		ORDER BY xp.pid ASC
 	) x3
 	ON x1.bid = x3.bid
 	WHERE x1.bname = $1`
-	rows, err := sp.db.DB.Query(q, sgroup)
+	rows, err := sp.db.DB.Query(q, sgroup, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("board-posts query", err))
 		return true
@@ -421,9 +426,9 @@ func (sp *PSQLIB) ListNewNews(
 
 		dw = aw.OpenDotWriter()
 		for rows.Next() {
-			var msgid CoreMsgID
+			var msgid string
 
-			err = rows.Scan(&msgid)
+			err = rows.Scan((*string)(&msgid))
 			if err != nil {
 				rows.Close()
 				sp.sqlError("newnews query rows scan", err)

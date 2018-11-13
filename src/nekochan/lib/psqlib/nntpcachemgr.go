@@ -13,6 +13,7 @@ import (
 	"nekochan/lib/cachepub"
 	fu "nekochan/lib/fileutil"
 	ht "nekochan/lib/hashtools"
+	"nekochan/lib/xos"
 )
 
 // this gon be fuken weird and complicated im telling u
@@ -241,15 +242,19 @@ readExisting:
 
 	r := o.p.NewReader()
 	done, err := w.Copy(num, msgid, r)
-	if err != os.ErrClosed {
+	if !xos.IsClosed(err) {
 		// nil(which would mean full success) or non-recoverable error
-		return err
+		if err == nil {
+			return nil
+		} else {
+			return fmt.Errorf("nntpObtainItem: w.Copy err: %v", err)
+		}
 	}
 	// file was closed
 	// sanity check if it was actually written properly
 	err = o.p.Error()
 	if err != io.EOF {
-		return fmt.Errorf("CachePub in unexpected error state: %v", err)
+		return fmt.Errorf("nntpObtainItem: CachePub in unexpected error state: %v", err)
 	}
 	// wait till file gets moved to stable storage
 	// XXX maybe simpler design (spinlock, or finished being read in atomic way) would be better?

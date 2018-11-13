@@ -72,6 +72,8 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.nntpfs.RemoveDir(nntpIncomingTempDir)
 	p.nntpfs.MakeDir(nntpIncomingDir)
 
+	p.nntpmgr = newNNTPCacheMgr()
+
 	p.altthumb = cfg.AltThumber
 
 	p.ffo = formFileOpener{&p.src}
