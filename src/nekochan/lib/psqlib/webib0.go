@@ -121,13 +121,17 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		return sp.sqlError("thread row count query scan", err), http.StatusInternalServerError
 	}
 
+	var pgslimit interface{}
+	if threadsPerPage > 0 {
+		pgslimit = threadsPerPage
+	}
 	rows, err := sp.db.DB.Query(
 		`SELECT tid,tname,attrib
 FROM ib0.threads
 WHERE bid=$1
 ORDER BY bump DESC,tid ASC
 LIMIT $2 OFFSET $3`,
-		bid, threadsPerPage, num*threadsPerPage)
+		bid, pgslimit, num*threadsPerPage)
 	if err != nil {
 		return sp.sqlError("threads query", err), http.StatusInternalServerError
 	}
