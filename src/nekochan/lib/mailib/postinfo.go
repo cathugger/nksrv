@@ -88,7 +88,7 @@ type BodyObject struct {
 	Data interface{}
 }
 
-func (i *BodyObject) MarshalJSON() ([]byte, error) {
+func (i BodyObject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.Data)
 }
 
