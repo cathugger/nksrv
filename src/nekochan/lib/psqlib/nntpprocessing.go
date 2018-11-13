@@ -110,7 +110,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 	} else {
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
-		H["Message-ID"] = []mail.HeaderVal{{V: fmsgids}}
+		H["Message-ID"] = mail.OneHeaderVal(fmsgids)
 		info.MessageID = cutMsgID(FullMsgIDStr(fmsgids))
 	}
 

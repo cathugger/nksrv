@@ -37,11 +37,6 @@ func modifyMultipartType(ct string) (_ string, rb string, _ error) {
 func (sp *PSQLIB) nntpGenerate(
 	xw io.Writer, num uint64, msgid CoreMsgIDStr) (err error) {
 
-	// TODO
-	// need to generate article off database shit
-	// im too fucking lazy to actually do it atm
-	// so placeholder to test shit will work for now
-
 	// fetch info about post. some of info we don't care about
 	q := `SELECT jp.title,jp.message,jp.headers,jp.layout,jf.fname
 FROM ib0.posts AS jp
@@ -180,7 +175,7 @@ ORDER BY jf.fid`
 	if !ismp {
 		// XXX should we announce 8bit text?
 		if pi.L.Binary {
-			pi.H["Content-Transfer-Encoding"] = []mail.HeaderVal{{V: "base64"}}
+			pi.H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
 		}
 	} else {
 		if len(pi.H["Content-Type"]) == 0 {

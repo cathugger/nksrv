@@ -17,7 +17,9 @@ func attachmentDisposition(original string) string {
 
 const plainUTF8Type = "text/plain; charset=UTF-8"
 
-func (sp *PSQLIB) fillWebPostDetails(i mailib.PostInfo, board string, ref CoreMsgIDStr) mailib.PostInfo {
+func (sp *PSQLIB) fillWebPostDetails(
+	i mailib.PostInfo, board string, ref CoreMsgIDStr) mailib.PostInfo {
+
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
 
@@ -126,7 +128,7 @@ func (sp *PSQLIB) fillWebPostDetails(i mailib.PostInfo, board string, ref CoreMs
 		xparts[x].Binary = true
 		x++
 	}
-	i.H["Content-Type"] = []mail.HeaderVal{{V: "multipart/mixed"}}
+	i.H["Content-Type"] = mail.OneHeaderVal("multipart/mixed")
 	i.L.Body.Data = xparts
 	return i
 }

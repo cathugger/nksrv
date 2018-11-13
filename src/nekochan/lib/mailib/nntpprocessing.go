@@ -240,6 +240,13 @@ func processMessageAttachment(
 			ext = mexts[0] // expect first to be good enough
 		}
 	}
+	// if still no extension, try treating "text/*" as "text/plain"
+	if ext == "" && strings.HasPrefix(ct, "text/") && ct != "text/plain" {
+		mexts, e := emime.MIMEExtensionsByType("text/plain")
+		if e == nil && len(mexts) != 0 {
+			ext = mexts[0] // expect first to be good enough
+		}
+	}
 	// special fallbacks, better than nothing
 	if ext == "" {
 		if strings.HasPrefix(ct, "text/") ||
@@ -291,6 +298,9 @@ func DevourMessageBody(
 			cleanTmpFiles()
 		}
 	}()
+
+	// TODO parse multiple levels of multipart
+	// TODO be picky about stuff from multipart/alternative, prefer txt, richtext
 
 	textprocessed := false
 
