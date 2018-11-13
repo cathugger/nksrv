@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -112,13 +113,22 @@ func (sp *PSQLIB) insertNewThread(
 		return
 	}
 
+	Hjson, err := json.Marshal(pInfo.H)
+	if err != nil {
+		panic(err)
+	}
+	Ljson, err := json.Marshal(&pInfo.L)
+	if err != nil {
+		panic(err)
+	}
+
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
 			bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
 			pInfo.MI.Title, pInfo.MI.Author,
 			pInfo.MI.Trip, pInfo.MI.Message,
-			pInfo.H, &pInfo.L)
+			Hjson, Ljson)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
@@ -131,8 +141,8 @@ func (sp *PSQLIB) insertNewThread(
 		args[5] = pInfo.MI.Author
 		args[6] = pInfo.MI.Trip
 		args[7] = pInfo.MI.Message
-		args[8] = pInfo.H
-		args[9] = &pInfo.L
+		args[8] = Hjson
+		args[9] = Ljson
 		for i := range pInfo.FI {
 			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size

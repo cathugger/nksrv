@@ -99,6 +99,10 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		return sp.sqlError("board attr json unmarshal", err), http.StatusInternalServerError
 	}
 
+	if threadsPerPage <= 0 {
+		threadsPerPage = 0
+		maxPages = 1
+	}
 	if maxPages != 0 && num > maxPages {
 		return errNoSuchPage, http.StatusNotFound
 	}
@@ -129,7 +133,13 @@ LIMIT $2 OFFSET $3`,
 	}
 
 	page.Number = num
-	page.Available = uint32((allcount + uint64(threadsPerPage) - 1) / uint64(threadsPerPage))
+	if threadsPerPage > 0 {
+		page.Available =
+			uint32((allcount + uint64(threadsPerPage) - 1) /
+				uint64(threadsPerPage))
+	} else {
+		page.Available = 1
+	}
 
 	type tpid struct {
 		tid  postID
