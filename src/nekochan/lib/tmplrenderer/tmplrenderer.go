@@ -31,6 +31,8 @@ const (
 	tmplThreadCatalogErr
 	tmplThread
 	tmplThreadErr
+	tmplCreatedBoard
+	tmplCreatedBoardErr
 	tmplCreatedThread
 	tmplCreatedThreadErr
 	tmplCreatedPost
@@ -47,6 +49,8 @@ var names = [tmplMax]string{
 	"thread_catalog_err",
 	"thread",
 	"thread_err",
+	"created_board",
+	"created_board_err",
 	"created_thread",
 	"created_thread_err",
 	"created_post",
@@ -154,6 +158,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	for i := 0; i < tmplMax; i++ {
 		filename := names[i] + ".tmpl"
 		charset := dcharset
+		// default content type for error pages is text/plain
 		var contenttype string
 		if i&1 == 0 {
 			contenttype = "text/html"
@@ -495,7 +500,25 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 func (tr *TmplRenderer) DressNewBoardResult(
 	w http.ResponseWriter, created bool, bname string, err error, code int) {
 
-	panic("TODO")
+	l := &struct {
+		S bool   // success
+		B string // board name
+		E error
+		C int
+		N NodeInfo
+		R *TmplRenderer
+	}{
+		S: created,
+		B: bname,
+		E: err,
+		C: code,
+		R: tr,
+	}
+	if err == nil {
+		outTmpl(w, tr, tmplCreatedBoard, 200, l)
+	} else {
+		outTmpl(w, tr, tmplCreatedBoardErr, code, l)
+	}
 }
 
 func (tr *TmplRenderer) DressPostResult(

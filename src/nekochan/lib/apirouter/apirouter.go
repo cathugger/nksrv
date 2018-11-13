@@ -3,6 +3,7 @@ package apirouter
 // simple html and webapi server
 
 import (
+	"encoding/json"
 	"fmt"
 	"mime"
 	"net/http"
@@ -136,9 +137,40 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h_boards := handler.NewRegexPath()
-	h_boards.Handle("/", false,
-		handler.NewMethod().Handle("GET",
-			http.HandlerFunc(cfg.Renderer.ServeBoardList)))
+	h_boardsroot := handler.NewMethod().
+		Handle("GET", http.HandlerFunc(cfg.Renderer.ServeBoardList))
+	if cfg.WebPostProvider != nil {
+		h_boardsroot.Handle("POST", http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+
+				ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+				if e != nil {
+					http.Error(
+						w, fmt.Sprintf("failed to parse content type: %v", e),
+						http.StatusBadRequest)
+					return
+				}
+				if ct != "application/json" {
+					http.Error(w, "bad Content-Type", http.StatusBadRequest)
+					return
+				}
+
+				jd := json.NewDecoder(r.Body)
+				var nbi ib0.IBNewBoardInfo
+				e = jd.Decode(&nbi)
+				if e != nil {
+					http.Error(
+						w, fmt.Sprintf("failed to parse content: %v", e),
+						http.StatusBadRequest)
+					return
+				}
+
+				c, e, code := cfg.WebPostProvider.IBPostNewBoard(nbi)
+				cfg.Renderer.DressNewBoardResult(w, c, nbi.Name, e, code)
+
+			}))
+	}
+	h_boards.Handle("/", false, h_boardsroot)
 	h_boards.Handle("/{{b}}", true, h_bcontent)
 
 	h.Handle("/boards", true, h_boards)

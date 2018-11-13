@@ -123,18 +123,13 @@ func (j *JSONRenderer) DressNewBoardResult(
 	}{
 		Success: created,
 		BName:   bname,
-
-		jsonErrorMsg: jsonErrorMsg{
-			Code: code,
-		},
 	}
 	if err != nil {
 		r.Msg = err.Error()
+		r.Code = code
 	}
 
 	e.Encode(r)
-
-	panic("TODO")
 }
 
 func (j *JSONRenderer) DressPostResult(
