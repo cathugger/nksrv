@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -207,9 +208,13 @@ func commonNewPost(
 }
 
 func (IBProviderDemo) IBPostNewBoard(
-	bi ib0.IBNewBoardInfo) (err error, code int) {
+	bi ib0.IBNewBoardInfo) (created bool, err error, code int) {
 
-	return nil, 0
+	if bi.Name == "test" {
+		return true, nil, 0
+	} else {
+		return false, errors.New("board already exists"), http.StatusConflict
+	}
 }
 
 func (IBProviderDemo) IBPostNewThread(
