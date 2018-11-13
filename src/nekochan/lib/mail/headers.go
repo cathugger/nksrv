@@ -2,16 +2,9 @@ package mail
 
 import (
 	"errors"
-	"io"
 
 	au "nekochan/lib/asciiutils"
 )
-
-type ArticleReader interface {
-	io.Reader
-	ReadByte() (byte, error)
-	Discard(n int) (int, error)
-}
 
 func ValidHeader(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
@@ -30,7 +23,12 @@ type HeaderVal struct {
 	V string // value
 	H string // original name, optional, needed only incase non-canonical form
 }
-type Headers map[string][]HeaderVal
+type HeaderVals []HeaderVal
+type Headers map[string]HeaderVals
+
+func OneHeaderVal(v string) HeaderVals {
+	return HeaderVals{{V: v}}
+}
 
 // case-sensitive
 func (h Headers) GetFirst(x string) string {

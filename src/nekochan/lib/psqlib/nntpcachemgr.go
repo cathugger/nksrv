@@ -12,6 +12,7 @@ import (
 
 	"nekochan/lib/cachepub"
 	fu "nekochan/lib/fileutil"
+	ht "nekochan/lib/hashtools"
 )
 
 // this gon be fuken weird and complicated im telling u
@@ -78,7 +79,7 @@ func (sp *PSQLIB) makeFilename(id CoreMsgIDStr) string {
 	// we could just base32 id itself but that would allow it to grow over common file name limit of 255
 	// so do blake2s
 	idsum := blake2s.Sum256(unsafeStrToBytes(string(id)))
-	enc := lowerBase32HexEnc.EncodeToString(idsum[:])
+	enc := ht.LowerBase32HexEnc.EncodeToString(idsum[:])
 	return sp.nntpfs.Main() + enc + ".eml"
 }
 

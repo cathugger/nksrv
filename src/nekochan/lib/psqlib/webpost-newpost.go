@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	. "nekochan/lib/logx"
+	"nekochan/lib/mailib"
 )
 
 type npTuple struct {
@@ -138,7 +139,7 @@ type replyTargetInfo struct {
 }
 
 func (sp *PSQLIB) insertNewReply(
-	rti replyTargetInfo, pInfo postInfo) (pid postID, err error) {
+	rti replyTargetInfo, pInfo mailib.PostInfo) (pid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -173,7 +174,7 @@ func (sp *PSQLIB) insertNewReply(
 		args[11] = pInfo.H
 		args[12] = &pInfo.L
 		for i := range pInfo.FI {
-			args[x+0] = FTypeS[pInfo.FI[i].Type]
+			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb

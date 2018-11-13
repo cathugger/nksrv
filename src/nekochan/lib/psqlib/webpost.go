@@ -4,11 +4,8 @@ import (
 	crand "crypto/rand"
 	"crypto/sha1"
 	"database/sql"
-	"encoding/base32"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -16,7 +13,6 @@ import (
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
-	"golang.org/x/crypto/blake2s"
 	"golang.org/x/text/unicode/norm"
 
 	au "nekochan/lib/asciiutils"
@@ -24,8 +20,10 @@ import (
 	"nekochan/lib/emime"
 	fu "nekochan/lib/fileutil"
 	"nekochan/lib/fstore"
+	ht "nekochan/lib/hashtools"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail/form"
+	"nekochan/lib/mailib"
 	ib0 "nekochan/lib/webib0"
 )
 
@@ -103,7 +101,7 @@ func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (_ erro
 }
 
 func checkSubmissionLimits(slimits *submissionLimits, reply bool,
-	f form.Form, mInfo messageInfo) (_ error, c int) {
+	f form.Form, mInfo mailib.MessageInfo) (_ error, c int) {
 
 	var e error
 	e, c = checkFileLimits(slimits, reply, f)
@@ -147,42 +145,11 @@ func (sp *PSQLIB) applyInstanceThreadOptions(threadOpts *threadOptions,
 	// TODO
 }
 
-var lowerBase32HexSet = "0123456789abcdefghijklmnopqrstuv"
-var lowerBase32HexEnc = base32.
-	NewEncoding(lowerBase32HexSet).
-	WithPadding(base32.NoPadding)
-
-// custom sort-able base64 set
-var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-	"_abcdefghijklmnopqrstuvwxyz"
-var sBase64Enc = base64.
-	NewEncoding(sBase64Set).
-	WithPadding(base64.NoPadding)
-
-// expects file to be seeked at 0
-func makeFileHash(f *os.File) (s string, e error) {
-	h, e := blake2s.New256([]byte(nil))
-	if e != nil {
-		return
-	}
-
-	_, e = io.Copy(h, f)
-	if e != nil {
-		return
-	}
-
-	var b [32]byte
-	sum := h.Sum(b[:0])
-	s = lowerBase32HexEnc.EncodeToString(sum)
-
-	return
-}
-
 // expects file to be seeked at 0
 func generateFileConfig(
-	f *os.File, ct string, fi fileInfo) (_ fileInfo, err error) {
+	f *os.File, ct string, fi mailib.FileInfo) (_ mailib.FileInfo, err error) {
 
-	s, err := makeFileHash(f)
+	s, err := ht.MakeFileHash(f)
 	if err != nil {
 		return
 	}
@@ -256,8 +223,8 @@ func (sp *PSQLIB) newMessageID(t int64) string {
 	var r [12]byte
 	crand.Read(r[:])
 
-	return sBase64Enc.EncodeToString(b[:]) + "." +
-		sBase64Enc.EncodeToString(r[:]) + "@" + sp.instance
+	return ht.SBase64Enc.EncodeToString(b[:]) + "." +
+		ht.SBase64Enc.EncodeToString(r[:]) + "@" + sp.instance
 }
 
 // TODO: more algos
@@ -314,7 +281,7 @@ func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
 
-	var pInfo postInfo
+	var pInfo mailib.PostInfo
 
 	defer func() {
 		if err != nil {
@@ -495,7 +462,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// there still can be the case where there are left untracked files in file system. they could be manually scanned, and damage is low.
 
 	// process files
-	pInfo.FI = make([]fileInfo, filecount)
+	pInfo.FI = make([]mailib.FileInfo, filecount)
 	x := 0
 	sp.log.LogPrint(DEBUG, "processing form files")
 	for _, fieldname := range FileFields {

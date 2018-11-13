@@ -10,7 +10,9 @@ import (
 	"strings"
 
 	au "nekochan/lib/asciiutils"
+	ht "nekochan/lib/hashtools"
 	"nekochan/lib/mail"
+	"nekochan/lib/mailib"
 )
 
 func randomBoundary() string {
@@ -19,7 +21,7 @@ func randomBoundary() string {
 	if err != nil {
 		panic(err)
 	}
-	return sBase64Enc.EncodeToString(b[:])
+	return ht.SBase64Enc.EncodeToString(b[:])
 }
 
 var errNoContentType = errors.New("no Content-Type")
@@ -52,10 +54,10 @@ ORDER BY jf.fid`
 		return sp.sqlError("posts x files query", err)
 	}
 
-	pi := postInfo{}
+	pi := mailib.PostInfo{}
 
 	for rows.Next() {
-		var fi fileInfo
+		var fi mailib.FileInfo
 
 		// XXX is it okay to overwrite stuff there?
 		err = rows.Scan(&pi.MI.Title, &pi.MI.Message, &pi.H, &pi.L, &fi.ID)
@@ -74,16 +76,16 @@ ORDER BY jf.fid`
 
 	// ensure Message-ID
 	if len(pi.H["Message-ID"]) == 0 {
-		pi.H["Message-ID"] = []mail.HeaderVal{{V: fmt.Sprintf("<%s>", msgid)}}
+		pi.H["Message-ID"] = mail.OneHeaderVal(fmt.Sprintf("<%s>", msgid))
 	}
 
 	// ensure Subject
 	if len(pi.H["Subject"]) == 0 && pi.MI.Title != "" {
-		pi.H["Subject"] = []mail.HeaderVal{{V: pi.MI.Title}}
+		pi.H["Subject"] = mail.OneHeaderVal(pi.MI.Title)
 	}
 
 	generateBody := func(
-		w io.Writer, binary bool, poi postObjectIndex) (err error) {
+		w io.Writer, binary bool, poi mailib.PostObjectIndex) (err error) {
 
 		var r io.Reader
 		if poi == 0 {
@@ -119,9 +121,9 @@ ORDER BY jf.fid`
 	}
 
 	generateSomething := func(
-		w io.Writer, binary bool, bo bodyObject) error {
+		w io.Writer, binary bool, bo mailib.BodyObject) error {
 
-		if poi, ok := bo.Data.(postObjectIndex); ok {
+		if poi, ok := bo.Data.(mailib.PostObjectIndex); ok {
 			return generateBody(w, binary, poi)
 		}
 		if bo.Data == nil {
@@ -131,23 +133,24 @@ ORDER BY jf.fid`
 	}
 
 	var generateMultipart func(
-		w io.Writer, boundary string, pis []partInfo) (err error)
+		w io.Writer, boundary string, pis []mailib.PartInfo) (err error)
 
 	generateMultipart = func(
-		w io.Writer, boundary string, pis []partInfo) (err error) {
+		w io.Writer, boundary string, pis []mailib.PartInfo) (err error) {
 
 		pw := mail.NewPartWriter(w, boundary, "")
 		for i := range pis {
-			ppis, ismp := pis[i].Body.Data.([]partInfo)
+			ppis, ismp := pis[i].Body.Data.([]mailib.PartInfo)
 			var pb string
 			if !ismp {
 				if pis[i].ContentType != "" {
-					pis[i].Headers["Content-Type"] = []mail.HeaderVal{{V: pis[i].ContentType}}
+					pis[i].Headers["Content-Type"] =
+						mail.OneHeaderVal(pis[i].ContentType)
 				}
 				// XXX should we announce 8bit text?
 				if pis[i].Binary {
 					pis[i].Headers["Content-Transfer-Encoding"] =
-						[]mail.HeaderVal{{V: "base64"}}
+						mail.OneHeaderVal("base64")
 				}
 			} else {
 				pis[i].Headers["Content-Type"] = []mail.HeaderVal{{}}
@@ -172,7 +175,7 @@ ORDER BY jf.fid`
 		return pw.FinishParts("")
 	}
 
-	pis, ismp := pi.L.Body.Data.([]partInfo)
+	pis, ismp := pi.L.Body.Data.([]mailib.PartInfo)
 	var bnd string
 	if !ismp {
 		// XXX should we announce 8bit text?

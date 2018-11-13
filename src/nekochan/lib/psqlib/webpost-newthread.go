@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	. "nekochan/lib/logx"
+	"nekochan/lib/mailib"
 )
 
 const postTQMsgArgCount = 10
@@ -100,7 +101,7 @@ SELECT * FROM up`
 }
 
 func (sp *PSQLIB) insertNewThread(
-	bid boardID, pInfo postInfo) (tid postID, err error) {
+	bid boardID, pInfo mailib.PostInfo) (tid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -132,7 +133,7 @@ func (sp *PSQLIB) insertNewThread(
 		args[8] = pInfo.H
 		args[9] = &pInfo.L
 		for i := range pInfo.FI {
-			args[x+0] = FTypeS[pInfo.FI[i].Type]
+			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb

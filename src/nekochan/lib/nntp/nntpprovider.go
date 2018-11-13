@@ -4,13 +4,13 @@ import (
 	"io"
 	"time"
 
-	"nekochan/lib/mail"
+	mail "nekochan/lib/minimail"
 )
 
-type FullMsgID []byte // msgid with < and >
-type CoreMsgID []byte // msgid without < and >
-type FullMsgIDStr string
-type CoreMsgIDStr string
+type FullMsgID = mail.FullMsgID // msgid with < and >
+type CoreMsgID = mail.CoreMsgID // msgid without < and >
+type FullMsgIDStr = mail.FullMsgIDStr
+type CoreMsgIDStr = mail.CoreMsgIDStr
 
 type ArticleReader = mail.ArticleReader
 

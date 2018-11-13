@@ -7,6 +7,7 @@ import (
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/mail"
+	"nekochan/lib/mailib"
 )
 
 func attachmentDisposition(original string) string {
@@ -16,7 +17,7 @@ func attachmentDisposition(original string) string {
 
 const plainUTF8Type = "text/plain; charset=UTF-8"
 
-func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr) postInfo {
+func (sp *PSQLIB) fillWebPostDetails(i mailib.PostInfo, board string, ref CoreMsgIDStr) mailib.PostInfo {
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
 
@@ -32,38 +33,38 @@ func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr)
 
 	// From
 	// XXX should we hardcode "Anonymous" incase Author is empty?
-	i.H["From"] = []mail.HeaderVal{{V: (&gmail.Address{
+	i.H["From"] = mail.OneHeaderVal((&gmail.Address{
 		Name:    i.MI.Author,
 		Address: "poster@" + sp.instance,
-	}).String()}}
+	}).String())
 
 	// Newsgroups
-	i.H["Newsgroups"] = []mail.HeaderVal{{V: board}}
+	i.H["Newsgroups"] = mail.OneHeaderVal(board)
 
 	// Date
 	{
 		dd := i.Date
 		Y, M, D := dd.Date()
 		h, m, s := dd.Clock()
-		i.H["Date"] = []mail.HeaderVal{{
-			V: fmt.Sprintf(
+		i.H["Date"] = mail.OneHeaderVal(
+			fmt.Sprintf(
 				"%02d %s %04d %02d:%02d:%02d GMT",
-				D, M.String()[:3], Y, h, m, s)}}
+				D, M.String()[:3], Y, h, m, s))
 	}
 
 	// References
 	if ref != "" {
-		i.H["References"] = []mail.HeaderVal{{V: fmt.Sprintf("<%s>", ref)}}
+		i.H["References"] = mail.OneHeaderVal(fmt.Sprintf("<%s>", ref))
 	}
 
 	// X-Sage
 	if i.MI.Sage && ref != "" {
 		// NOTE: some impls specifically check for "1"
-		i.H["X-Sage"] = []mail.HeaderVal{{V: "1"}}
+		i.H["X-Sage"] = mail.OneHeaderVal("1")
 	}
 
 	// Path
-	i.H["Path"] = []mail.HeaderVal{{V: sp.instance + "!.POSTED!not-for-mail"}}
+	i.H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 
 	// now deal with layout
 
@@ -72,9 +73,9 @@ func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr)
 			// empty. don't include Content-Type header either
 			i.L.Body.Data = nil
 		} else {
-			i.L.Body.Data = postObjectIndex(0)
+			i.L.Body.Data = mailib.PostObjectIndex(0)
 			if text8bit {
-				i.H["Content-Type"] = []mail.HeaderVal{{V: plainUTF8Type}}
+				i.H["Content-Type"] = mail.OneHeaderVal(plainUTF8Type)
 			}
 		}
 		return i
@@ -91,10 +92,10 @@ func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr)
 		if len(i.FI[0].ContentType) == 0 {
 			panic("Content-Type not set")
 		}
-		i.H["Content-Type"] = []mail.HeaderVal{{V: i.FI[0].ContentType}}
+		i.H["Content-Type"] = mail.OneHeaderVal(i.FI[0].ContentType)
 		i.H["Content-Disposition"] =
-			[]mail.HeaderVal{{V: attachmentDisposition(i.FI[0].Original)}}
-		i.L.Body.Data = postObjectIndex(1)
+			mail.OneHeaderVal(attachmentDisposition(i.FI[0].Original))
+		i.L.Body.Data = mailib.PostObjectIndex(1)
 		i.L.Binary = true
 		return i
 	}
@@ -103,13 +104,13 @@ func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr)
 	if hastext {
 		nparts++
 	}
-	xparts := make([]partInfo, nparts)
+	xparts := make([]mailib.PartInfo, nparts)
 	x := 0
 	if hastext {
 		if text8bit {
 			xparts[0].ContentType = plainUTF8Type
 		}
-		xparts[0].Body.Data = postObjectIndex(0)
+		xparts[0].Body.Data = mailib.PostObjectIndex(0)
 		x++
 	}
 	for a := range i.FI {
@@ -118,11 +119,10 @@ func (sp *PSQLIB) fillWebPostDetails(i postInfo, board string, ref CoreMsgIDStr)
 		}
 		xparts[x].ContentType = i.FI[x].ContentType
 		xparts[x].Headers = mail.Headers{
-			"Content-Disposition": []mail.HeaderVal{{
-				V: attachmentDisposition(i.FI[x].Original),
-			}},
+			"Content-Disposition": mail.OneHeaderVal(
+				attachmentDisposition(i.FI[x].Original)),
 		}
-		xparts[x].Body.Data = postObjectIndex(1 + a)
+		xparts[x].Body.Data = mailib.PostObjectIndex(1 + a)
 		xparts[x].Binary = true
 		x++
 	}
