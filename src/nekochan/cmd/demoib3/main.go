@@ -14,6 +14,7 @@ import (
 	fl "nekochan/lib/filelogger"
 	"nekochan/lib/fstore"
 	ir "nekochan/lib/ibrouter"
+	ar "nekochan/lib/apirouter"
 	rj "nekochan/lib/jsonrenderer"
 	"nekochan/lib/logx"
 	"nekochan/lib/psql"
@@ -130,11 +131,16 @@ func main() {
 		errorcode = 1
 		runtime.Goexit()
 	}
+	ah := ar.NewAPIRouter(ar.Cfg{
+		Renderer:        rend,
+		WebPostProvider: dbib,
+	})
 	rcfg := ir.Cfg{
 		HTMLRenderer:    rend,
 		StaticProvider:  di.IBProviderDemo{},
 		FileProvider:    di.IBProviderDemo{},
 		WebPostProvider: dbib,
+		APIHandler: ah,
 	}
 	rh := ir.NewIBRouter(rcfg)
 

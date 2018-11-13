@@ -210,7 +210,7 @@ func commonNewPost(
 func (IBProviderDemo) IBPostNewBoard(
 	bi ib0.IBNewBoardInfo) (created bool, err error, code int) {
 
-	if bi.Name == "test" {
+	if bi.Name != "test" {
 		return true, nil, 0
 	} else {
 		return false, errors.New("board already exists"), http.StatusConflict
