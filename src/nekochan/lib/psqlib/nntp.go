@@ -347,7 +347,11 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	var msgid CoreMsgIDStr
 	var npid postID
 
-	q := "SELECT pid,msgid FROM ib0.posts WHERE bid = $1 AND pid > $2 LIMIT 1"
+	q := `SELECT pid,msgid
+	FROM ib0.posts
+	WHERE bid = $1 AND pid > $2
+	ORDER BY pid ASC
+	LIMIT 1`
 	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&npid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -376,7 +380,11 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	var msgid CoreMsgIDStr
 	var npid postID
 
-	q := "SELECT pid,msgid FROM ib0.posts WHERE bid = $1 AND pid < $2 LIMIT 1"
+	q := `SELECT pid,msgid
+	FROM ib0.posts
+	WHERE bid = $1 AND pid < $2
+	ORDER BY pid DESC
+	LIMIT 1`
 	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&npid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -698,8 +706,9 @@ func (sp *PSQLIB) GetOverByMsgID(
 	var bname string
 	var pid postID
 	var title string
-	var hfrom, hdate, hrefs string
+	var hfrom, hdate, hrefs sql.NullString
 
+	// XXX maybe we should check for headers -> 'Subject' too?
 	q := `SELECT xp.bid, xb.bname, xp.pid, xp.title,
 		xp.headers -> 'From' ->> 0, xp.headers -> 'Date' ->> 0,
 		xp.headers -> 'References' ->> 0
@@ -721,7 +730,7 @@ func (sp *PSQLIB) GetOverByMsgID(
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
 	sp.printOver(dw, artnumInGroup(cs, bid, pid), pid, sid, bname, title,
-		hfrom, hdate, hrefs)
+		hfrom.String, hdate.String, hrefs.String)
 	dw.Close()
 	return true
 }
@@ -737,7 +746,8 @@ func (sp *PSQLIB) GetOverByRange(
 
 	var dw io.WriteCloser
 
-	q := `SELECT pid, msgid, title, headers
+	// XXX maybe we should check for headers -> 'Subject' too?
+	q := `SELECT pid, msgid, title,
 		headers -> 'From' ->> 0, headers -> 'Date' ->> 0,
 		headers -> 'References' ->> 0
 	FROM ib0.posts
@@ -753,7 +763,7 @@ func (sp *PSQLIB) GetOverByRange(
 		var pid postID
 		var msgid CoreMsgIDStr
 		var title string
-		var hfrom, hdate, hrefs string
+		var hfrom, hdate, hrefs sql.NullString
 
 		err = rows.Scan(&pid, &msgid, &title, &hfrom, &hdate, &hrefs)
 		if err != nil {
@@ -772,7 +782,8 @@ func (sp *PSQLIB) GetOverByRange(
 			dw = w.DotWriter()
 		}
 
-		sp.printOver(dw, pid, pid, msgid, gs.bname, title, hfrom, hdate, hrefs)
+		sp.printOver(dw, pid, pid, msgid, gs.bname, title,
+			hfrom.String, hdate.String, hrefs.String)
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -809,8 +820,9 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 
 	var msgid CoreMsgIDStr
 	var title string
-	var hfrom, hdate, hrefs string
+	var hfrom, hdate, hrefs sql.NullString
 
+	// XXX maybe we should check for headers -> 'Subject' too?
 	q := `SELECT msgid, title,
 		headers -> 'From' ->> 0, headers -> 'Date' ->> 0,
 		headers -> 'References' ->> 0
@@ -829,7 +841,8 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname, title, hfrom, hdate, hrefs)
+	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname, title,
+		hfrom.String, hdate.String, hrefs.String)
 	dw.Close()
 	return true
 }
@@ -853,13 +866,13 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 	var bid boardID
 	var pid postID
 	var err error
-	var h string
+	var h sql.NullString
 
 	if shdr == "Message-ID" {
 		q := `SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1`
 		err = sp.db.DB.QueryRow(q, msgid).Scan(&bid, &pid)
 		if err == nil {
-			h = fmt.Sprintf("<%s>", sid)
+			h.String = fmt.Sprintf("<%s>", sid)
 		}
 	} else if shdr == "Subject" {
 		q := `SELECT bid,pid,title,headers -> $2 ->> 0
@@ -868,8 +881,8 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 	LIMIT 1`
 		var title string
 		err = sp.db.DB.QueryRow(q, msgid, shdr).Scan(&bid, &pid, &title, &h)
-		if err == nil && h == "" {
-			h = title
+		if err == nil && !h.Valid {
+			h.String = title
 		}
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
@@ -897,12 +910,13 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 	if rfc {
 		w.ResHdrFollow()
 		dw := w.DotWriter()
-		fmt.Fprintf(dw, "%d %s\n", artnumInGroup(cs, bid, pid), replaceTab(h))
+		fmt.Fprintf(dw, "%d %s\n",
+			artnumInGroup(cs, bid, pid), replaceTab(h.String))
 		dw.Close()
 	} else {
 		w.ResXHdrFollow()
 		dw := w.DotWriter()
-		fmt.Fprintf(dw, "<%s> %s\n", sid, replaceTab(h))
+		fmt.Fprintf(dw, "<%s> %s\n", sid, replaceTab(h.String))
 		dw.Close()
 	}
 
@@ -919,7 +933,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	shdr := canonicalHeaderQueryStr(hdr)
 
-	var rowsscan = func(r *sql.Rows, pid *postID, h *string) error {
+	var rowsscan = func(r *sql.Rows, pid *postID, h *sql.NullString) error {
 		return r.Scan(pid, h)
 	}
 
@@ -945,11 +959,11 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		rows, err = sp.db.DB.
 			Query(q, gs.bid, rmin, rmax, shdr)
 
-		rowsscan = func(r *sql.Rows, pid *postID, h *string) error {
+		rowsscan = func(r *sql.Rows, pid *postID, h *sql.NullString) error {
 			var title string
 			e := r.Scan(pid, &title, h)
-			if e == nil && *h == "" {
-				*h = title
+			if e == nil && !h.Valid {
+				h.String = title
 			}
 			return err
 		}
@@ -981,7 +995,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	for rows.Next() {
 		var pid postID
-		var h string
+		var h sql.NullString
 
 		err = rowsscan(rows, &pid, &h)
 		if err != nil {
@@ -1004,7 +1018,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 			dw = w.DotWriter()
 		}
 
-		fmt.Fprintf(dw, "%d %s\n", pid, replaceTab(h))
+		fmt.Fprintf(dw, "%d %s\n", pid, replaceTab(h.String))
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -1038,12 +1052,12 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	shdr := canonicalHeaderQueryStr(hdr)
 
-	var rowscan = func(r *sql.Row, h *string) error {
+	var rowscan = func(r *sql.Row, h *sql.NullString) error {
 		return r.Scan(h)
 	}
 
 	var err error
-	var h string
+	var h sql.NullString
 	var row *sql.Row
 
 	if shdr == "Message-ID" {
@@ -1064,11 +1078,11 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
 
-		rowscan = func(r *sql.Row, h *string) error {
+		rowscan = func(r *sql.Row, h *sql.NullString) error {
 			var title string
 			e := r.Scan(&title, h)
-			if e == nil && *h == "" {
-				*h = title
+			if e == nil && !h.Valid {
+				h.String = title
 			}
 			return e
 		}
@@ -1107,7 +1121,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	}
 
 	dw := w.DotWriter()
-	fmt.Fprintf(dw, "%d %s\n", gs.pid, replaceTab(h))
+	fmt.Fprintf(dw, "%d %s\n", gs.pid, replaceTab(h.String))
 	dw.Close()
 
 	return true

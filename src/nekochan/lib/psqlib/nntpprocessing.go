@@ -223,7 +223,7 @@ func (sp *PSQLIB) nntpProcessArticle(
 		ssub := au.TrimWSString(sh)
 		if !isSubjectEmpty(ssub) {
 			if len(H["MIME-Version"]) != 0 {
-				// undo MIME hacks
+				// undo MIME hacks, if any
 				dsub, e := mimeWordDecoder.Decode(ssub)
 				if e == nil {
 					ssub = dsub
