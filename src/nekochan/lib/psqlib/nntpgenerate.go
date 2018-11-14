@@ -13,7 +13,7 @@ import (
 )
 
 func (sp *PSQLIB) nntpGenerate(
-	xw io.Writer, num uint64, msgid CoreMsgIDStr) (err error) {
+	w io.Writer, num uint64, msgid CoreMsgIDStr) (err error) {
 
 	// fetch info about post. some of info we don't care about
 	q := `SELECT jp.title,jp.message,jp.headers,jp.layout,jf.fname
@@ -32,8 +32,6 @@ ORDER BY jf.fid`
 	havesomething := false
 
 	for rows.Next() {
-		havesomething = true
-
 		var jH, jL xtypes.JSONText
 		var fid sql.NullString
 
@@ -48,25 +46,29 @@ ORDER BY jf.fid`
 			"nntpGenerate: PxF: title(%q) msg(%q) H(%q) L(%q) id(%v)",
 			pi.MI.Title, pi.MI.Message, jH, jL, fid)
 
-		err = jH.Unmarshal(&pi.H)
-		if err != nil {
-			rows.Close()
-			return sp.sqlError("jH unmarshal", err)
-		}
+		if !havesomething {
+			err = jH.Unmarshal(&pi.H)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("jH unmarshal", err)
+			}
 
-		err = jL.Unmarshal(&pi.L)
-		if err != nil {
-			rows.Close()
-			return sp.sqlError("jL unmarshal", err)
-		}
+			err = jL.Unmarshal(&pi.L)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("jL unmarshal", err)
+			}
 
-		sp.log.LogPrintf(DEBUG,
-			"nntpGenerate: unmarshaled H(%#v) L(%#v)",
-			pi.H, &pi.L)
+			sp.log.LogPrintf(DEBUG,
+				"nntpGenerate: unmarshaled H(%#v) L(%#v)",
+				pi.H, &pi.L)
+		}
 
 		if fid.Valid && fid.String != "" {
 			pi.FI = append(pi.FI, mailib.FileInfo{ID: fid.String})
 		}
+
+		havesomething = true
 	}
 	if err = rows.Err(); err != nil {
 		return sp.sqlError("posts x files query rows iteration", err)
@@ -86,5 +88,5 @@ ORDER BY jf.fid`
 		pi.H["Subject"] = mail.OneHeaderVal(pi.MI.Title)
 	}
 
-	return mailib.GenerateMessage(&sp.src, xw, pi)
+	return mailib.GenerateMessage(&sp.src, w, pi)
 }

@@ -9,47 +9,17 @@ import (
 	qp "mime/quotedprintable"
 	"os"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/text/encoding/ianaindex"
-	"golang.org/x/text/unicode/norm"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/emime"
 	"nekochan/lib/fstore"
 	ht "nekochan/lib/hashtools"
 	"nekochan/lib/mail"
+	tu "nekochan/lib/textutils"
 )
-
-func optimalTextMessageString(s string) string {
-	// not removing \r because they should be removed already
-	// last \n isn't needed if char before it exists and it isn't \n
-	if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
-		s = s[:len(s)-1]
-	}
-	return s
-}
-
-func normalizeTextMessage(msg string) (s string) {
-	// normalise using form C
-	s = norm.NFC.String(msg)
-	// trim line endings, and empty lines at the end
-	lines := strings.Split(s, "\n")
-	for i, v := range lines {
-		lines[i] = strings.TrimRightFunc(v, unicode.IsSpace)
-	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		if lines[i] != "" {
-			break
-		}
-		lines = lines[:i]
-	}
-	s = strings.Join(lines, "\n")
-	// ensure we don't have any CR left
-	s = strings.Replace(s, "\r", "", -1)
-	return
-}
 
 func processMessagePrepareReader(
 	cte string, ismultipart bool, r io.Reader) (
@@ -126,7 +96,7 @@ func processMessageText(
 
 				// normal processing - no need to have copy
 				if !binary {
-					str = optimalTextMessageString(str)
+					str = au.TrimUnixNL(str)
 				}
 				return r, str, true, false, nil
 
@@ -147,7 +117,7 @@ func processMessageText(
 					// we don't care about binary mode
 					// because this is just converted copy
 					// so might aswell normalize and optimize it further
-					rstr = normalizeTextMessage(dstr)
+					rstr = tu.NormalizeTextMessage(dstr)
 					msgattachment = true
 					// proceed with processing as attachment
 				} else {

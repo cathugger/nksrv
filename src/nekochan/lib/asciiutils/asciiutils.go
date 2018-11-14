@@ -146,3 +146,12 @@ func Is7BitString(s string) bool {
 	}
 	return true
 }
+
+func TrimUnixNL(s string) string {
+	// not removing \r because they should be removed already
+	// last \n isn't needed if char before it exists and it isn't \n
+	if len(s) > 1 && s[len(s)-1] == '\n' && s[len(s)-2] != '\n' {
+		s = s[:len(s)-1]
+	}
+	return s
+}

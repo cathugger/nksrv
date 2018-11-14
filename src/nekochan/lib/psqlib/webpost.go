@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -24,6 +23,7 @@ import (
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail/form"
 	"nekochan/lib/mailib"
+	tu "nekochan/lib/textutils"
 	ib0 "nekochan/lib/webib0"
 )
 
@@ -246,26 +246,6 @@ func validFormText(s string) bool {
 	return utf8.ValidString(s) && readableText(s)
 }
 
-func normalizeTextMessage(msg string) (s string) {
-	// normalise using form C
-	s = norm.NFC.String(msg)
-	// trim line endings, and empty lines at the end
-	lines := strings.Split(s, "\n")
-	for i, v := range lines {
-		lines[i] = strings.TrimRightFunc(v, unicode.IsSpace)
-	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		if lines[i] != "" {
-			break
-		}
-		lines = lines[:i]
-	}
-	s = strings.Join(lines, "\n")
-	// ensure we don't have any CR left
-	s = strings.Replace(s, "\r", "", -1)
-	return
-}
-
 var lineReplacer = strings.NewReplacer(
 	"\r", "",
 	"\n", " ",
@@ -434,7 +414,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
-	pInfo.MI.Message = normalizeTextMessage(xfmessage)
+	pInfo.MI.Message = tu.NormalizeTextMessage(xfmessage)
 	sp.log.LogPrintf(DEBUG,
 		"form fields after processing: Title(%q) Message(%q)",
 		pInfo.MI.Title, pInfo.MI.Message)
