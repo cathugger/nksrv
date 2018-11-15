@@ -18,6 +18,7 @@ import (
 
 	"nekochan/lib/date"
 	"nekochan/lib/mail/form"
+	mm "nekochan/lib/minimail"
 	ib0 "nekochan/lib/webib0"
 )
 
@@ -38,6 +39,8 @@ func (IBProviderDemo) IBGetPostParams() (*form.ParserParams, form.FileOpener) {
 	return &form.DefaultParserParams, formFileOpener{}
 }
 
+type CoreMsgIDStr = mm.CoreMsgIDStr
+
 // custom sort-able base64 set
 var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 var sBase64Enc = base64.
@@ -46,7 +49,7 @@ var sBase64Enc = base64.
 
 type postedInfo = ib0.IBPostedInfo
 
-func newMessageID(t int64) string {
+func newMessageID(t int64) CoreMsgIDStr {
 	var b [8]byte
 	// TAI64
 	u := uint64(t) + 4611686018427387914
@@ -69,12 +72,12 @@ func newMessageID(t int64) string {
 	var r [12]byte
 	crand.Read(r[:])
 
-	return sBase64Enc.EncodeToString(b[:]) + "." +
-		sBase64Enc.EncodeToString(r[:]) + "@test.invalid"
+	return CoreMsgIDStr(sBase64Enc.EncodeToString(b[:]) + "." +
+		sBase64Enc.EncodeToString(r[:]) + "@test.invalid")
 }
 
 // TODO: more algos
-func todoHashPostID(coremsgid string) string {
+func todoHashPostID(coremsgid CoreMsgIDStr) string {
 	b := sha1.Sum([]byte("<" + coremsgid + ">"))
 	return hex.EncodeToString(b[:])
 }

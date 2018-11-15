@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"nekochan/lib/mail/form"
+	mm "nekochan/lib/minimail"
 )
 
 type IBPostedInfo struct {
-	Board     string `json:"board"`
-	ThreadID  string `json:"thread_id"`
-	PostID    string `json:"post_id"`
-	MessageID string `json:"message_id"` // XXX will we actually use this for anything??
+	Board     string          `json:"board"`
+	ThreadID  string          `json:"thread_id"`
+	PostID    string          `json:"post_id"`
+	MessageID mm.CoreMsgIDStr `json:"message_id"` // XXX will we actually use this for anything??
 }
 
 var IBWebFormFileFields = []string{

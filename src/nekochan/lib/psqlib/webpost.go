@@ -199,7 +199,7 @@ func generateFileConfig(
 
 type postedInfo = ib0.IBPostedInfo
 
-func (sp *PSQLIB) newMessageID(t int64) string {
+func (sp *PSQLIB) newMessageID(t int64) CoreMsgIDStr {
 	var b [8]byte
 	// TAI64
 	u := uint64(t) + 4611686018427387914
@@ -222,13 +222,13 @@ func (sp *PSQLIB) newMessageID(t int64) string {
 	var r [12]byte
 	crand.Read(r[:])
 
-	return ht.SBase64Enc.EncodeToString(b[:]) + "." +
-		ht.SBase64Enc.EncodeToString(r[:]) + "@" + sp.instance
+	return CoreMsgIDStr(ht.SBase64Enc.EncodeToString(b[:]) + "." +
+		ht.SBase64Enc.EncodeToString(r[:]) + "@" + sp.instance)
 }
 
 // TODO: more algos
-func todoHashPostID(coremsgid string) string {
-	b := sha1.Sum(unsafeStrToBytes("<" + coremsgid + ">"))
+func todoHashPostID(coremsgid CoreMsgIDStr) string {
+	b := sha1.Sum(unsafeStrToBytes("<" + string(coremsgid) + ">"))
 	return hex.EncodeToString(b[:])
 }
 

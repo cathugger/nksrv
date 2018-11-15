@@ -9,8 +9,8 @@ import (
 )
 
 type PostInfo struct {
-	ID        string // message identifier, hash of MessageID
-	MessageID string // globally unique message identifier
+	ID        string       // message identifier, hash of MessageID
+	MessageID CoreMsgIDStr // globally unique message identifier
 	Date      time.Time
 
 	MI MessageInfo

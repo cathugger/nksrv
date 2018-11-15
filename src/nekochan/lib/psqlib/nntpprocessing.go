@@ -9,6 +9,7 @@ import (
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/date"
+	fu "nekochan/lib/fileutil"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	"nekochan/lib/mailib"
@@ -224,6 +225,10 @@ func (sp *PSQLIB) nntpProcessArticle(
 		panic("len(pi.FI) != len(tfns)")
 	}
 
+	// properly fill in fields
+
+	pi.MessageID = info.MessageID
+	pi.ID = todoHashPostID(pi.MessageID)
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	if len(H["Subject"]) != 0 {
@@ -255,6 +260,25 @@ func (sp *PSQLIB) nntpProcessArticle(
 
 	if len(H["X-Sage"]) != 0 {
 		pi.MI.Sage = true
+	}
+
+	// TODO insert
+
+	// move files
+	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
+	for x := range tfns {
+		from := tfns[x]
+		to := sp.src.Main() + pi.FI[x].ID
+		sp.log.LogPrintf(DEBUG, "renaming %q -> %q", from, to)
+		xe := fu.RenameNoClobber(from, to)
+		if xe != nil {
+			if os.IsExist(xe) {
+				sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+			} else {
+				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+			}
+			os.Remove(from)
+		}
 	}
 
 	// TODO
