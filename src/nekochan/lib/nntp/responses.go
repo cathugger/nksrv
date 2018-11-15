@@ -152,8 +152,12 @@ func (r Responder) ResArticleNotWanted(msgid CoreMsgID) error {
 	return r.PrintfLine("438 <%s>", msgid)
 }
 
-func (r Responder) ResArticleRejected(msgid CoreMsgID) error {
-	return r.PrintfLine("439 <%s>", msgid)
+func (r Responder) ResArticleRejected(msgid CoreMsgID, err error) error {
+	if err == nil {
+		return r.PrintfLine("439 <%s>", msgid)
+	} else {
+		return r.PrintfLine("439 <%s> %v", msgid, err)
+	}
 }
 
 func (r Responder) ResPostingNotPermitted() error {

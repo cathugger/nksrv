@@ -212,24 +212,10 @@ func (sp *PSQLIB) HandleIHave(
 	w.ResSendArticleToBeTransferred()
 	r := ro.OpenReader()
 
-	var mh mail.MessageHead
-	defer func() {
-		mh.Close()
-		// CAUTION err MUST be set for this to work
-		if err != nil {
-			r.Discard(-1)
-		}
-	}()
-	mh, err = mail.ReadHeaders(r, 2<<20)
+	info, newname, H, err, unexpected := sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
 	if err != nil {
-		err = fmt.Errorf("failed reading headers: %v", err)
-		w.ResTransferRejected(err)
-		return true
-	}
-	defer mh.Close()
+		r.Discard(-1)
 
-	info, err, unexpected := sp.nntpDigestTransferHead(w, mh.H, unsafe_sid)
-	if err != nil {
 		if !unexpected {
 			w.ResTransferRejected(err)
 		} else {
@@ -238,12 +224,100 @@ func (sp *PSQLIB) HandleIHave(
 		return true
 	}
 
+	sp.nntpSendIncomingArticle(newname, H, info)
+
+	// we're done there, signal success
+	w.ResTransferSuccess()
+	return true
+}
+
+// + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
+func (sp *PSQLIB) HandleCheck(
+	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+
+	var err error
+
+	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
+
+	// check if we already have it
+	exists, err := sp.nntpCheckArticleExists(w, unsafe_sid)
+	if err != nil {
+		w.ResInternalError(err)
+		return true
+	}
+	if exists {
+		// article exists, false for default message
+		return false
+	}
+	w.ResArticleWanted(msgid)
+	return true
+}
+
+// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
+func (sp *PSQLIB) HandleTakeThis(
+	w Responder, cs *ConnState, r nntp.ArticleReader, msgid CoreMsgID) bool {
+
+	var err error
+
+	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
+	// check if we already have it
+	exists, err := sp.nntpCheckArticleExists(w, unsafe_sid)
+	if err != nil {
+		w.ResInternalError(err)
+		r.Discard(-1)
+		return true
+	}
+	if exists {
+		// article exists, false for default message
+		return false
+	}
+
+	info, newname, H, err, unexpected :=
+		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
+	if err != nil {
+		if !unexpected {
+			w.ResArticleRejected(msgid, err)
+		} else {
+			w.ResInternalError(err)
+		}
+		r.Discard(-1)
+		return true
+	}
+
+	sp.nntpSendIncomingArticle(newname, H, info)
+
+	// we're done there, signal success
+	w.ResArticleTransferedOK(msgid)
+	return true
+}
+
+func (sp *PSQLIB) handleIncoming(
+	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string) (
+	info nntpParsedInfo, newname string, H mail.Headers,
+	err error, unexpected bool) {
+
+	var mh mail.MessageHead
+	mh, err = mail.ReadHeaders(r, 2<<20)
+	defer func() {
+		mh.Close()
+	}()
+	if err != nil {
+		err = fmt.Errorf("failed reading headers: %v", err)
+		return
+	}
+	defer mh.Close()
+
+	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid)
+	if err != nil {
+		return
+	}
+
 	// TODO file should start with current timestamp/increasing counter
 	f, err := sp.nntpfs.NewFile(nntpIncomingTempDir, "", ".eml")
 	if err != nil {
 		err = fmt.Errorf("error on making temporary file: %v", err)
-		w.ResInternalError(err)
-		return true
+		unexpected = true
+		return
 	}
 	defer func() {
 		// CAUTION depends on err being set
@@ -256,20 +330,18 @@ func (sp *PSQLIB) HandleIHave(
 
 	err = mail.WriteHeaders(f, mh.H, false)
 	if err != nil {
-		if err == mail.ErrHeaderLineTooLong {
-			w.ResTransferRejected(err)
-		} else {
+		if err != mail.ErrHeaderLineTooLong {
 			err = fmt.Errorf("error writing headers: %v", err)
-			w.ResInternalError(err)
+			unexpected = true
 		}
-		return true
+		return
 	}
 
 	_, err = fmt.Fprintf(f, "\n")
 	if err != nil {
 		err = fmt.Errorf("error writing body: %v", err)
-		w.ResInternalError(err)
-		return true
+		unexpected = true
+		return
 	}
 
 	// TODO make limit configurable
@@ -277,14 +349,13 @@ func (sp *PSQLIB) HandleIHave(
 	n, err := io.CopyN(f, mh.B, limit+1)
 	if err != nil && err != io.EOF {
 		err = fmt.Errorf("error writing body: %v", err)
-		w.ResInternalError(err)
-		return true
+		unexpected = true
+		return
 	}
 	// check if limit exceeded
 	if n > limit {
 		err = fmt.Errorf("message body too large, up to %d allowed", limit)
-		w.ResTransferRejected(err)
-		return true
+		return
 	}
 
 	// XXX should we have option to call f.Sync()?
@@ -292,35 +363,18 @@ func (sp *PSQLIB) HandleIHave(
 	err = f.Close()
 	if err != nil {
 		err = fmt.Errorf("error writing body: %v", err)
-		w.ResInternalError(err)
-		return true
+		unexpected = true
+		return
 	}
 
-	newname := path.Join(sp.nntpfs.Main()+nntpIncomingDir, path.Base(f.Name()))
+	newname = path.Join(sp.nntpfs.Main()+incdir, path.Base(f.Name()))
 	err = os.Rename(f.Name(), newname)
 	if err != nil {
 		err = sp.sqlError("incoming file move", err)
-		w.ResInternalError(err)
-		return true
+		unexpected = true
+		return
 	}
 
-	sp.nntpSendIncomingArticle(newname, mh.H, info)
-
-	// we're done there, signal success
-	w.ResTransferSuccess()
-	return true
-}
-
-// + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
-func (sp *PSQLIB) HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool {
-	// TODO
-	w.ResInternalError(fmt.Errorf("unimplemented"))
-	return true
-}
-
-// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
-func (sp *PSQLIB) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReader, msgid CoreMsgID) bool {
-	w.ResInternalError(fmt.Errorf("unimplemented"))
-	r.Discard(-1)
-	return true
+	H = mh.H
+	return
 }

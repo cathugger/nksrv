@@ -84,7 +84,7 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 
 	cid := CutMessageID(id)
 	if ReservedMessageID(id) || !c.prov.HandleTakeThis(c.w, c, r, cid) {
-		c.w.ResArticleRejected(cid)
+		c.w.ResArticleRejected(cid, nil)
 	}
 	return true
 }

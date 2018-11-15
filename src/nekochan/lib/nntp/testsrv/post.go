@@ -113,7 +113,7 @@ func (p *TestSrv) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReade
 	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != unsafeCoreMsgIDToStr(msgid) {
-		w.ResArticleRejected(msgid)
+		w.ResArticleRejected(msgid, nil)
 		h.Close()
 		r.Discard(-1)
 		return true

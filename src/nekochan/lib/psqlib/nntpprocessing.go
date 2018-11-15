@@ -57,7 +57,7 @@ type nntpParsedInfo struct {
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
-	w Responder, H mail.Headers, unsafe_sid CoreMsgIDStr) (
+	H mail.Headers, unsafe_sid CoreMsgIDStr) (
 	info nntpParsedInfo, err error, unexpected bool) {
 
 	for _, mv := range hdrNNTPMandatory {
