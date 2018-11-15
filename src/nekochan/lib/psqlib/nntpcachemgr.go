@@ -33,10 +33,11 @@ import (
 // this should improve concurrency, and hopefuly not cause much harm in case assumption isn't true and object is regenerated
 
 type nntpCacheObj struct {
-	m        sync.RWMutex
-	cond     *sync.Cond
-	finished bool
-	p        *cachepub.CachePub
+	m         sync.RWMutex
+	cond      *sync.Cond
+	finished  bool
+	finisherr error // file move error
+	p         *cachepub.CachePub
 }
 
 type nntpCacheMgr struct {
@@ -209,27 +210,43 @@ func (sp *PSQLIB) nntpObtainItem(
 
 	// do et
 	go func() {
-		err = sp.nntpGenerate(cpub, num, msgid)
-		if err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
+		var we error // dangerous
+
+		we = sp.nntpGenerate(cpub, num, msgid)
+		if we != nil {
+			if we == io.EOF {
+				we = io.ErrUnexpectedEOF
 			}
-			cpub.Cancel(err)
+			cpub.Cancel(we)
 		} else {
 			cpub.Finish()
 		}
 		tn := f.Name()
 		// XXX maybe we should wait a little there so that readers could finish reading? idk
-		f.Close()
-		if err == nil {
+		// at this point file was written but if close fails,
+		// readers (who didn't finish before close) won't be able to
+		// read rest/reopen. therefore signal error
+		e := f.Close()
+		if we == nil && e != nil {
+			we = fmt.Errorf("worker failed closing file: %v", e)
+		}
+		if we == nil {
 			// move from tmp to stable
-			fu.RenameNoClobber(tn, filename)
-		} else {
+			we = fu.RenameNoClobber(tn, filename)
+			if os.IsExist(we) {
+				we = nil
+			}
+			if we != nil {
+				we = fmt.Errorf("worker failed renaming file: %v", we)
+			}
+		}
+		if we != nil {
 			os.Remove(tn)
 		}
 		// notify readers if any about availability
 		o.m.Lock()
 		o.finished = true
+		o.finisherr = we
 		o.m.Unlock()
 		o.cond.Broadcast()
 		// take out of map
@@ -262,11 +279,20 @@ readExisting:
 	for !o.finished {
 		o.cond.Wait()
 	}
+	err = o.finisherr
 	o.m.RUnlock()
+	// check error from worker
+	if err != nil {
+		return fmt.Errorf("nntpObtainItem: finisherr: %v", err)
+	}
 	// read from stable storage
 	exists, err := obtainFromCache(w, filename, done, num, msgid)
 	if exists || err != nil {
 		// if we finished successfuly, or failed in a way we cannot recover
+		if err != nil {
+			err = fmt.Errorf(
+				"nntpObtainItem: failed obtaining after generation: %v", err)
+		}
 		return err
 	}
 	// this shouldn't happen
