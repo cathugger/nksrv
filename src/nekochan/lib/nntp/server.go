@@ -2,10 +2,12 @@ package nntp
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	tp "net/textproto"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -123,12 +125,6 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 	s.mu.Unlock()
 }
 
-const (
-	cGraceful = iota
-	cHangup
-	cError
-)
-
 func (s *NNTPServer) handleConnection(c ConnCW) {
 	r := bufreader.NewBufReader(c)
 	cs := &ConnState{
@@ -148,17 +144,16 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		cs.w.PrintfLine("201 hello! posting forbidden.")
 	}
 
-	reason := cs.serveClient()
+	abortconn := cs.serveClient()
 
-	/*
-		// XXX incase cHangup, we have no way to check if other side ACK'd data before killing socket.
-		if reason != cError && c.CloseWrite() == nil && reason == cGraceful {
-			r.Discard(1) // ignore return, it's error to send anything after quit command
-		}
-	*/
-	if reason != cError {
+	if !abortconn {
 		// let OS handle FIN signaling in background
 		c.SetLinger(-1)
+		s.log.LogPrintf(
+			NOTICE, "closing %s on %s", c.RemoteAddr(), c.LocalAddr())
+	} else {
+		s.log.LogPrintf(
+			NOTICE, "resetting %s on %s", c.RemoteAddr(), c.LocalAddr())
 	}
 
 	c.Close()
@@ -272,7 +267,20 @@ func (s *NNTPServer) Close() bool {
 	return true
 }
 
-func (c *ConnState) serveClient() int {
+// stolen idea from net/http
+var ErrAbortHandler = errors.New("nntp: abort Handler")
+
+func (c *ConnState) serveClient() bool {
+	defer func() {
+		if r := recover(); r != nil && r != ErrAbortHandler {
+			c.log.LogPrintf(ERROR, "panic in handler: %v", r)
+			if c.log.LockWrite(ERROR) {
+				c.log.Write(debug.Stack())
+				c.log.Close()
+			}
+		}
+	}()
+
 	var inbuf [512]byte
 	args := make([][]byte, 0)
 
@@ -289,18 +297,12 @@ func (c *ConnState) serveClient() int {
 				}
 				if e != nil {
 					// socket error while draining
-					if e == io.EOF {
-						return cHangup
-					} else {
-						return cError
-					}
+					return e != io.EOF
 				}
 				c.w.PrintfLine("501 command too long")
 				continue
-			} else if e == io.EOF {
-				return cHangup
 			} else {
-				return cError
+				return e != io.EOF
 			}
 		}
 
@@ -351,7 +353,7 @@ func (c *ConnState) serveClient() int {
 					c.log.LogPrintf(WARN, "too much parameters")
 				} else {
 					if !cmd.cmdfunc(c, args, incmd[x:]) {
-						return cGraceful
+						return false
 					}
 				}
 				goto nextcommand
@@ -377,7 +379,7 @@ func (c *ConnState) serveClient() int {
 			goto nextcommand
 		}
 		if !cmd.cmdfunc(c, args, nil) {
-			return cGraceful
+			return false
 		}
 	nextcommand:
 	}

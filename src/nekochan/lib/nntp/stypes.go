@@ -15,7 +15,7 @@ type Responder struct {
 }
 
 func (r Responder) Abort() {
-	r.c.Close()
+	panic(ErrAbortHandler)
 }
 
 type ConnState struct {
