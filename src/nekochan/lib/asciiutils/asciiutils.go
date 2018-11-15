@@ -128,6 +128,14 @@ func IsPrintableASCIISlice(s []byte, e byte) bool {
 	}
 	return true
 }
+func IsPrintableASCIIStr(s string, e byte) bool {
+	for _, c := range []byte(s) {
+		if c <= 32 || c >= 127 || c == e {
+			return false
+		}
+	}
+	return true
+}
 
 func Is7BitBytes(s []byte) bool {
 	for _, c := range s {
@@ -137,7 +145,6 @@ func Is7BitBytes(s []byte) bool {
 	}
 	return true
 }
-
 func Is7BitString(s string) bool {
 	for _, c := range []byte(s) {
 		if c >= 0x80 {

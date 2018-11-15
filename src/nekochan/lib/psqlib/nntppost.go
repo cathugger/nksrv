@@ -7,7 +7,11 @@ import (
 	"os"
 	"path"
 
+	xtypes "github.com/jmoiron/sqlx/types"
+
+	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
+	mm "nekochan/lib/minimail"
 	"nekochan/lib/nntp"
 )
 
@@ -24,21 +28,131 @@ func cutMsgID(s FullMsgIDStr) CoreMsgIDStr {
 		nntp.CutMessageID(unsafeStrToBytes(string(s)))))
 }
 
-func (sp *PSQLIB) acceptNewsgroupArticle(group string) error {
+func (sp *PSQLIB) acceptArticleHead(
+	board string, troot FullMsgIDStr) (
+	ins insertSqlInfo, err error, unexpected bool) {
+
 	// TODO ability to autoadd group?
-	var dummy int
-	q := `SELECT 1 FROM ib0.boards WHERE bname = $1 LIMIT 1`
-	err := sp.db.DB.QueryRow(q, group).Scan(&dummy)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errNoSuchBoard
-		} else {
-			return sp.sqlError("board existence query scan", err)
+
+	var jbPL xtypes.JSONText // board post limits
+	var jbXL xtypes.JSONText // board newthread/reply limits
+	var jtRL xtypes.JSONText // thread reply limits
+	var jbTO xtypes.JSONText // board threads options
+	var jtTO xtypes.JSONText // thread options
+
+	ins.isReply = troot != ""
+
+	ins.threadOpts = defaultThreadOptions
+
+	// get info about board, if reply, also thread, its limits and shit.
+	// does it even exists?
+	if !ins.isReply {
+
+		// new thread
+		q := `SELECT bid,post_limits,newthread_limits
+FROM ib0.boards
+WHERE bname=$1`
+
+		sp.log.LogPrintf(DEBUG, "executing board query:\n%s\n", q)
+
+		err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = errNoSuchBoard
+			} else {
+				unexpected = true
+				err = sp.sqlError("board row query scan", err)
+			}
+			return
 		}
+
+		sp.log.LogPrintf(DEBUG,
+			"got bid(%d) post_limits(%q) newthread_limits(%q)",
+			ins.bid, jbPL, jbXL)
+
+		ins.postLimits = defaultNewThreadSubmissionLimits
+
 	} else {
-		// board exists so accept it
-		return nil
+
+		// new post
+		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
+		q := `WITH
+xb AS (
+	SELECT bid,post_limits,reply_limits,thread_opts
+	FROM ib0.boards
+	WHERE bname=$1
+	LIMIT 1
+)
+SELECT xb.bid,xb.post_limits,xb.reply_limits,
+	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts
+FROM xb
+LEFT JOIN (
+	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts
+	FROM ib0.threads xt
+	JOIN xb
+	ON xb.bid = xt.bid
+	JOIN ib0.posts xp
+	ON xb.bid=xp.bid AND xt.tid=xp.tid
+	WHERE xp.msgid=$2
+	LIMIT 1
+) AS xtp
+ON xb.bid=xtp.bid`
+
+		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
+
+		var xtid sql.NullInt64
+
+		err = sp.db.DB.QueryRow(q, board, string(mm.CutMessageIDStr(troot))).
+			Scan(&ins.bid, &jbPL, &jbXL, &xtid, &jtRL, &jbTO, &jtTO)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				err = errNoSuchBoard
+			} else {
+				unexpected = true
+				err = sp.sqlError("board x thread row query scan", err)
+			}
+			return
+		}
+
+		sp.log.LogPrintf(DEBUG,
+			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
+				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%q)",
+			ins.bid, jbPL, jbXL, xtid, jtRL, jbTO, jtTO)
+
+		if xtid.Int64 <= 0 {
+			// TODO ability to put such messages elsewhere?
+			err = errNoSuchThread
+			return
+		}
+
+		ins.tid = postID(xtid.Int64)
+
+		ins.postLimits = defaultReplySubmissionLimits
+
 	}
+
+	err = sp.unmarshalBoardConfig(&ins.postLimits, jbPL, jbXL)
+	if err != nil {
+		unexpected = true
+		return
+	}
+
+	if ins.isReply {
+		err = sp.unmarshalThreadConfig(
+			&ins.postLimits, &ins.threadOpts, jtRL, jbTO, jtTO)
+		if err != nil {
+			unexpected = true
+			return
+		}
+
+		sp.applyInstanceThreadOptions(&ins.threadOpts, board)
+	}
+
+	// apply instance-specific limit tweaks
+	sp.applyInstanceSubmissionLimits(&ins.postLimits, ins.isReply, board)
+
+	// done here
+	return
 }
 
 func (sp *PSQLIB) nntpCheckArticleExists(
@@ -114,9 +228,13 @@ func (sp *PSQLIB) HandleIHave(
 	}
 	defer mh.Close()
 
-	info, ok := sp.nntpDigestTransferHead(w, mh.H, unsafe_sid)
-	if !ok {
-		// nntpDigestTransferHead sends report
+	info, err, unexpected := sp.nntpDigestTransferHead(w, mh.H, unsafe_sid)
+	if err != nil {
+		if !unexpected {
+			w.ResTransferRejected(err)
+		} else {
+			w.ResInternalError(err)
+		}
 		return true
 	}
 

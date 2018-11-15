@@ -253,19 +253,18 @@ func processMessageAttachment(
 // creating relevant files.
 // It removes "Content-Transfer-Encoding" header from XH,
 // also sometimes modifies "Content-Type" header.
+// info.ContentParams must be non-nil only if info.ContentType requires
+// processing of params (text/*, multipart/*).
 func DevourMessageBody(
 	src *fstore.FStore, XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
 	pi PostInfo, tmpfilenames []string, err error) {
 
-	cleanTmpFiles := func() {
-		for _, fn := range tmpfilenames {
-			os.Remove(fn)
-		}
-		tmpfilenames = []string(nil)
-	}
 	defer func() {
 		if err != nil {
-			cleanTmpFiles()
+			for _, fn := range tmpfilenames {
+				os.Remove(fn)
+			}
+			tmpfilenames = []string(nil)
 		}
 	}()
 

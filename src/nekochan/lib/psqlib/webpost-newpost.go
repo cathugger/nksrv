@@ -93,7 +93,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		INSERT INTO ib0.files (bid,pid,ftype,fsize,fname,thumb,oname)
 		SELECT *
 		FROM (
-			SELECT $1,pid
+			SELECT $2,pid
 			FROM up
 		) AS q0
 		CROSS JOIN (

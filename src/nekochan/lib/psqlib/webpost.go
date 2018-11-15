@@ -120,8 +120,7 @@ func checkSubmissionLimits(slimits *submissionLimits, reply bool,
 }
 
 func (sp *PSQLIB) applyInstanceSubmissionLimits(
-	slimits *submissionLimits, reply bool,
-	board string, r *http.Request) {
+	slimits *submissionLimits, reply bool, board string) {
 
 	// TODO
 
@@ -139,8 +138,8 @@ func (sp *PSQLIB) applyInstanceSubmissionLimits(
 	}
 }
 
-func (sp *PSQLIB) applyInstanceThreadOptions(threadOpts *threadOptions,
-	board string, r *http.Request) {
+func (sp *PSQLIB) applyInstanceThreadOptions(
+	threadOpts *threadOptions, board string) {
 
 	// TODO
 }
@@ -291,11 +290,14 @@ func (sp *PSQLIB) commonNewPost(
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
 
-	var jcfg [5]xtypes.JSONText
+	var jbPL xtypes.JSONText // board post limits
+	var jbXL xtypes.JSONText // board newthread/reply limits
+	var jtRL xtypes.JSONText // thread reply limits
+	var jbTO xtypes.JSONText // board threads options
+	var jtTO xtypes.JSONText // thread options
 	var bid boardID
-	var tid postID
-	var pid postID
-	var ref CoreMsgIDStr
+	var tid sql.NullInt64
+	var ref sql.NullString
 
 	var postLimits submissionLimits
 	threadOpts := defaultThreadOptions
@@ -310,7 +312,7 @@ WHERE bname=$1`
 
 		sp.log.LogPrintf(DEBUG, "executing board query:\n%s\n", q)
 
-		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jcfg[0], &jcfg[1])
+		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jbPL, &jbXL)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
@@ -320,7 +322,7 @@ WHERE bname=$1`
 		}
 
 		sp.log.LogPrintf(DEBUG, "got bid(%d) post_limits(%q) newthread_limits(%q)",
-			bid, jcfg[0], jcfg[1])
+			bid, jbPL, jbXL)
 
 		rInfo.Board = board
 
@@ -330,19 +332,32 @@ WHERE bname=$1`
 
 		// new post
 		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
-		q := `SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xt.tid,xt.reply_limits,xb.thread_opts,xt.thread_opts,xp.msgid
-FROM ib0.boards xb
-LEFT JOIN ib0.threads xt
-ON xb.bid=xt.bid
-INNER JOIN ib0.posts xp
-ON xt.bid=xp.bid AND xt.tid=xp.pid
-WHERE xb.bname=$1 AND xt.tname=$2`
+		q := `WITH
+xb AS (
+	SELECT bid,post_limits,reply_limits,thread_opts
+	FROM ib0.boards
+	WHERE bname=$1
+	LIMIT 1
+)
+SELECT xb.bid,xb.post_limits,xb.reply_limits,
+	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.msgid
+FROM xb
+LEFT JOIN (
+	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.msgid
+	FROM ib0.threads xt
+	JOIN xb
+	ON xb.bid = xt.bid
+	JOIN ib0.posts xp
+	ON xb.bid=xp.bid AND xt.tid=xp.pid
+	WHERE xt.tname=$2
+	LIMIT 1
+) AS xtp
+ON xb.bid=xtp.bid`
 
 		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board, thread).Scan(
-			&bid, &jcfg[0], &jcfg[1], &tid, &jcfg[2], &jcfg[3], &jcfg[4], &ref)
+			&bid, &jbPL, &jbXL, &tid, &jtRL, &jbTO, &jtTO, &ref)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
@@ -352,13 +367,13 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 		}
 
 		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%d) "+
-				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%q)",
-			bid, jcfg[0], jcfg[1], tid, jcfg[2], jcfg[3], jcfg[4], ref)
+			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
+				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%#v)",
+			bid, jbPL, jbXL, tid, jtRL, jbTO, jtTO, ref)
 
 		rInfo.Board = board
 
-		if tid == 0 {
+		if tid.Int64 <= 0 {
 			return rInfo, errNoSuchThread, http.StatusNotFound
 		}
 
@@ -368,47 +383,23 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 
 	}
 
-	// jcfg[0] - b.post_limits in all cases
-	err = jcfg[0].Unmarshal(&postLimits)
+	err = sp.unmarshalBoardConfig(&postLimits, jbPL, jbXL)
 	if err != nil {
-		return rInfo, sp.sqlError("jcfg[0] json unmarshal", err),
-			http.StatusInternalServerError
-	}
-
-	// jcfg[1] - either b.newthread_limits or b.reply_limits
-	err = jcfg[1].Unmarshal(&postLimits)
-	if err != nil {
-		return rInfo, sp.sqlError("jcfg[1] json unmarshal", err),
-			http.StatusInternalServerError
+		return rInfo, err, http.StatusInternalServerError
 	}
 
 	if isReply {
-		// jcfg[2] - t.reply_limits
-		err = jcfg[2].Unmarshal(&postLimits)
+		err = sp.unmarshalThreadConfig(
+			&postLimits, &threadOpts, jtRL, jbTO, jtTO)
 		if err != nil {
-			return rInfo, sp.sqlError("jcfg[2] json unmarshal", err),
-				http.StatusInternalServerError
+			return rInfo, err, http.StatusInternalServerError
 		}
 
-		// jcfg[3] - b.thread_opts
-		err = jcfg[3].Unmarshal(&threadOpts)
-		if err != nil {
-			return rInfo, sp.sqlError("jcfg[3] json unmarshal", err),
-				http.StatusInternalServerError
-		}
-
-		// jcfg[4] - t.thread_opts
-		err = jcfg[4].Unmarshal(&threadOpts)
-		if err != nil {
-			return rInfo, sp.sqlError("jcfg[4] json unmarshal", err),
-				http.StatusInternalServerError
-		}
-
-		sp.applyInstanceThreadOptions(&threadOpts, board, r)
+		sp.applyInstanceThreadOptions(&threadOpts, board)
 	}
 
 	// apply instance-specific limit tweaks
-	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board, r)
+	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board)
 
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
@@ -431,7 +422,7 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// fill in info about post
 	tu := date.NowTimeUnix()
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
-	pInfo = sp.fillWebPostDetails(pInfo, board, ref)
+	pInfo = sp.fillWebPostDetails(pInfo, board, CoreMsgIDStr(ref.String))
 
 	// at this point message should be checked
 	// we should calculate proper file names here
@@ -476,12 +467,11 @@ WHERE xb.bname=$1 AND xt.tname=$2`
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		tid, err = sp.insertNewThread(bid, pInfo)
+		_, err = sp.insertNewThread(bid, pInfo)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		pid, err = sp.insertNewReply(
-			replyTargetInfo{bid, tid, threadOpts.BumpLimit}, pInfo)
-		_ = pid // fuk u go
+		_, err = sp.insertNewReply(replyTargetInfo{
+			bid, postID(tid.Int64), threadOpts.BumpLimit}, pInfo)
 	}
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError

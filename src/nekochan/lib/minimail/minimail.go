@@ -1,6 +1,10 @@
 package minimail
 
-import "io"
+import (
+	"io"
+
+	au "nekochan/lib/asciiutils"
+)
 
 // some of types put in small package so that nntp won't need to pull in whole mail
 
@@ -13,4 +17,14 @@ type ArticleReader interface {
 	io.Reader
 	ReadByte() (byte, error)
 	Discard(n int) (int, error)
+}
+
+func CutMessageIDStr(id FullMsgIDStr) CoreMsgIDStr {
+	return CoreMsgIDStr(id[1 : len(id)-1])
+}
+
+func ValidMessageIDStr(id FullMsgIDStr) bool {
+	return len(id) >= 3 &&
+		id[0] == '<' && id[len(id)-1] == '>' && len(id) <= 250 &&
+		au.IsPrintableASCIIStr(string(CutMessageIDStr(id)), '>')
 }

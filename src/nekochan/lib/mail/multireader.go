@@ -10,9 +10,10 @@ import (
 )
 
 type PartReader struct {
-	*bufreader.BufReader                      // current part reader
-	br                   *bufreader.BufReader // underlying reader
-	extbr                bool                 // whether br is external
+	*bufreader.BufReader // current part reader
+
+	br    *bufreader.BufReader // underlying reader
+	extbr bool                 // whether br is external
 
 	n                int   // ammount of readable data
 	err              error // queued error

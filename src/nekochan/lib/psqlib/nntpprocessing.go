@@ -42,24 +42,31 @@ var hdrNNTPMandatory = [...]struct {
 	{"NNTP-Posting-Date", true},
 }
 
-type nntpParsedInfo = mailib.ParsedMessageInfo
+type insertSqlInfo struct {
+	postLimits submissionLimits
+	threadOpts threadOptions
+	tid        postID
+	bid        boardID
+	isReply    bool
+}
+
+type nntpParsedInfo struct {
+	insertSqlInfo
+	mailib.ParsedMessageInfo
+}
 
 func (sp *PSQLIB) nntpDigestTransferHead(
 	w Responder, H mail.Headers, unsafe_sid CoreMsgIDStr) (
-	info nntpParsedInfo, ok bool) {
-
-	var err error
+	info nntpParsedInfo, err error, unexpected bool) {
 
 	for _, mv := range hdrNNTPMandatory {
 		hv := H[mv.h]
 		if !mv.o && len(hv) != 1 {
 			err = fmt.Errorf("exactly one %q header required", mv.h)
-			w.ResTransferRejected(err)
 			return
 		}
 		if mv.o && len(hv) > 1 {
 			err = fmt.Errorf("more than one %q header not allowed", mv.h)
-			w.ResTransferRejected(err)
 			return
 		}
 	}
@@ -92,7 +99,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 		if !validMsgID(hid) {
 			err = fmt.Errorf("invalid article Message-ID %q", hid)
-			w.ResTransferRejected(err)
 			return
 		}
 
@@ -102,7 +108,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 			err = fmt.Errorf(
 				"IHAVE Message-ID <%s> doesn't match article Message-ID <%s>",
 				unsafe_sid, cid)
-			w.ResTransferRejected(err)
 			return
 		}
 
@@ -118,7 +123,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	pdate, err := mail.ParseDate(H["Date"][0].V)
 	if err != nil {
 		err = fmt.Errorf("error parsing Date header: %v", err)
-		w.ResTransferRejected(err)
 		return
 	}
 	info.PostedDate = pdate.Unix()
@@ -132,32 +136,35 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// but we only support single-board posts
 	if !nntp.ValidGroupSlice(unsafeStrToBytes(hgroup)) {
 		err = fmt.Errorf("newsgroup %q not supported", hgroup)
-		w.ResTransferRejected(err)
-		return
-	}
-	if err = sp.acceptNewsgroupArticle(hgroup); err != nil {
-		if err == errNoSuchBoard {
-			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
-			w.ResTransferRejected(err)
-		} else {
-			w.ResInternalError(err)
-		}
 		return
 	}
 	info.Newsgroup = hgroup
 
+	// References
+	var troot FullMsgIDStr
+	if len(H["References"]) != 0 {
+		troot = mail.ExtractFirstValidReference(H["References"][0].V)
+	}
+
+	// actual DB check on group and refered article
+	info.insertSqlInfo, err, unexpected = sp.acceptArticleHead(hgroup, troot)
+	if err != nil {
+		if err == errNoSuchBoard {
+			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
+		}
+		return
+	}
+
 	// Content-Type
 	if len(H["Content-Type"]) != 0 {
-		info.ContentType, info.ContentParams, err =
+		var e error
+		info.ContentType, info.ContentParams, e =
 			mime.ParseMediaType(H["Content-Type"][0].V)
-		if err != nil {
-			err = fmt.Errorf("error parsing Content-Type header: %v", err)
-			w.ResTransferRejected(err)
-			return
+		if e != nil {
+			info.ContentType = "invalid"
 		}
 	}
 
-	ok = true
 	return
 }
 
@@ -205,7 +212,8 @@ func (sp *PSQLIB) nntpProcessArticle(
 	}
 	defer mh.Close()
 
-	pi, tfns, err := mailib.DevourMessageBody(&sp.src, H, info, mh.B)
+	pi, tfns, err := mailib.DevourMessageBody(
+		&sp.src, H, info.ParsedMessageInfo, mh.B)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
 			"nntpProcessArticle: devourTransferArticle failed: %v", err)
