@@ -199,6 +199,7 @@ func (sp *PSQLIB) nntpObtainItem(
 	c.m.Unlock()
 
 	if oo != nil {
+		// running generator exists
 		// uhhh now we have to delete our existing thing..
 		fn := f.Name()
 		f.Close()
@@ -208,6 +209,7 @@ func (sp *PSQLIB) nntpObtainItem(
 		goto readExisting
 	}
 
+	// start generator
 	// do et
 	go func() {
 		var we error // dangerous
@@ -271,7 +273,8 @@ readExisting:
 	// sanity check if it was actually written properly
 	err = o.p.Error()
 	if err != io.EOF {
-		return fmt.Errorf("nntpObtainItem: CachePub in unexpected error state: %v", err)
+		return fmt.Errorf(
+			"nntpObtainItem: CachePub in unexpected error state: %v", err)
 	}
 	// wait till file gets moved to stable storage
 	// XXX maybe simpler design (spinlock, or finished being read in atomic way) would be better?
@@ -289,12 +292,14 @@ readExisting:
 	exists, err := obtainFromCache(w, filename, done, num, msgid)
 	if exists || err != nil {
 		// if we finished successfuly, or failed in a way we cannot recover
-		if err != nil {
-			err = fmt.Errorf(
+		if err == nil {
+			return nil
+		} else {
+			return fmt.Errorf(
 				"nntpObtainItem: failed obtaining after generation: %v", err)
 		}
-		return err
 	}
 	// this shouldn't happen
-	return errors.New("couldn't open file in stable storage even though it should be there")
+	return errors.New(
+		"nntpObtainItem: after generation obtainFromCache didn't find file")
 }
