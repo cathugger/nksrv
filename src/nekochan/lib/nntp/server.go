@@ -132,7 +132,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		conn: c,
 		r:    r,
 		prov: s.prov,
-		w:    Responder{tp.NewWriter(bufio.NewWriter(c)), c},
+		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 	}
 	cs.log = NewLogToX(
 		s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
@@ -256,8 +256,7 @@ func (s *NNTPServer) Close() bool {
 	for c := range s.connections {
 		c.Close()
 	}
-	// maybe have sort of waitgroup here too?
-	// not sure if needed, as sockets are closed at this point anyway
+	// TODO waitgroup for clients
 
 	// we're done closing, so allow new servers to spawn later
 	s.closing = false
@@ -281,16 +280,15 @@ func (c *ConnState) serveClient() bool {
 		}
 	}()
 
-	var inbuf [512]byte
 	args := make([][]byte, 0)
 
 	for {
-		i, e := c.r.ReadUntil(inbuf[:], '\n')
+		i, e := c.r.ReadUntil(c.inbuf[:], '\n')
 		if e != nil {
 			if e == bufreader.ErrDelimNotFound {
 				// command line too big to process, drain and signal error
 				for {
-					_, e = c.r.ReadUntil(inbuf[:], '\n')
+					_, e = c.r.ReadUntil(c.inbuf[:], '\n')
 					if e != bufreader.ErrDelimNotFound {
 						break
 					}
@@ -307,10 +305,10 @@ func (c *ConnState) serveClient() bool {
 		}
 
 		var incmd []byte
-		if i > 1 && inbuf[i-2] == '\r' {
-			incmd = inbuf[:i-2]
+		if i > 1 && c.inbuf[i-2] == '\r' {
+			incmd = c.inbuf[:i-2]
 		} else {
-			incmd = inbuf[:i-1]
+			incmd = c.inbuf[:i-1]
 		}
 		for _, ch := range incmd {
 			if ch == '\000' || ch == '\r' {

@@ -157,7 +157,7 @@ func parseDateSlice(date []byte) (Y, M, D int, valid bool) {
 	if len(date) != 6 {
 		Y = stoi(date[:len(date)-4])
 	} else {
-		Y = int(date[0])*10 + int(date[1])
+		Y = int(date[0]-'0')*10 + int(date[1]-'0')
 		/*
 		 * {RFC 3977}
 		 * If the first two digits of the year are not specified
