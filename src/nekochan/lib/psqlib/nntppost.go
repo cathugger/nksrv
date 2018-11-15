@@ -179,7 +179,17 @@ var (
 func (sp *PSQLIB) nntpSendIncomingArticle(
 	name string, H mail.Headers, info nntpParsedInfo) {
 
-	sp.nntpProcessArticle(name, H, info)
+	defer os.Remove(name)
+
+	f, err := os.Open(name)
+	if err != nil {
+		sp.log.LogPrintf(WARN,
+			"nntpProcessArticle: failed to open: %v", err)
+		return
+	}
+	defer f.Close()
+
+	sp.nntpProcessArticle(f, H, info)
 }
 
 func (sp *PSQLIB) HandlePost(
@@ -296,6 +306,41 @@ func (sp *PSQLIB) handleIncoming(
 	info nntpParsedInfo, newname string, H mail.Headers,
 	err error, unexpected bool) {
 
+	info, f, H, err, unexpected := sp.handleIncomingIntoFile(r, unsafe_sid)
+	if err != nil {
+		if f != nil {
+			n := f.Name()
+			f.Close()
+			os.Remove(n)
+		}
+		return
+	}
+
+	// XXX should we have option to call f.Sync()?
+	// would this level of reliability be worth performance degradation?
+	err = f.Close()
+	if err != nil {
+		err = fmt.Errorf("error writing body: %v", err)
+		unexpected = true
+		return
+	}
+
+	newname = path.Join(sp.nntpfs.Main()+incdir, path.Base(f.Name()))
+	err = os.Rename(f.Name(), newname)
+	if err != nil {
+		err = sp.sqlError("incoming file move", err)
+		unexpected = true
+		return
+	}
+
+	return
+}
+
+func (sp *PSQLIB) handleIncomingIntoFile(
+	r io.Reader, unsafe_sid CoreMsgIDStr) (
+	info nntpParsedInfo, f *os.File, H mail.Headers,
+	err error, unexpected bool) {
+
 	var mh mail.MessageHead
 	mh, err = mail.ReadHeaders(r, 2<<20)
 	defer func() {
@@ -313,20 +358,12 @@ func (sp *PSQLIB) handleIncoming(
 	}
 
 	// TODO file should start with current timestamp/increasing counter
-	f, err := sp.nntpfs.NewFile(nntpIncomingTempDir, "", ".eml")
+	f, err = sp.nntpfs.NewFile(nntpIncomingTempDir, "", ".eml")
 	if err != nil {
 		err = fmt.Errorf("error on making temporary file: %v", err)
 		unexpected = true
 		return
 	}
-	defer func() {
-		// CAUTION depends on err being set
-		if err != nil {
-			n := f.Name()
-			f.Close()
-			os.Remove(n)
-		}
-	}()
 
 	err = mail.WriteHeaders(f, mh.H, false)
 	if err != nil {
@@ -355,23 +392,6 @@ func (sp *PSQLIB) handleIncoming(
 	// check if limit exceeded
 	if n > limit {
 		err = fmt.Errorf("message body too large, up to %d allowed", limit)
-		return
-	}
-
-	// XXX should we have option to call f.Sync()?
-	// would this level of reliability be worth performance degradation?
-	err = f.Close()
-	if err != nil {
-		err = fmt.Errorf("error writing body: %v", err)
-		unexpected = true
-		return
-	}
-
-	newname = path.Join(sp.nntpfs.Main()+incdir, path.Base(f.Name()))
-	err = os.Rename(f.Name(), newname)
-	if err != nil {
-		err = sp.sqlError("incoming file move", err)
-		unexpected = true
 		return
 	}
 

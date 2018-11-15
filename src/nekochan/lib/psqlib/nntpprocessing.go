@@ -192,20 +192,10 @@ func failCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 var mimeWordDecoder = mime.WordDecoder{CharsetReader: failCharsetReader}
 
 func (sp *PSQLIB) nntpProcessArticle(
-	name string, H mail.Headers, info nntpParsedInfo) {
-
-	defer os.Remove(name)
-
-	f, err := os.Open(name)
-	if err != nil {
-		sp.log.LogPrintf(WARN,
-			"nntpProcessArticle: failed to open: %v", err)
-		return
-	}
-	defer f.Close()
+	r io.Reader, H mail.Headers, info nntpParsedInfo) {
 
 	// TODO skip headers because we already have them
-	mh, err := mail.ReadHeaders(f, 2<<20)
+	mh, err := mail.ReadHeaders(r, 2<<20)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
 			"nntpProcessArticle: failed reading headers: %v", err)
