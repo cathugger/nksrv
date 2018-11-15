@@ -1,10 +1,7 @@
 package psqlib
 
 import (
-	crand "crypto/rand"
-	"crypto/sha1"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -198,39 +195,6 @@ func generateFileConfig(
 }
 
 type postedInfo = ib0.IBPostedInfo
-
-func (sp *PSQLIB) newMessageID(t int64) CoreMsgIDStr {
-	var b [8]byte
-	// TAI64
-	u := uint64(t) + 4611686018427387914
-	b[7] = byte(u)
-	u >>= 8
-	b[6] = byte(u)
-	u >>= 8
-	b[5] = byte(u)
-	u >>= 8
-	b[4] = byte(u)
-	u >>= 8
-	b[3] = byte(u)
-	u >>= 8
-	b[2] = byte(u)
-	u >>= 8
-	b[1] = byte(u)
-	u >>= 8
-	b[0] = byte(u)
-
-	var r [12]byte
-	crand.Read(r[:])
-
-	return CoreMsgIDStr(ht.SBase64Enc.EncodeToString(b[:]) + "." +
-		ht.SBase64Enc.EncodeToString(r[:]) + "@" + sp.instance)
-}
-
-// TODO: more algos
-func todoHashPostID(coremsgid CoreMsgIDStr) string {
-	b := sha1.Sum(unsafeStrToBytes("<" + string(coremsgid) + ">"))
-	return hex.EncodeToString(b[:])
-}
 
 func readableText(s string) bool {
 	for _, c := range s {
@@ -461,8 +425,8 @@ ON xb.bid=xtp.bid`
 	}
 
 	// lets think of post ID there
-	pInfo.MessageID = sp.newMessageID(tu)
-	pInfo.ID = todoHashPostID(pInfo.MessageID)
+	pInfo.MessageID = mailib.NewRandomMessageID(tu, sp.instance)
+	pInfo.ID = mailib.HashPostID_SHA1(pInfo.MessageID)
 
 	// perform insert
 	if !isReply {

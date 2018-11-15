@@ -228,7 +228,7 @@ func (sp *PSQLIB) nntpProcessArticle(
 	// properly fill in fields
 
 	pi.MessageID = info.MessageID
-	pi.ID = todoHashPostID(pi.MessageID)
+	pi.ID = mailib.HashPostID_SHA1(pi.MessageID)
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	if len(H["Subject"]) != 0 {
@@ -262,7 +262,26 @@ func (sp *PSQLIB) nntpProcessArticle(
 		pi.MI.Sage = true
 	}
 
-	// TODO insert
+	// perform insert
+	if !info.isReply {
+		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
+		_, err = sp.insertNewThread(info.bid, pi)
+	} else {
+		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
+		_, err = sp.insertNewReply(replyTargetInfo{
+			info.bid, info.tid, info.threadOpts.BumpLimit}, pi)
+	}
+	if err != nil {
+		sp.log.LogPrintf(
+			ERROR, "nntpProcessArticle: post insertion failed: %v", err)
+
+		// cleanup
+		for _, fn := range tfns {
+			os.Remove(fn)
+		}
+
+		return
+	}
 
 	// move files
 	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
@@ -279,13 +298,5 @@ func (sp *PSQLIB) nntpProcessArticle(
 			}
 			os.Remove(from)
 		}
-	}
-
-	// TODO
-	sp.log.LogPrintf(DEBUG, "nntpProcessArticle: pi: %#v", pi)
-	sp.log.LogPrintf(DEBUG, "nntpProcessArticle: tfns: %#v", tfns)
-
-	for _, fn := range tfns {
-		os.Remove(fn)
 	}
 }

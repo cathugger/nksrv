@@ -1,24 +1,21 @@
 package demoib
 
 import (
-	crand "crypto/rand"
-	"crypto/sha1"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 
 	"nekochan/lib/date"
 	"nekochan/lib/mail/form"
+	"nekochan/lib/mailib"
 	mm "nekochan/lib/minimail"
+	tu "nekochan/lib/textutils"
 	ib0 "nekochan/lib/webib0"
 )
 
@@ -41,46 +38,7 @@ func (IBProviderDemo) IBGetPostParams() (*form.ParserParams, form.FileOpener) {
 
 type CoreMsgIDStr = mm.CoreMsgIDStr
 
-// custom sort-able base64 set
-var sBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
-var sBase64Enc = base64.
-	NewEncoding(sBase64Set).
-	WithPadding(base64.NoPadding)
-
 type postedInfo = ib0.IBPostedInfo
-
-func newMessageID(t int64) CoreMsgIDStr {
-	var b [8]byte
-	// TAI64
-	u := uint64(t) + 4611686018427387914
-	b[7] = byte(u)
-	u >>= 8
-	b[6] = byte(u)
-	u >>= 8
-	b[5] = byte(u)
-	u >>= 8
-	b[4] = byte(u)
-	u >>= 8
-	b[3] = byte(u)
-	u >>= 8
-	b[2] = byte(u)
-	u >>= 8
-	b[1] = byte(u)
-	u >>= 8
-	b[0] = byte(u)
-
-	var r [12]byte
-	crand.Read(r[:])
-
-	return CoreMsgIDStr(sBase64Enc.EncodeToString(b[:]) + "." +
-		sBase64Enc.EncodeToString(r[:]) + "@test.invalid")
-}
-
-// TODO: more algos
-func todoHashPostID(coremsgid CoreMsgIDStr) string {
-	b := sha1.Sum([]byte("<" + coremsgid + ">"))
-	return hex.EncodeToString(b[:])
-}
 
 func readableText(s string) bool {
 	for _, c := range s {
@@ -93,26 +51,6 @@ func readableText(s string) bool {
 
 func validFormText(s string) bool {
 	return utf8.ValidString(s) && readableText(s)
-}
-
-func optimiseTextMessage(msg string) (s string) {
-	// normalise using form C
-	s = norm.NFC.String(msg)
-	// trim line endings, and empty lines at the end
-	lines := strings.Split(s, "\n")
-	for i, v := range lines {
-		lines[i] = strings.TrimRightFunc(v, unicode.IsSpace)
-	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		if lines[i] != "" {
-			break
-		}
-		lines = lines[:i]
-	}
-	s = strings.Join(lines, "\n")
-	// ensure we don't have any CR left
-	s = strings.Replace(s, "\r", "", -1)
-	return
 }
 
 var lineReplacer = strings.NewReplacer(
@@ -180,7 +118,7 @@ func commonNewPost(
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	pTitle := strings.TrimSpace(optimiseFormLine(xftitle))
-	pMessage := optimiseTextMessage(xfmessage)
+	pMessage := tu.NormalizeTextMessage(xfmessage)
 	fmt.Fprintf(os.Stderr,
 		"form fields after processing: Title{%q} Message{%q}\n",
 		pTitle, pMessage)
@@ -199,8 +137,8 @@ func commonNewPost(
 	// postprocess
 	tu := date.NowTimeUnix()
 	// lets think of post ID there
-	pMessageID := newMessageID(tu)
-	pID := todoHashPostID(pMessageID)
+	pMessageID := mailib.NewRandomMessageID(tu, "test.invalid")
+	pID := mailib.HashPostID_SHA1(pMessageID)
 
 	if !isReply {
 		rInfo.ThreadID = pID
