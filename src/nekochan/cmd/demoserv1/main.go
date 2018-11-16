@@ -132,7 +132,7 @@ func main() {
 		proto, host = "tcp", *nntpbind
 	}
 
-	mlg.LogPrint(
+	mlg.LogPrintf(
 		NOTICE, "starting nntp server on proto(%s) host(%s)", proto, host)
 	err = srv.ListenAndServe(proto, host, nntp.ListenParam{})
 	if err != nil {
