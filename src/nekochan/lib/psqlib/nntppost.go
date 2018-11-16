@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
+	"nekochan/lib/bufreader"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	mm "nekochan/lib/minimail"
@@ -162,7 +164,7 @@ ON xb.bid=xtp.bid`
 }
 
 func (sp *PSQLIB) nntpCheckArticleExists(
-	w Responder, unsafe_sid CoreMsgIDStr) (exists bool, err error) {
+	unsafe_sid CoreMsgIDStr) (exists bool, err error) {
 
 	var dummy int
 	q := "SELECT 1 FROM ib0.posts WHERE msgid = $1 LIMIT 1"
@@ -190,19 +192,55 @@ func (sp *PSQLIB) nntpSendIncomingArticle(
 	f, err := os.Open(name)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
-			"nntpProcessArticle: failed to open: %v", err)
+			"nntpSendIncomingArticle: failed to open: %v", err)
 		return
 	}
 	defer f.Close()
 
-	sp.nntpProcessArticle(f, H, info)
+	sp.netnewsSubmitFullArticle(f, H, info)
 }
 
 func (sp *PSQLIB) HandlePost(
 	w Responder, cs *ConnState, ro nntp.ReaderOpener) bool {
 
-	// TODO
-	return false
+	w.ResSendArticleToBePosted()
+	r := ro.OpenReader()
+	err, unexpected := sp.netnewsHandleSubmissionDirectly(r)
+	if err != nil {
+		if !unexpected {
+			w.ResPostingFailed(err)
+		} else {
+			w.ResInternalError(err)
+		}
+		r.Discard(-1)
+	} else {
+		w.ResPostingAccepted()
+	}
+	return true
+}
+
+func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
+	r io.Reader) (err error, unexpected bool) {
+
+	var mh mail.MessageHead
+	mh, err = mail.ReadHeaders(r, 2<<20)
+	if err != nil {
+		err = fmt.Errorf("failed reading headers: %v", err)
+		return
+	}
+	defer mh.Close()
+
+	info, err, unexpected := sp.nntpDigestTransferHead(mh.H, "", true)
+	if err != nil {
+		return
+	}
+
+	err, unexpected = sp.ensureArticleDoesntExist(cutMsgID(info.FullMsgIDStr))
+	if err != nil {
+		return
+	}
+
+	return sp.netnewsSubmitArticle(mh.B, mh.H, info)
 }
 
 // + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
@@ -215,7 +253,7 @@ func (sp *PSQLIB) HandleIHave(
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(w, unsafe_sid)
+	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		return true
@@ -229,15 +267,14 @@ func (sp *PSQLIB) HandleIHave(
 	r := ro.OpenReader()
 
 	info, newname, H, err, unexpected :=
-		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir, false)
+		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
 	if err != nil {
-		r.Discard(-1)
-
 		if !unexpected {
 			w.ResTransferRejected(err)
 		} else {
 			w.ResInternalError(err)
 		}
+		r.Discard(-1)
 		return true
 	}
 
@@ -257,7 +294,7 @@ func (sp *PSQLIB) HandleCheck(
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(w, unsafe_sid)
+	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		return true
@@ -278,7 +315,7 @@ func (sp *PSQLIB) HandleTakeThis(
 
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(w, unsafe_sid)
+	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		r.Discard(-1)
@@ -290,7 +327,7 @@ func (sp *PSQLIB) HandleTakeThis(
 	}
 
 	info, newname, H, err, unexpected :=
-		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir, false)
+		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
 	if err != nil {
 		if !unexpected {
 			w.ResArticleRejected(msgid, err)
@@ -309,18 +346,13 @@ func (sp *PSQLIB) HandleTakeThis(
 }
 
 func (sp *PSQLIB) handleIncoming(
-	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string, post bool) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string) (
 	info nntpParsedInfo, newname string, H mail.Headers,
 	err error, unexpected bool) {
 
 	info, f, H, err, unexpected :=
-		sp.handleIncomingIntoFile(r, unsafe_sid, post)
+		sp.handleIncomingIntoFile(r, unsafe_sid)
 	if err != nil {
-		if f != nil {
-			n := f.Name()
-			f.Close()
-			os.Remove(n)
-		}
 		return
 	}
 
@@ -345,35 +377,75 @@ func (sp *PSQLIB) handleIncoming(
 }
 
 func (sp *PSQLIB) handleIncomingIntoFile(
-	r io.Reader, unsafe_sid CoreMsgIDStr, post bool) (
+	r io.Reader, unsafe_sid CoreMsgIDStr) (
 	info nntpParsedInfo, f *os.File, H mail.Headers,
 	err error, unexpected bool) {
 
 	var mh mail.MessageHead
 	mh, err = mail.ReadHeaders(r, 2<<20)
-	defer func() {
-		mh.Close()
-	}()
 	if err != nil {
 		err = fmt.Errorf("failed reading headers: %v", err)
 		return
 	}
 	defer mh.Close()
 
-	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid, post)
+	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid, false)
 	if err != nil {
 		return
 	}
+
+	f, err, unexpected = sp.netnewsCopyArticleToFile(mh.H, mh.B)
+	if err != nil {
+		return
+	}
+
+	H = mh.H
+	return
+}
+
+var errArticleAlreadyExists = errors.New("article with this Message-ID already exists")
+
+func (sp *PSQLIB) ensureArticleDoesntExist(
+	msgid CoreMsgIDStr) (err error, unexpected bool) {
+
+	// check if we already have it
+	exists, e := sp.nntpCheckArticleExists(msgid)
+	if e != nil {
+		err = fmt.Errorf(
+			"error while checking article existence: %v", e)
+		unexpected = true
+		return
+	}
+	if exists {
+		// article exists, false for default message
+		err = errArticleAlreadyExists
+		unexpected = false
+		return
+	}
+
+	return
+}
+
+func (sp *PSQLIB) netnewsCopyArticleToFile(
+	H mail.Headers, B *bufreader.BufReader) (
+	f *os.File, err error, unexpected bool) {
 
 	// TODO file should start with current timestamp/increasing counter
 	f, err = sp.nntpfs.NewFile(nntpIncomingTempDir, "", ".eml")
 	if err != nil {
-		err = fmt.Errorf("error on making temporary file: %v", err)
+		err = fmt.Errorf("error making temporary file: %v", err)
 		unexpected = true
 		return
 	}
+	defer func() {
+		if err != nil {
+			f.Close()
+			os.Remove(f.Name())
+			f = nil
+		}
+	}()
 
-	err = mail.WriteHeaders(f, mh.H, false)
+	err = mail.WriteHeaders(f, H, false)
 	if err != nil {
 		if err != mail.ErrHeaderLineTooLong {
 			err = fmt.Errorf("error writing headers: %v", err)
@@ -384,25 +456,25 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 
 	_, err = fmt.Fprintf(f, "\n")
 	if err != nil {
-		err = fmt.Errorf("error writing body: %v", err)
+		err = fmt.Errorf("error writing newline: %v", err)
 		unexpected = true
 		return
 	}
 
 	// TODO make limit configurable
 	const limit = 256 << 20
-	n, err := io.CopyN(f, mh.B, limit+1)
+	n, err := io.CopyN(f, B, limit+1)
 	if err != nil && err != io.EOF {
 		err = fmt.Errorf("error writing body: %v", err)
 		unexpected = true
 		return
 	}
+	err = nil
 	// check if limit exceeded
 	if n > limit {
 		err = fmt.Errorf("message body too large, up to %d allowed", limit)
 		return
 	}
 
-	H = mh.H
 	return
 }

@@ -86,6 +86,31 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 	return
 }
 
+func SkipHeaders(r io.Reader) (mh MessageHead, err error) {
+	br := bufPool.Get().(*bufreader.BufReader)
+	br.Drop()
+	br.ResetErr()
+
+	hadNL := true
+	for {
+		var c byte
+		c, err = br.ReadByte()
+		if err != nil {
+			br.SetReader(nil)
+			br.ResetErr()
+			bufPool.Put(br)
+
+			return
+		}
+		if c == '\n' && hadNL {
+			break
+		}
+		hadNL = c == '\n'
+	}
+	mh.B = br
+	return
+}
+
 func estimateNumHeaders(br *bufreader.BufReader) (n int, e error) {
 	br.CompactBuffer()
 	_, e = br.FillBufferUpto(0)

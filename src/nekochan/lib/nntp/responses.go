@@ -164,8 +164,12 @@ func (r Responder) ResPostingNotPermitted() error {
 	return r.PrintfLine("440 article injection isn't allowed")
 }
 
-func (r Responder) ResPostingFailed() error {
-	return r.PrintfLine("441 article injection failed")
+func (r Responder) ResPostingFailed(e error) error {
+	if e == nil {
+		return r.PrintfLine("441 article injection failed")
+	} else {
+		return r.PrintfLine("441 article injection failed: %v", e)
+	}
 }
 
 func (r Responder) ResAuthRequired() error {

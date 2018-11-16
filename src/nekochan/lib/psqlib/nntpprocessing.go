@@ -154,7 +154,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 		if unsafe_sid != cid && unsafe_sid != "" {
 			err = fmt.Errorf(
-				"IHAVE Message-ID <%s> doesn't match article Message-ID <%s>",
+				"provided Message-ID <%s> doesn't match article Message-ID <%s>",
 				unsafe_sid, cid)
 			return
 		}
@@ -285,23 +285,36 @@ func failCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 
 var mimeWordDecoder = mime.WordDecoder{CharsetReader: failCharsetReader}
 
-func (sp *PSQLIB) nntpProcessArticle(
+func (sp *PSQLIB) netnewsSubmitFullArticle(
 	r io.Reader, H mail.Headers, info nntpParsedInfo) {
 
 	// TODO skip headers because we already have them
-	mh, err := mail.ReadHeaders(r, 2<<20)
+	mh, err := mail.SkipHeaders(r)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
-			"nntpProcessArticle: failed reading headers: %v", err)
+			"netnewsSubmitFullArticle: failed reading headers: %v", err)
 		return
 	}
 	defer mh.Close()
 
-	pi, tfns, err := mailib.DevourMessageBody(
-		&sp.src, H, info.ParsedMessageInfo, mh.B)
+	err, unexpected := sp.netnewsSubmitArticle(mh.B, H, info)
 	if err != nil {
-		sp.log.LogPrintf(WARN,
-			"nntpProcessArticle: devourTransferArticle failed: %v", err)
+		if !unexpected {
+			sp.log.LogPrintf(WARN, "netnewsSubmitArticle: %v", err)
+		} else {
+			sp.log.LogPrintf(ERROR, "netnewsSubmitArticle: %v", err)
+		}
+	}
+}
+
+func (sp *PSQLIB) netnewsSubmitArticle(
+	br io.Reader, H mail.Headers, info nntpParsedInfo) (
+	err error, unexpected bool) {
+
+	pi, tfns, err := mailib.DevourMessageBody(
+		&sp.src, H, info.ParsedMessageInfo, br)
+	if err != nil {
+		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
 	}
 
@@ -356,8 +369,8 @@ func (sp *PSQLIB) nntpProcessArticle(
 			info.bid, info.tid, info.threadOpts.BumpLimit}, pi)
 	}
 	if err != nil {
-		sp.log.LogPrintf(
-			ERROR, "nntpProcessArticle: post insertion failed: %v", err)
+		err = fmt.Errorf("post insertion failed: %v", err)
+		unexpected = true
 
 		// cleanup
 		for _, fn := range tfns {
@@ -383,4 +396,6 @@ func (sp *PSQLIB) nntpProcessArticle(
 			os.Remove(from)
 		}
 	}
+
+	return
 }
