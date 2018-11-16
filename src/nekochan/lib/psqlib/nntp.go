@@ -706,19 +706,18 @@ func (sp *PSQLIB) GetOverByMsgID(
 	var bname string
 	var pid postID
 	var title string
-	var hfrom, hdate, hrefs sql.NullString
+	var hsubject, hfrom, hdate, hrefs sql.NullString
 
-	// XXX maybe we should check for headers -> 'Subject' too?
 	q := `SELECT xp.bid, xb.bname, xp.pid, xp.title,
-		xp.headers -> 'From' ->> 0, xp.headers -> 'Date' ->> 0,
-		xp.headers -> 'References' ->> 0
+		xp.headers -> 'Subject' ->> 0, xp.headers -> 'From' ->> 0,
+		xp.headers -> 'Date' ->> 0, xp.headers -> 'References' ->> 0
 	FROM ib0.posts AS xp
 	JOIN ib0.boards AS xb
 	USING (bid)
 	WHERE xp.msgid = $1
 	LIMIT 1`
 	err := sp.db.DB.QueryRow(q, sid).Scan(
-		&bid, &bname, &pid, &title, &hfrom, &hdate, &hrefs)
+		&bid, &bname, &pid, &title, &hsubject, &hfrom, &hdate, &hrefs)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -726,11 +725,14 @@ func (sp *PSQLIB) GetOverByMsgID(
 		w.ResInternalError(sp.sqlError("overview query", err))
 		return true
 	}
+	if !hsubject.Valid {
+		hsubject.String = title
+	}
 
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	sp.printOver(dw, artnumInGroup(cs, bid, pid), pid, sid, bname, title,
-		hfrom.String, hdate.String, hrefs.String)
+	sp.printOver(dw, artnumInGroup(cs, bid, pid), pid, sid, bname,
+		hsubject.String, hfrom.String, hdate.String, hrefs.String)
 	dw.Close()
 	return true
 }
@@ -746,10 +748,9 @@ func (sp *PSQLIB) GetOverByRange(
 
 	var dw io.WriteCloser
 
-	// XXX maybe we should check for headers -> 'Subject' too?
 	q := `SELECT pid, msgid, title,
-		headers -> 'From' ->> 0, headers -> 'Date' ->> 0,
-		headers -> 'References' ->> 0
+		headers -> 'Subject' ->> 0, headers -> 'From' ->> 0,
+		headers -> 'Date' ->> 0, headers -> 'References' ->> 0
 	FROM ib0.posts
 	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
 	ORDER BY pid ASC`
@@ -763,9 +764,9 @@ func (sp *PSQLIB) GetOverByRange(
 		var pid postID
 		var msgid CoreMsgIDStr
 		var title string
-		var hfrom, hdate, hrefs sql.NullString
+		var hsubject, hfrom, hdate, hrefs sql.NullString
 
-		err = rows.Scan(&pid, &msgid, &title, &hfrom, &hdate, &hrefs)
+		err = rows.Scan(&pid, &msgid, &title, &hsubject, &hfrom, &hdate, &hrefs)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("overview query rows scan", err)
@@ -776,14 +777,17 @@ func (sp *PSQLIB) GetOverByRange(
 			}
 			return true
 		}
+		if !hsubject.Valid {
+			hsubject.String = title
+		}
 
 		if dw == nil {
 			w.ResOverviewInformationFollows()
 			dw = w.DotWriter()
 		}
 
-		sp.printOver(dw, pid, pid, msgid, gs.bname, title,
-			hfrom.String, hdate.String, hrefs.String)
+		sp.printOver(dw, pid, pid, msgid, gs.bname,
+			hsubject.String, hfrom.String, hdate.String, hrefs.String)
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -820,17 +824,17 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 
 	var msgid CoreMsgIDStr
 	var title string
-	var hfrom, hdate, hrefs sql.NullString
+	var hsubject, hfrom, hdate, hrefs sql.NullString
 
 	// XXX maybe we should check for headers -> 'Subject' too?
 	q := `SELECT msgid, title,
-		headers -> 'From' ->> 0, headers -> 'Date' ->> 0,
-		headers -> 'References' ->> 0
+		headers -> 'Subject' ->> 0, headers -> 'From' ->> 0,
+		headers -> 'Date' ->> 0, headers -> 'References' ->> 0
 	FROM ib0.posts
 	WHERE bid = $1 AND pid = $2
 	LIMIT 1`
 	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).
-		Scan(&msgid, &title, &hfrom, &hdate, &hrefs)
+		Scan(&msgid, &title, &hsubject, &hfrom, &hdate, &hrefs)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -838,11 +842,14 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		w.ResInternalError(sp.sqlError("overview query", err))
 		return true
 	}
+	if !hsubject.Valid {
+		hsubject.String = title
+	}
 
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname, title,
-		hfrom.String, hdate.String, hrefs.String)
+	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname,
+		hsubject.String, hfrom.String, hdate.String, hrefs.String)
 	dw.Close()
 	return true
 }
