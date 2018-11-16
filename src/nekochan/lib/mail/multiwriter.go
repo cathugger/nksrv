@@ -35,9 +35,11 @@ func (pw *PartWriter) StartNextPart(H Headers) (err error) {
 	if err != nil {
 		return
 	}
-	err = WritePartHeaders(pw.Writer, H, false)
-	if err != nil {
-		return
+	if H != nil {
+		err = WritePartHeaders(pw.Writer, H, false)
+		if err != nil {
+			return
+		}
 	}
 	_, err = fmt.Fprintf(pw.Writer, "\n")
 	return

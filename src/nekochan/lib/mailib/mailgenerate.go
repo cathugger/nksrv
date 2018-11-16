@@ -42,10 +42,13 @@ func GenerateMessage(
 	if !ismp {
 		// XXX should we announce 8bit text?
 		if pi.L.Binary {
+			if pi.H == nil {
+				pi.H = make(mail.Headers)
+			}
 			pi.H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
 		}
 	} else {
-		if len(pi.H["Content-Type"]) == 0 {
+		if pi.H == nil || len(pi.H["Content-Type"]) == 0 {
 			return errNoContentType
 		}
 		pi.H["Content-Type"] = pi.H["Content-Type"][:1]
@@ -55,7 +58,9 @@ func GenerateMessage(
 			return
 		}
 	}
-	mail.WriteHeaders(xw, pi.H, true)
+	if pi.H != nil {
+		mail.WriteHeaders(xw, pi.H, true)
+	}
 	fmt.Fprintf(xw, "\n")
 
 	generateBody := func(
@@ -118,15 +123,24 @@ func GenerateMessage(
 			var pb string
 			if !ismp {
 				if pis[i].ContentType != "" {
+					if pis[i].Headers == nil {
+						pis[i].Headers = make(mail.Headers)
+					}
 					pis[i].Headers["Content-Type"] =
 						mail.OneHeaderVal(pis[i].ContentType)
 				}
 				// XXX should we announce 8bit text?
 				if pis[i].Binary {
+					if pis[i].Headers == nil {
+						pis[i].Headers = make(mail.Headers)
+					}
 					pis[i].Headers["Content-Transfer-Encoding"] =
 						mail.OneHeaderVal("base64")
 				}
 			} else {
+				if pis[i].Headers == nil {
+					pis[i].Headers = make(mail.Headers)
+				}
 				pis[i].Headers["Content-Type"] = []mail.HeaderVal{{}}
 				pis[i].Headers["Content-Type"][0].V, pb, err =
 					modifyMultipartType(pis[i].ContentType)
