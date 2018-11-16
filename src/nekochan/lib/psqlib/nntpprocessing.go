@@ -76,6 +76,7 @@ type insertSqlInfo struct {
 	tid        postID
 	bid        boardID
 	isReply    bool
+	refSubject string
 }
 
 type nntpParsedInfo struct {
@@ -222,14 +223,39 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	return
 }
 
-func isSubjectEmpty(s string) bool {
-	return s == "" || au.EqualFoldString(s, "None") ||
-		au.EqualFoldString(s, "no subject") ||
-		au.StartsWithFoldString(s, "Re: ")
-	/*
-	 * XXX tbh unsure about "Re: " but to precisely check that,
-	 * would need to peek into post it refers to
-	 */
+func isSubjectEmpty(s string, isReply bool, refs string) bool {
+	isVoid := func(x string) bool {
+		// content-less subjects some shitty nodes like spamming
+		return x == "" || au.EqualFoldString(x, "None") ||
+			au.EqualFoldString(x, "no subject")
+	}
+	if isVoid(s) {
+		return true
+	}
+	if isReply {
+		// content-less copy of parent subject
+		if au.EqualFoldString(s, refs) {
+			return true
+		}
+		// if after above checks it doesn't start with Re: it's legit
+		if !au.StartsWithFoldString(s, "Re:") {
+			return false
+		}
+		if len(s) > 3 && (s[3] == ' ' || s[3] == '\t') {
+			s = s[4:]
+		} else {
+			s = s[3:]
+		}
+		if refs == "" {
+			// parent probably was void, so check for that
+			return isVoid(s)
+		} else {
+			// Re: parent
+			return au.EqualFoldString(s, refs)
+		}
+	} else {
+		return false
+	}
 }
 
 type failCharsetError string
@@ -277,14 +303,14 @@ func (sp *PSQLIB) nntpProcessArticle(
 	if len(H["Subject"]) != 0 {
 		sh := H["Subject"][0].V
 		ssub := au.TrimWSString(sh)
-		if !isSubjectEmpty(ssub) {
-			if len(H["MIME-Version"]) != 0 {
-				// undo MIME hacks, if any
-				dsub, e := mimeWordDecoder.Decode(ssub)
-				if e == nil {
-					ssub = dsub
-				}
+		if len(H["MIME-Version"]) != 0 {
+			// undo MIME hacks, if any
+			dsub, e := mimeWordDecoder.Decode(ssub)
+			if e == nil {
+				ssub = dsub
 			}
+		}
+		if !isSubjectEmpty(ssub, info.isReply, info.refSubject) {
 			pi.MI.Title = ssub
 			if pi.MI.Title == sh && len(H["Subject"]) == 1 {
 				// no need to duplicate

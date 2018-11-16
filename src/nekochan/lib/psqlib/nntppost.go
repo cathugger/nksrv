@@ -66,9 +66,11 @@ WHERE bname=$1`
 			return
 		}
 
-		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) post_limits(%q) newthread_limits(%q)",
-			ins.bid, jbPL, jbXL)
+		/*
+			sp.log.LogPrintf(DEBUG,
+				"got bid(%d) post_limits(%q) newthread_limits(%q)",
+				ins.bid, jbPL, jbXL)
+		*/
 
 		ins.postLimits = defaultNewThreadSubmissionLimits
 
@@ -84,10 +86,10 @@ xb AS (
 	LIMIT 1
 )
 SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts
+	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.title
 FROM xb
 LEFT JOIN (
-	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts
+	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.title
 	FROM ib0.threads xt
 	JOIN xb
 	ON xb.bid = xt.bid
@@ -101,9 +103,10 @@ ON xb.bid=xtp.bid`
 		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
 		var xtid sql.NullInt64
+		var xsubject sql.NullString
 
 		err = sp.db.DB.QueryRow(q, board, string(mm.CutMessageIDStr(troot))).
-			Scan(&ins.bid, &jbPL, &jbXL, &xtid, &jtRL, &jbTO, &jtTO)
+			Scan(&ins.bid, &jbPL, &jbXL, &xtid, &jtRL, &jbTO, &jtTO, &xsubject)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errNoSuchBoard
@@ -114,10 +117,12 @@ ON xb.bid=xtp.bid`
 			return
 		}
 
-		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
-				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%q)",
-			ins.bid, jbPL, jbXL, xtid, jtRL, jbTO, jtTO)
+		/*
+			sp.log.LogPrintf(DEBUG,
+				"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
+					"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%q)",
+				ins.bid, jbPL, jbXL, xtid, jtRL, jbTO, jtTO)
+		*/
 
 		if xtid.Int64 <= 0 {
 			// TODO ability to put such messages elsewhere?
@@ -126,6 +131,7 @@ ON xb.bid=xtp.bid`
 		}
 
 		ins.tid = postID(xtid.Int64)
+		ins.refSubject = xsubject.String
 
 		ins.postLimits = defaultReplySubmissionLimits
 
