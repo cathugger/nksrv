@@ -55,8 +55,8 @@ func (*PSQLIB) SupportsOverByMsgID() bool { return true }
 func (*PSQLIB) SupportsHdr() bool         { return true }
 
 func (p *PSQLIB) SupportsIHave() bool  { return true }
-func (p *PSQLIB) SupportsPost() bool   { return false } // TODO
-func (p *PSQLIB) SupportsStream() bool { return false } // TODO
+func (p *PSQLIB) SupportsPost() bool   { return true }
+func (p *PSQLIB) SupportsStream() bool { return true }
 
 func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"runtime"
 
@@ -22,6 +23,7 @@ func main() {
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
+	nntpbind := flag.String("nntpbind", "", "nntp server bind string")
 
 	flag.Parse()
 
@@ -121,7 +123,16 @@ func main() {
 	}
 
 	srv := nntp.NewNNTPServer(dbib, lgr)
-	err = srv.ListenAndServe("tcp4", "127.0.0.1:6633", nntp.ListenParam{})
+
+	var proto, host string
+	u, e := url.ParseRequestURI(*nntpbind)
+	if e == nil {
+		proto, host = u.Scheme, u.Host
+	} else {
+		proto, host = "tcp", *nntpbind
+	}
+
+	err = srv.ListenAndServe(proto, host, nntp.ListenParam{})
 	if err != nil {
 		mlg.LogPrintf(ERROR, "ListenAndServe returned: %v", err)
 	}
