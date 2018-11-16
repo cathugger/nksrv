@@ -425,8 +425,9 @@ ON xb.bid=xtp.bid`
 	}
 
 	// lets think of post ID there
-	pInfo.MessageID = mailib.NewRandomMessageID(tu, sp.instance)
-	pInfo.ID = mailib.HashPostID_SHA1(pInfo.MessageID)
+	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
+	pInfo.MessageID = cutMsgID(fmsgids)
+	pInfo.ID = mailib.HashPostID_SHA1(fmsgids)
 
 	// perform insert
 	if !isReply {

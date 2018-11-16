@@ -44,15 +44,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 	i.H["Newsgroups"] = mail.OneHeaderVal(board)
 
 	// Date
-	{
-		dd := i.Date
-		Y, M, D := dd.Date()
-		h, m, s := dd.Clock()
-		i.H["Date"] = mail.OneHeaderVal(
-			fmt.Sprintf(
-				"%02d %s %04d %02d:%02d:%02d GMT",
-				D, M.String()[:3], Y, h, m, s))
-	}
+	i.H["Date"] = mail.OneHeaderVal(mail.FormatDate(i.Date))
 
 	// References
 	if ref != "" {
@@ -77,11 +69,14 @@ func (sp *PSQLIB) fillWebPostDetails(
 		} else {
 			i.L.Body.Data = mailib.PostObjectIndex(0)
 			if text8bit {
+				i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
 				i.H["Content-Type"] = mail.OneHeaderVal(plainUTF8Type)
 			}
 		}
 		return i
 	}
+
+	i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
 
 	// {RFC 2183}
 	// 2.10  Content-Disposition and the Main Message

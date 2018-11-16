@@ -8,7 +8,7 @@ import (
 	ht "nekochan/lib/hashtools"
 )
 
-func NewRandomMessageID(t int64, name string) CoreMsgIDStr {
+func NewRandomMessageID(t int64, name string) FullMsgIDStr {
 	// TAI64
 	var b [8]byte
 	u := uint64(t) + 4611686018427387914
@@ -32,12 +32,12 @@ func NewRandomMessageID(t int64, name string) CoreMsgIDStr {
 	var r [12]byte
 	crand.Read(r[:])
 
-	return CoreMsgIDStr(ht.SBase64Enc.EncodeToString(b[:]) + "." +
-		ht.SBase64Enc.EncodeToString(r[:]) + "@" + name)
+	return FullMsgIDStr("<" + ht.SBase64Enc.EncodeToString(b[:]) + "." +
+		ht.SBase64Enc.EncodeToString(r[:]) + "@" + name + ">")
 }
 
 // TODO: more algos
-func HashPostID_SHA1(coremsgid CoreMsgIDStr) string {
-	b := sha1.Sum(unsafeStrToBytes("<" + string(coremsgid) + ">"))
+func HashPostID_SHA1(coremsgid FullMsgIDStr) string {
+	b := sha1.Sum(unsafeStrToBytes(string(coremsgid)))
 	return hex.EncodeToString(b[:])
 }

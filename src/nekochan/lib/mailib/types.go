@@ -8,7 +8,7 @@ type FullMsgIDStr = minimail.FullMsgIDStr
 type CoreMsgIDStr = minimail.CoreMsgIDStr
 
 type ParsedMessageInfo struct {
-	MessageID     CoreMsgIDStr
+	FullMsgIDStr  FullMsgIDStr
 	PostedDate    int64
 	Newsgroup     string
 	ContentType   string

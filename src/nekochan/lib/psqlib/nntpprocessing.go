@@ -1,11 +1,13 @@
 package psqlib
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime"
 	nmail "net/mail"
 	"os"
+	"time"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/date"
@@ -16,17 +18,42 @@ import (
 	"nekochan/lib/nntp"
 )
 
-// mandatory headers for transmission. POST uses separate system
-var hdrNNTPMandatory = [...]struct {
+type headerRestriction struct {
 	h string // header
 	o bool   // optional (allow absence?)
-}{
+}
+
+var hdrNNTPPostRestrict = [...]headerRestriction{
+	// NetNews stuff specified in {RFC 5536}
+	{"Message-ID", true},
+	{"From", false},
+	{"Date", true},
+	{"Newsgroups", false},
+	{"Path", true},
+	{"Subject", true}, // more lax than {RFC 5536} (no subject is much better than "none")
+
+	// {RFC 5322}
+	{"Sender", true},
+	{"Reply-To", true},
+	{"To", true},
+	{"Cc", true},
+	{"Bcc", true},
+	{"In-Reply-To", true},
+	{"References", true},
+
+	// some extras we process
+	{"Injection-Date", true},
+	{"NNTP-Posting-Date", true},
+}
+
+// mandatory headers for transmission. POST uses separate system
+var hdrNNTPTransferRestrict = [...]headerRestriction{
 	// NetNews stuff specified in {RFC 5536}
 	{"Message-ID", true}, // special handling
 	{"From", false},
 	{"Date", false},
 	{"Newsgroups", false},
-	{"Path", true},    // more lax than {RFC 5536}
+	{"Path", false},
 	{"Subject", true}, // more lax than {RFC 5536} (no subject is much better than "none")
 
 	// {RFC 5322}
@@ -57,10 +84,16 @@ type nntpParsedInfo struct {
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
-	H mail.Headers, unsafe_sid CoreMsgIDStr) (
+	H mail.Headers, unsafe_sid CoreMsgIDStr, post bool) (
 	info nntpParsedInfo, err error, unexpected bool) {
 
-	for _, mv := range hdrNNTPMandatory {
+	var restrictions []headerRestriction
+	if !post {
+		restrictions = hdrNNTPTransferRestrict[:]
+	} else {
+		restrictions = hdrNNTPPostRestrict[:]
+	}
+	for _, mv := range restrictions {
 		hv := H[mv.h]
 		if !mv.o && len(hv) != 1 {
 			err = fmt.Errorf("exactly one %q header required", mv.h)
@@ -88,9 +121,13 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 			au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
 	}
 
+	var tu int64
+	if post {
+		tu = date.NowTimeUnix()
+	}
+
 	// Message-ID validation
 	hmsgids := H["Message-ID"]
-
 	if len(hmsgids) != 0 {
 
 		// yes we modify header there
@@ -105,28 +142,41 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 		cid := cutMsgID(hid)
 
-		if unsafe_sid != cid {
+		if unsafe_sid != cid && unsafe_sid != "" {
 			err = fmt.Errorf(
 				"IHAVE Message-ID <%s> doesn't match article Message-ID <%s>",
 				unsafe_sid, cid)
 			return
 		}
 
-		info.MessageID = cid
+		info.FullMsgIDStr = hid
 
-	} else {
+	} else if unsafe_sid != "" {
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
 		H["Message-ID"] = mail.OneHeaderVal(fmsgids)
-		info.MessageID = cutMsgID(FullMsgIDStr(fmsgids))
+		info.FullMsgIDStr = FullMsgIDStr(fmsgids)
+	} else if post {
+		fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
+		H["Message-ID"] = mail.OneHeaderVal(string(fmsgids))
+		info.FullMsgIDStr = fmsgids
+	} else {
+		err = errors.New("missing Message-ID")
+		return
 	}
 
 	// Date
-	pdate, err := mail.ParseDate(H["Date"][0].V)
-	if err != nil {
-		err = fmt.Errorf("error parsing Date header: %v", err)
-		return
+	if len(H["Date"]) != 0 {
+		pdate, e := mail.ParseDate(H["Date"][0].V)
+		if e != nil {
+			err = fmt.Errorf("error parsing Date header: %v", e)
+			return
+		}
+		info.PostedDate = pdate.Unix()
+	} else {
+		H["Date"] = mail.OneHeaderVal(mail.FormatDate(time.Unix(tu, 0)))
+		info.PostedDate = tu
 	}
-	info.PostedDate = pdate.Unix()
+
 	// TODO check if message is not too new
 	// maybe check for too old aswell
 	// checking for too old may help to clean up message reject/ban filters
@@ -152,6 +202,9 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	if err != nil {
 		if err == errNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
+		} else if err == errNoSuchThread {
+			err = fmt.Errorf(
+				"refering to non-existing root post %s not allowed", troot)
 		}
 		return
 	}
@@ -217,8 +270,8 @@ func (sp *PSQLIB) nntpProcessArticle(
 
 	// properly fill in fields
 
-	pi.MessageID = info.MessageID
-	pi.ID = mailib.HashPostID_SHA1(pi.MessageID)
+	pi.MessageID = cutMsgID(info.FullMsgIDStr)
+	pi.ID = mailib.HashPostID_SHA1(info.FullMsgIDStr)
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	if len(H["Subject"]) != 0 {

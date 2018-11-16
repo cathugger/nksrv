@@ -144,7 +144,7 @@ func commonNewPost(
 		rInfo.ThreadID = pID
 	}
 	rInfo.PostID = pID
-	rInfo.MessageID = pMessageID
+	rInfo.MessageID = mm.CutMessageIDStr(pMessageID)
 	return
 }
 

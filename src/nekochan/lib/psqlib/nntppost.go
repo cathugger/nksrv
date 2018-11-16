@@ -222,7 +222,8 @@ func (sp *PSQLIB) HandleIHave(
 	w.ResSendArticleToBeTransferred()
 	r := ro.OpenReader()
 
-	info, newname, H, err, unexpected := sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
+	info, newname, H, err, unexpected :=
+		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir, false)
 	if err != nil {
 		r.Discard(-1)
 
@@ -283,7 +284,7 @@ func (sp *PSQLIB) HandleTakeThis(
 	}
 
 	info, newname, H, err, unexpected :=
-		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
+		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir, false)
 	if err != nil {
 		if !unexpected {
 			w.ResArticleRejected(msgid, err)
@@ -302,11 +303,12 @@ func (sp *PSQLIB) HandleTakeThis(
 }
 
 func (sp *PSQLIB) handleIncoming(
-	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string, post bool) (
 	info nntpParsedInfo, newname string, H mail.Headers,
 	err error, unexpected bool) {
 
-	info, f, H, err, unexpected := sp.handleIncomingIntoFile(r, unsafe_sid)
+	info, f, H, err, unexpected :=
+		sp.handleIncomingIntoFile(r, unsafe_sid, post)
 	if err != nil {
 		if f != nil {
 			n := f.Name()
@@ -337,7 +339,7 @@ func (sp *PSQLIB) handleIncoming(
 }
 
 func (sp *PSQLIB) handleIncomingIntoFile(
-	r io.Reader, unsafe_sid CoreMsgIDStr) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, post bool) (
 	info nntpParsedInfo, f *os.File, H mail.Headers,
 	err error, unexpected bool) {
 
@@ -352,7 +354,7 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 	}
 	defer mh.Close()
 
-	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid)
+	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid, post)
 	if err != nil {
 		return
 	}
