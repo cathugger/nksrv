@@ -155,9 +155,12 @@ func GenerateMessage(
 			}
 
 			if !ismp {
-				return generateSomething(w, pis[i].Binary, pis[i].Body)
+				err = generateSomething(w, pis[i].Binary, pis[i].Body)
 			} else {
-				return generateMultipart(w, pb, ppis)
+				err = generateMultipart(w, pb, ppis)
+			}
+			if err != nil {
+				return
 			}
 		}
 		return pw.FinishParts("")
