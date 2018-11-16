@@ -141,7 +141,8 @@ func processMessageText(
 }
 
 func processMessageAttachment(
-	src *fstore.FStore, H mail.Headers, r io.Reader, binary bool, ct string) (
+	src *fstore.FStore, H mail.Headers, r io.Reader,
+	binary bool, ct string, cpar map[string]string) (
 	fi FileInfo, fn string, err error) {
 
 	// new
@@ -191,6 +192,9 @@ func processMessageAttachment(
 				oname = oname[i+1:]
 			}
 		}
+	}
+	if oname == "" && cpar != nil {
+		oname = cpar["name"]
 	}
 	ext := ""
 	if oname != "" {
@@ -280,8 +284,9 @@ func DevourMessageBody(
 		// is used when message is properly decoded
 		msgattachment := false
 
-		if !textprocessed && len(H["Content-Disposition"]) == 0 &&
-			(ct == "" || strings.HasPrefix(ct, "text/")) {
+		if !textprocessed && (ct == "" ||
+			(strings.HasPrefix(ct, "text/") && cpar["name"] == "")) &&
+			len(H["Content-Disposition"]) == 0 {
 
 			// try processing as main text
 			// even if we fail, don't try doing it with other part
@@ -303,7 +308,7 @@ func DevourMessageBody(
 
 		// if this point is reached, we'll need to add this as attachment
 
-		fi, fn, err := processMessageAttachment(src, H, r, binary, ct)
+		fi, fn, err := processMessageAttachment(src, H, r, binary, ct, cpar)
 		tmpfilenames = append(tmpfilenames, fn)
 		if err != nil {
 			return

@@ -326,7 +326,7 @@ func (c *ConnState) serveClient() bool {
 			c.log.LogPrintf(WARN, "unrecognised command %q", incmd[:x])
 			continue
 		}
-		c.log.LogPrintf(INFO, "processing command %q", incmd[:x])
+		//c.log.LogPrintf(INFO, "processing command %q", incmd[:x])
 
 		args = args[:0] // reuse
 

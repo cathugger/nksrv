@@ -10,9 +10,29 @@ import (
 	"nekochan/lib/mailib"
 )
 
-func attachmentDisposition(original string) string {
-	return mime.FormatMediaType(
-		"inline", map[string]string{"filename": original})
+func attachmentDisposition(oname string) string {
+	if oname != "" {
+		return mime.FormatMediaType(
+			"inline", map[string]string{"filename": oname})
+	} else {
+		return "inline"
+	}
+}
+
+func attachmentConentType(ctype string, oname string) string {
+	ct, cpar, err := mime.ParseMediaType(ctype)
+	if err != nil {
+		// cannot parse media type -- cannot add "name" parameter
+		return ctype
+	}
+	cpar["name"] = oname
+	ct = mime.FormatMediaType(ct, cpar)
+	if ct != "" {
+		return ct
+	} else {
+		// if formatting failed, return original
+		return ctype
+	}
 }
 
 const plainUTF8Type = "text/plain; charset=UTF-8"
@@ -89,7 +109,8 @@ func (sp *PSQLIB) fillWebPostDetails(
 		if len(i.FI[0].ContentType) == 0 {
 			panic("Content-Type not set")
 		}
-		i.H["Content-Type"] = mail.OneHeaderVal(i.FI[0].ContentType)
+		i.H["Content-Type"] = mail.OneHeaderVal(
+			attachmentConentType(i.FI[0].ContentType, i.FI[0].Original))
 		i.H["Content-Disposition"] =
 			mail.OneHeaderVal(attachmentDisposition(i.FI[0].Original))
 		i.L.Body.Data = mailib.PostObjectIndex(1)
@@ -114,7 +135,8 @@ func (sp *PSQLIB) fillWebPostDetails(
 		if len(i.FI[a].ContentType) == 0 {
 			panic("Content-Type not set")
 		}
-		xparts[x].ContentType = i.FI[x].ContentType
+		xparts[x].ContentType = attachmentConentType(
+			i.FI[x].ContentType, i.FI[x].Original)
 		xparts[x].Headers = mail.Headers{
 			"Content-Disposition": mail.OneHeaderVal(
 				attachmentDisposition(i.FI[x].Original)),
