@@ -96,7 +96,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	}
 	for _, mv := range restrictions {
 		hv := H[mv.h]
-		if !mv.o && len(hv) != 1 {
+		if !mv.o && (len(hv) != 1 || au.TrimWSString(hv[0].V) == "") {
 			err = fmt.Errorf("exactly one %q header required", mv.h)
 			return
 		}
@@ -113,13 +113,22 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 	// ignore other headers than first
 	if len(H["Content-Type"]) != 0 {
-		H["Content-Type"] = H["Content-Type"][:1]
-		H["Content-Type"][0].V = au.TrimWSString(H["Content-Type"][0].V)
+		ts := au.TrimWSString(H["Content-Type"][0].V)
+		if ts != "" {
+			H["Content-Type"] = H["Content-Type"][:1]
+			H["Content-Type"][0].V = ts
+		} else {
+			delete(H, "Content-Type")
+		}
 	}
 	if len(H["Content-Transfer-Encoding"]) != 0 {
-		H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
-		H["Content-Transfer-Encoding"][0].V =
-			au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
+		ts := au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
+		if ts != "" {
+			H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
+			H["Content-Transfer-Encoding"][0].V = ts
+		} else {
+			delete(H, "Content-Transfer-Encoding")
+		}
 	}
 
 	var tu int64
@@ -208,6 +217,12 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 				"refering to non-existing root post %s not allowed", troot)
 		}
 		return
+	}
+
+	if len(H["Path"]) != 0 && au.TrimWSString(H["Path"][0].V) != "" {
+		H["Path"][0].V = sp.instance + "!" + H["Path"][0].V
+	} else {
+		H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 	}
 
 	// Content-Type
