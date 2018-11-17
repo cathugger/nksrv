@@ -19,6 +19,6 @@ func failCharsetReader(charset string, input io.Reader) (io.Reader, error) {
 
 var mimeWordDecoder = mime.WordDecoder{CharsetReader: failCharsetReader}
 
-func DecodeMIMEWord(s string) (string, error) {
-	return mimeWordDecoder.Decode(s)
+func DecodeMIMEWordHeader(s string) (string, error) {
+	return mimeWordDecoder.DecodeHeader(s)
 }

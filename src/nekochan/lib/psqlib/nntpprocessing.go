@@ -230,7 +230,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		var e error
 		ct := H["Content-Type"][0].V
 		// attempt to undo MIME hackery, if any
-		tr_ct, e := mail.DecodeMIMEWord(ct)
+		tr_ct, e := mail.DecodeMIMEWordHeader(ct)
 		if e != nil {
 			tr_ct = ct
 		}
@@ -326,7 +326,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		ssub := au.TrimWSString(sh)
 		if len(H["MIME-Version"]) != 0 {
 			// undo MIME hacks, if any
-			dsub, e := mail.DecodeMIMEWord(ssub)
+			dsub, e := mail.DecodeMIMEWordHeader(ssub)
 			if e == nil {
 				ssub = dsub
 			}

@@ -284,7 +284,7 @@ func DevourMessageBody(
 		if len(H["Content-Disposition"]) != 0 {
 			cdis = H["Content-Disposition"][0].V
 			// undo MIME hackery
-			tr_cdis, e := mail.DecodeMIMEWord(cdis)
+			tr_cdis, e := mail.DecodeMIMEWordHeader(cdis)
 			if e == nil {
 				cdis = tr_cdis
 			}
@@ -383,7 +383,7 @@ func DevourMessageBody(
 			if pct != "" {
 				var e error
 				// attempt to undo MIME hackery, if any
-				tr_pct, e := mail.DecodeMIMEWord(pct)
+				tr_pct, e := mail.DecodeMIMEWordHeader(pct)
 				if e != nil {
 					tr_pct = pct
 				}
