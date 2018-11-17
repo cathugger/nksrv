@@ -283,6 +283,11 @@ func DevourMessageBody(
 		cdis := ""
 		if len(H["Content-Disposition"]) != 0 {
 			cdis = H["Content-Disposition"][0].V
+			// undo MIME hackery
+			tr_cdis, e := mail.DecodeMIMEWord(cdis)
+			if e == nil {
+				cdis = tr_cdis
+			}
 		}
 		var cdis_t string
 		var cdis_par map[string]string
@@ -373,14 +378,19 @@ func DevourMessageBody(
 			}
 			delete(PH, "Content-Type")
 
-			var pxct string
-			var pxctparam map[string]string
+			var pct_t string
+			var pct_par map[string]string
 			if pct != "" {
 				var e error
-				pxct, pxctparam, e = mime.ParseMediaType(pct)
+				// attempt to undo MIME hackery, if any
+				tr_pct, e := mail.DecodeMIMEWord(pct)
 				if e != nil {
-					pxct = "invalid"
-					pxctparam = map[string]string(nil)
+					tr_pct = pct
+				}
+				pct_t, pct_par, e = mime.ParseMediaType(tr_pct)
+				if e != nil {
+					pct_t = "invalid"
+					pct_par = map[string]string(nil)
 				}
 			}
 
@@ -402,7 +412,7 @@ func DevourMessageBody(
 			partI.Binary = pbinary
 			partI.Headers = PH
 			partI.Body, err =
-				guttleBody(pxr, PH, pxct, pxctparam, pbinary)
+				guttleBody(pxr, PH, pct_t, pct_par, pbinary)
 			if err != nil {
 				err = fmt.Errorf("guttleBody: %v", err)
 				break

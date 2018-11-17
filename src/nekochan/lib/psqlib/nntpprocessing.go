@@ -228,8 +228,13 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// Content-Type
 	if len(H["Content-Type"]) != 0 {
 		var e error
-		info.ContentType, info.ContentParams, e =
-			mime.ParseMediaType(H["Content-Type"][0].V)
+		ct := H["Content-Type"][0].V
+		// attempt to undo MIME hackery, if any
+		tr_ct, e := mail.DecodeMIMEWord(ct)
+		if e != nil {
+			tr_ct = ct
+		}
+		info.ContentType, info.ContentParams, e = mime.ParseMediaType(tr_ct)
 		if e != nil {
 			info.ContentType = "invalid"
 		}
@@ -272,18 +277,6 @@ func isSubjectEmpty(s string, isReply bool, refs string) bool {
 		return false
 	}
 }
-
-type failCharsetError string
-
-func (f failCharsetError) Error() string {
-	return fmt.Sprintf("unknown charset: %q", string(f))
-}
-
-func failCharsetReader(charset string, input io.Reader) (io.Reader, error) {
-	return nil, failCharsetError(charset)
-}
-
-var mimeWordDecoder = mime.WordDecoder{CharsetReader: failCharsetReader}
 
 func (sp *PSQLIB) netnewsSubmitFullArticle(
 	r io.Reader, H mail.Headers, info nntpParsedInfo) {
@@ -333,7 +326,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		ssub := au.TrimWSString(sh)
 		if len(H["MIME-Version"]) != 0 {
 			// undo MIME hacks, if any
-			dsub, e := mimeWordDecoder.Decode(ssub)
+			dsub, e := mail.DecodeMIMEWord(ssub)
 			if e == nil {
 				ssub = dsub
 			}
