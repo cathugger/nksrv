@@ -12,7 +12,7 @@ import (
 
 func attachmentDisposition(oname string) string {
 	return mime.FormatMediaType(
-		"inline", map[string]string{"filename": oname})
+		"attachment", map[string]string{"filename": oname})
 }
 
 func attachmentConentType(ctype string, oname string) string {

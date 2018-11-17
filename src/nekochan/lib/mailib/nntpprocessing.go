@@ -54,7 +54,7 @@ func processMessagePrepareReader(
 }
 
 func processMessageText(
-	r io.Reader, binary bool, ct string, cpar map[string]string) (
+	r io.Reader, binary bool, ct_t string, ct_par map[string]string) (
 	_ io.Reader, rstr string, finished bool, msgattachment bool, err error) {
 
 	// TODO make configurable
@@ -77,8 +77,8 @@ func processMessageText(
 	if n <= maxTextBuf {
 		// it fit
 		cset := ""
-		if ct != "" && cpar != nil {
-			cset = cpar["charset"]
+		if ct_t != "" && ct_par != nil {
+			cset = ct_par["charset"]
 		}
 
 		UorA := au.EqualFoldString(cset, "UTF-8") ||
@@ -142,7 +142,7 @@ func processMessageText(
 
 func processMessageAttachment(
 	src *fstore.FStore, H mail.Headers, r io.Reader,
-	binary bool, ct string, cpar map[string]string) (
+	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
 	fi FileInfo, fn string, err error) {
 
 	// new
@@ -179,22 +179,18 @@ func processMessageAttachment(
 		return
 	}
 	// determine with what filename should we store it
-	cdis := ""
-	if len(H["Content-Disposition"]) != 0 {
-		cdis = H["Content-Disposition"][0].V
-	}
 	oname := ""
-	if cdis != "" {
-		_, params, e := mime.ParseMediaType(cdis)
-		if e == nil && params["filename"] != "" {
-			oname = params["filename"]
-			if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
-				oname = oname[i+1:]
-			}
+	if cdis_par != nil && cdis_par["filename"] != "" {
+		oname = cdis_par["filename"]
+		if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
+			oname = oname[i+1:]
 		}
 	}
-	if oname == "" && cpar != nil {
-		oname = cpar["name"]
+	if oname == "" && ct_par != nil && ct_par["name"] != "" {
+		oname = ct_par["name"]
+		if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
+			oname = oname[i+1:]
+		}
 	}
 	ext := ""
 	if oname != "" {
@@ -204,18 +200,19 @@ func processMessageAttachment(
 			ext = oname[i+1:]
 		}
 	}
-	if ct == "" {
-		ct = "text/plain"
+	if ct_t == "" {
+		// default
+		ct_t = "text/plain"
 	}
-	if ext == "" || !emime.MIMEIsCanonical(ext, ct) {
+	if ext == "" || !emime.MIMEIsCanonical(ext, ct_t) {
 		// attempt finding better extension
-		mexts, e := emime.MIMEExtensionsByType(ct)
+		mexts, e := emime.MIMEExtensionsByType(ct_t)
 		if e == nil && len(mexts) != 0 {
 			ext = mexts[0] // expect first to be good enough
 		}
 	}
 	// if still no extension, try treating "text/*" as "text/plain"
-	if ext == "" && strings.HasPrefix(ct, "text/") && ct != "text/plain" {
+	if ext == "" && strings.HasPrefix(ct_t, "text/") && ct_t != "text/plain" {
 		mexts, e := emime.MIMEExtensionsByType("text/plain")
 		if e == nil && len(mexts) != 0 {
 			ext = mexts[0] // expect first to be good enough
@@ -223,11 +220,11 @@ func processMessageAttachment(
 	}
 	// special fallbacks, better than nothing
 	if ext == "" {
-		if strings.HasPrefix(ct, "text/") ||
-			strings.HasPrefix(ct, "multipart/") {
+		if strings.HasPrefix(ct_t, "text/") ||
+			strings.HasPrefix(ct_t, "multipart/") {
 
 			ext = "txt"
-		} else if strings.HasPrefix(ct, "message/") {
+		} else if strings.HasPrefix(ct_t, "message/") {
 			ext = "eml"
 		}
 	}
@@ -245,7 +242,7 @@ func processMessageAttachment(
 	//}
 
 	fi = FileInfo{
-		ContentType: ct,
+		ContentType: ct_t,
 		Size:        n,
 		ID:          iname,
 		Original:    oname,
@@ -278,15 +275,27 @@ func DevourMessageBody(
 	textprocessed := false
 
 	guttleBody := func(
-		r io.Reader, H mail.Headers, ct string, cpar map[string]string,
+		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
 		binary bool) (obj BodyObject, err error) {
 
 		// is used when message is properly decoded
 		msgattachment := false
 
-		if !textprocessed && (ct == "" ||
-			(strings.HasPrefix(ct, "text/") && cpar["name"] == "")) &&
-			len(H["Content-Disposition"]) == 0 {
+		cdis := ""
+		if len(H["Content-Disposition"]) != 0 {
+			cdis = H["Content-Disposition"][0].V
+		}
+		var cdis_t string
+		var cdis_par map[string]string
+		if cdis != "" {
+			cdis_t, cdis_par, _ = mime.ParseMediaType(cdis)
+		}
+
+		if !textprocessed &&
+			(ct_t == "" ||
+				(strings.HasPrefix(ct_t, "text/") && ct_par["name"] == "")) &&
+			(cdis == "" ||
+				(cdis_t == "inline" && cdis_par["filename"] == "")) {
 
 			// try processing as main text
 			// even if we fail, don't try doing it with other part
@@ -295,7 +304,7 @@ func DevourMessageBody(
 			var str string
 			var finished bool
 			r, str, finished, msgattachment, err =
-				processMessageText(r, binary, ct, cpar)
+				processMessageText(r, binary, ct_t, ct_par)
 			if err != nil {
 				return
 			}
@@ -308,7 +317,8 @@ func DevourMessageBody(
 
 		// if this point is reached, we'll need to add this as attachment
 
-		fi, fn, err := processMessageAttachment(src, H, r, binary, ct, cpar)
+		fi, fn, err :=
+			processMessageAttachment(src, H, r, binary, ct_t, ct_par, cdis_par)
 		tmpfilenames = append(tmpfilenames, fn)
 		if err != nil {
 			return
