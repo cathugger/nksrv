@@ -10,9 +10,18 @@ import (
 	"nekochan/lib/mailib"
 )
 
-func attachmentDisposition(oname string) string {
-	return mime.FormatMediaType(
+func attachmentDisposition(oname string) (cdis string) {
+	cdis = mime.FormatMediaType(
 		"attachment", map[string]string{"filename": oname})
+	// if failed to encode, or has invalid chars
+	if cdis == "" || au.ContainsControlString(cdis) {
+		// escape using mime hackery
+		// because apparently mime.FormatMediaType was too shit to do that
+		oname = mime.BEncoding.Encode("UTF-8", oname)
+		cdis = mime.FormatMediaType(
+			"attachment", map[string]string{"filename": oname})
+	}
+	return
 }
 
 func attachmentConentType(ctype string, oname string) string {
@@ -21,8 +30,18 @@ func attachmentConentType(ctype string, oname string) string {
 		// cannot parse media type -- cannot add "name" parameter
 		return ctype
 	}
+
 	cpar["name"] = oname
 	ct = mime.FormatMediaType(ct, cpar)
+
+	// if failed to encode, or has invalid chars
+	if ct == "" || au.ContainsControlString(ct) {
+		// escape using mime hackery
+		// because apparently mime.FormatMediaType was too shit to do that
+		cpar["name"] = mime.BEncoding.Encode("UTF-8", oname)
+		ct = mime.FormatMediaType(ct, cpar)
+	}
+
 	if ct != "" {
 		return ct
 	} else {

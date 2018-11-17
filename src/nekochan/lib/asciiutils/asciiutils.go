@@ -154,6 +154,18 @@ func Is7BitString(s string) bool {
 	return true
 }
 
+// ContainsControlString checks if string contains ASCII control
+// characters (TAB isn't considered control character though).
+func ContainsControlString(s string) bool {
+	for _, c := range []byte(s) {
+		// \t is safe
+		if (c < 0x20 && c != '\t') || c == 0x7F {
+			return true
+		}
+	}
+	return false
+}
+
 func TrimUnixNL(s string) string {
 	// not removing \r because they should be removed already
 	// last \n isn't needed if char before it exists and it isn't \n
