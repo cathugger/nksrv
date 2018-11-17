@@ -28,6 +28,7 @@ func main() {
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
+	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
 
 	flag.Parse()
 
@@ -144,7 +145,7 @@ func main() {
 	}
 	rh := ir.NewIBRouter(rcfg)
 
-	server := &http.Server{Addr: "127.0.0.1:1234", Handler: rh}
+	server := &http.Server{Addr: *httpbind, Handler: rh}
 
 	// graceful shutdown by signal
 	killc := make(chan os.Signal, 2)
