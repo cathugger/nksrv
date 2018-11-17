@@ -132,10 +132,10 @@ func (sp *PSQLIB) fillWebPostDetails(
 			panic("Content-Type not set")
 		}
 		xparts[x].ContentType = attachmentConentType(
-			i.FI[x].ContentType, i.FI[x].Original)
+			i.FI[a].ContentType, i.FI[a].Original)
 		xparts[x].Headers = mail.Headers{
 			"Content-Disposition": mail.OneHeaderVal(
-				attachmentDisposition(i.FI[x].Original)),
+				attachmentDisposition(i.FI[a].Original)),
 		}
 		xparts[x].Body.Data = mailib.PostObjectIndex(1 + a)
 		xparts[x].Binary = true
