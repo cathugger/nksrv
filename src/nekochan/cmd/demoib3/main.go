@@ -125,7 +125,7 @@ func main() {
 		}
 	}
 
-	rend, err := rj.NewJSONRenderer(dbib, rj.Config{Indent: "\t"})
+	rend, err := rj.NewJSONRenderer(dbib, rj.Config{Indent: "  "})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rj.NewJSONRenderer error:", err)
 		errorcode = 1

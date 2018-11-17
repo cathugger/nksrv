@@ -86,9 +86,10 @@ type IBCommonThread struct {
 
 // thread in thread list page
 type IBThreadListPageThread struct {
-	IBCommonThread
 	SkippedReplies     uint32 `json:"skipreplies"` // number of replies not included
 	SkippedAttachments uint32 `json:"skipfiles"`   // number of attachments not included
+
+	IBCommonThread
 }
 
 // info about board common across pages

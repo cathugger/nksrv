@@ -194,9 +194,8 @@ func processMessageAttachment(
 	}
 	ext := ""
 	if oname != "" {
-		if i := strings.LastIndexByte(
-			oname, '.'); i >= 0 && i+1 < len(oname) {
-
+		i := strings.LastIndexByte(oname, '.')
+		if i >= 0 && i+1 < len(oname) {
 			ext = oname[i+1:]
 		}
 	}
