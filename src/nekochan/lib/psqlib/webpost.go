@@ -383,11 +383,6 @@ ON xb.bid=xtp.bid`
 
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
-	// fill in info about post
-	tu := date.NowTimeUnix()
-	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
-	pInfo = sp.fillWebPostDetails(pInfo, board, CoreMsgIDStr(ref.String))
-
 	// at this point message should be checked
 	// we should calculate proper file names here
 	// should we move files before or after writing to database?
@@ -424,6 +419,10 @@ ON xb.bid=xtp.bid`
 		}
 	}
 
+	// fill in info about post
+	tu := date.NowTimeUnix()
+	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
+	pInfo = sp.fillWebPostDetails(pInfo, board, CoreMsgIDStr(ref.String))
 	// lets think of post ID there
 	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
 	pInfo.MessageID = cutMsgID(fmsgids)
