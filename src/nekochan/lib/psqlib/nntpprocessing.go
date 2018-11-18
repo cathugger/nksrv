@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	nmail "net/mail"
 	"os"
 	"time"
@@ -111,23 +110,25 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	delete(H, "Date-Received")
 	delete(H, "Xref")
 
-	// ignore other headers than first
-	if len(H["Content-Type"]) != 0 {
-		ts := au.TrimWSString(H["Content-Type"][0].V)
-		if ts != "" {
-			H["Content-Type"] = H["Content-Type"][:1]
-			H["Content-Type"][0].V = ts
-		} else {
-			delete(H, "Content-Type")
+	if post {
+		// ignore other headers than first
+		if len(H["Content-Type"]) != 0 {
+			ts := au.TrimWSString(H["Content-Type"][0].V)
+			if ts != "" {
+				H["Content-Type"] = H["Content-Type"][:1]
+				H["Content-Type"][0].V = ts
+			} else {
+				delete(H, "Content-Type")
+			}
 		}
-	}
-	if len(H["Content-Transfer-Encoding"]) != 0 {
-		ts := au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
-		if ts != "" {
-			H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
-			H["Content-Transfer-Encoding"][0].V = ts
-		} else {
-			delete(H, "Content-Transfer-Encoding")
+		if len(H["Content-Transfer-Encoding"]) != 0 {
+			ts := au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
+			if ts != "" {
+				H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
+				H["Content-Transfer-Encoding"][0].V = ts
+			} else {
+				delete(H, "Content-Transfer-Encoding")
+			}
 		}
 	}
 
@@ -223,21 +224,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		H["Path"][0].V = sp.instance + "!" + H["Path"][0].V
 	} else {
 		H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
-	}
-
-	// Content-Type
-	if len(H["Content-Type"]) != 0 {
-		var e error
-		ct := H["Content-Type"][0].V
-		// attempt to undo MIME hackery, if any
-		tr_ct, e := mail.DecodeMIMEWordHeader(ct)
-		if e != nil {
-			tr_ct = ct
-		}
-		info.ContentType, info.ContentParams, e = mime.ParseMediaType(tr_ct)
-		if e != nil {
-			info.ContentType = "invalid"
-		}
 	}
 
 	return

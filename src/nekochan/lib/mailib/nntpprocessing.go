@@ -140,10 +140,9 @@ func processMessageText(
 	return r, rstr, false, msgattachment, nil
 }
 
-func processMessageAttachment(
-	src *fstore.FStore, H mail.Headers, r io.Reader,
-	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
-	fi FileInfo, fn string, err error) {
+func takeInFile(
+	src *fstore.FStore, r io.Reader, binary bool) (
+	fn, hash string, fsize int64, err error) {
 
 	// new
 	f, err := src.TempFile("mail-", "")
@@ -152,11 +151,17 @@ func processMessageAttachment(
 	}
 	// get name
 	fn = f.Name()
+	// cleanup on err
+	defer func() {
+		if err != nil {
+			os.Remove(fn)
+		}
+	}()
 	// copy
 	if !binary {
 		r = au.NewUnixTextReader(r)
 	}
-	n, err := io.Copy(f, r)
+	fsize, err = io.Copy(f, r)
 	if err != nil {
 		f.Close()
 		return
@@ -168,34 +173,72 @@ func processMessageAttachment(
 		return
 	}
 	// hash it
-	h, err := ht.MakeFileHash(f)
+	hash, err = ht.MakeFileHash(f)
 	if err != nil {
 		f.Close()
 		return
 	}
+
+	// XXX do something more before closing file?
+
 	// close
 	err = f.Close()
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+func processMessageAttachment(
+	src *fstore.FStore, H mail.Headers, r io.Reader,
+	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
+	fi FileInfo, fn string, err error) {
+
+	fn, hash, fsize, err := takeInFile(src, r, binary)
+	if err != nil {
+		return
+	}
+
 	// determine with what filename should we store it
 	oname := ""
 	if cdis_par != nil && cdis_par["filename"] != "" {
 		oname = cdis_par["filename"]
-		if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
-			oname = oname[i+1:]
+		// undo RFC 2047 MIME Word hackery, if any
+		tr_oname, e := mail.DecodeMIMEWordHeader(oname)
+		if e == nil {
+			oname = tr_oname
+		}
+		if !utf8.ValidString(oname) {
+			oname = ""
 		}
 	}
 	if oname == "" && ct_par != nil && ct_par["name"] != "" {
 		oname = ct_par["name"]
-		if i := strings.LastIndexAny(oname, "/\\"); i >= 0 {
-			oname = oname[i+1:]
+		// undo RFC 2047 MIME Word hackery, if any
+		tr_oname, e := mail.DecodeMIMEWordHeader(oname)
+		if e == nil {
+			oname = tr_oname
 		}
+		if !utf8.ValidString(oname) {
+			oname = ""
+		}
+	}
+	// ensure oname is clean
+	// we don't care about windows backslash because it wouldn't be harmful for us
+	// since it's only used for display purposes
+	if i := strings.LastIndexByte(oname, '/'); i >= 0 {
+		oname = oname[i+1:]
 	}
 	ext := ""
 	if oname != "" {
 		i := strings.LastIndexByte(oname, '.')
-		if i >= 0 && i+1 < len(oname) {
+		// do some additional checks to ensure that extension at least makes sense
+		// since we will be storing that in filesystem
+		if i >= 0 && i+1 < len(oname) &&
+			strings.IndexAny(oname[i+1:], "\\:*\"?<>|") < 0 &&
+			!au.ContainsControlString(oname[i+1:]) {
+
 			ext = oname[i+1:]
 		}
 	}
@@ -231,9 +274,9 @@ func processMessageAttachment(
 	// even if we don't, that's okay
 	var iname string
 	if ext != "" {
-		iname = h + "." + ext
+		iname = hash + "." + ext
 	} else {
-		iname = h
+		iname = hash
 	}
 	// don't make up original name, it's ok not to have anything in it
 	//if oname == "" {
@@ -242,7 +285,7 @@ func processMessageAttachment(
 
 	fi = FileInfo{
 		ContentType: ct_t,
-		Size:        n,
+		Size:        fsize,
 		ID:          iname,
 		Original:    oname,
 	}
@@ -283,11 +326,6 @@ func DevourMessageBody(
 		cdis := ""
 		if len(H["Content-Disposition"]) != 0 {
 			cdis = H["Content-Disposition"][0].V
-			// undo MIME hackery
-			tr_cdis, e := mail.DecodeMIMEWordHeader(cdis)
-			if e == nil {
-				cdis = tr_cdis
-			}
 		}
 		var cdis_t string
 		var cdis_par map[string]string
@@ -297,9 +335,11 @@ func DevourMessageBody(
 
 		if !textprocessed &&
 			(ct_t == "" ||
-				(strings.HasPrefix(ct_t, "text/") && ct_par["name"] == "")) &&
+				(strings.HasPrefix(ct_t, "text/") &&
+					ct_par != nil && ct_par["name"] == "")) &&
 			(cdis == "" ||
-				(cdis_t == "inline" && cdis_par["filename"] == "")) {
+				(cdis_t == "inline" &&
+					cdis_par != nil && cdis_par["filename"] == "")) {
 
 			// try processing as main text
 			// even if we fail, don't try doing it with other part
@@ -338,7 +378,18 @@ func DevourMessageBody(
 		return
 	}
 
-	xismultipart := strings.HasPrefix(info.ContentType, "multipart/")
+	var xct_t string
+	var xct_par map[string]string
+	if len(XH["Content-Type"]) != 0 {
+		var e error
+		ct := XH["Content-Type"][0].V
+		xct_t, xct_par, e = mime.ParseMediaType(ct)
+		if e != nil && xct_t == "" {
+			xct_t = "invalid"
+		}
+	}
+
+	xismultipart := strings.HasPrefix(xct_t, "multipart/")
 
 	var xcte string
 	if len(XH["Content-Transfer-Encoding"]) != 0 {
@@ -354,10 +405,10 @@ func DevourMessageBody(
 		return
 	}
 
-	if xismultipart && info.ContentParams["boundary"] != "" &&
+	if xismultipart && xct_par != nil && xct_par["boundary"] != "" &&
 		len(XH["Content-Disposition"]) == 0 {
 
-		pr := mail.NewPartReader(xr, info.ContentParams["boundary"])
+		pr := mail.NewPartReader(xr, xct_par["boundary"])
 		var pis []PartInfo
 		for {
 			err = pr.NextPart()
@@ -382,15 +433,9 @@ func DevourMessageBody(
 			var pct_par map[string]string
 			if pct != "" {
 				var e error
-				// attempt to undo MIME hackery, if any
-				tr_pct, e := mail.DecodeMIMEWordHeader(pct)
-				if e != nil {
-					tr_pct = pct
-				}
-				pct_t, pct_par, e = mime.ParseMediaType(tr_pct)
-				if e != nil {
+				pct_t, pct_par, e = mime.ParseMediaType(pct)
+				if e != nil && pct_t == "" {
 					pct_t = "invalid"
-					pct_par = map[string]string(nil)
 				}
 			}
 
@@ -434,6 +479,7 @@ func DevourMessageBody(
 		pi.H = XH
 		pi.L.Binary = xbinary
 		pi.L.Body.Data = pis
+
 		return // done there
 	}
 
@@ -443,7 +489,7 @@ func DevourMessageBody(
 	// since this is toplvl dont set ContentType or other headers
 	pi.L.Binary = xbinary
 	pi.L.Body, err =
-		guttleBody(xr, XH, info.ContentType, info.ContentParams, xbinary)
+		guttleBody(xr, XH, xct_t, xct_par, xbinary)
 
 	return
 }
