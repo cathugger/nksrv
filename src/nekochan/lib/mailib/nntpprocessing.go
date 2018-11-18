@@ -330,14 +330,18 @@ func DevourMessageBody(
 		var cdis_t string
 		var cdis_par map[string]string
 		if cdis != "" {
-			cdis_t, cdis_par, _ = mime.ParseMediaType(cdis)
+			var e error
+			cdis_t, cdis_par, e = mime.ParseMediaType(cdis)
+			if e != nil {
+				cdis_t = "invalid"
+			}
 		}
 
 		if !textprocessed &&
 			(ct_t == "" ||
 				(strings.HasPrefix(ct_t, "text/") &&
 					ct_par != nil && ct_par["name"] == "")) &&
-			(cdis == "" ||
+			(cdis_t == "" ||
 				(cdis_t == "inline" &&
 					cdis_par != nil && cdis_par["filename"] == "")) {
 
