@@ -71,7 +71,7 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 	// if we get error that means that error has occured before reaching body
 	if err == nil {
 		if headlimit > 0 {
-			if lr.N == 0 && br.QueuedErr() == io.EOF {
+			if lr.N == 0 && br.QueuedErr() == errHeadLimitReached {
 				br.ResetErr()
 			}
 			br.SetReader(r)

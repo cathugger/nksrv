@@ -15,16 +15,17 @@ import (
 )
 
 type PSQLIB struct {
-	db       psql.PSQL
-	log      Logger
-	src      fstore.FStore
-	thm      fstore.FStore
-	nntpfs   fstore.FStore
-	nntpmgr  nntpCacheMgr
-	altthumb altthumber.AltThumber
-	ffo      formFileOpener
-	fpp      form.ParserParams
-	instance string
+	db                 psql.PSQL
+	log                Logger
+	src                fstore.FStore
+	thm                fstore.FStore
+	nntpfs             fstore.FStore
+	nntpmgr            nntpCacheMgr
+	altthumb           altthumber.AltThumber
+	ffo                formFileOpener
+	fpp                form.ParserParams
+	instance           string
+	maxArticleBodySize int64
 
 	// newthread prepared statements and locking
 	ntStmts map[int]*sql.Stmt
@@ -82,7 +83,8 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	// TODO make configurable
 	p.fpp.MaxFileCount = 100
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
-	p.instance = "nekochan" // TODO config
+	p.instance = "nekochan"          // TODO config
+	p.maxArticleBodySize = 256 << 20 // TODO config
 
 	p.ntStmts = make(map[int]*sql.Stmt)
 	p.npStmts = make(map[npTuple]*sql.Stmt)

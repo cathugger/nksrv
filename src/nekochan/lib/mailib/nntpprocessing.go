@@ -21,6 +21,8 @@ import (
 	tu "nekochan/lib/textutils"
 )
 
+const DefaultHeaderSizeLimit = 2 << 20
+
 func processMessagePrepareReader(
 	cte string, ismultipart bool, r io.Reader) (
 	_ io.Reader, binary bool, err error) {
@@ -496,4 +498,26 @@ func DevourMessageBody(
 		guttleBody(xr, XH, xct_t, xct_par, xbinary)
 
 	return
+}
+
+func CleanContentTypeAndTransferEncoding(H mail.Headers) {
+	// ignore other headers than first, trim whitespace
+	if len(H["Content-Type"]) != 0 {
+		ct := au.TrimWSString(H["Content-Type"][0].V)
+		if ct != "" {
+			H["Content-Type"] = H["Content-Type"][:1]
+			H["Content-Type"][0].V = ct
+		} else {
+			delete(H, "Content-Type")
+		}
+	}
+	if len(H["Content-Transfer-Encoding"]) != 0 {
+		cte := au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
+		if cte != "" {
+			H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
+			H["Content-Transfer-Encoding"][0].V = cte
+		} else {
+			delete(H, "Content-Transfer-Encoding")
+		}
+	}
 }

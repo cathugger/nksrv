@@ -110,27 +110,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	delete(H, "Date-Received")
 	delete(H, "Xref")
 
-	if post {
-		// ignore other headers than first
-		if len(H["Content-Type"]) != 0 {
-			ts := au.TrimWSString(H["Content-Type"][0].V)
-			if ts != "" {
-				H["Content-Type"] = H["Content-Type"][:1]
-				H["Content-Type"][0].V = ts
-			} else {
-				delete(H, "Content-Type")
-			}
-		}
-		if len(H["Content-Transfer-Encoding"]) != 0 {
-			ts := au.TrimWSString(H["Content-Transfer-Encoding"][0].V)
-			if ts != "" {
-				H["Content-Transfer-Encoding"] = H["Content-Transfer-Encoding"][:1]
-				H["Content-Transfer-Encoding"][0].V = ts
-			} else {
-				delete(H, "Content-Transfer-Encoding")
-			}
-		}
-	}
+	mailib.CleanContentTypeAndTransferEncoding(H)
 
 	var tu int64
 	if post {
@@ -166,11 +146,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
 		H["Message-ID"] = mail.OneHeaderVal(fmsgids)
 		info.FullMsgIDStr = FullMsgIDStr(fmsgids)
-	} else if post {
-		fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
-		H["Message-ID"] = mail.OneHeaderVal(string(fmsgids))
-		info.FullMsgIDStr = fmsgids
-	} else {
+	} else if !post {
 		err = errors.New("missing Message-ID")
 		return
 	}
@@ -267,7 +243,6 @@ func isSubjectEmpty(s string, isReply bool, refs string) bool {
 func (sp *PSQLIB) netnewsSubmitFullArticle(
 	r io.Reader, H mail.Headers, info nntpParsedInfo) {
 
-	// TODO skip headers because we already have them
 	mh, err := mail.SkipHeaders(r)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
@@ -302,6 +277,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	// properly fill in fields
+
+	if info.FullMsgIDStr == "" {
+		// was POST, think of Message-ID there
+		fmsgids := mailib.NewRandomMessageID(info.PostedDate, sp.instance)
+		H["Message-ID"] = mail.OneHeaderVal(string(fmsgids))
+		info.FullMsgIDStr = fmsgids
+	}
 
 	pi.MessageID = cutMsgID(info.FullMsgIDStr)
 	pi.ID = mailib.HashPostID_SHA1(info.FullMsgIDStr)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 
@@ -13,6 +14,7 @@ import (
 	"nekochan/lib/bufreader"
 	. "nekochan/lib/logx"
 	"nekochan/lib/mail"
+	"nekochan/lib/mailib"
 	mm "nekochan/lib/minimail"
 	"nekochan/lib/nntp"
 )
@@ -222,15 +224,25 @@ func (sp *PSQLIB) HandlePost(
 func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
 	r io.Reader) (err error, unexpected bool) {
 
+	lr := &io.LimitedReader{R: r, N: int64(math.MaxInt64)}
+
 	var mh mail.MessageHead
-	mh, err = mail.ReadHeaders(r, 2<<20)
+	mh, err = mail.ReadHeaders(lr, mailib.DefaultHeaderSizeLimit)
 	if err != nil {
 		err = fmt.Errorf("failed reading headers: %v", err)
 		return
 	}
 	defer mh.Close()
 
+	limit := sp.maxArticleBodySize
+	lr.N = limit + 1 - int64(len(mh.B.Buffered()))
+
 	info, err, unexpected := sp.nntpDigestTransferHead(mh.H, "", true)
+	if lr.N <= 0 {
+		// limit exceeded
+		err = fmt.Errorf("article body too large, up to %d allowed", limit)
+		return
+	}
 	if err != nil {
 		return
 	}
@@ -382,7 +394,7 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 	err error, unexpected bool) {
 
 	var mh mail.MessageHead
-	mh, err = mail.ReadHeaders(r, 2<<20)
+	mh, err = mail.ReadHeaders(r, mailib.DefaultHeaderSizeLimit)
 	if err != nil {
 		err = fmt.Errorf("failed reading headers: %v", err)
 		return
@@ -461,20 +473,19 @@ func (sp *PSQLIB) netnewsCopyArticleToFile(
 		return
 	}
 
-	// TODO make limit configurable
-	const limit = 256 << 20
+	limit := sp.maxArticleBodySize
 	n, err := io.CopyN(f, B, limit+1)
-	if err != nil && err != io.EOF {
+	if n > limit {
+		// limit exceeded
+		err = fmt.Errorf("article body too large, up to %d allowed", limit)
+		return
+	}
+	if err != io.EOF {
 		err = fmt.Errorf("error writing body: %v", err)
 		unexpected = true
 		return
 	}
 	err = nil
-	// check if limit exceeded
-	if n > limit {
-		err = fmt.Errorf("message body too large, up to %d allowed", limit)
-		return
-	}
 
 	return
 }
