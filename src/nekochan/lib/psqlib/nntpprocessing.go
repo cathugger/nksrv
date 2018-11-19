@@ -112,11 +112,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 	mailib.CleanContentTypeAndTransferEncoding(H)
 
-	var tu int64
-	if post {
-		tu = date.NowTimeUnix()
-	}
-
 	// Message-ID validation
 	hmsgids := H["Message-ID"]
 	if len(hmsgids) != 0 {
@@ -160,6 +155,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		}
 		info.PostedDate = pdate.Unix()
 	} else {
+		tu := date.NowTimeUnix()
 		H["Date"] = mail.OneHeaderVal(mail.FormatDate(time.Unix(tu, 0)))
 		info.PostedDate = tu
 	}
