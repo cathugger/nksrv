@@ -247,9 +247,11 @@ func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
 		return
 	}
 
-	err, unexpected = sp.ensureArticleDoesntExist(cutMsgID(info.FullMsgIDStr))
-	if err != nil {
-		return
+	if info.FullMsgIDStr != "" {
+		err, unexpected = sp.ensureArticleDoesntExist(cutMsgID(info.FullMsgIDStr))
+		if err != nil {
+			return
+		}
 	}
 
 	return sp.netnewsSubmitArticle(mh.B, mh.H, info)
