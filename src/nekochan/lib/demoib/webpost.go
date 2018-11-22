@@ -172,4 +172,26 @@ func (IBProviderDemo) IBPostNewReply(
 	return commonNewPost(r, f, board, thread, true)
 }
 
+func (IBProviderDemo) IBDeleteBoard(
+	r *http.Request, board string) (err error, code int) {
+
+	if board == "test" {
+		return nil, 0
+	} else {
+		return errors.New("board not found"), http.StatusNotFound
+	}
+}
+
+func (IBProviderDemo) IBDeletePost(
+	r *http.Request, board, post string) (err error, code int) {
+
+	if board != "test" {
+		return errors.New("board not found"), http.StatusNotFound
+	}
+	if len(post) < 4 || post[:4] != "0123" {
+		return errors.New("post not found"), http.StatusNotFound
+	}
+	return nil, 0
+}
+
 var _ ib0.IBWebPostProvider = IBProviderDemo{}

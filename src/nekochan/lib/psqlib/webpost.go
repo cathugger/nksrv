@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -484,6 +485,7 @@ RETURNING bid`
 	if e != nil {
 		if e == sql.ErrNoRows {
 			code = http.StatusConflict
+			err = errors.New("such board already exists")
 			return
 		}
 		err = sp.sqlError("board insertion query row scan", e)
@@ -505,6 +507,32 @@ func (sp *PSQLIB) IBPostNewReply(
 	rInfo postedInfo, err error, _ int) {
 
 	return sp.commonNewPost(r, f, board, thread, true)
+}
+
+func (sp *PSQLIB) IBDeleteBoard(
+	r *http.Request, board string) (err error, code int) {
+
+	return nil, 0
+
+	var bid boardID
+	// TODO
+	q := `DELETE FROM ib0.boards WHERE bname=$1 RETURNING bid`
+	e := sp.db.DB.QueryRow(q, board).Scan(&bid)
+	if e != nil {
+		if e == sql.ErrNoRows {
+			return errors.New("no such board"), http.StatusNotFound
+		}
+		err = sp.sqlError("board delete query row scan", e)
+		code = http.StatusInternalServerError
+	}
+	return nil, 0
+}
+
+func (sp *PSQLIB) IBDeletePost(
+	r *http.Request, board, post string) (err error, code int) {
+
+	// TODO
+	return nil, 0
 }
 
 var _ ib0.IBWebPostProvider = (*PSQLIB)(nil)

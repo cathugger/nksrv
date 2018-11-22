@@ -73,6 +73,8 @@ func (fs *FStore) MakeDir(dir string) (err error) {
 	fs.initMu.Lock()
 	defer fs.initMu.Unlock()
 
+	//fmt.Fprintf(os.Stderr, "newdir: %q\n", fs.root+dir)
+
 	err = os.MkdirAll(fs.root+dir, 0700)
 	if err != nil {
 		return
@@ -99,6 +101,7 @@ func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {
 
 	fs.initMu.Lock()
 	if _, inited := fs.initDirs[dir]; !inited {
+		//fmt.Fprintf(os.Stderr, "initdir: %q\n", fulldir)
 		err = os.MkdirAll(fulldir, 0700)
 		if err != nil {
 			fs.initMu.Unlock()
