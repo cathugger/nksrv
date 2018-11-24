@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
@@ -131,6 +133,24 @@ func main() {
 	} else {
 		proto, host = "tcp", *nntpbind
 	}
+
+	// graceful shutdown by signal
+	killc := make(chan os.Signal, 2)
+	signal.Notify(killc, os.Interrupt, syscall.SIGTERM)
+	go func(c chan os.Signal) {
+		for {
+			s := <-c
+			switch s {
+			case os.Interrupt, syscall.SIGTERM:
+				signal.Reset(os.Interrupt, syscall.SIGTERM)
+				fmt.Fprintf(os.Stderr, "killing server\n")
+				if srv != nil {
+					srv.Close()
+				}
+				return
+			}
+		}
+	}(killc)
 
 	mlg.LogPrintf(
 		NOTICE, "starting nntp server on proto(%s) host(%s)", proto, host)
