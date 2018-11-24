@@ -11,6 +11,7 @@ var currIb0Version = ""
 
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
+
 	`CREATE TABLE ib0.boards (
 	bname  TEXT    NOT NULL,           -- external board identifier
 	bid    SERIAL  NOT NULL,           -- internal board ID
@@ -32,6 +33,7 @@ var dbIb0InitStatements = []string{
 	UNIQUE      (bname),
 	PRIMARY KEY (bid)
 )`,
+
 	`CREATE TABLE ib0.threads (
 	bid   INTEGER                     NOT NULL, /* internal board ID this thread belongs to */
 	tname TEXT                        NOT NULL, /* external thread identifier */
@@ -46,6 +48,7 @@ var dbIb0InitStatements = []string{
 	PRIMARY KEY (bid,tid),
 	FOREIGN KEY (bid) REFERENCES ib0.boards
 )`,
+
 	`CREATE TABLE ib0.posts (
 	bid     INTEGER                     NOT NULL, /* internal board ID this post belongs to */
 	pname   TEXT                        NOT NULL, /* extermal post identifier */
@@ -73,6 +76,7 @@ var dbIb0InitStatements = []string{
 )`,
 	`CREATE INDEX ON ib0.posts (bid)`,
 	`CREATE INDEX ON ib0.posts (bid,tid)`,
+
 	`CREATE TYPE ftype_t AS ENUM ('file', 'msg', 'text', 'image')`,
 	`CREATE TABLE ib0.files (
 	fid      BIGSERIAL NOT NULL, /* internal file ID of this file */
@@ -93,6 +97,44 @@ var dbIb0InitStatements = []string{
 )`,
 	`CREATE INDEX ON ib0.files (bid,pid)`,
 	`CREATE INDEX ON ib0.files (fname)`,
+
+	`CREATE TABLE ib0.scraper_list (
+	sid      SERIAL  NOT NULL,
+	sname    TEXT    NOT NULL,
+	last_use INTEGER NOT NULL, -- used for cleanup
+
+	PRIMARY KEY (sid),
+	UNIQUE (sname)
+)`,
+	`CREATE INDEX ON ib0.scraper_list (last_use)`,
+
+	`CREATE TABLE ib0.scraper_last_newnews (
+	sid          INTEGER NOT NULL,
+	last_newnews BIGINT  NOT NULL,
+	PRIMARY KEY (sid),
+	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
+)`,
+
+	`CREATE TABLE ib0.scraper_last_newgroups (
+	sid            INTEGER NOT NULL,
+	last_newgroups BIGINT  NOT NULL,
+	PRIMARY KEY (sid),
+	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
+)`,
+
+	`CREATE TABLE ib0.scraper_group_track (
+	sid      INTEGER NOT NULL,
+	bid      INTEGER NOT NULL,
+	last_use INTEGER NOT NULL, -- used for cleanup
+	last_max BIGINT  NOT NULL, -- max id seen last time
+	next_max BIGINT  NOT NULL, -- new max id
+
+	PRIMARY KEY (sid,bid),
+	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE,
+	FOREIGN KEY (bid) REFERENCES ib0.boards ON DELETE CASCADE
+)`,
+	`CREATE INDEX ON ib0.scraper_group_track (sid,last_use)`,
+
 	`INSERT INTO capabilities(component,version) VALUES ('ib0','')`,
 }
 

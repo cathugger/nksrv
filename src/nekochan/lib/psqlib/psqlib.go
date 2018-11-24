@@ -34,6 +34,8 @@ type PSQLIB struct {
 	// newpost prepared statements and locking
 	npStmts map[npTuple]*sql.Stmt
 	npMutex sync.RWMutex
+
+	scraper_nonce int32
 }
 
 type Config struct {

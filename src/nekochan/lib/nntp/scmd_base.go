@@ -272,6 +272,9 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
+	// TODO maybe include backend identification
+	fmt.Fprintf(dw, "IMPLEMENTATION CNTPD\n")
+
 	dw.Close()
 
 	return true

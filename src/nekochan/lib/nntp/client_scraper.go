@@ -15,8 +15,11 @@ import (
 )
 
 type ClientDatabase interface {
-	GetNodeTime() (t int64, err error)
-	UpdateNodeTime(t int64) error
+	GetLastNewNews() (t int64, err error)
+	UpdateLastNewNews(t int64) error
+
+	GetLastNewGroups() (t int64, err error)
+	UpdateLastNewGroups(t int64) error
 
 	// MAY make new group, may return id==0 if no info about group before this
 	// if id<0 then no such group currently exists
@@ -32,14 +35,20 @@ type ClientDatabase interface {
 	StoreTempGroup(group []byte, old_id uint64) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
-	ReadArticle(r io.Reader, msgid CoreMsgID) (err error, unexpected bool)
+	//ReadArticle(r io.Reader, msgid CoreMsgID) (err error, unexpected bool)
 }
 
 type scraperState struct {
 	initialResponseUnderstod bool
 	initialResponseAllowPost bool
-	badActiveList            bool
-	badNewsgroupsList        bool
+
+	badActiveList     bool
+	badNewsgroupsList bool
+	badCapabilities   bool
+
+	capHdr    bool
+	capOver   bool
+	capReader bool
 }
 
 type NNTPScraper struct {
@@ -54,8 +63,10 @@ type NNTPScraper struct {
 	log Logger
 }
 
-func NewNNTPScraper(db ClientDatabase, log Logger) *NNTPScraper {
-	return &NNTPScraper{db: db, log: log}
+func NewNNTPScraper(db ClientDatabase, logx LoggerX) *NNTPScraper {
+	c := &NNTPScraper{db: db}
+	c.log = NewLogToX(logx, fmt.Sprintf("nntpscraper.%p", c))
+	return c
 }
 
 func (c *NNTPScraper) openDotReader() *bufreader.DotReader {
@@ -173,6 +184,9 @@ func (c *NNTPScraper) readOnlyNewsgroup(
 			return c.inbuf[:end], e
 		}
 		if b == '\n' {
+			if end == 0 {
+				end = i
+			}
 			if end == 0 || !FullValidGroupSlice(c.inbuf[:end]) {
 				return nil, fmt.Errorf("bad group %q", c.inbuf[:end])
 			}
@@ -294,6 +308,7 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 			if e == io.EOF {
 				break
 			}
+			c.s.badActiveList = true
 			err = fmt.Errorf("failed reading list line: %v", e)
 			return
 		}
@@ -371,6 +386,7 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 			if e == io.EOF {
 				break
 			}
+			c.s.badNewsgroupsList = true
 			err = fmt.Errorf("failed reading list line: %v", e)
 			return
 		}
@@ -393,6 +409,50 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 	return
 }
 
+func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
+	err = c.w.PrintfLine("CAPABILITIES")
+	if err != nil {
+		fatal = true
+		return
+	}
+	code, _, err, fatal := c.readResponse()
+	if err != nil {
+		return
+	}
+	if code != 101 {
+		c.s.badCapabilities = true
+		return
+	}
+	dr := c.openDotReader()
+	defer func() {
+		if err != nil {
+			dr.Discard(-1)
+		}
+	}()
+	for {
+		line, e := c.readDotLine(dr)
+		if e != nil {
+			if e == io.EOF {
+				break
+			}
+			err = fmt.Errorf("failed reading list line: %v", e)
+			return
+		}
+		x := parseKeyword(line)
+		capability := unsafeBytesToStr(line[:x])
+		switch capability {
+		case "HDR":
+			c.s.capHdr = true
+		case "OVER":
+			c.s.capOver = true
+		case "READER":
+			c.s.capReader = true
+		}
+	}
+	// done
+	return
+}
+
 func (c *NNTPScraper) Run(network, address string) {
 	// TODO
 	for {
@@ -402,6 +462,7 @@ func (c *NNTPScraper) Run(network, address string) {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		c.s = scraperState{}
 		c.w = tp.NewWriter(bufio.NewWriter(conn))
 		c.r = bufreader.NewBufReader(conn)
 		c.dr = nil
@@ -434,7 +495,45 @@ func (c *NNTPScraper) main() error {
 			code, au.TrimWSBytes(rest))
 	}
 
-	e, fatal := c.doActiveList()
+	e, fatal := c.doCapabilities()
+	if e != nil {
+		if fatal {
+			return fmt.Errorf("doCapabilities() failed: %v", e)
+		} else {
+			c.log.LogPrintf(WARN, "doCapabilities() failed: %v", e)
+		}
+	}
+
+	if !c.s.capReader {
+		err = c.w.PrintfLine("MODE READER")
+		if err != nil {
+			return fmt.Errorf("error writing mode-reader command: %v", err)
+		}
+		code, rest, err, fatal := c.readResponse()
+		if err == nil {
+			if code == 200 {
+				c.s.initialResponseAllowPost = true
+			} else if code > 200 && code < 300 {
+				c.s.initialResponseAllowPost = false
+			} else if code == 502 {
+				return fmt.Errorf(
+					"bad mode-reader response %d %q", code, au.TrimWSBytes(rest))
+			} else if code == 500 || code == 501 {
+				// do nothing if not implemented
+			} else {
+				c.log.LogPrintf(WARN, "weird mode-reader response %d %q",
+					code, au.TrimWSBytes(rest))
+			}
+		} else {
+			if fatal {
+				return fmt.Errorf("error reading mode-reader response: %v", err)
+			} else {
+				c.log.LogPrintf(WARN, "error reading mode-reader response: %v", e)
+			}
+		}
+	}
+
+	e, fatal = c.doActiveList()
 	if e != nil {
 		if fatal {
 			return fmt.Errorf("doActiveList method failed: %v", e)
