@@ -120,6 +120,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
+	gs.pid = num
 	return sp.nntpObtainItemOrStat(w, num, msgid)
 }
 

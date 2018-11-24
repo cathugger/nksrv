@@ -141,6 +141,7 @@ func (p *TestSrv) GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bo
 	if a == nil {
 		return false
 	}
+	gs.number = num
 	w.ResArticleFollows(num, a.msgid)
 	dw := w.DotWriter()
 	dw.Write(a.head)
@@ -159,6 +160,7 @@ func (p *TestSrv) GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bo
 	if a == nil {
 		return false
 	}
+	gs.number = num
 	w.ResHeadFollows(num, a1msgid)
 	dw := w.DotWriter()
 	dw.Write(a.head)
@@ -175,6 +177,7 @@ func (p *TestSrv) GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bo
 	if a == nil {
 		return false
 	}
+	gs.number = num
 	w.ResBodyFollows(num, a.msgid)
 	dw := w.DotWriter()
 	dw.Write(a.body)
@@ -191,6 +194,7 @@ func (p *TestSrv) GetArticleStatByNum(w Responder, cs *ConnState, num uint64) bo
 	if a == nil {
 		return false
 	}
+	gs.number = num
 	w.ResArticleFound(num, a.msgid)
 	return true
 }
