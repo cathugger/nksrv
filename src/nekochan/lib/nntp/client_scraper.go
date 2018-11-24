@@ -224,7 +224,7 @@ func parseListActiveLine(
 	//skipWS()
 	s := i
 	skipNonWS()
-	if s <= i || !FullValidGroupSlice(line[s:i]) {
+	if s >= i || !FullValidGroupSlice(line[s:i]) {
 		err = fmt.Errorf("bad group %q", line[s:i])
 		return
 	}
@@ -233,7 +233,7 @@ func parseListActiveLine(
 	skipWS()
 	s = i
 	skipNonWS()
-	if s <= i || !isNumberSlice(line[s:i]) {
+	if s >= i || !isNumberSlice(line[s:i]) {
 		err = fmt.Errorf("bad hiwm %q", line[s:i])
 		return
 	}
@@ -242,7 +242,7 @@ func parseListActiveLine(
 	skipWS()
 	s = i
 	skipNonWS()
-	if s <= i || !isNumberSlice(line[s:i]) {
+	if s >= i || !isNumberSlice(line[s:i]) {
 		err = fmt.Errorf("bad lowm %q", line[s:i])
 		return
 	}
@@ -327,10 +327,13 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 			err = fmt.Errorf("GetGroupID() failed: %v", e)
 			return
 		}
+		c.log.LogPrintf(DEBUG,
+			"doActiveList: got existing group %q id %d", gname, old_id)
 		if old_id < 0 {
 			// such group currently does not exist and wasn't created
 			continue
 		}
+
 		e = c.db.StoreTempGroupID(gname, hiwm, uint64(old_id))
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
@@ -395,6 +398,8 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 			err = fmt.Errorf("GetGroupID() failed: %v", e)
 			return
 		}
+		c.log.LogPrintf(DEBUG,
+			"doNewsgroupsList: got existing group %q id %d", gname, old_id)
 		if old_id < 0 {
 			continue
 		}
@@ -410,6 +415,7 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 }
 
 func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
+	c.log.LogPrintf(DEBUG, "querying CAPABILITIES")
 	err = c.w.PrintfLine("CAPABILITIES")
 	if err != nil {
 		fatal = true
@@ -417,12 +423,15 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 	}
 	code, _, err, fatal := c.readResponse()
 	if err != nil {
+		c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
 		return
 	}
 	if code != 101 {
+		c.log.LogPrintf(DEBUG, "code: %d", code)
 		c.s.badCapabilities = true
 		return
 	}
+	c.log.LogPrintf(DEBUG, "reading CAPABILITIES")
 	dr := c.openDotReader()
 	defer func() {
 		if err != nil {
@@ -438,6 +447,7 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 			err = fmt.Errorf("failed reading list line: %v", e)
 			return
 		}
+		c.log.LogPrintf(DEBUG, "got capability line %q", line)
 		x := parseKeyword(line)
 		capability := unsafeBytesToStr(line[:x])
 		switch capability {
@@ -450,6 +460,7 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 		}
 	}
 	// done
+	c.log.LogPrintf(DEBUG, "done readin CAPABILITIES")
 	return
 }
 
@@ -551,6 +562,7 @@ func (c *NNTPScraper) main() error {
 		}
 	}
 
+	c.log.LogPrintf(DEBUG, "scraper will load temp groups")
 	for {
 		group, new_id, old_id, e := c.db.LoadTempGroup()
 		if e != nil {
