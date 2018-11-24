@@ -10,26 +10,25 @@ import (
 
 type ScraperDB struct {
 	sp    *PSQLIB
-	id    int32
-	nonce int32
+	id    int64
+	nonce int64
 
 	temp_rows *sql.Rows
 }
 
 var _ nntp.ClientDatabase = (*ScraperDB)(nil)
 
-func (s *ScraperDB) getNonce() int32 {
+func (s *ScraperDB) getNonce() int64 {
 	// not to be used in multithreaded context
 	if s.nonce == 0 {
-		nowtime := date.NowTimeUnix()
-		s.nonce = int32(nowtime)
+		s.nonce = date.NowTimeUnixMilli()
 		if s.nonce == 0 {
 			s.nonce = 1
 		}
 	}
 	return s.nonce
 }
-func (s *ScraperDB) nextNonce() int32 {
+func (s *ScraperDB) nextNonce() int64 {
 	if s.nonce != 0 {
 		s.nonce++
 		if s.nonce == 0 {
@@ -55,10 +54,12 @@ func (s *ScraperDB) GetLastNewNews() (t int64, err error) {
 	return
 }
 func (s *ScraperDB) UpdateLastNewNews(t int64) error {
-	q := `INSERT INTO ib0.scraper_last_newnews (sid,last_newnews)
+	q := `INSERT INTO ib0.scraper_last_newnews AS ln (sid,last_newnews)
 VALUES ($1,$2)
-ON CONFLICT DO UPDATE SET last_newnews = $2
-WHERE sid = $1`
+ON CONFLICT (sid)
+DO
+	UPDATE SET last_newnews = $2
+	WHERE ln.sid = $1`
 	_, e := s.sp.db.DB.Exec(q, s.id, t)
 	if e != nil {
 		return s.sp.sqlError("scraper_last_newnews upsert query execution", e)
@@ -80,10 +81,12 @@ func (s *ScraperDB) GetLastNewGroups() (t int64, err error) {
 	return
 }
 func (s *ScraperDB) UpdateLastNewGroups(t int64) error {
-	q := `INSERT INTO ib0.scraper_last_newgroups (sid,last_newgroups)
+	q := `INSERT INTO ib0.scraper_last_newgroups AS ln (sid,last_newgroups)
 VALUES ($1,$2)
-ON CONFLICT DO UPDATE SET last_newgroups = $2
-WHERE sid = $1`
+ON CONFLICT (sid)
+DO
+	UPDATE SET last_newgroups = $2
+	WHERE ln.sid = $1`
 	_, e := s.sp.db.DB.Exec(q, s.id, t)
 	if e != nil {
 		return s.sp.sqlError("scraper_last_newgroups upsert query execution", e)
@@ -158,13 +161,13 @@ func (s *ScraperDB) DoneTempGroups() {
 func (s *ScraperDB) StoreTempGroupID(
 	group []byte, new_id uint64, old_id uint64) error {
 
-	q := `INSERT INTO ib0.scraper_group_track (sid,bid,last_use,last_max,next_max)
+	q := `INSERT INTO ib0.scraper_group_track AS sgt (sid,bid,last_use,last_max,next_max)
 SELECT $1 AS sid, bid, $3, 0, $4
 FROM ib0.boards xb
 WHERE bname=$2
-ON CONFLICT
+ON CONFLICT (sid,bid)
 	DO UPDATE SET last_use=$3, next_max=$4
-	WHERE sid=EXCLUDED.sid AND bid=EXCLUDED.bid`
+	WHERE sgt.sid=EXCLUDED.sid AND sgt.bid=EXCLUDED.bid`
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce, new_id)
 	if e != nil {
@@ -173,13 +176,13 @@ ON CONFLICT
 	return nil
 }
 func (s *ScraperDB) StoreTempGroup(group []byte, old_id uint64) error {
-	q := `INSERT INTO ib0.scraper_group_track (sid,bid,last_use,last_max,next_max)
+	q := `INSERT INTO ib0.scraper_group_track AS sgt (sid,bid,last_use,last_max,next_max)
 SELECT $1 AS sid, bid, $3, 0, -1
 FROM ib0.boards xb
 WHERE bname=$2
-ON CONFLICT
+ON CONFLICT (sid,bid)
 	DO UPDATE SET last_use=$3, next_max=-1
-	WHERE sid=EXCLUDED.sid AND bid=EXCLUDED.bid`
+	WHERE sgt.sid=EXCLUDED.sid AND sgt.bid=EXCLUDED.bid`
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce)
 	if e != nil {
@@ -225,11 +228,10 @@ WHERE xs.sid=$1 AND xs.last_use=$2`
 	return
 }
 
-func (sp *PSQLIB) getScraperNonce() int32 {
+func (sp *PSQLIB) getScraperNonce() int64 {
 	// not to be used in multithreaded context
 	if sp.scraper_nonce == 0 {
-		nowtime := date.NowTimeUnix()
-		sp.scraper_nonce = int32(nowtime)
+		sp.scraper_nonce = date.NowTimeUnixMilli()
 		if sp.scraper_nonce == 0 {
 			sp.scraper_nonce = 1
 		}
@@ -238,11 +240,13 @@ func (sp *PSQLIB) getScraperNonce() int32 {
 }
 
 func (sp *PSQLIB) NewScraperDB(name string) (*ScraperDB, error) {
-	q := `INSERT INTO ib0.scraper_list (sname,last_use)
-	VALUES ($1,$2)
-	ON CONFLICT DO UPDATE SET last_use = $2
-	WHERE sname = $1
-	RETURNING sid`
+	q := `INSERT INTO ib0.scraper_list AS sl (sname,last_use)
+VALUES ($1,$2)
+ON CONFLICT (sname)
+DO
+	UPDATE SET last_use = $2
+	WHERE sl.sname = $1
+RETURNING sid`
 	nonce := sp.getScraperNonce()
 	db := &ScraperDB{sp: sp}
 	e := sp.db.DB.

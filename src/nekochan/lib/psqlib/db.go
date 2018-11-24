@@ -99,9 +99,9 @@ var dbIb0InitStatements = []string{
 	`CREATE INDEX ON ib0.files (fname)`,
 
 	`CREATE TABLE ib0.scraper_list (
-	sid      SERIAL  NOT NULL,
-	sname    TEXT    NOT NULL,
-	last_use INTEGER NOT NULL, -- used for cleanup
+	sid      BIGSERIAL NOT NULL,
+	sname    TEXT      NOT NULL,
+	last_use BIGINT    NOT NULL, -- used for cleanup
 
 	PRIMARY KEY (sid),
 	UNIQUE (sname)
@@ -109,23 +109,24 @@ var dbIb0InitStatements = []string{
 	`CREATE INDEX ON ib0.scraper_list (last_use)`,
 
 	`CREATE TABLE ib0.scraper_last_newnews (
-	sid          INTEGER NOT NULL,
-	last_newnews BIGINT  NOT NULL,
+	sid          BIGINT NOT NULL,
+	last_newnews BIGINT NOT NULL,
 	PRIMARY KEY (sid),
 	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
 )`,
 
 	`CREATE TABLE ib0.scraper_last_newgroups (
-	sid            INTEGER NOT NULL,
-	last_newgroups BIGINT  NOT NULL,
+	sid            BIGINT NOT NULL,
+	last_newgroups BIGINT NOT NULL,
+
 	PRIMARY KEY (sid),
 	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
 )`,
 
 	`CREATE TABLE ib0.scraper_group_track (
-	sid      INTEGER NOT NULL,
+	sid      BIGINT  NOT NULL,
 	bid      INTEGER NOT NULL,
-	last_use INTEGER NOT NULL, -- used for cleanup
+	last_use BIGINT  NOT NULL, -- used for cleanup
 	last_max BIGINT  NOT NULL, -- max id seen last time
 	next_max BIGINT  NOT NULL, -- new max id
 

@@ -35,7 +35,7 @@ type PSQLIB struct {
 	npStmts map[npTuple]*sql.Stmt
 	npMutex sync.RWMutex
 
-	scraper_nonce int32
+	scraper_nonce int64
 }
 
 type Config struct {
