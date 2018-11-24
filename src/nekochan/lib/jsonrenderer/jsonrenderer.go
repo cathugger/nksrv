@@ -111,7 +111,7 @@ func (j *JSONRenderer) ServeThread(
 }
 
 func (j *JSONRenderer) DressNewBoardResult(
-	w http.ResponseWriter, created bool, bname string, err error, code int) {
+	w http.ResponseWriter, bname string, err error, code int) {
 
 	e := j.prepareEncoder(w, code)
 
@@ -121,7 +121,7 @@ func (j *JSONRenderer) DressNewBoardResult(
 
 		jsonErrorMsg
 	}{
-		Success: created,
+		Success: err == nil,
 		BName:   bname,
 	}
 	if err != nil {

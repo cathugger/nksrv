@@ -148,13 +148,23 @@ func commonNewPost(
 	return
 }
 
+func (IBProviderDemo) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
+	return ib0.IBNewBoardInfo{
+		Name:           "",
+		Description:    "",
+		ThreadsPerPage: 10,
+		MaxActivePages: 10,
+		MaxPages:       15,
+	}
+}
+
 func (IBProviderDemo) IBPostNewBoard(
-	bi ib0.IBNewBoardInfo) (created bool, err error, code int) {
+	bi ib0.IBNewBoardInfo) (err error, code int) {
 
 	if bi.Name != "test" {
-		return true, nil, 0
+		return nil, 0
 	} else {
-		return false, errors.New("board already exists"), http.StatusConflict
+		return errors.New("board already exists"), http.StatusConflict
 	}
 }
 

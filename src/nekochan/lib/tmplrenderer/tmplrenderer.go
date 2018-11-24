@@ -498,7 +498,7 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 }
 
 func (tr *TmplRenderer) DressNewBoardResult(
-	w http.ResponseWriter, created bool, bname string, err error, code int) {
+	w http.ResponseWriter, bname string, err error, code int) {
 
 	l := &struct {
 		S bool   // success
@@ -508,7 +508,7 @@ func (tr *TmplRenderer) DressNewBoardResult(
 		N NodeInfo
 		R *TmplRenderer
 	}{
-		S: created,
+		S: err == nil,
 		B: bname,
 		E: err,
 		C: code,

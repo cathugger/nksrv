@@ -156,7 +156,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				}
 
 				jd := json.NewDecoder(r.Body)
-				var nbi ib0.IBNewBoardInfo
+				nbi := cfg.WebPostProvider.IBDefaultBoardInfo()
 				e = jd.Decode(&nbi)
 				if e != nil {
 					http.Error(
@@ -165,8 +165,8 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					return
 				}
 
-				c, e, code := cfg.WebPostProvider.IBPostNewBoard(nbi)
-				cfg.Renderer.DressNewBoardResult(w, c, nbi.Name, e, code)
+				e, code := cfg.WebPostProvider.IBPostNewBoard(nbi)
+				cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 			}))
 	}

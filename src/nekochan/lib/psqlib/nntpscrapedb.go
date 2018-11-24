@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"fmt"
 	"io"
 
 	"nekochan/lib/date"
@@ -12,6 +13,8 @@ type ScraperDB struct {
 	sp    *PSQLIB
 	id    int64
 	nonce int64
+
+	autoadd bool
 
 	temp_rows *sql.Rows
 }
@@ -95,7 +98,9 @@ DO
 }
 
 func (s *ScraperDB) GetGroupID(group []byte) (int64, error) {
-	q := `WITH
+	loopn := 0
+	for {
+		q := `WITH
 	sg AS (
 		SELECT bid FROM ib0.boards WHERE bname = $2 LIMIT 1
 	),
@@ -110,19 +115,36 @@ SELECT sg.bid,st.last_max
 FROM sg
 LEFT JOIN st
 ON sg.bid = st.bid`
-	var bid boardID
-	var lid sql.NullInt64
+		var bid boardID
+		var lid sql.NullInt64
 
-	e := s.sp.db.DB.
-		QueryRow(q, s.id, group).
-		Scan(&bid, &lid)
-	if e != nil {
-		if e == sql.ErrNoRows {
-			return -1, nil
+		e := s.sp.db.DB.
+			QueryRow(q, s.id, group).
+			Scan(&bid, &lid)
+		if e != nil {
+			if e == sql.ErrNoRows {
+				if !s.autoadd || loopn > 20 {
+					return -1, nil
+				}
+			} else {
+				// SQL error
+				return -1, s.sp.sqlError("GetGroupID query scan", e)
+			}
+		} else {
+			// found something
+			return lid.Int64, nil
 		}
-		return -1, s.sp.sqlError("GetGroupID query scan", e)
+
+		loopn++
+
+		// if we're here, then we need to make new board
+		bi := s.sp.IBDefaultBoardInfo()
+		bi.Name = unsafeBytesToStr(group)
+		e, dup := s.sp.addNewBoard(bi)
+		if e != nil && !dup {
+			return -1, fmt.Errorf("addNewBoard error: %v", e)
+		}
 	}
-	return lid.Int64, nil
 }
 func (s *ScraperDB) UpdateGroupID(group []byte, id uint64) error {
 	q := `UPDATE ib0.scraper_group_track AS st
@@ -239,7 +261,7 @@ func (sp *PSQLIB) getScraperNonce() int64 {
 	return sp.scraper_nonce
 }
 
-func (sp *PSQLIB) NewScraperDB(name string) (*ScraperDB, error) {
+func (sp *PSQLIB) NewScraperDB(name string, autoadd bool) (*ScraperDB, error) {
 	q := `INSERT INTO ib0.scraper_list AS sl (sname,last_use)
 VALUES ($1,$2)
 ON CONFLICT (sname)
@@ -248,7 +270,7 @@ DO
 	WHERE sl.sname = $1
 RETURNING sid`
 	nonce := sp.getScraperNonce()
-	db := &ScraperDB{sp: sp}
+	db := &ScraperDB{sp: sp, autoadd: autoadd}
 	e := sp.db.DB.
 		QueryRow(q, name, nonce).
 		Scan(&db.id)

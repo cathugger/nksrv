@@ -471,8 +471,18 @@ ON xb.bid=xtp.bid`
 	return
 }
 
-func (sp *PSQLIB) IBPostNewBoard(
-	bi ib0.IBNewBoardInfo) (created bool, err error, code int) {
+func (sp *PSQLIB) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
+	return ib0.IBNewBoardInfo{
+		Name:           "",
+		Description:    "",
+		ThreadsPerPage: 10,
+		MaxActivePages: 10,
+		MaxPages:       15,
+	}
+}
+
+func (sp *PSQLIB) addNewBoard(
+	bi ib0.IBNewBoardInfo) (err error, duplicate bool) {
 
 	q := `INSERT INTO ib0.boards (
 	bname,badded,bdesc,threads_per_page,max_active_pages,max_pages)
@@ -484,15 +494,29 @@ RETURNING bid`
 		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages).Scan(&bid)
 	if e != nil {
 		if e == sql.ErrNoRows {
-			code = http.StatusConflict
+			duplicate = true
 			err = errors.New("such board already exists")
 			return
 		}
 		err = sp.sqlError("board insertion query row scan", e)
-		code = http.StatusInternalServerError
 		return
 	}
-	return true, nil, 0
+	return nil, false
+}
+
+func (sp *PSQLIB) IBPostNewBoard(
+	bi ib0.IBNewBoardInfo) (err error, code int) {
+
+	err, duplicate := sp.addNewBoard(bi)
+	if err != nil {
+		if duplicate {
+			code = http.StatusConflict
+		} else {
+			code = http.StatusInternalServerError
+		}
+		return
+	}
+	return nil, 0
 }
 
 func (sp *PSQLIB) IBPostNewThread(
