@@ -1,10 +1,13 @@
 package nntp
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	tp "net/textproto"
+	"time"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/bufreader"
@@ -49,6 +52,10 @@ type NNTPScraper struct {
 	s   scraperState
 	db  ClientDatabase
 	log Logger
+}
+
+func NewNNTPScraper(db ClientDatabase, log Logger) *NNTPScraper {
+	return &NNTPScraper{db: db, log: log}
 }
 
 func (c *NNTPScraper) openDotReader() *bufreader.DotReader {
@@ -386,7 +393,31 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 	return
 }
 
-func (c *NNTPScraper) Run() error {
+func (c *NNTPScraper) Run(network, address string) {
+	// TODO
+	for {
+		c.log.LogPrintf(DEBUG, "dialing...")
+		conn, e := net.Dial(network, address)
+		if e != nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		c.w = tp.NewWriter(bufio.NewWriter(conn))
+		c.r = bufreader.NewBufReader(conn)
+		c.dr = nil
+		c.log.LogPrintf(DEBUG, "scraping...")
+		e = c.main()
+		conn.Close()
+		if e != nil {
+			c.log.LogPrintf(WARN, "scraper error: %v", e)
+		} else {
+			c.log.LogPrintf(WARN, "scraper done")
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func (c *NNTPScraper) main() error {
 	code, rest, err, _ := c.readResponse()
 	if err != nil {
 		return fmt.Errorf(

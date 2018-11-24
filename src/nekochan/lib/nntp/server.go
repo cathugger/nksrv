@@ -37,6 +37,7 @@ type NNTPServer struct {
 	mu          sync.Mutex
 	closing     bool
 	wg          sync.WaitGroup
+	cwg         sync.WaitGroup
 	listeners   map[ListenerCW]struct{}
 	connections map[ConnCW]struct{}
 }
@@ -114,6 +115,7 @@ func (s *NNTPServer) registerConn(c ConnCW) {
 		s.connections = make(map[ConnCW]struct{})
 	}
 	s.connections[c] = struct{}{}
+	s.cwg.Add(1)
 	s.mu.Unlock()
 }
 
@@ -126,11 +128,10 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 }
 
 func (s *NNTPServer) handleConnection(c ConnCW) {
-	r := bufreader.NewBufReader(c)
 	cs := &ConnState{
 		srv:  s,
 		conn: c,
-		r:    r,
+		r:    bufreader.NewBufReader(c),
 		prov: s.prov,
 		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 	}
@@ -158,6 +159,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	c.Close()
 	s.unregisterConn(c)
+	s.cwg.Done()
 }
 
 func (s *NNTPServer) ListenAndServe(
@@ -256,7 +258,15 @@ func (s *NNTPServer) Close() bool {
 	for c := range s.connections {
 		c.Close()
 	}
-	// TODO waitgroup for clients
+
+	// to finish clients need to unregister
+	s.mu.Unlock()
+
+	// wait for client handlers to finish
+	s.cwg.Wait()
+
+	// now, to unset closing state..
+	s.mu.Lock()
 
 	// we're done closing, so allow new servers to spawn later
 	s.closing = false
