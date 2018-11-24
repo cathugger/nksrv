@@ -32,6 +32,7 @@ func init() {
 		},
 		"HELP": &command{
 			cmdfunc: cmdHelp,
+			maxargs: 2,
 			help:    "- print manual.",
 		},
 		"LIST": &command{
@@ -309,7 +310,54 @@ func cmdMode(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
 	c.w.PrintfLine("100 here's manual")
+
 	dw := c.w.DotWriter()
+	defer dw.Close()
+
+	if len(args) != 0 {
+		ToUpperASCII(args[0])
+		k := unsafeBytesToStr(args[0])
+
+		noSuchCommand := func() { fmt.Fprintf(dw, "no such command\n") }
+		noInfoAboutThisCommand := func() {
+			fmt.Fprintf(dw, "no info about this command\n")
+		}
+
+		cmd, ok := commandMap[k]
+		if !ok {
+			noSuchCommand()
+			return true
+		}
+		if cmd.help == "" {
+			noInfoAboutThisCommand()
+			return true
+		}
+		if len(args) != 1 {
+			if k != "LIST" {
+				noSuchCommand()
+				return true
+			}
+
+			ToUpperASCII(args[1])
+			lk := unsafeBytesToStr(args[1])
+			lcmd, ok := listCommandMap[lk]
+			if !ok {
+				noSuchCommand()
+				return true
+			}
+			if lcmd.help == "" {
+				noInfoAboutThisCommand()
+				return true
+			}
+
+			fmt.Fprintf(dw, "LIST %s %s\n", lk, lcmd.help)
+			return true
+		}
+
+		fmt.Fprintf(dw, "%s %s\n", k, cmd.help)
+		return true
+	}
+
 	for _, k := range commandList {
 		cmd := commandMap[k]
 		if cmd.help != "" {
@@ -324,7 +372,7 @@ func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
 			}
 		}
 	}
-	dw.Close()
+
 	return true
 }
 

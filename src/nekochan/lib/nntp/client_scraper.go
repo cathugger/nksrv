@@ -16,7 +16,8 @@ type ClientDatabase interface {
 	UpdateNodeTime(t int64) error
 
 	// MAY make new group, may return id==0 if no info about group before this
-	GetGroupID(group []byte) (id uint64, err error)
+	// if id<0 then no such group currently exists
+	GetGroupID(group []byte) (id int64, err error)
 	UpdateGroupID(group []byte, id uint64) error
 
 	// to keep list of received newsgroups
@@ -24,7 +25,6 @@ type ClientDatabase interface {
 	CancelTempGroups()             // if we fail in middle of adding
 	FinishTempGroups(partial bool) // after all list is added
 	DoneTempGroups()               // after we finished using them
-	// we MAY pass old_id as 0 if new_id is 0 aswell
 	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
 	StoreTempGroup(group []byte, old_id uint64) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
@@ -300,15 +300,16 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 			// negative count = no articles
 			hiwm = 0
 		}
-		old_id := uint64(0)
-		if hiwm != 0 {
-			old_id, e = c.db.GetGroupID(gname)
-			if e != nil {
-				err = fmt.Errorf("GetGroupID() failed: %v", e)
-				return
-			}
+		old_id, e := c.db.GetGroupID(gname)
+		if e != nil {
+			err = fmt.Errorf("GetGroupID() failed: %v", e)
+			return
 		}
-		e = c.db.StoreTempGroupID(gname, hiwm, old_id)
+		if old_id < 0 {
+			// such group currently does not exist and wasn't created
+			continue
+		}
+		e = c.db.StoreTempGroupID(gname, hiwm, uint64(old_id))
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
 			return
@@ -371,7 +372,10 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 			err = fmt.Errorf("GetGroupID() failed: %v", e)
 			return
 		}
-		e = c.db.StoreTempGroup(gname, old_id)
+		if old_id < 0 {
+			continue
+		}
+		e = c.db.StoreTempGroup(gname, uint64(old_id))
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
 			return
