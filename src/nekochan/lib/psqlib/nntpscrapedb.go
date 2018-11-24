@@ -146,7 +146,7 @@ ON sg.bid = st.bid`
 		}
 	}
 }
-func (s *ScraperDB) UpdateGroupID(group []byte, id uint64) error {
+func (s *ScraperDB) UpdateGroupID(group string, id uint64) error {
 	q := `UPDATE ib0.scraper_group_track AS st
 SET last_max = $3
 FROM ib0.boards AS xb

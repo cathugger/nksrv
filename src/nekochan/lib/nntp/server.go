@@ -332,7 +332,7 @@ func (c *ConnState) serveClient() bool {
 		x := parseKeyword(incmd)
 		cmd, ok := commandMap[string(incmd[:x])]
 		if !ok {
-			c.w.PrintfLine("500 unrecognised command")
+			c.w.PrintfLine("500 sir I do not understand")
 			c.log.LogPrintf(WARN, "unrecognised command %q", incmd[:x])
 			continue
 		}

@@ -24,7 +24,7 @@ type ClientDatabase interface {
 	// MAY make new group, may return id==0 if no info about group before this
 	// if id<0 then no such group currently exists
 	GetGroupID(group []byte) (id int64, err error)
-	UpdateGroupID(group []byte, id uint64) error
+	UpdateGroupID(group string, id uint64) error
 
 	// to keep list of received newsgroups
 	StartTempGroups() error        // before we start adding
@@ -45,14 +45,32 @@ type scraperState struct {
 	badActiveList     bool
 	badNewsgroupsList bool
 	badCapabilities   bool
+	badOver           bool
+	badXOver          bool
 
 	capHdr    bool
 	capOver   bool
 	capReader bool
+
+	workaroundStupidActiveList bool
+}
+
+func (s *scraperState) canOver() bool {
+	return s.capOver && !s.badOver
+}
+
+func (s *scraperState) canXOver() bool {
+	return !s.badXOver
+}
+
+type todoArticle struct {
+	id    uint64
+	msgid FullMsgIDStr
 }
 
 type NNTPScraper struct {
 	inbuf [512]byte
+	args  [][]byte
 
 	w  *tp.Writer
 	r  *bufreader.BufReader
@@ -61,6 +79,8 @@ type NNTPScraper struct {
 	s   scraperState
 	db  ClientDatabase
 	log Logger
+
+	todoList []todoArticle
 }
 
 func NewNNTPScraper(db ClientDatabase, logx LoggerX) *NNTPScraper {
@@ -320,7 +340,12 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 		}
 		if hiwm < lowm {
 			// negative count = no articles
-			hiwm = 0
+			if c.s.workaroundStupidActiveList {
+				// unless it's broke implementation
+				hiwm, lowm = lowm, hiwm
+			} else {
+				hiwm = 0
+			}
 		}
 		old_id, e := c.db.GetGroupID(gname)
 		if e != nil {
@@ -457,6 +482,16 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 			c.s.capOver = true
 		case "READER":
 			c.s.capReader = true
+		case "IMPLEMENTATION":
+			c.args, _ = parseResponseArguments(line[x:], 6, c.args[:0])
+			if len(c.args) != 0 {
+				impl := unsafeBytesToStr(c.args[0])
+				if au.EqualFoldString(impl, "SRNDv2") {
+					c.log.LogPrintf(INFO, "detected SRNDv2")
+					// workarounds for some jeff' stuff
+					c.s.workaroundStupidActiveList = true
+				}
+			}
 		}
 	}
 	// done
@@ -487,6 +522,316 @@ func (c *NNTPScraper) Run(network, address string) {
 		}
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func (c *NNTPScraper) doGroup(
+	gname string) (new_id int64, err error, notexists, fatal bool) {
+
+	err = c.w.PrintfLine("GROUP %s", gname)
+	if err != nil {
+		fatal = true
+		return
+	}
+
+	code, rest, err, fatal := c.readResponse()
+	if err != nil {
+		c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+		return
+	}
+
+	if code == 211 {
+
+		c.args, _ = parseResponseArguments(rest, 4, c.args[:0])
+		if len(c.args) < 3 ||
+			!isNumberSlice(c.args[0]) ||
+			!isNumberSlice(c.args[1]) ||
+			!isNumberSlice(c.args[2]) {
+
+			return -1, fmt.Errorf(
+				"bad successful group response %q",
+				au.TrimWSBytes(rest)), false, false
+		}
+
+		num := stoi64(c.args[0])
+		lo := stoi64(c.args[1])
+		hi := stoi64(c.args[2])
+
+		c.args = c.args[:0]
+
+		if lo > hi || num == 0 {
+			// empty group
+			hi = 0
+		}
+		new_id = int64(hi) // we need only high id
+		return
+
+	} else if code == 411 {
+		return -1, errors.New("no such newsgroup"), true, false
+	} else {
+		return -1, fmt.Errorf(
+			"bad GROUP err %d %q",
+			code, au.TrimWSBytes(rest)), false, false
+	}
+}
+
+func (c *NNTPScraper) getOverLineInfo(
+	dr *bufreader.DotReader) (
+	id uint64, msgid FullMsgID, err error) {
+
+	i := 0
+	nomore := false
+	eatField := func() (field []byte, err error) {
+		s := i
+		for {
+			b, e := dr.ReadByte()
+			if e != nil {
+				err = e
+				return
+			}
+			if b == '\n' {
+				field = c.inbuf[s:i]
+				nomore = true
+				return
+			}
+			if b == '\t' {
+				field = c.inbuf[s:i]
+				return
+			}
+			if i >= len(c.inbuf) {
+				err = errTooLargeResponse
+				return
+			}
+			c.inbuf[i] = b
+			i++
+		}
+	}
+	ignoreField := func() (err error) {
+		for {
+			b, e := dr.ReadByte()
+			if e != nil {
+				err = e
+				return
+			}
+			if b == '\n' {
+				nomore = true
+				return
+			}
+			if b == '\t' {
+				return
+			}
+		}
+	}
+
+	defer func() {
+		if !nomore {
+			for {
+				b, e := dr.ReadByte()
+				if e != nil || b == '\n' {
+					return
+				}
+			}
+		}
+	}()
+
+	// {RFC 2980}
+	// (article number goes before these, ofc)
+	// The sequence of fields must be in this order:
+	// subject, author, date, message-id, references,
+	// byte count, and line count.
+
+	// number
+	snum, err := eatField()
+	if err != nil || nomore {
+		return
+	}
+	snum = au.TrimWSBytes(snum)
+	if len(snum) == 0 || !isNumberSlice(snum) {
+		err = fmt.Errorf("bad id %q", snum)
+		return
+	}
+	id = stoi64(snum)
+	// subject, author, date
+	for xx := 0; xx < 3; xx++ {
+		err = ignoreField()
+		if err != nil {
+			return
+		}
+		if nomore {
+			err = errors.New("wanted more fields")
+			return
+		}
+	}
+	// message-id
+	smsgid, err := eatField()
+	if err != nil {
+		return
+	}
+	smsgid = au.TrimWSBytes(smsgid)
+	msgid = FullMsgID(smsgid)
+	if !ValidMessageID(msgid) {
+		err = fmt.Errorf("invalid msg-id %q", smsgid)
+		return
+	}
+
+	return
+}
+
+func (c *NNTPScraper) eatGroupSlice(
+	group string, r_begin, r_end int64) (err error, fatal bool) {
+
+	overD := false
+
+	printOverLine := func(over string) error {
+		if r_end >= 0 {
+			if r_begin != r_end {
+				return c.w.PrintfLine("%s %d-%d", over, r_begin, r_end)
+			} else {
+				return c.w.PrintfLine("%s %d", over, r_begin)
+			}
+		} else {
+			return c.w.PrintfLine("%s %d-", over, r_begin)
+		}
+	}
+
+	if c.s.canOver() {
+		err = printOverLine("OVER")
+		if err != nil {
+			fatal = true
+			return
+		}
+
+		var code uint
+		var rest []byte
+		code, rest, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+		if code == 224 {
+			// ayy it's all gucci
+			// common code path will take care of this
+			overD = true
+		} else if code == 423 || code == 420 {
+			// can happen
+			return
+		} else {
+			c.log.LogPrintf(WARN,
+				"unexpected OVER response %d %q, falling back to XOVER",
+				code, au.TrimWSBytes(rest))
+			c.s.badOver = true
+		}
+	}
+	if !overD && c.s.canXOver() {
+		err = printOverLine("XOVER")
+		if err != nil {
+			fatal = true
+			return
+		}
+
+		var code uint
+		var rest []byte
+		code, rest, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+		if code == 224 {
+			// ayy it's all gucci
+			overD = true
+		} else if code == 423 || code == 420 {
+			// can happen
+			return
+		} else {
+			c.log.LogPrintf(WARN,
+				"unexpected XOVER response %d %q",
+				code, au.TrimWSBytes(rest))
+			c.s.badXOver = true
+		}
+	}
+	if !overD {
+		err = errors.New("can't use OVER or XOVER")
+		return
+	}
+
+	// uhh... gotta parse OVER/XOVER lines now..
+	dr := c.openDotReader()
+	defer func() {
+		if err != nil {
+			dr.Discard(-1)
+		}
+	}()
+	c.todoList = c.todoList[:0] // reuse
+	for {
+		var id uint64
+		var msgid FullMsgID
+		id, msgid, err = c.getOverLineInfo(dr)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+			return
+		}
+		// if we didn't ask for this, don't include
+		if id == 0 || id < uint64(r_begin) ||
+			(r_end >= 0 && id > uint64(r_end)) ||
+			(r_end < 0 && id > uint64(r_begin)+899) {
+
+			continue
+		}
+
+		if len(c.todoList) >= 900 {
+			// safeguard
+			continue
+		}
+
+		// add to list to query
+		c.todoList = append(c.todoList, todoArticle{
+			id: id, msgid: FullMsgIDStr(msgid)})
+	}
+	// loaded list.. now process it
+	// TODO
+	c.log.LogPrintf(DEBUG, "start TODO list")
+	for i := range c.todoList {
+		c.log.LogPrintf(DEBUG, "TODO list %d %s",
+			c.todoList[i].id, c.todoList[i].msgid)
+	}
+	c.log.LogPrintf(DEBUG, "end TODO list")
+	return
+}
+
+func (c *NNTPScraper) eatGroup(
+	group string, old_id, new_id uint64) (err error, fatal bool) {
+
+	var r_begin, r_end int64
+
+	r_begin = int64(old_id) + 1
+
+	if new_id > uint64(r_begin)+599 {
+		r_end = r_begin + 599
+	} else {
+		r_end = -1
+	}
+	for {
+		err, fatal = c.eatGroupSlice(group, r_begin, r_end)
+		if err != nil {
+			return
+		}
+		if r_end < 0 {
+			// this was supposed to be last one
+			break
+		}
+		r_begin = r_end + 1
+		if uint64(r_begin) > new_id {
+			break
+		}
+		if new_id > uint64(r_begin)+599 {
+			r_end = r_begin + 599
+		} else {
+			r_end = -1
+		}
+	}
+	return
 }
 
 func (c *NNTPScraper) main() error {
@@ -544,13 +889,20 @@ func (c *NNTPScraper) main() error {
 		}
 	}
 
-	e, fatal = c.doActiveList()
-	if e != nil {
-		if fatal {
-			return fmt.Errorf("doActiveList method failed: %v", e)
+	gotGroupList := false
+	if !gotGroupList && !c.s.badActiveList {
+		e, fatal = c.doActiveList()
+		if e != nil {
+			if fatal {
+				return fmt.Errorf("doActiveList method failed: %v", e)
+			} else {
+				c.log.LogPrintf(WARN, "doActiveList method failed: %v", e)
+			}
 		} else {
-			c.log.LogPrintf(WARN, "doActiveList method failed: %v", e)
+			gotGroupList = true
 		}
+	}
+	if !gotGroupList && !c.s.badNewsgroupsList {
 		e, fatal = c.doNewsgroupsList()
 		if e != nil {
 			if fatal {
@@ -558,8 +910,12 @@ func (c *NNTPScraper) main() error {
 			} else {
 				c.log.LogPrintf(WARN, "doNewsgroupsList method failed: %v", e)
 			}
-			return errors.New("no methods left to get group list")
+		} else {
+			gotGroupList = true
 		}
+	}
+	if !gotGroupList {
+		return errors.New("no methods left to get group list")
 	}
 
 	c.log.LogPrintf(DEBUG, "scraper will load temp groups")
@@ -574,6 +930,40 @@ func (c *NNTPScraper) main() error {
 		}
 		c.log.LogPrintf(DEBUG, "LoadTempGroup(): g:%q n:%d o:%d",
 			group, new_id, old_id)
+
+		if new_id >= 0 && old_id >= uint64(new_id) {
+			if old_id != uint64(new_id) {
+				// keep track of reduction too
+				c.db.UpdateGroupID(group, uint64(new_id))
+			}
+			// skip this
+			continue
+		}
+
+		var g_id int64
+		var notexists bool
+		g_id, err, notexists, fatal = c.doGroup(group)
+		if err != nil && !notexists {
+			if fatal {
+				return fmt.Errorf("doGroup failed: %v", e)
+			} else {
+				c.log.LogPrintf(WARN, "doGroup failed: %v", e)
+			}
+			// next group, I guess..
+			continue
+		}
+		if new_id < 0 || g_id > new_id {
+			new_id = g_id
+		}
+
+		err, fatal = c.eatGroup(group, old_id, uint64(new_id))
+		if err != nil {
+			if fatal {
+				return fmt.Errorf("eatGroup failed: %v", e)
+			} else {
+				c.log.LogPrintf(WARN, "eatGroup failed: %v", e)
+			}
+		}
 	}
 
 	c.db.DoneTempGroups()
