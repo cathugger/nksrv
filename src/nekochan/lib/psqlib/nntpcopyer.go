@@ -5,7 +5,9 @@ import (
 )
 
 type nntpCopyer interface {
-	Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error)
+	Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (
+		written int64, err error)
+	SetGroupState(gs *groupState)
 	IsClosed() bool
 }
 
@@ -13,9 +15,17 @@ type nntpCopyer interface {
 type fullNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
+	gs *groupState
 }
 
-func (c *fullNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
+func (c *fullNNTPCopyer) SetGroupState(gs *groupState) {
+	c.gs = gs
+}
+
+func (c *fullNNTPCopyer) Copy(
+	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	written int64, err error) {
+
 	buf := make([]byte, 32*1024)
 
 	var nr, nw int
@@ -28,6 +38,9 @@ func (c *fullNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (wr
 			// abort on error before initialisation if no data - avoid begining empty incomplete message
 			err = er
 			return
+		}
+		if c.gs != nil {
+			c.gs.pid = num
 		}
 		c.w.ResArticleFollows(num, msgid)
 		c.dw = c.w.DotWriter()
@@ -74,7 +87,12 @@ func (c *fullNNTPCopyer) IsClosed() bool {
 type headNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
+	gs *groupState
 	st int
+}
+
+func (c *headNNTPCopyer) SetGroupState(gs *groupState) {
+	c.gs = gs
 }
 
 func (c *headNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
@@ -90,6 +108,9 @@ func (c *headNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (wr
 			// abort on error before initialisation if no data - avoid begining empty incomplete message
 			err = er
 			return
+		}
+		if c.gs != nil {
+			c.gs.pid = num
 		}
 		c.w.ResHeadFollows(num, msgid)
 		c.dw = c.w.DotWriter()
@@ -165,10 +186,18 @@ func (c *headNNTPCopyer) IsClosed() bool {
 type bodyNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
+	gs *groupState
 	st int
 }
 
-func (c *bodyNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
+func (c *bodyNNTPCopyer) SetGroupState(gs *groupState) {
+	c.gs = gs
+}
+
+func (c *bodyNNTPCopyer) Copy(
+	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	written int64, err error) {
+
 	buf := make([]byte, 32*1024)
 
 	var nr, nw int
@@ -182,6 +211,9 @@ func (c *bodyNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (wr
 			// abort on error before initialisation if no data - avoid begining empty incomplete message
 			err = er
 			return
+		}
+		if c.gs != nil {
+			c.gs.pid = num
 		}
 		c.w.ResBodyFollows(num, msgid)
 		c.dw = c.w.DotWriter()
@@ -246,10 +278,21 @@ func (c *bodyNNTPCopyer) IsClosed() bool {
 
 // stat
 type statNNTPCopyer struct {
-	w Responder
+	w  Responder
+	gs *groupState
 }
 
-func (c statNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
+func (c *statNNTPCopyer) SetGroupState(gs *groupState) {
+	c.gs = gs
+}
+
+func (c statNNTPCopyer) Copy(
+	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	written int64, err error) {
+
+	if c.gs != nil {
+		c.gs.pid = num
+	}
 	// interface abuse
 	c.w.ResArticleFound(num, msgid)
 	return 0, nil

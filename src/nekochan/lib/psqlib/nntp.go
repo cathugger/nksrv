@@ -120,8 +120,7 @@ func (sp *PSQLIB) GetArticleBodyByMsgID(
 func (sp *PSQLIB) GetArticleStatByMsgID(
 	w Responder, cs *ConnState, msgid CoreMsgID) bool {
 
-	// notice: not reference
-	sc := statNNTPCopyer{w: w}
+	sc := &statNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(sc, w, cs, msgid)
 }
 
@@ -152,8 +151,7 @@ func (sp *PSQLIB) GetArticleBodyByNum(
 func (sp *PSQLIB) GetArticleStatByNum(
 	w Responder, cs *ConnState, num uint64) bool {
 
-	// notice: not reference
-	sc := statNNTPCopyer{w: w}
+	sc := &statNNTPCopyer{w: w}
 	return sp.getArticleCommonByNum(sc, w, cs, num)
 }
 
@@ -176,8 +174,7 @@ func (sp *PSQLIB) GetArticleBodyByCurr(w Responder, cs *ConnState) bool {
 	return sp.getArticleCommonByCurr(nc, w, cs)
 }
 func (sp *PSQLIB) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
-	// notice: not reference
-	sc := statNNTPCopyer{w: w}
+	sc := &statNNTPCopyer{w: w}
 	return sp.getArticleCommonByCurr(sc, w, cs)
 }
 

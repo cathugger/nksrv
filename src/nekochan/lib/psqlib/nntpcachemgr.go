@@ -120,7 +120,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
-	gs.pid = num
+	w.SetGroupState(gs)
 	return sp.nntpObtainItemOrStat(w, num, msgid)
 }
 
@@ -148,7 +148,7 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 func (sp *PSQLIB) nntpObtainItemOrStat(
 	w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
 
-	if _, ok := w.(statNNTPCopyer); !ok {
+	if _, ok := w.(*statNNTPCopyer); !ok {
 		return sp.nntpObtainItem(w, num, msgid)
 	} else {
 		// interface abuse
