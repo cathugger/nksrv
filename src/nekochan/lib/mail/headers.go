@@ -11,6 +11,8 @@ func ValidHeader(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
 }
 
+const maxHeaderLen = 2000
+
 var (
 	errTooLongHeader       = errors.New("too long header")
 	errMissingColon        = errors.New("missing colon in header")
@@ -21,8 +23,9 @@ var (
 const maxCommonHdrLen = 32
 
 type HeaderValInner struct {
-	V string `json:"v"` // value
-	H string `json:"h"` // original name, optional, needed only incase non-canonical form
+	V string   `json:"v"`           // value
+	H string   `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
+	S []uint32 `json:"s,omitempty"` // split points, for folding/unfolding
 }
 
 type HeaderVal struct {
@@ -30,7 +33,7 @@ type HeaderVal struct {
 }
 
 func (hv HeaderVal) MarshalJSON() ([]byte, error) {
-	if hv.H == "" {
+	if hv.H == "" && len(hv.S) == 0 {
 		return json.Marshal(hv.V)
 	} else {
 		return json.Marshal(hv.HeaderValInner)
@@ -41,6 +44,7 @@ func (hv *HeaderVal) UnmarshalJSON(b []byte) (err error) {
 	err = json.Unmarshal(b, &hv.V)
 	if err == nil {
 		hv.H = ""
+		hv.S = []uint32(nil)
 		return
 	}
 	return json.Unmarshal(b, &hv.HeaderValInner)

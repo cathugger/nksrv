@@ -131,12 +131,16 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 	// one buffer for string slice
 	Hbuf := make([]HeaderVal, 0, est)
 
+	var splits []uint32
+
 	finishCurrent := func() {
 		if len(currHeader) != 0 {
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
 				H: origHeader,
 				V: string(h.Bytes()),
+				S: splits,
 			}}
+			splits = []uint32(nil)
 			if cs, ok := H[currHeader]; ok {
 				H[currHeader] = append(cs, hval)
 			} else {
@@ -157,7 +161,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 		for len(b) != 0 {
 			n := bytes.IndexByte(b, '\n')
 			if n < 0 {
-				if len(b) >= 2000 {
+				if len(b) >= maxHeaderLen {
 					// uh oh
 					e = errTooLongHeader
 				}

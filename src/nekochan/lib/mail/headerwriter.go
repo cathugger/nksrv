@@ -99,7 +99,7 @@ var writePartHeaderMap = func() (m map[string]struct{}) {
 
 func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 	// TODO implement line folding
-	if !force && len(h)+2+len(s) > 998 {
+	if !force && len(h)+2+len(s)+2 > maxHeaderLen {
 		return ErrHeaderLineTooLong
 	}
 	if _, e := fmt.Fprintf(w, "%s: %s\n", h, s); e != nil {
