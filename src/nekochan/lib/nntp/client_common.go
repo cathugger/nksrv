@@ -3,39 +3,12 @@ package nntp
 import (
 	"errors"
 	"fmt"
-	"io"
 	tp "net/textproto"
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/bufreader"
 	. "nekochan/lib/logx"
 )
-
-type ScraperDatabase interface {
-	GetLastNewNews() (t int64, err error)
-	UpdateLastNewNews(t int64) error
-
-	GetLastNewGroups() (t int64, err error)
-	UpdateLastNewGroups(t int64) error
-
-	// MAY make new group, may return id==0 if no info about group before this
-	// if id<0 then no such group currently exists
-	GetGroupID(group []byte) (id int64, err error)
-	UpdateGroupID(group string, id uint64) error
-
-	// to keep list of received newsgroups
-	StartTempGroups() error        // before we start adding
-	CancelTempGroups()             // if we fail in middle of adding
-	FinishTempGroups(partial bool) // after all list is added
-	DoneTempGroups()               // after we finished using them
-	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
-	StoreTempGroup(group []byte, old_id uint64) error
-	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
-
-	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
-
-	ReadArticle(r io.Reader, msgid CoreMsgIDStr) (err error, unexpected bool)
-}
 
 var errTooLargeResponse = errors.New("too large response")
 

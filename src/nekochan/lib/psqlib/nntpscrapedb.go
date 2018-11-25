@@ -21,6 +21,11 @@ type ScraperDB struct {
 
 var _ nntp.ScraperDatabase = (*ScraperDB)(nil)
 
+func (s *ScraperDB) autoAddGroup(group string) bool {
+	// TODO some kind of filtering maybe?
+	return s.autoadd || s.sp.shouldAutoAddNNTPPostGroup(group)
+}
+
 func (s *ScraperDB) getNonce() int64 {
 	// not to be used in multithreaded context
 	if s.nonce == 0 {
@@ -98,6 +103,8 @@ DO
 }
 
 func (s *ScraperDB) GetGroupID(group []byte) (int64, error) {
+	unsafe_sgroup := unsafeBytesToStr(group)
+
 	loopn := 0
 	for {
 		q := `WITH
@@ -119,11 +126,11 @@ ON sg.bid = st.bid`
 		var lid sql.NullInt64
 
 		e := s.sp.db.DB.
-			QueryRow(q, s.id, group).
+			QueryRow(q, s.id, unsafe_sgroup).
 			Scan(&bid, &lid)
 		if e != nil {
 			if e == sql.ErrNoRows {
-				if !s.autoadd || loopn > 20 {
+				if !s.autoAddGroup(unsafe_sgroup) || loopn >= 20 {
 					return -1, nil
 				}
 			} else {
@@ -139,7 +146,7 @@ ON sg.bid = st.bid`
 
 		// if we're here, then we need to make new board
 		bi := s.sp.IBDefaultBoardInfo()
-		bi.Name = unsafeBytesToStr(group)
+		bi.Name = unsafe_sgroup
 		e, dup := s.sp.addNewBoard(bi)
 		if e != nil && !dup {
 			return -1, fmt.Errorf("addNewBoard error: %v", e)
@@ -265,10 +272,11 @@ var (
 )
 
 func (s *ScraperDB) ReadArticle(
-	r io.Reader, msgid CoreMsgIDStr) (err error, unexpected bool) {
+	r io.Reader, msgid CoreMsgIDStr, expectgroup string) (
+	err error, unexpected bool, wantroot FullMsgIDStr) {
 
-	info, newname, H, err, unexpected :=
-		s.sp.handleIncoming(r, msgid, nntpScraperDir)
+	info, newname, H, err, unexpected, wantroot :=
+		s.sp.handleIncoming(r, msgid, expectgroup, nntpScraperDir)
 	if err != nil {
 		return
 	}

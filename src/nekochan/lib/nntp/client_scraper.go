@@ -15,6 +15,33 @@ import (
 	. "nekochan/lib/logx"
 )
 
+type ScraperDatabase interface {
+	GetLastNewNews() (t int64, err error)
+	UpdateLastNewNews(t int64) error
+
+	GetLastNewGroups() (t int64, err error)
+	UpdateLastNewGroups(t int64) error
+
+	// MAY make new group, may return id==0 if no info about group before this
+	// if id<0 then no such group currently exists
+	GetGroupID(group []byte) (id int64, err error)
+	UpdateGroupID(group string, id uint64) error
+
+	// to keep list of received newsgroups
+	StartTempGroups() error        // before we start adding
+	CancelTempGroups()             // if we fail in middle of adding
+	FinishTempGroups(partial bool) // after all list is added
+	DoneTempGroups()               // after we finished using them
+	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
+	StoreTempGroup(group []byte, old_id uint64) error
+	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
+
+	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
+
+	ReadArticle(r io.Reader, msgid CoreMsgIDStr, expectedgroup string) (
+		err error, unexpected bool, wantedroot FullMsgIDStr)
+}
+
 type todoArticle struct {
 	id    uint64
 	msgid FullMsgIDStr
@@ -320,7 +347,10 @@ func (c *NNTPScraper) doGroup(
 	}
 }
 
-func (c *NNTPScraper) eatArticle(msgid FullMsgIDStr) (err error, fatal bool) {
+func (c *NNTPScraper) eatArticle(
+	msgid FullMsgIDStr, expectedgroup string) (
+	err error, fatal bool, wantroot FullMsgIDStr) {
+
 	dr := c.openDotReader()
 	defer func() {
 		if err != nil {
@@ -330,7 +360,9 @@ func (c *NNTPScraper) eatArticle(msgid FullMsgIDStr) (err error, fatal bool) {
 
 	//c.log.LogPrintf(DEBUG, "eatArticle: inside")
 
-	err, fatal = c.db.ReadArticle(dr, CutMsgIDStr(msgid))
+	err, fatal, wantroot = c.db.ReadArticle(
+		dr, CutMsgIDStr(msgid), expectedgroup)
+
 	if err != nil {
 		if fatal {
 			c.log.LogPrintf(ERROR, "c.db.ReadArticle fatal err: %v", err)
@@ -408,7 +440,7 @@ func (c *NNTPScraper) processTODOList(
 			continue
 		}
 		// process article
-		err, fatal = c.eatArticle(c.todoList[i].msgid)
+		err, fatal, _ = c.eatArticle(c.todoList[i].msgid, group)
 		if err != nil {
 			if fatal {
 				return

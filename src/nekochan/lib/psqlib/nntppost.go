@@ -32,11 +32,14 @@ func cutMsgID(s FullMsgIDStr) CoreMsgIDStr {
 		nntp.CutMessageID(unsafeStrToBytes(string(s)))))
 }
 
+func (sp *PSQLIB) shouldAutoAddNNTPPostGroup(group string) bool {
+	// TODO some kind of filtering maybe?
+	return sp.autoAddNNTPPostGroup
+}
+
 func (sp *PSQLIB) acceptArticleHead(
 	board string, troot FullMsgIDStr) (
-	ins insertSqlInfo, err error, unexpected bool) {
-
-	// TODO ability to autoadd group?
+	ins insertSqlInfo, err error, unexpected bool, wantroot bool) {
 
 	var jbPL xtypes.JSONText // board post limits
 	var jbXL xtypes.JSONText // board newthread/reply limits
@@ -59,15 +62,38 @@ WHERE bname=$1`
 
 		//sp.log.LogPrintf(DEBUG, "executing acceptArticleHead board query:\n%s\n", q)
 
-		err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				err = errNoSuchBoard
+		nadd := 0
+		for {
+			err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					if !sp.shouldAutoAddNNTPPostGroup(board) || nadd >= 20 {
+						err = errNoSuchBoard
+						return
+					}
+					// try adding new
+				} else {
+					unexpected = true
+					err = sp.sqlError("board row query scan", err)
+					return
+				}
 			} else {
-				unexpected = true
-				err = sp.sqlError("board row query scan", err)
+				// we got board
+				break
 			}
-			return
+
+			nadd++
+
+			// try to add new board
+			bi := sp.IBDefaultBoardInfo()
+			bi.Name = board
+			var dup bool
+			err, dup = sp.addNewBoard(bi)
+			if err != nil && !dup {
+				unexpected = true
+				err = fmt.Errorf("addNewBoard error: %v", err)
+				return
+			}
 		}
 
 		/*
@@ -90,36 +116,45 @@ xb AS (
 	LIMIT 1
 )
 SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.title
+	xtp.bid,xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.title
 FROM xb
-LEFT JOIN (
+FULL JOIN (
 	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.title
 	FROM ib0.threads xt
-	JOIN xb
-	ON xb.bid = xt.bid
 	JOIN ib0.posts xp
-	ON xb.bid=xp.bid AND xt.tid=xp.tid
+	ON xt.bid=xp.bid AND xt.tid=xp.tid
 	WHERE xp.msgid=$2
 	LIMIT 1
 ) AS xtp
-ON xb.bid=xtp.bid`
+ON TRUE`
 
 		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
+		var xbid sql.NullInt64
+		var xtbid sql.NullInt64
 		var xtid sql.NullInt64
 		var xsubject sql.NullString
 
 		err = sp.db.DB.QueryRow(q, board, string(mm.CutMessageIDStr(troot))).
-			Scan(&ins.bid, &jbPL, &jbXL, &xtid, &jtRL, &jbTO, &jtTO, &xsubject)
+			Scan(&xbid, &jbPL, &jbXL, &xtbid, &xtid, &jtRL, &jbTO, &jtTO, &xsubject)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errNoSuchBoard
+				// don't autoadd for replies.
+				// reply obviously won't have any parent post in this board
+				// because board didn't exist before.
+				// ... we can actually suggest to add parent tho
+				if sp.shouldAutoAddNNTPPostGroup(board) {
+					wantroot = true
+				}
 			} else {
 				unexpected = true
 				err = sp.sqlError("board x thread row query scan", err)
 			}
 			return
 		}
+
+		ins.bid = boardID(xbid.Int64)
 
 		/*
 			sp.log.LogPrintf(DEBUG,
@@ -128,9 +163,26 @@ ON xb.bid=xtp.bid`
 				ins.bid, jbPL, jbXL, xtid, jtRL, jbTO, jtTO)
 		*/
 
-		if xtid.Int64 <= 0 {
-			// TODO ability to put such messages elsewhere?
+		if xtbid.Int64 > 0 && xtid.Int64 > 0 {
+			// such thread exists
+			if xbid.Int64 != xtbid.Int64 {
+				// but in different board...
+				err = errors.New("post refers to thread in different board")
+				return
+			}
+			// at this point everything is right
+			// keep goin
+		} else if xbid.Int64 <= 0 {
+			// no such board exists
+			err = errNoSuchBoard
+			if sp.shouldAutoAddNNTPPostGroup(board) {
+				wantroot = true
+			}
+			return
+		} else {
+			// no such thread exists
 			err = errNoSuchThread
+			wantroot = true
 			return
 		}
 
@@ -239,7 +291,7 @@ func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
 	limit := sp.maxArticleBodySize
 	lr.N = limit + 1 - int64(len(mh.B.Buffered()))
 
-	info, err, unexpected := sp.nntpDigestTransferHead(mh.H, "", true)
+	info, err, unexpected, _ := sp.nntpDigestTransferHead(mh.H, "", "", true)
 	if lr.N <= 0 {
 		// limit exceeded
 		err = fmt.Errorf("article body too large, up to %d allowed", limit)
@@ -282,8 +334,8 @@ func (sp *PSQLIB) HandleIHave(
 	w.ResSendArticleToBeTransferred()
 	r := ro.OpenReader()
 
-	info, newname, H, err, unexpected :=
-		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
+	info, newname, H, err, unexpected, _ :=
+		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir)
 	if err != nil {
 		if !unexpected {
 			w.ResTransferRejected(err)
@@ -342,8 +394,8 @@ func (sp *PSQLIB) HandleTakeThis(
 		return false
 	}
 
-	info, newname, H, err, unexpected :=
-		sp.handleIncoming(r, unsafe_sid, nntpIncomingDir)
+	info, newname, H, err, unexpected, _ :=
+		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir)
 	if err != nil {
 		if !unexpected {
 			w.ResArticleRejected(msgid, err)
@@ -362,12 +414,12 @@ func (sp *PSQLIB) HandleTakeThis(
 }
 
 func (sp *PSQLIB) handleIncoming(
-	r io.Reader, unsafe_sid CoreMsgIDStr, incdir string) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, incdir string) (
 	info nntpParsedInfo, newname string, H mail.Headers,
-	err error, unexpected bool) {
+	err error, unexpected bool, wantroot FullMsgIDStr) {
 
-	info, f, H, err, unexpected :=
-		sp.handleIncomingIntoFile(r, unsafe_sid)
+	info, f, H, err, unexpected, wantroot :=
+		sp.handleIncomingIntoFile(r, unsafe_sid, expectgroup)
 	if err != nil {
 		return
 	}
@@ -393,9 +445,9 @@ func (sp *PSQLIB) handleIncoming(
 }
 
 func (sp *PSQLIB) handleIncomingIntoFile(
-	r io.Reader, unsafe_sid CoreMsgIDStr) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string) (
 	info nntpParsedInfo, f *os.File, H mail.Headers,
-	err error, unexpected bool) {
+	err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	var mh mail.MessageHead
 	mh, err = mail.ReadHeaders(r, mailib.DefaultHeaderSizeLimit)
@@ -405,7 +457,8 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 	}
 	defer mh.Close()
 
-	info, err, unexpected = sp.nntpDigestTransferHead(mh.H, unsafe_sid, false)
+	info, err, unexpected, wantroot =
+		sp.nntpDigestTransferHead(mh.H, unsafe_sid, expectgroup, false)
 	if err != nil {
 		return
 	}

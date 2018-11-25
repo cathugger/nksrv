@@ -454,7 +454,7 @@ ON xb.bid=xtp.bid`
 			xe := fu.RenameNoClobber(from, to)
 			if xe != nil {
 				if os.IsExist(xe) {
-					sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+					//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 				} else {
 					sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
 				}

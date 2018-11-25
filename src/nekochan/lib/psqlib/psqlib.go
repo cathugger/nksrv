@@ -15,17 +15,18 @@ import (
 )
 
 type PSQLIB struct {
-	db                 psql.PSQL
-	log                Logger
-	src                fstore.FStore
-	thm                fstore.FStore
-	nntpfs             fstore.FStore
-	nntpmgr            nntpCacheMgr
-	altthumb           altthumber.AltThumber
-	ffo                formFileOpener
-	fpp                form.ParserParams
-	instance           string
-	maxArticleBodySize int64
+	db                   psql.PSQL
+	log                  Logger
+	src                  fstore.FStore
+	thm                  fstore.FStore
+	nntpfs               fstore.FStore
+	nntpmgr              nntpCacheMgr
+	altthumb             altthumber.AltThumber
+	ffo                  formFileOpener
+	fpp                  form.ParserParams
+	instance             string
+	maxArticleBodySize   int64
+	autoAddNNTPPostGroup bool
 
 	// newthread prepared statements and locking
 	ntStmts map[int]*sql.Stmt
@@ -39,12 +40,13 @@ type PSQLIB struct {
 }
 
 type Config struct {
-	DB         psql.PSQL
-	Logger     LoggerX
-	SrcCfg     fstore.Config
-	ThmCfg     fstore.Config
-	NNTPFSCfg  fstore.Config
-	AltThumber altthumber.AltThumber
+	DB                 psql.PSQL
+	Logger             LoggerX
+	SrcCfg             fstore.Config
+	ThmCfg             fstore.Config
+	NNTPFSCfg          fstore.Config
+	AltThumber         altthumber.AltThumber
+	AddBoardOnNNTPPost bool
 }
 
 // readonly for now
@@ -88,6 +90,8 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
 	p.instance = "nekochan"          // TODO config
 	p.maxArticleBodySize = 256 << 20 // TODO config
+
+	p.autoAddNNTPPostGroup = cfg.AddBoardOnNNTPPost
 
 	p.ntStmts = make(map[int]*sql.Stmt)
 	p.npStmts = make(map[npTuple]*sql.Stmt)

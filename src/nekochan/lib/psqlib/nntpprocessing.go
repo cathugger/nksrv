@@ -84,8 +84,8 @@ type nntpParsedInfo struct {
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
-	H mail.Headers, unsafe_sid CoreMsgIDStr, post bool) (
-	info nntpParsedInfo, err error, unexpected bool) {
+	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string, post bool) (
+	info nntpParsedInfo, err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	var restrictions []headerRestriction
 	if !post {
@@ -172,6 +172,10 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		err = fmt.Errorf("newsgroup %q not supported", hgroup)
 		return
 	}
+	if expectgroup != "" && hgroup != expectgroup {
+		err = fmt.Errorf("newsgroup %q not expected", hgroup)
+		return
+	}
 	info.Newsgroup = hgroup
 
 	// References
@@ -181,13 +185,18 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	}
 
 	// actual DB check on group and refered article
-	info.insertSqlInfo, err, unexpected = sp.acceptArticleHead(hgroup, troot)
+	var wr bool
+	info.insertSqlInfo, err, unexpected, wr =
+		sp.acceptArticleHead(hgroup, troot)
 	if err != nil {
 		if err == errNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
 		} else if err == errNoSuchThread {
 			err = fmt.Errorf(
 				"refering to non-existing root post %s not allowed", troot)
+		}
+		if wr {
+			wantroot = troot
 		}
 		return
 	}
@@ -348,7 +357,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		xe := fu.RenameNoClobber(from, to)
 		if xe != nil {
 			if os.IsExist(xe) {
-				sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 			} else {
 				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
 			}
