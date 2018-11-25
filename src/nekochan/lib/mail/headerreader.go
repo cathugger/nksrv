@@ -8,10 +8,18 @@ import (
 	"nekochan/lib/bufreader"
 )
 
-type HeaderAcceptor interface {
-	EatHeaderName(b []byte)
-	EatHeaderValue(b []byte)
-	FinishHeader()
+func obtainBufReader(r io.Reader) (br *bufreader.BufReader) {
+	br = bufPool.Get().(*bufreader.BufReader)
+	br.Drop()
+	br.ResetErr()
+	br.SetReader(r)
+	return
+}
+
+func dropBufReader(br *bufreader.BufReader) {
+	br.SetReader(nil)
+	br.ResetErr()
+	bufPool.Put(br)
 }
 
 type MessageHead struct {
@@ -22,9 +30,7 @@ type MessageHead struct {
 
 func (mh *MessageHead) Close() error {
 	if mh.B != nil {
-		mh.B.SetReader(nil)
-		mh.B.ResetErr()
-		bufPool.Put(mh.B)
+		dropBufReader(mh.B)
 		mh.B = nil
 	}
 	return nil
@@ -53,17 +59,14 @@ func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
 // Users should call mh.Close after they used mh.B. If err is returned,
 // closing isn't required.
 func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
-	br := bufPool.Get().(*bufreader.BufReader)
-	br.Drop()
-	br.ResetErr()
-
 	var lr *limitedHeadReader
+	var br *bufreader.BufReader
 	if headlimit > 0 {
 		// TODO replace LimitedReader with something which returns something other than io.EOF
 		lr = &limitedHeadReader{R: r, N: headlimit}
-		br.SetReader(lr)
+		br = obtainBufReader(lr)
 	} else {
-		br.SetReader(r)
+		br = obtainBufReader(r)
 	}
 
 	mh.H, err = readHeaders(br)
@@ -78,29 +81,21 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 		}
 		mh.B = br
 	} else {
-		br.SetReader(nil)
-		br.ResetErr()
-		bufPool.Put(br)
+		dropBufReader(br)
 	}
 
 	return
 }
 
 func SkipHeaders(r io.Reader) (mh MessageHead, err error) {
-	br := bufPool.Get().(*bufreader.BufReader)
-	br.Drop()
-	br.ResetErr()
-	br.SetReader(r)
+	br := obtainBufReader(r)
 
 	hadNL := true
 	for {
 		var c byte
 		c, err = br.ReadByte()
 		if err != nil {
-			br.SetReader(nil)
-			br.ResetErr()
-			bufPool.Put(br)
-
+			dropBufReader(br)
 			return
 		}
 		if c == '\n' && hadNL {
