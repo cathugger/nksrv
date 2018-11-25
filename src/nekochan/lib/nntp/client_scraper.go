@@ -505,6 +505,17 @@ func (c *NNTPScraper) processTODOList(
 		}
 	}
 
+	queuedRef := func(ref FullMsgIDStr, x int) bool {
+		// it's imperfect but probably will be good enough
+		for i := 0; i < x; i++ {
+			if c.todoList[i].msgid == ref {
+				return true
+			}
+		}
+		return false
+	}
+
+	// start worker
 	go responseLoop(todochan, finishchan)
 
 	c.log.LogPrintf(DEBUG, "start TODO list")
@@ -557,7 +568,7 @@ func (c *NNTPScraper) processTODOList(
 				errCloseLoop()
 				return
 			}
-			if !exists {
+			if !exists && !queuedRef(c.todoList[i].ref, i) {
 				c.log.LogPrintf(DEBUG,
 					"TODO list %d %s reference %s doesn't exist - not requesting",
 					c.todoList[i].id, c.todoList[i].msgid, c.todoList[i].ref)
@@ -634,12 +645,12 @@ func (c *NNTPScraper) eatHdrOutput(
 		// if we didn't ask for this, don't include
 		if id == 0 || id < uint64(r_begin) ||
 			(r_end >= 0 && id > uint64(r_end)) ||
-			(r_end < 0 && id > uint64(r_begin)+899) {
+			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
 			continue
 		}
 
-		if len(c.todoList) >= 900 {
+		if len(c.todoList) >= maxListSize {
 			// safeguard
 			continue
 		}
@@ -676,12 +687,12 @@ func (c *NNTPScraper) eatOverOutput(
 		// if we didn't ask for this, don't include
 		if id == 0 || id < uint64(r_begin) ||
 			(r_end >= 0 && id > uint64(r_end)) ||
-			(r_end < 0 && id > uint64(r_begin)+899) {
+			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
 			continue
 		}
 
-		if len(c.todoList) >= 900 {
+		if len(c.todoList) >= maxListSize {
 			// safeguard
 			continue
 		}
@@ -865,6 +876,9 @@ func (c *NNTPScraper) eatGroupSlice(
 	return
 }
 
+const oneSliceSize = 800
+const maxListSize = 950
+
 func (c *NNTPScraper) eatGroup(
 	group string, old_id, new_id uint64) (err error, fatal bool) {
 
@@ -872,8 +886,8 @@ func (c *NNTPScraper) eatGroup(
 
 	r_begin = int64(old_id) + 1
 
-	if new_id > uint64(r_begin)+599 {
-		r_end = r_begin + 599
+	if new_id > uint64(r_begin)+oneSliceSize-1 {
+		r_end = r_begin + oneSliceSize - 1
 	} else {
 		r_end = -1
 	}
@@ -891,8 +905,8 @@ func (c *NNTPScraper) eatGroup(
 		if uint64(r_begin) > new_id {
 			break
 		}
-		if new_id > uint64(r_begin)+599 {
-			r_end = r_begin + 599
+		if new_id > uint64(r_begin)+oneSliceSize-1 {
+			r_end = r_begin + oneSliceSize - 1
 		} else {
 			r_end = -1
 		}
