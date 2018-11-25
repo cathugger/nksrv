@@ -35,7 +35,9 @@ type ClientDatabase interface {
 	StoreTempGroup(group []byte, old_id uint64) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
-	//ReadArticle(r io.Reader, msgid CoreMsgID) (err error, unexpected bool)
+	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
+
+	ReadArticle(r io.Reader, msgid CoreMsgIDStr) (err error, unexpected bool)
 }
 
 type scraperState struct {
@@ -676,8 +678,114 @@ func (c *NNTPScraper) getOverLineInfo(
 	return
 }
 
+func (c *NNTPScraper) eatArticle(msgid FullMsgIDStr) (err error, fatal bool) {
+	dr := c.openDotReader()
+	defer func() {
+		if err != nil {
+			dr.Discard(-1)
+		}
+	}()
+
+	err, fatal = c.db.ReadArticle(dr, CutMsgIDStr(msgid))
+	if err != nil {
+		if fatal {
+			c.log.LogPrintf(ERROR, "c.db.ReadArticle fatal err: %v", err)
+		} else {
+			c.log.LogPrintf(ERROR, "c.db.ReadArticle expected err: %v", err)
+		}
+	}
+	return
+}
+
+func (c *NNTPScraper) processTODOList(
+	group string, maxid int64) (new_maxid int64, err error, fatal bool) {
+
+	new_maxid = -1
+	defer func() {
+		c.log.LogPrintf(DEBUG, "processTODOList defer: maxid(%d) new_maxid(%d)",
+			maxid, new_maxid)
+		if new_maxid >= 0 && new_maxid > maxid {
+			c.log.LogPrintf(DEBUG, "processTODOList defer: updating group id")
+			c.db.UpdateGroupID(group, uint64(new_maxid))
+		}
+	}()
+
+	c.log.LogPrintf(DEBUG, "start TODO list")
+	for i := range c.todoList {
+		wanted, e := c.db.IsArticleWanted(c.todoList[i].msgid)
+		if e != nil {
+			c.log.LogPrintf(ERROR,
+				"IsArticleWanted(%s) fail: %v", c.todoList[i].msgid, e)
+			err = e
+			return
+		}
+
+		if !wanted {
+			c.log.LogPrintf(DEBUG, "TODO list %d %s unwanted",
+				c.todoList[i].id, c.todoList[i].msgid)
+
+			if int64(c.todoList[i].id) > new_maxid {
+				new_maxid = int64(c.todoList[i].id)
+			}
+
+			continue
+		}
+		c.log.LogPrintf(DEBUG, "TODO list %d %s wanted",
+			c.todoList[i].id, c.todoList[i].msgid)
+
+		// we want it, so ask for it
+		err = c.w.PrintfLine("ARTICLE %d", c.todoList[i].id)
+		if err != nil {
+			fatal = true
+			return
+		}
+
+		var code uint
+		var rest []byte
+		code, rest, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+
+		if code == 220 {
+			// we have to process it now
+			// -->>
+		} else if code == 423 || code == 430 {
+			// article gone..
+			c.log.LogPrintf(WARN,
+				"processTODOList: negative ARTICLE response %d %q",
+				code, au.TrimWSBytes(rest))
+			continue
+		} else {
+			c.log.LogPrintf(WARN,
+				"processTODOList: weird ARTICLE response %d %q",
+				code, au.TrimWSBytes(rest))
+			continue
+		}
+		// process article
+		err, fatal = c.eatArticle(c.todoList[i].msgid)
+		if err != nil {
+			if fatal {
+				return
+			} else {
+				c.log.LogPrintf(WARN,
+					"processTODOList: eatArticle(%s) fail: %v",
+					c.todoList[i].msgid, err)
+				err = nil
+			}
+		}
+		// we ate it successfuly
+		if int64(c.todoList[i].id) > new_maxid {
+			new_maxid = int64(c.todoList[i].id)
+		}
+	}
+	c.log.LogPrintf(DEBUG, "end TODO list")
+	return
+}
+
 func (c *NNTPScraper) eatGroupSlice(
-	group string, r_begin, r_end int64) (err error, fatal bool) {
+	group string, r_begin, r_end, maxid int64) (new_maxid int64, err error, fatal bool) {
 
 	overD := false
 
@@ -790,13 +898,7 @@ func (c *NNTPScraper) eatGroupSlice(
 			id: id, msgid: FullMsgIDStr(msgid)})
 	}
 	// loaded list.. now process it
-	// TODO
-	c.log.LogPrintf(DEBUG, "start TODO list")
-	for i := range c.todoList {
-		c.log.LogPrintf(DEBUG, "TODO list %d %s",
-			c.todoList[i].id, c.todoList[i].msgid)
-	}
-	c.log.LogPrintf(DEBUG, "end TODO list")
+	new_maxid, err, fatal = c.processTODOList(group, maxid)
 	return
 }
 
@@ -812,8 +914,9 @@ func (c *NNTPScraper) eatGroup(
 	} else {
 		r_end = -1
 	}
+	maxid := int64(old_id)
 	for {
-		err, fatal = c.eatGroupSlice(group, r_begin, r_end)
+		maxid, err, fatal = c.eatGroupSlice(group, r_begin, r_end, maxid)
 		if err != nil {
 			return
 		}
@@ -959,9 +1062,9 @@ func (c *NNTPScraper) main() error {
 		err, fatal = c.eatGroup(group, old_id, uint64(new_id))
 		if err != nil {
 			if fatal {
-				return fmt.Errorf("eatGroup failed: %v", e)
+				return fmt.Errorf("eatGroup failed: %v", err)
 			} else {
-				c.log.LogPrintf(WARN, "eatGroup failed: %v", e)
+				c.log.LogPrintf(WARN, "eatGroup failed: %v", err)
 			}
 		}
 	}

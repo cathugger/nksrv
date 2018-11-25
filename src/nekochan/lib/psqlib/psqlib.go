@@ -74,6 +74,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	}
 	p.nntpfs.RemoveDir(nntpIncomingTempDir)
 	p.nntpfs.MakeDir(nntpIncomingDir)
+	p.nntpfs.MakeDir(nntpScraperDir)
 
 	p.nntpmgr = newNNTPCacheMgr()
 

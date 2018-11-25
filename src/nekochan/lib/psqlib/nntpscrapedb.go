@@ -250,6 +250,33 @@ WHERE xs.sid=$1 AND xs.last_use=$2`
 	return
 }
 
+func (s *ScraperDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
+	cmsgid := cutMsgID(msgid)
+	// check if we already have it
+	exists, err := s.sp.nntpCheckArticleExists(cmsgid)
+	if err != nil {
+		return false, err
+	}
+	return !exists, nil
+}
+
+var (
+	nntpScraperDir = "_sin"
+)
+
+func (s *ScraperDB) ReadArticle(
+	r io.Reader, msgid CoreMsgIDStr) (err error, unexpected bool) {
+
+	info, newname, H, err, unexpected :=
+		s.sp.handleIncoming(r, msgid, nntpScraperDir)
+	if err != nil {
+		return
+	}
+
+	s.sp.nntpSendIncomingArticle(newname, H, info)
+	return
+}
+
 func (sp *PSQLIB) getScraperNonce() int64 {
 	// not to be used in multithreaded context
 	if sp.scraper_nonce == 0 {

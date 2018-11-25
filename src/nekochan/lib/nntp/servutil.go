@@ -47,6 +47,10 @@ func CutMessageID(id FullMsgID) CoreMsgID {
 	return CoreMsgID(id[1 : len(id)-1])
 }
 
+func CutMsgIDStr(id FullMsgIDStr) CoreMsgIDStr {
+	return CoreMsgIDStr(id[1 : len(id)-1])
+}
+
 func ValidMessageID(id FullMsgID) bool {
 	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
 		len(id) <= 250 && au.IsPrintableASCIISlice(CutMessageID(id), '>')
