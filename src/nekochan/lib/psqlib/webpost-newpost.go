@@ -76,6 +76,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		WHERE bid = $2 AND tid = $3
 	),`
 		b.WriteString(st_bump)
+	} else {
+		st_nobump := `
+	ut AS (SELECT 1 LIMIT $1),`
+		b.WriteString(st_nobump)
 	}
 
 	st2 := `
