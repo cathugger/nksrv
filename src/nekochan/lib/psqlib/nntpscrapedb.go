@@ -267,6 +267,12 @@ func (s *ScraperDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
 	return !exists, nil
 }
 
+func (s *ScraperDB) DoesReferenceExist(
+	ref FullMsgIDStr) (exists bool, err error) {
+
+	return s.sp.nntpCheckArticleExists(cutMsgID(ref))
+}
+
 var (
 	nntpScraperDir = "_sin"
 )

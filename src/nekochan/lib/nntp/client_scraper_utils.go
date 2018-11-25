@@ -6,6 +6,7 @@ import (
 
 	au "nekochan/lib/asciiutils"
 	"nekochan/lib/bufreader"
+	"nekochan/lib/mail"
 )
 
 func (c *NNTPScraper) readDotLine(dr *bufreader.DotReader) ([]byte, error) {
@@ -119,11 +120,14 @@ func parseListActiveLine(
 
 func (c *NNTPScraper) getOverLineInfo(
 	dr *bufreader.DotReader) (
-	id uint64, msgid FullMsgID, err error) {
+	id uint64, msgid, ref FullMsgID, err error) {
 
 	i := 0
 	nomore := false
 	eatField := func() (field []byte, err error) {
+		if nomore {
+			return
+		}
 		s := i
 		for {
 			b, e := dr.ReadByte()
@@ -149,6 +153,9 @@ func (c *NNTPScraper) getOverLineInfo(
 		}
 	}
 	ignoreField := func() (err error) {
+		if nomore {
+			return
+		}
 		for {
 			b, e := dr.ReadByte()
 			if e != nil {
@@ -215,6 +222,13 @@ func (c *NNTPScraper) getOverLineInfo(
 		err = fmt.Errorf("invalid msg-id %q", smsgid)
 		return
 	}
+	// references
+	xref, err := eatField()
+	if err != nil {
+		return
+	}
+	ref = FullMsgID(unsafeStrToBytes(
+		string(mail.ExtractFirstValidReference(unsafeBytesToStr(xref)))))
 
 	return
 }

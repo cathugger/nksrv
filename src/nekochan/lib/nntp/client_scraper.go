@@ -38,6 +38,7 @@ type ScraperDatabase interface {
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
 	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
+	DoesReferenceExist(ref FullMsgIDStr) (bool, error)
 
 	ReadArticle(r io.Reader, msgid CoreMsgIDStr, expectedgroup string) (
 		err error, unexpected bool, wantedroot FullMsgIDStr)
@@ -46,6 +47,7 @@ type ScraperDatabase interface {
 type todoArticle struct {
 	id    uint64
 	msgid FullMsgIDStr
+	ref   FullMsgIDStr
 }
 
 type NNTPScraper struct {
@@ -546,6 +548,29 @@ func (c *NNTPScraper) processTODOList(
 		default:
 		}
 
+		if c.todoList[i].ref != "" {
+			exists, e := c.db.DoesReferenceExist(c.todoList[i].ref)
+			if e != nil {
+				c.log.LogPrintf(ERROR,
+					"DoesReferenceExist(%s) fail: %v", c.todoList[i].ref, e)
+				err = e
+				errCloseLoop()
+				return
+			}
+			if !exists {
+				c.log.LogPrintf(DEBUG,
+					"TODO list %d %s reference %s doesn't exist - not requesting",
+					c.todoList[i].id, c.todoList[i].msgid, c.todoList[i].ref)
+			}
+
+			select {
+			case e, _ := <-finishchan:
+				handleFinishCase(e)
+				return
+			default:
+			}
+		}
+
 		// we want it, so ask for it
 		err = c.w.PrintfLine("ARTICLE %d", c.todoList[i].id)
 		if err != nil {
@@ -639,8 +664,8 @@ func (c *NNTPScraper) eatOverOutput(
 	c.todoList = c.todoList[:0] // reuse
 	for {
 		var id uint64
-		var msgid FullMsgID
-		id, msgid, err = c.getOverLineInfo(dr)
+		var msgid, ref FullMsgID
+		id, msgid, ref, err = c.getOverLineInfo(dr)
 		if err != nil {
 			if err == io.EOF {
 				err = nil
@@ -661,9 +686,16 @@ func (c *NNTPScraper) eatOverOutput(
 			continue
 		}
 
+		sref := FullMsgIDStr("")
+		if len(ref) != 0 {
+			sref = FullMsgIDStr(ref)
+		}
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
-			id: id, msgid: FullMsgIDStr(msgid)})
+			id:    id,
+			msgid: FullMsgIDStr(msgid),
+			ref:   sref,
+		})
 	}
 
 	return
