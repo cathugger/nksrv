@@ -8,6 +8,7 @@ import (
 	"math"
 	"net"
 	tp "net/textproto"
+	"sync"
 	"time"
 
 	au "nekochan/lib/asciiutils"
@@ -373,6 +374,62 @@ func (c *NNTPScraper) eatArticle(
 	return
 }
 
+func (c *NNTPScraper) handleArticleResponse(
+	msgid FullMsgIDStr, group string) (
+	ok bool, err error, fatal bool, wantroot FullMsgIDStr) {
+
+	var code uint
+	var rest []byte
+	code, rest, err, fatal = c.readResponse()
+	if err != nil {
+		c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+		return
+	}
+
+	if code == 220 {
+		// we have to process it now
+		// -->>
+	} else if code == 221 || code == 222 {
+
+		c.log.LogPrintf(WARN,
+			"processTODOList: weird ARTICLE response %d %q",
+			code, au.TrimWSBytes(rest))
+
+		xdr := c.openDotReader()
+		xdr.Discard(-1)
+
+		return
+
+	} else if code >= 420 && code < 440 {
+		// article gone..
+		c.log.LogPrintf(WARN,
+			"processTODOList: negative ARTICLE response %d %q",
+			code, au.TrimWSBytes(rest))
+		ok = true
+		return
+	} else {
+		c.log.LogPrintf(WARN,
+			"processTODOList: weird ARTICLE response %d %q",
+			code, au.TrimWSBytes(rest))
+		return
+	}
+	// process article
+	err, fatal, wantroot = c.eatArticle(msgid, group)
+	if err != nil {
+		if fatal {
+			return
+		} else {
+			c.log.LogPrintf(WARN,
+				"processTODOList: eatArticle(%s) fail: %v", msgid, err)
+			err = nil
+			ok = true
+		}
+	} else {
+		ok = true
+	}
+	return
+}
+
 func (c *NNTPScraper) processTODOList(
 	group string, maxid int64) (new_maxid int64, err error, fatal bool) {
 
@@ -386,13 +443,84 @@ func (c *NNTPScraper) processTODOList(
 		}
 	}()
 
+	var maxidMu sync.Mutex
+
+	responseHandler := func(
+		id int64, msgid FullMsgIDStr) (err error, fatal bool) {
+
+		ok, err, fatal, _ := c.handleArticleResponse(msgid, group)
+		if err != nil {
+			return
+		}
+
+		if ok {
+			maxidMu.Lock()
+			// we ate it successfuly
+			if id > new_maxid {
+				new_maxid = id
+			}
+			maxidMu.Unlock()
+		}
+		return
+	}
+
+	type todoLoopArticle struct {
+		msgid FullMsgIDStr
+		id    int64
+	}
+
+	responseLoop := func(ch <-chan todoLoopArticle, endch chan<- error) {
+		for a := range ch {
+			err, fatal := responseHandler(a.id, a.msgid)
+			if err != nil {
+				if fatal {
+					endch <- err
+					return
+				}
+				c.log.LogPrintf(WARN,
+					"responseHandler(%d,%s) err: %v", a.id, a.msgid, err)
+			}
+		}
+		close(endch)
+	}
+	todochan := make(chan todoLoopArticle, 32) // 32 pending articles max
+	finishchan := make(chan error)             // blocking
+
+	errCloseLoop := func() {
+		close(todochan)
+		<-finishchan
+	}
+
+	handleFinishCase := func(e error) {
+		if e != nil {
+			err = e
+			c.log.LogPrintf(ERROR,
+				"worker quit because of fatal err: %v", e)
+			fatal = true
+		} else {
+			c.log.LogPrintf(ERROR, "wtf worker quit before I told him to")
+			err = errors.New("unexpected worker quit")
+		}
+	}
+
+	go responseLoop(todochan, finishchan)
+
 	c.log.LogPrintf(DEBUG, "start TODO list")
 	for i := range c.todoList {
+
+		select {
+		case e, _ := <-finishchan:
+			handleFinishCase(e)
+			return
+		default:
+		}
+
 		wanted, e := c.db.IsArticleWanted(c.todoList[i].msgid)
 		if e != nil {
 			c.log.LogPrintf(ERROR,
 				"IsArticleWanted(%s) fail: %v", c.todoList[i].msgid, e)
 			err = e
+			errCloseLoop()
 			return
 		}
 
@@ -400,63 +528,57 @@ func (c *NNTPScraper) processTODOList(
 			c.log.LogPrintf(DEBUG, "TODO list %d %s unwanted",
 				c.todoList[i].id, c.todoList[i].msgid)
 
+			maxidMu.Lock()
 			if int64(c.todoList[i].id) > new_maxid {
 				new_maxid = int64(c.todoList[i].id)
 			}
+			maxidMu.Unlock()
 
 			continue
 		}
 		c.log.LogPrintf(DEBUG, "TODO list %d %s wanted",
 			c.todoList[i].id, c.todoList[i].msgid)
 
+		select {
+		case e, _ := <-finishchan:
+			handleFinishCase(e)
+			return
+		default:
+		}
+
 		// we want it, so ask for it
 		err = c.w.PrintfLine("ARTICLE %d", c.todoList[i].id)
 		if err != nil {
 			fatal = true
+			errCloseLoop()
 			return
 		}
 
-		var code uint
-		var rest []byte
-		code, rest, err, fatal = c.readResponse()
-		if err != nil {
-			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
-			return
+		tla := todoLoopArticle{
+			id:    int64(c.todoList[i].id),
+			msgid: c.todoList[i].msgid,
 		}
 
-		if code == 220 {
-			// we have to process it now
-			// -->>
-		} else if code >= 420 && code < 440 {
-			// article gone..
-			c.log.LogPrintf(WARN,
-				"processTODOList: negative ARTICLE response %d %q",
-				code, au.TrimWSBytes(rest))
-			continue
-		} else {
-			c.log.LogPrintf(WARN,
-				"processTODOList: weird ARTICLE response %d %q",
-				code, au.TrimWSBytes(rest))
-			continue
-		}
-		// process article
-		err, fatal, _ = c.eatArticle(c.todoList[i].msgid, group)
-		if err != nil {
-			if fatal {
-				return
-			} else {
-				c.log.LogPrintf(WARN,
-					"processTODOList: eatArticle(%s) fail: %v",
-					c.todoList[i].msgid, err)
-				err = nil
-			}
-		}
-		// we ate it successfuly
-		if int64(c.todoList[i].id) > new_maxid {
-			new_maxid = int64(c.todoList[i].id)
+		select {
+		case todochan <- tla:
+			// queued
+		case e, _ := <-finishchan:
+			handleFinishCase(e)
+			return
 		}
 	}
 	c.log.LogPrintf(DEBUG, "end TODO list")
+
+	close(todochan)
+	c.log.LogPrintf(DEBUG, "waiting for worker to quit")
+	e, _ := <-finishchan
+	if e == nil {
+		c.log.LogPrintf(DEBUG, "worker quit cleanly")
+	} else {
+		c.log.LogPrintf(DEBUG, "worker quit with err: %v", e)
+		fatal = true
+		err = e
+	}
 	return
 }
 
