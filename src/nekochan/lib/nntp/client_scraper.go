@@ -427,7 +427,7 @@ func (c *NNTPScraper) processTODOList(
 		if code == 220 {
 			// we have to process it now
 			// -->>
-		} else if code == 423 || code == 430 {
+		} else if code >= 420 && code < 440 {
 			// article gone..
 			c.log.LogPrintf(WARN,
 				"processTODOList: negative ARTICLE response %d %q",
