@@ -14,167 +14,22 @@ import (
 	. "nekochan/lib/logx"
 )
 
-type ClientDatabase interface {
-	GetLastNewNews() (t int64, err error)
-	UpdateLastNewNews(t int64) error
-
-	GetLastNewGroups() (t int64, err error)
-	UpdateLastNewGroups(t int64) error
-
-	// MAY make new group, may return id==0 if no info about group before this
-	// if id<0 then no such group currently exists
-	GetGroupID(group []byte) (id int64, err error)
-	UpdateGroupID(group string, id uint64) error
-
-	// to keep list of received newsgroups
-	StartTempGroups() error        // before we start adding
-	CancelTempGroups()             // if we fail in middle of adding
-	FinishTempGroups(partial bool) // after all list is added
-	DoneTempGroups()               // after we finished using them
-	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
-	StoreTempGroup(group []byte, old_id uint64) error
-	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
-
-	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
-
-	ReadArticle(r io.Reader, msgid CoreMsgIDStr) (err error, unexpected bool)
-}
-
-type scraperState struct {
-	initialResponseUnderstod bool
-	initialResponseAllowPost bool
-
-	badActiveList     bool
-	badNewsgroupsList bool
-	badCapabilities   bool
-	badOver           bool
-	badXOver          bool
-
-	capHdr    bool
-	capOver   bool
-	capReader bool
-
-	workaroundStupidActiveList bool
-}
-
-func (s *scraperState) canOver() bool {
-	return s.capOver && !s.badOver
-}
-
-func (s *scraperState) canXOver() bool {
-	return !s.badXOver
-}
-
 type todoArticle struct {
 	id    uint64
 	msgid FullMsgIDStr
 }
 
 type NNTPScraper struct {
-	inbuf [512]byte
-	args  [][]byte
+	NNTPClient
 
-	w  *tp.Writer
-	r  *bufreader.BufReader
-	dr *bufreader.DotReader
-
-	s   scraperState
-	db  ClientDatabase
-	log Logger
-
+	db       ScraperDatabase
 	todoList []todoArticle
 }
 
-func NewNNTPScraper(db ClientDatabase, logx LoggerX) *NNTPScraper {
+func NewNNTPScraper(db ScraperDatabase, logx LoggerX) *NNTPScraper {
 	c := &NNTPScraper{db: db}
 	c.log = NewLogToX(logx, fmt.Sprintf("nntpscraper.%p", c))
 	return c
-}
-
-func (c *NNTPScraper) openDotReader() *bufreader.DotReader {
-	if c.dr == nil {
-		c.dr = bufreader.NewDotReader(c.r)
-	} else {
-		c.dr.Reset()
-	}
-	return c.dr
-}
-
-var errTooLargeResponse = errors.New("too large response")
-
-func (c *NNTPScraper) readLine() (incmd []byte, e error) {
-	var i int
-	i, e = c.r.ReadUntil(c.inbuf[:], '\n')
-	if e != nil {
-		if e == bufreader.ErrDelimNotFound {
-			// response too large to process, error
-			e = errTooLargeResponse
-		}
-		return
-	}
-
-	if i > 1 && c.inbuf[i-2] == '\r' {
-		incmd = c.inbuf[:i-2]
-	} else {
-		incmd = c.inbuf[:i-1]
-	}
-
-	return
-}
-
-func parseResponseCode(line []byte) (code uint, rest []byte, err error) {
-	// NNTP uses exactly 3 characters always so expect that
-	if len(line) < 3 || !isNumberSlice(line[:3]) ||
-		(len(line) > 3 && line[3] != ' ') {
-
-		return 0, line, fmt.Errorf("response %q not understod", line)
-	}
-	code = stoi(line[:3])
-	if code < 100 || code >= 600 {
-		err = fmt.Errorf("response code %d out of range", code)
-	}
-	return code, line[3:], err
-}
-
-// parseResponseArguments parses rest of response line,
-// up to specified number of arguments, appending to args slice,
-// returning updated args slice and unprocessed slice of line.
-// If requested num is -1 it will parse as much arguments as there are.
-func parseResponseArguments(
-	line []byte, num int, args [][]byte) ([][]byte, []byte) {
-
-	if len(line) == 0 || num == 0 {
-		return args, nil
-	}
-	i := 1 // skip initial guaranteed space
-	for i < len(line) && num != 0 {
-		for i < len(line) && line[i] == ' ' {
-			i++
-		}
-		s := i
-		for i < len(line) && line[i] != ' ' {
-			i++
-		}
-		if i <= s {
-			break
-		}
-		args = append(args, line[s:i])
-		num--
-	}
-	return args, line[i:]
-}
-
-func (c *NNTPScraper) readResponse() (
-	code uint, rest []byte, err error, fatal bool) {
-
-	incmd, err := c.readLine()
-	if err != nil {
-		fatal = true
-		return
-	}
-
-	code, rest, err = parseResponseCode(incmd)
-	return
 }
 
 func (c *NNTPScraper) readDotLine(dr *bufreader.DotReader) ([]byte, error) {
@@ -510,7 +365,7 @@ func (c *NNTPScraper) Run(network, address string) {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		c.s = scraperState{}
+		c.s = clientState{}
 		c.w = tp.NewWriter(bufio.NewWriter(conn))
 		c.r = bufreader.NewBufReader(conn)
 		c.dr = nil
@@ -786,6 +641,107 @@ func (c *NNTPScraper) processTODOList(
 	return
 }
 
+func (c *NNTPScraper) eatHdrLine(
+	dr *bufreader.DotReader) (
+	id uint64, msgid FullMsgID, err error) {
+
+	line, err := c.readDotLine(dr)
+	if err != nil {
+		return
+	}
+
+	i := 0
+	skipWS := func() {
+		for i < len(line) && (i == ' ' || i == '\t') {
+			i++
+		}
+	}
+	skipNonWS := func() {
+		for i < len(line) && i != ' ' && i != '\t' {
+			i++
+		}
+	}
+
+	skipWS()
+	s := i
+	skipNonWS()
+	if s >= i {
+		// empty line
+		return
+	}
+	snum := line[s:i]
+	// {RFC 2980}
+	if au.EqualFoldString(unsafeBytesToStr(snum), "(none)") {
+		return
+	}
+	if !isNumberSlice(snum) {
+		err = fmt.Errorf("bad id %q", snum)
+		return
+	}
+	id = stoi64(snum)
+
+	skipWS()
+	s = i
+	skipNonWS()
+	msgid = FullMsgID(line[s:i])
+	if !ValidMessageID(msgid) {
+		err = fmt.Errorf("invalid msg-id %q", line[s:i])
+		return
+	}
+	skipWS()
+	if i < len(line) {
+		err = errors.New("extra data in HDR output")
+		return
+	}
+
+	return
+}
+
+func (c *NNTPScraper) eatHdrOutput(
+	r_begin, r_end int64) (err error) {
+
+	dr := c.openDotReader()
+	defer func() {
+		if err != nil {
+			dr.Discard(-1)
+		}
+	}()
+	c.todoList = c.todoList[:0] // reuse
+
+	for {
+		var id uint64
+		var msgid FullMsgID
+
+		id, msgid, err = c.eatHdrLine(dr)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+			return
+		}
+
+		// if we didn't ask for this, don't include
+		if id == 0 || id < uint64(r_begin) ||
+			(r_end >= 0 && id > uint64(r_end)) ||
+			(r_end < 0 && id > uint64(r_begin)+899) {
+
+			continue
+		}
+
+		if len(c.todoList) >= 900 {
+			// safeguard
+			continue
+		}
+
+		// add to list to query
+		c.todoList = append(c.todoList, todoArticle{
+			id: id, msgid: FullMsgIDStr(msgid)})
+	}
+
+	return
+}
+
 func (c *NNTPScraper) eatOverOutput(
 	r_begin, r_end int64) (err error) {
 
@@ -829,9 +785,86 @@ func (c *NNTPScraper) eatOverOutput(
 }
 
 func (c *NNTPScraper) eatGroupSlice(
-	group string, r_begin, r_end, maxid int64) (new_maxid int64, err error, fatal bool) {
+	group string, r_begin, r_end, maxid int64) (
+	new_maxid int64, err error, fatal bool) {
 
-	overD := false
+	printHdrLine := func(hdr string) error {
+		if r_end >= 0 {
+			if r_begin != r_end {
+				return c.w.PrintfLine("%s Message-ID %d-%d", hdr, r_begin, r_end)
+			} else {
+				return c.w.PrintfLine("%s Message-ID %d", hdr, r_begin)
+			}
+		} else {
+			return c.w.PrintfLine("%s Message-ID %d-", hdr, r_begin)
+		}
+	}
+
+	hdrD := false
+
+	if c.s.canHdr() {
+		err = printHdrLine("HDR")
+		if err != nil {
+			fatal = true
+			return
+		}
+
+		var code uint
+		var rest []byte
+		code, rest, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+		if code == 225 || code == 221 {
+			// ayy it's all gucci
+			// common code path will take care of this
+			hdrD = true
+		} else if code == 423 || code == 420 {
+			// can happen
+			return
+		} else {
+			c.log.LogPrintf(WARN,
+				"unexpected HDR response %d %q, falling back to XHDR",
+				code, au.TrimWSBytes(rest))
+			c.s.badHdr = true
+		}
+	}
+	if !hdrD && c.s.canXHdr() {
+		err = printHdrLine("XHDR")
+		if err != nil {
+			fatal = true
+			return
+		}
+
+		var code uint
+		var rest []byte
+		code, rest, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+		if code == 225 || code == 221 {
+			// ayy it's all gucci
+			// common code path will take care of this
+			hdrD = true
+		} else if code == 423 || code == 420 {
+			// can happen
+			return
+		} else {
+			c.log.LogPrintf(WARN,
+				"unexpected XHDR response %d %q",
+				code, au.TrimWSBytes(rest))
+			c.s.badXHdr = true
+		}
+	}
+	if hdrD {
+		// parse HDR/XHDR lines
+		err = c.eatHdrOutput(r_begin, r_end)
+		// loaded list.. now process it
+		new_maxid, err, fatal = c.processTODOList(group, maxid)
+		return
+	}
 
 	printOverLine := func(over string) error {
 		if r_end >= 0 {
@@ -844,6 +877,8 @@ func (c *NNTPScraper) eatGroupSlice(
 			return c.w.PrintfLine("%s %d-", over, r_begin)
 		}
 	}
+
+	overD := false
 
 	if c.s.canOver() {
 		err = printOverLine("OVER")
@@ -900,15 +935,16 @@ func (c *NNTPScraper) eatGroupSlice(
 			c.s.badXOver = true
 		}
 	}
-	if !overD {
-		err = errors.New("can't use OVER or XOVER")
+	if overD {
+		// uhh... gotta parse OVER/XOVER lines now..
+		err = c.eatOverOutput(r_begin, r_end)
+		// loaded list.. now process it
+		new_maxid, err, fatal = c.processTODOList(group, maxid)
 		return
 	}
 
-	// uhh... gotta parse OVER/XOVER lines now..
-	err = c.eatOverOutput(r_begin, r_end)
-	// loaded list.. now process it
-	new_maxid, err, fatal = c.processTODOList(group, maxid)
+	err = errors.New(
+		"can't list group slice (tried HDR/XHDR/OVER/XOVER)")
 	return
 }
 

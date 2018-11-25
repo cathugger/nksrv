@@ -19,7 +19,7 @@ type ScraperDB struct {
 	temp_rows *sql.Rows
 }
 
-var _ nntp.ClientDatabase = (*ScraperDB)(nil)
+var _ nntp.ScraperDatabase = (*ScraperDB)(nil)
 
 func (s *ScraperDB) getNonce() int64 {
 	// not to be used in multithreaded context
