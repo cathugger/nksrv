@@ -6,6 +6,7 @@ import (
 	"io"
 	tp "net/textproto"
 
+	au "nekochan/lib/asciiutils"
 	"nekochan/lib/bufreader"
 	. "nekochan/lib/logx"
 )
@@ -167,4 +168,23 @@ func (c *NNTPClient) readResponse() (
 
 	code, rest, err = parseResponseCode(incmd)
 	return
+}
+
+func (c *NNTPClient) handleInitial() error {
+	code, rest, err, _ := c.readResponse()
+	if err != nil {
+		return fmt.Errorf(
+			"error reading initial response: %v, %q",
+			err, au.TrimWSBytes(rest))
+	}
+	if code == 200 {
+		c.s.initialResponseAllowPost = true
+	} else if code == 201 {
+		c.s.initialResponseAllowPost = false
+	} else {
+		return fmt.Errorf(
+			"bad initial response %d %q",
+			code, au.TrimWSBytes(rest))
+	}
+	return nil
 }

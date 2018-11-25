@@ -984,20 +984,11 @@ func (c *NNTPScraper) eatGroup(
 }
 
 func (c *NNTPScraper) main() error {
-	code, rest, err, _ := c.readResponse()
-	if err != nil {
-		return fmt.Errorf(
-			"error reading initial response: %v, %q",
-			err, au.TrimWSBytes(rest))
-	}
-	if code == 200 {
-		c.s.initialResponseAllowPost = true
-	} else if code == 201 {
-		c.s.initialResponseAllowPost = false
-	} else {
-		return fmt.Errorf(
-			"bad initial response %d %q",
-			code, au.TrimWSBytes(rest))
+	var e error
+
+	e = c.handleInitial()
+	if e != nil {
+		return e
 	}
 
 	e, fatal := c.doCapabilities()
@@ -1010,12 +1001,12 @@ func (c *NNTPScraper) main() error {
 	}
 
 	if !c.s.capReader {
-		err = c.w.PrintfLine("MODE READER")
-		if err != nil {
-			return fmt.Errorf("error writing mode-reader command: %v", err)
+		e = c.w.PrintfLine("MODE READER")
+		if e != nil {
+			return fmt.Errorf("error writing mode-reader command: %v", e)
 		}
-		code, rest, err, fatal := c.readResponse()
-		if err == nil {
+		code, rest, e, fatal := c.readResponse()
+		if e == nil {
 			if code == 200 {
 				c.s.initialResponseAllowPost = true
 			} else if code > 200 && code < 300 {
@@ -1031,7 +1022,7 @@ func (c *NNTPScraper) main() error {
 			}
 		} else {
 			if fatal {
-				return fmt.Errorf("error reading mode-reader response: %v", err)
+				return fmt.Errorf("error reading mode-reader response: %v", e)
 			} else {
 				c.log.LogPrintf(WARN, "error reading mode-reader response: %v", e)
 			}
@@ -1091,8 +1082,8 @@ func (c *NNTPScraper) main() error {
 
 		var g_id int64
 		var notexists bool
-		g_id, err, notexists, fatal = c.doGroup(group)
-		if err != nil && !notexists {
+		g_id, e, notexists, fatal = c.doGroup(group)
+		if e != nil && !notexists {
 			if fatal {
 				return fmt.Errorf("doGroup failed: %v", e)
 			} else {
@@ -1105,12 +1096,12 @@ func (c *NNTPScraper) main() error {
 			new_id = g_id
 		}
 
-		err, fatal = c.eatGroup(group, old_id, uint64(new_id))
-		if err != nil {
+		e, fatal = c.eatGroup(group, old_id, uint64(new_id))
+		if e != nil {
 			if fatal {
-				return fmt.Errorf("eatGroup failed: %v", err)
+				return fmt.Errorf("eatGroup failed: %v", e)
 			} else {
-				c.log.LogPrintf(WARN, "eatGroup failed: %v", err)
+				c.log.LogPrintf(WARN, "eatGroup failed: %v", e)
 			}
 		}
 	}
