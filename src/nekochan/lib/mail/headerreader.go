@@ -90,6 +90,7 @@ func SkipHeaders(r io.Reader) (mh MessageHead, err error) {
 	br := bufPool.Get().(*bufreader.BufReader)
 	br.Drop()
 	br.ResetErr()
+	br.SetReader(r)
 
 	hadNL := true
 	for {

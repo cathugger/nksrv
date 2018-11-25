@@ -198,6 +198,8 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 	}
 
+	//sp.log.LogPrintf(DEBUG, "nntpDigestTransferHead done")
+
 	return
 }
 

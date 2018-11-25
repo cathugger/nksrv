@@ -275,7 +275,7 @@ func (sp *PSQLIB) commonNewPost(
 FROM ib0.boards
 WHERE bname=$1`
 
-		sp.log.LogPrintf(DEBUG, "executing board query:\n%s\n", q)
+		sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jbPL, &jbXL)
 		if err != nil {

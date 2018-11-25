@@ -57,7 +57,7 @@ func (sp *PSQLIB) acceptArticleHead(
 FROM ib0.boards
 WHERE bname=$1`
 
-		sp.log.LogPrintf(DEBUG, "executing board query:\n%s\n", q)
+		sp.log.LogPrintf(DEBUG, "executing acceptArticleHead board query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
 		if err != nil {
@@ -160,6 +160,8 @@ ON xb.bid=xtp.bid`
 
 	// apply instance-specific limit tweaks
 	sp.applyInstanceSubmissionLimits(&ins.postLimits, ins.isReply, board)
+
+	//sp.log.LogPrintf(DEBUG, "acceptArticleHead done")
 
 	// done here
 	return

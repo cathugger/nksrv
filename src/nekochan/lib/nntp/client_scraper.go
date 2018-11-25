@@ -686,6 +686,8 @@ func (c *NNTPScraper) eatArticle(msgid FullMsgIDStr) (err error, fatal bool) {
 		}
 	}()
 
+	//c.log.LogPrintf(DEBUG, "eatArticle: inside")
+
 	err, fatal = c.db.ReadArticle(dr, CutMsgIDStr(msgid))
 	if err != nil {
 		if fatal {
@@ -784,6 +786,48 @@ func (c *NNTPScraper) processTODOList(
 	return
 }
 
+func (c *NNTPScraper) eatOverOutput(
+	r_begin, r_end int64) (err error) {
+
+	dr := c.openDotReader()
+	defer func() {
+		if err != nil {
+			dr.Discard(-1)
+		}
+	}()
+	c.todoList = c.todoList[:0] // reuse
+	for {
+		var id uint64
+		var msgid FullMsgID
+		id, msgid, err = c.getOverLineInfo(dr)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+			return
+		}
+		// if we didn't ask for this, don't include
+		if id == 0 || id < uint64(r_begin) ||
+			(r_end >= 0 && id > uint64(r_end)) ||
+			(r_end < 0 && id > uint64(r_begin)+899) {
+
+			continue
+		}
+
+		if len(c.todoList) >= 900 {
+			// safeguard
+			continue
+		}
+
+		// add to list to query
+		c.todoList = append(c.todoList, todoArticle{
+			id: id, msgid: FullMsgIDStr(msgid)})
+	}
+
+	return
+}
+
 func (c *NNTPScraper) eatGroupSlice(
 	group string, r_begin, r_end, maxid int64) (new_maxid int64, err error, fatal bool) {
 
@@ -862,41 +906,7 @@ func (c *NNTPScraper) eatGroupSlice(
 	}
 
 	// uhh... gotta parse OVER/XOVER lines now..
-	dr := c.openDotReader()
-	defer func() {
-		if err != nil {
-			dr.Discard(-1)
-		}
-	}()
-	c.todoList = c.todoList[:0] // reuse
-	for {
-		var id uint64
-		var msgid FullMsgID
-		id, msgid, err = c.getOverLineInfo(dr)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-				break
-			}
-			return
-		}
-		// if we didn't ask for this, don't include
-		if id == 0 || id < uint64(r_begin) ||
-			(r_end >= 0 && id > uint64(r_end)) ||
-			(r_end < 0 && id > uint64(r_begin)+899) {
-
-			continue
-		}
-
-		if len(c.todoList) >= 900 {
-			// safeguard
-			continue
-		}
-
-		// add to list to query
-		c.todoList = append(c.todoList, todoArticle{
-			id: id, msgid: FullMsgIDStr(msgid)})
-	}
+	err = c.eatOverOutput(r_begin, r_end)
 	// loaded list.. now process it
 	new_maxid, err, fatal = c.processTODOList(group, maxid)
 	return
