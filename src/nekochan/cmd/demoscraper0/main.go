@@ -24,6 +24,7 @@ func main() {
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	nntpconn := flag.String("nntpconn", "", "nntp server connect string")
+	scrapekey := flag.String("scrapekey", "test", "scraper identifier used to store state")
 
 	flag.Parse()
 
@@ -122,7 +123,7 @@ func main() {
 		}
 	}
 
-	dbscraper, err := dbib.NewScraperDB("test", true)
+	dbscraper, err := dbib.NewScraperDB(*scrapekey, true)
 	if err != nil {
 		mlg.LogPrintln(CRITICAL, "dbib.NewScraperDB failed:", err)
 		errorcode = 1
