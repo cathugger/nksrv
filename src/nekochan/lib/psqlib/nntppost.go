@@ -57,7 +57,7 @@ func (sp *PSQLIB) acceptArticleHead(
 FROM ib0.boards
 WHERE bname=$1`
 
-		sp.log.LogPrintf(DEBUG, "executing acceptArticleHead board query:\n%s\n", q)
+		//sp.log.LogPrintf(DEBUG, "executing acceptArticleHead board query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
 		if err != nil {
@@ -104,7 +104,7 @@ LEFT JOIN (
 ) AS xtp
 ON xb.bid=xtp.bid`
 
-		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
+		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
 		var xtid sql.NullInt64
 		var xsubject sql.NullString

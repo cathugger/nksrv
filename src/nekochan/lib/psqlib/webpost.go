@@ -275,7 +275,7 @@ func (sp *PSQLIB) commonNewPost(
 FROM ib0.boards
 WHERE bname=$1`
 
-		sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
+		//sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jbPL, &jbXL)
 		if err != nil {
@@ -319,7 +319,7 @@ LEFT JOIN (
 ) AS xtp
 ON xb.bid=xtp.bid`
 
-		sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
+		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
 		err = sp.db.DB.QueryRow(q, board, thread).Scan(
 			&bid, &jbPL, &jbXL, &tid, &jtRL, &jbTO, &jtTO, &ref)
