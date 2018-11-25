@@ -40,10 +40,7 @@ func NewPartReader(r io.Reader, boundary string) *PartReader {
 	/* idk what should be actual limit but this should work */
 	if br == nil || br.Size() < 256 {
 		extbr = false
-		br = bufPool.Get().(*bufreader.BufReader)
-		br.Drop()
-		br.ResetErr()
-		br.SetReader(r)
+		br = obtainBufReader(r)
 	}
 
 	return &PartReader{
@@ -150,10 +147,8 @@ func (pr *PartReader) nextPart() error {
 	}
 
 	if cr == nil {
-		cr = bufPool.Get().(*bufreader.BufReader)
+		cr = obtainBufReader(wrapUnderlying{pr})
 		pr.BufReader = cr
-		cr.Drop()
-		cr.SetReader(wrapUnderlying{pr})
 	}
 	cr.ResetErr()
 	return nil
@@ -174,17 +169,13 @@ func (pr *PartReader) NextPart() (e error) {
 func (pr *PartReader) Close() error {
 	cr := pr.BufReader
 	if cr != nil {
-		cr.SetReader(nil)
-		cr.ResetErr()
-		bufPool.Put(cr)
+		dropBufReader(cr)
 		pr.BufReader = nil
 	}
 	br := pr.br
 	if br != nil {
 		if !pr.extbr {
-			br.SetReader(nil)
-			br.ResetErr()
-			bufPool.Put(br)
+			dropBufReader(br)
 		}
 		pr.br = nil
 	}

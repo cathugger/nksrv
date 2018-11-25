@@ -8,20 +8,6 @@ import (
 	"nekochan/lib/bufreader"
 )
 
-func obtainBufReader(r io.Reader) (br *bufreader.BufReader) {
-	br = bufPool.Get().(*bufreader.BufReader)
-	br.Drop()
-	br.ResetErr()
-	br.SetReader(r)
-	return
-}
-
-func dropBufReader(br *bufreader.BufReader) {
-	br.SetReader(nil)
-	br.ResetErr()
-	bufPool.Put(br)
-}
-
 type MessageHead struct {
 	H Headers // message headers
 	//HSort []string      // header keys sorted in order they appeared
