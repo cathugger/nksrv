@@ -49,7 +49,7 @@ var hdrNNTPPostRestrict = [...]headerRestriction{
 var hdrNNTPTransferRestrict = [...]headerRestriction{
 	// NetNews stuff specified in {RFC 5536}
 	{"Message-ID", true}, // special handling
-	{"From", false},
+	{"From", true},       // idfk why there are articles like this
 	{"Date", false},
 	{"Newsgroups", false},
 	{"Path", false},
@@ -306,7 +306,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}
 
-	if len(H["From"]) != 0 {
+	if len(H["From"]) != 0 && au.TrimWSString(H["From"][0].V) != "" {
 		a, e := nmail.ParseAddress(H["From"][0].V)
 		if e == nil {
 			// XXX should we filter out "Anonymous" names? would save some bytes
