@@ -3,7 +3,6 @@ package cntp0
 import (
 	"crypto/sha256"
 	"crypto/sha512"
-	"fmt"
 	"io"
 
 	"golang.org/x/crypto/blake2b"
@@ -38,7 +37,7 @@ type DigestBLAKE2b struct {
 }
 
 func (d DigestBLAKE2b) Hasher() (h Hasher) {
-	switch d.s*8 {
+	switch d.s * 8 {
 	case 512:
 		h.h, _ = blake2b.New512(nil)
 	case 384:
@@ -101,7 +100,7 @@ type DigestSHA2_512 struct {
 }
 
 func (d DigestSHA2_512) Hasher() (h Hasher) {
-	switch d.s*8 {
+	switch d.s * 8 {
 	case 512:
 		h.h = sha512.New()
 	case 256:

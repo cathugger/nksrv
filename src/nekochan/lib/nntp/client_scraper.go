@@ -287,13 +287,19 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 	return
 }
 
-func (c *NNTPScraper) Run(network, address string) {
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
+}
+
+func (c *NNTPScraper) Run(d Dialer, network, address string) {
 	// TODO
 	for {
 		c.log.LogPrintf(DEBUG, "dialing...")
-		conn, e := net.Dial(network, address)
+		conn, e := d.Dial(network, address)
 		if e != nil {
-			time.Sleep(1 * time.Second)
+			c.log.LogPrintf(WARN, "error dialing: %v", e)
+			c.log.LogPrintf(WARN, "will wait 10 secs")
+			time.Sleep(10 * time.Second)
 			continue
 		}
 		c.s = clientState{}
@@ -301,13 +307,17 @@ func (c *NNTPScraper) Run(network, address string) {
 		c.r = bufreader.NewBufReader(conn)
 		c.dr = nil
 		c.log.LogPrintf(DEBUG, "scraping...")
-		e = c.main()
-		conn.Close()
-		if e != nil {
-			c.log.LogPrintf(WARN, "scraper error: %v", e)
-		} else {
-			c.log.LogPrintf(WARN, "scraper done")
+		for {
+			e = c.main()
+			if e != nil {
+				break
+			}
+			c.log.LogPrintf(WARN, "scraper done, will wait 90 secs")
+			time.Sleep(90 * time.Second)
 		}
+		conn.Close()
+		c.log.LogPrintf(WARN, "scraper error: %v", e)
+		c.log.LogPrintf(WARN, "will reconnect after 10 secs")
 		time.Sleep(10 * time.Second)
 	}
 }

@@ -3,9 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"runtime"
+
+	"golang.org/x/net/proxy"
 
 	di "nekochan/lib/demoib"
 	fl "nekochan/lib/filelogger"
@@ -24,6 +27,7 @@ func main() {
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	nntpconn := flag.String("nntpconn", "", "nntp server connect string")
+	socks := flag.String("socks", "", "socks proxy address")
 	scrapekey := flag.String("scrapekey", "test", "scraper identifier used to store state")
 
 	flag.Parse()
@@ -146,6 +150,18 @@ func main() {
 		runtime.Goexit()
 	}
 
+	var d nntp.Dialer
+	if *socks == "" {
+		d = &net.Dialer{}
+	} else {
+		d, e = proxy.SOCKS5("tcp", *socks, nil, nil)
+		if e != nil {
+			mlg.LogPrintln(CRITICAL, "SOCKS5 fail:", e)
+			errorcode = 1
+			runtime.Goexit()
+		}
+	}
+
 	/*
 		defer func() {
 			r := recover()
@@ -159,6 +175,6 @@ func main() {
 
 	mlg.LogPrintf(
 		NOTICE, "starting nntp scraper with proto(%s) host(%s)", proto, host)
-	scraper.Run(proto, host)
+	scraper.Run(d, proto, host)
 	mlg.LogPrintf(NOTICE, "nntp scraper terminated")
 }

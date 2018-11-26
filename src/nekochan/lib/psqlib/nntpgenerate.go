@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	. "nekochan/lib/logx"
+	//. "nekochan/lib/logx"
 	"nekochan/lib/mail"
 	"nekochan/lib/mailib"
 
