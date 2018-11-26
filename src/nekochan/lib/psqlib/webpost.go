@@ -146,10 +146,11 @@ func (sp *PSQLIB) applyInstanceThreadOptions(
 func generateFileConfig(
 	f *os.File, ct string, fi mailib.FileInfo) (_ mailib.FileInfo, err error) {
 
-	s, err := ht.MakeFileHash(f)
+	hash, hashtype, err := ht.MakeFileHash(f)
 	if err != nil {
 		return
 	}
+	s := hash + "-" + hashtype
 
 	// prefer info from file name, try figuring out content-type from it
 	// if that fails, try looking into content-type, try figure out filename

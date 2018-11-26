@@ -144,7 +144,7 @@ func processMessageText(
 
 func takeInFile(
 	src *fstore.FStore, r io.Reader, binary bool) (
-	fn, hash string, fsize int64, err error) {
+	fn, hash, hashtype string, fsize int64, err error) {
 
 	// new
 	f, err := src.TempFile("mail-", "")
@@ -175,7 +175,7 @@ func takeInFile(
 		return
 	}
 	// hash it
-	hash, err = ht.MakeFileHash(f)
+	hash, hashtype, err = ht.MakeFileHash(f)
 	if err != nil {
 		f.Close()
 		return
@@ -197,7 +197,7 @@ func processMessageAttachment(
 	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
 	fi FileInfo, fn string, err error) {
 
-	fn, hash, fsize, err := takeInFile(src, r, binary)
+	fn, hash, hashtype, fsize, err := takeInFile(src, r, binary)
 	if err != nil {
 		return
 	}
@@ -276,9 +276,9 @@ func processMessageAttachment(
 	// even if we don't, that's okay
 	var iname string
 	if ext != "" {
-		iname = hash + "." + ext
+		iname = hash + "-" + hashtype + "." + ext
 	} else {
-		iname = hash
+		iname = hash + "-" + hashtype
 	}
 	// don't make up original name, it's ok not to have anything in it
 	//if oname == "" {
