@@ -111,25 +111,26 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 			err = fmt.Errorf("failed reading list line: %v", e)
 			return
 		}
-		gname, hiwm, lowm, _, e := parseListActiveLine(line)
+		gname, xhiwm, lowm, _, e := parseListActiveLine(line)
 		if e != nil {
 			c.s.badActiveList = true
 			err = fmt.Errorf("failed parsing list line: %v", e)
 			return
 		}
-		if hiwm < lowm {
+		hiwm := int64(xhiwm)
+		if xhiwm < lowm {
 			// negative count = no articles
 			if c.s.workaroundStupidActiveList {
 				// unless it's broke implementation
-				hiwm, lowm = lowm, hiwm
+				hiwm = -1
 			} else {
 				hiwm = 0
 			}
-		}
-		// safeguard
-		if int64(hiwm) < 0 {
+		} else if hiwm < 0 {
+			// safeguard
 			hiwm = math.MaxInt64
 		}
+
 		old_id, e := c.db.GetGroupID(gname)
 		if e != nil {
 			err = fmt.Errorf("GetGroupID() failed: %v", e)
@@ -142,7 +143,11 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 			continue
 		}
 
-		e = c.db.StoreTempGroupID(gname, hiwm, uint64(old_id))
+		if hiwm >= 0 {
+			e = c.db.StoreTempGroupID(gname, uint64(hiwm), uint64(old_id))
+		} else {
+			e = c.db.StoreTempGroup(gname, uint64(old_id))
+		}
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
 			return
