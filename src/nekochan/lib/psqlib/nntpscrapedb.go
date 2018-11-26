@@ -227,7 +227,8 @@ func (s *ScraperDB) LoadTempGroup() (
 FROM ib0.scraper_group_track xs
 JOIN ib0.boards xb
 ON xs.bid = xb.bid
-WHERE xs.sid=$1 AND xs.last_use=$2`
+WHERE xs.sid=$1 AND xs.last_use=$2
+ORDER BY xb.bname`
 		s.temp_rows, err = s.sp.db.DB.Query(q, s.id, s.nonce)
 		if err != nil {
 			s.temp_rows = nil

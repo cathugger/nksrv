@@ -419,14 +419,18 @@ func (sp *PSQLIB) ListNewNews(
 
 	if wmany || wmgrp {
 		if wmany {
-			q := `SELECT msgid FROM ib0.posts WHERE padded > $1`
+			q := `SELECT msgid
+	FROM ib0.posts
+	WHERE padded >= $1
+	ORDER BY padded,bid,pid`
 			rows, err = sp.db.DB.Query(q, qt)
 		} else {
 			q := `SELECT xp.msgid
 	FROM ib0.posts AS xp
 	JOIN ib0.boards AS xb
 	USING (bid)
-	WHERE xb.bname = $1 AND xp.padded > $2`
+	WHERE xb.bname = $1 AND xp.padded >= $2
+	ORDER BY xp.padded,xp.bid,xp.pid`
 			rows, err = sp.db.DB.Query(q, swildmat, qt)
 		}
 		if err != nil {
@@ -457,7 +461,8 @@ func (sp *PSQLIB) ListNewNews(
 	FROM ib0.posts AS xp
 	JOIN ib0.boards AS xb
 	USING (bid)
-	WHERE xp.added > $1`
+	WHERE xp.padded >= $1
+	ORDER BY xp.padded,xp.bid,xp.pid`
 		rows, err = sp.db.DB.Query(q, qt)
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
@@ -501,8 +506,9 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	FROM ib0.boards AS xb
 	LEFT JOIN ib0.posts AS xp
 	USING (bid)
-	WHERE xb.badded > $1
-	GROUP BY xb.bid`
+	WHERE xb.badded >= $1
+	GROUP BY xb.bid
+	ORDER BY xb.badded`
 	rows, err := sp.db.DB.Query(q, qt)
 	if err != nil {
 		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
@@ -626,7 +632,7 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	}
 
 	if !wmgrp {
-		q := `SELECT bname,bdesc FROM ib0.boards`
+		q := `SELECT bname,bdesc FROM ib0.boards ORDER BY bname`
 		rows, err = sp.db.DB.Query(q)
 	} else {
 		q := `SELECT bname,bdesc FROM ib0.boards WHERE bname = $1`
