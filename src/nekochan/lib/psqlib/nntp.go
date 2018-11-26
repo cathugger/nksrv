@@ -255,6 +255,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 		USING (bid)
 		WHERE xb.bname = $1
 		GROUP BY xb.bid
+		LIMIT 1
 	) x2
 	ON x1.bid = x2.bid
 	LEFT JOIN (
@@ -262,12 +263,11 @@ func (sp *PSQLIB) SelectAndListGroup(
 		FROM ib0.boards AS xb
 		LEFT JOIN ib0.posts AS xp
 		USING (bid)
-		WHERE xb.bname = $1
-			AND xp.pid >= $2 AND ($3 < 0 OR xp.pid <= $3)
-		ORDER BY xp.pid ASC
+		WHERE xb.bname = $1 AND xp.pid >= $2 AND ($3 < 0 OR xp.pid <= $3)
 	) x3
 	ON x1.bid = x3.bid
-	WHERE x1.bname = $1`
+	WHERE x1.bname = $1
+	ORDER BY x3.pid`
 	rows, err := sp.db.DB.Query(q, sgroup, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("board-posts query", err))
