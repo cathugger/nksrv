@@ -36,7 +36,7 @@ var dbIb0InitStatements = []string{
 
 	`CREATE TABLE ib0.threads (
 	bid   INTEGER                     NOT NULL, /* internal board ID this thread belongs to */
-	tname TEXT                        NOT NULL, /* external thread identifier */
+	tname TEXT        COLLATE C       NOT NULL, /* external thread identifier */
 	tid   BIGINT                      NOT NULL, /* internal thread ID */
 	bump  TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* last bump time. decides position in pages/catalog */
 
@@ -51,14 +51,14 @@ var dbIb0InitStatements = []string{
 
 	`CREATE TABLE ib0.posts (
 	bid     INTEGER                     NOT NULL, /* internal board ID this post belongs to */
-	pname   TEXT                        NOT NULL, /* extermal post identifier */
+	pname   TEXT      COLLATE C         NOT NULL, /* extermal post identifier */
 	pid     BIGINT                      NOT NULL, /* internal post ID of this post. if pid==tid then this is OP */
 	tid     BIGINT                      NOT NULL, /* internal thread ID this post belongs to */
 	padded  TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* date field used for sorting. will actually contain delivery date */
 	pdate   TIMESTAMP WITHOUT TIME ZONE NOT NULL, /* real date field */
 	sage    BOOLEAN                     NOT NULL, /* if true this isn't bump */
 
-	msgid   TEXT                        NOT NULL, /* Message-ID */
+	msgid   TEXT      COLLATE C         NOT NULL, /* Message-ID */
 	author  TEXT                        NOT NULL, /* author name */
 	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
 	title   TEXT                        NOT NULL, /* message title/subject field */

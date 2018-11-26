@@ -560,7 +560,8 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	FROM ib0.boards AS xb
 	LEFT JOIN ib0.posts AS xp
 	USING (bid)
-	GROUP BY xb.bid`
+	GROUP BY xb.bid
+	ORDER BY xb.bname`
 		rows, err = sp.db.DB.Query(q)
 	} else {
 		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
