@@ -182,7 +182,7 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 	sgroup := unsafeBytesToStr(group)
 
 	var bid uint32
-	var lo, hi uint64
+	var lo, hi sql.NullInt64
 	q := `SELECT xb.bid,MIN(xp.pid),MAX(xp.pid)
 	FROM ib0.boards AS xb
 	LEFT JOIN ib0.posts AS xp
@@ -208,13 +208,15 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 		// sgroup is unsafe
 		gs.bname = string(group)
 	}
-	gs.pid = lo
+	gs.pid = uint64(lo.Int64)
 
-	if lo != 0 {
-		if hi < lo {
+	if lo.Int64 > 0 {
+		if hi.Int64 < lo.Int64 {
 			hi = lo // paranoia
 		}
-		w.ResGroupSuccessfullySelected(hi-lo+1, lo, hi, sgroup)
+		w.ResGroupSuccessfullySelected(
+			uint64(hi.Int64)-uint64(lo.Int64)+1,
+			uint64(lo.Int64), uint64(hi.Int64), sgroup)
 	} else {
 		w.ResGroupSuccessfullySelected(0, 0, 0, sgroup)
 	}
@@ -275,7 +277,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 	var dw io.WriteCloser
 	for rows.Next() {
 		var bid boardID
-		var lo, hi, pid postID
+		var lo, hi sql.NullInt64
+		var pid postID
 		err = rows.Scan(&bid, &lo, &hi, &pid)
 		if err != nil {
 			rows.Close()
@@ -294,13 +297,15 @@ func (sp *PSQLIB) SelectAndListGroup(
 				// sgroup is unsafe
 				gs.bname = string(group)
 			}
-			gs.pid = lo
+			gs.pid = postID(lo.Int64)
 
-			if lo != 0 {
-				if hi < lo {
+			if lo.Int64 > 0 {
+				if uint64(hi.Int64) < uint64(lo.Int64) {
 					hi = lo // paranoia
 				}
-				w.ResArticleNumbersFollow(hi-lo+1, lo, hi, sgroup)
+				w.ResArticleNumbersFollow(
+					uint64(hi.Int64)-uint64(lo.Int64)+1,
+					uint64(lo.Int64), uint64(hi.Int64), sgroup)
 			} else {
 				w.ResArticleNumbersFollow(0, 0, 0, sgroup)
 			}
@@ -507,7 +512,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	dw := aw.OpenDotWriter()
 	for rows.Next() {
 		var bname []byte
-		var lo, hi uint64
+		var lo, hi sql.NullInt64
 
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
@@ -517,11 +522,12 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 			return
 		}
 
-		if hi < lo {
+		if uint64(hi.Int64) < uint64(lo.Int64) {
 			hi = lo // paranoia
 		}
 
-		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
+		fmt.Fprintf(dw, "%s %d %d y\n",
+			bname, uint64(hi.Int64), uint64(lo.Int64))
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -573,7 +579,7 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	dw := aw.OpenDotWriter()
 	for rows.Next() {
 		var bname []byte
-		var lo, hi uint64
+		var lo, hi sql.NullInt64
 
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
@@ -587,11 +593,12 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 			continue
 		}
 
-		if hi < lo {
+		if uint64(hi.Int64) < uint64(lo.Int64) {
 			hi = lo // paranoia
 		}
 
-		fmt.Fprintf(dw, "%s %d %d y\n", bname, hi, lo)
+		fmt.Fprintf(dw, "%s %d %d y\n",
+			bname, uint64(hi.Int64), uint64(lo.Int64))
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
