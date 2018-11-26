@@ -34,11 +34,11 @@ func (DigestBLAKE2s) WriteIdentifier(w io.Writer) {
 
 // BLAKE2b
 type DigestBLAKE2b struct {
-	s uint32
+	s uint32 // in bytes
 }
 
 func (d DigestBLAKE2b) Hasher() (h Hasher) {
-	switch d.s {
+	switch d.s*8 {
 	case 512:
 		h.h, _ = blake2b.New512(nil)
 	case 384:
@@ -53,10 +53,6 @@ var nameBLAKE2b = []byte("BLAKE2b")
 
 func (d DigestBLAKE2b) WriteIdentifier(w io.Writer) {
 	w.Write(nameBLAKE2b)
-	if d.s != 512 {
-		w.Write(digestSeparator)
-		fmt.Fprintf(w, "%d", d.s)
-	}
 }
 
 // SHA2
@@ -101,11 +97,11 @@ func (DigestSHA2_384) WriteIdentifier(w io.Writer) {
 
 // 512
 type DigestSHA2_512 struct {
-	s uint32
+	s uint32 // in bytes
 }
 
 func (d DigestSHA2_512) Hasher() (h Hasher) {
-	switch d.s {
+	switch d.s*8 {
 	case 512:
 		h.h = sha512.New()
 	case 256:
@@ -120,10 +116,6 @@ var nameSHA2_512 = []byte("SHA2-512")
 
 func (d DigestSHA2_512) WriteIdentifier(w io.Writer) {
 	w.Write(nameSHA2_512)
-	if d.s != 512 {
-		w.Write(digestSeparator)
-		fmt.Fprintf(w, "%d", d.s)
-	}
 }
 
 // SHA3
@@ -181,14 +173,14 @@ func (DigestSHA3_512) WriteIdentifier(w io.Writer) {
 
 // SHAKE
 type DigestSHAKE_128 struct {
-	s uint32
+	s uint32 // in bytes
 }
 
 func (d DigestSHAKE_128) Hasher() Hasher {
 	return Hasher{
 		h: shakewrap{
 			keccakstate: sha3.NewShake128().(keccakstate),
-			size:        d.s / 8,
+			size:        d.s,
 		},
 	}
 }
@@ -197,21 +189,17 @@ var nameSHAKE_128 = []byte("SHAKE-128")
 
 func (d DigestSHAKE_128) WriteIdentifier(w io.Writer) {
 	w.Write(nameSHAKE_128)
-	if d.s != 256 {
-		w.Write(digestSeparator)
-		fmt.Fprintf(w, "%d", d.s)
-	}
 }
 
 type DigestSHAKE_256 struct {
-	s uint32
+	s uint32 // in bytes
 }
 
 func (d DigestSHAKE_256) Hasher() Hasher {
 	return Hasher{
 		h: shakewrap{
 			keccakstate: sha3.NewShake256().(keccakstate),
-			size:        d.s / 8,
+			size:        d.s,
 		},
 	}
 }
@@ -220,8 +208,4 @@ var nameSHAKE_256 = []byte("SHAKE-256")
 
 func (d DigestSHAKE_256) WriteIdentifier(w io.Writer) {
 	w.Write(nameSHAKE_256)
-	if d.s != 512 {
-		w.Write(digestSeparator)
-		fmt.Fprintf(w, "%d", d.s)
-	}
 }

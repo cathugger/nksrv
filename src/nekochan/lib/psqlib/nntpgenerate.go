@@ -42,9 +42,9 @@ ORDER BY jf.fid`
 			return sp.sqlError("posts x files query rows scan", err)
 		}
 
-		sp.log.LogPrintf(DEBUG,
-			"nntpGenerate: PxF: title(%q) msg(%q) H(%q) L(%q) id(%v)",
-			pi.MI.Title, pi.MI.Message, jH, jL, fid)
+		//sp.log.LogPrintf(DEBUG,
+		//	"nntpGenerate: PxF: title(%q) msg(%q) H(%q) L(%q) id(%v)",
+		//	pi.MI.Title, pi.MI.Message, jH, jL, fid)
 
 		if !havesomething {
 			err = jH.Unmarshal(&pi.H)
@@ -59,9 +59,9 @@ ORDER BY jf.fid`
 				return sp.sqlError("jL unmarshal", err)
 			}
 
-			sp.log.LogPrintf(DEBUG,
-				"nntpGenerate: unmarshaled H(%#v) L(%#v)",
-				pi.H, &pi.L)
+			//sp.log.LogPrintf(DEBUG,
+			//	"nntpGenerate: unmarshaled H(%#v) L(%#v)",
+			//	pi.H, &pi.L)
 		}
 
 		if fid.Valid && fid.String != "" {

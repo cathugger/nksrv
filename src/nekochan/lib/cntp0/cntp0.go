@@ -22,78 +22,87 @@ var (
 	errUnknownAlgo = errors.New("unsupported digest option")
 )
 
-func parseIntParam(param string, def uint64) (n uint64, e error) {
-	if param == "" {
-		n = def
-	} else {
-		n, e = strconv.ParseUint(param, 10, 32)
-		if e != nil {
-			return
-		}
-		if n < MinBits || n > MaxBits || n%8 != 0 {
-			e = errUnknownAlgo
-			return
-		}
-	}
-	return
+func parseBlake2s(size
+
+var hashes := map[string]struct{
+	defaultSize int
+	parseFunc func(Digest, error)
+}{
+	"blake2s":{
+		defaultSize: 256/8,
+		parseFunc: func(sz int) (d Digest, e error) {
+			if size == 256/8 {
+				d = DigestBLAKE2s{}
+			} else {
+				e = errUnknownAlgo
+			}
+		},
+	},
+	"blake2b":{
+		defaultSize: 512/8,
+		
+	},
 }
 
 // $CNTP0$SHA2-256$
 // we're fed only "SHA2-256" in this case
-// $CNTP0$BLAKE2b$256$
-// we're fed "BLAKE2b" "256"
-func PickDigest(algo, extra string) (d Digest, e error) {
+// we also are fed size in bytes
+func PickDigest(algo string, size int) (d Digest, e error) {
 	var n uint64
 	switch algo {
 	// BLAKE2
-	case "blake2s":
-		if extra == "" || extra == "256" {
-			d = DigestBLAKE2s{}
-		} else {
-			e = errUnknownAlgo
-		}
 	case "blake2b":
-		if extra == "" || extra == "512" {
-			d = DigestBLAKE2b{s: 512}
-		} else if extra == "384" {
-			d = DigestBLAKE2b{s: 384}
-		} else if extra == "256" {
-			d = DigestBLAKE2b{s: 256}
+		if size == 0 {
+			size = 512/8
+		}
+		if size == 512/8 || size == 384/8 || size == 256/8 {
+			d = DigestBLAKE2b{s: size}
 		} else {
 			e = errUnknownAlgo
 		}
 	// SHA2
 	case "sha2-224":
-		if extra == "" || extra == "224" {
+		if size == 0 {
+			size = 224/8
+		}
+		if size == 224/8 {
 			d = DigestSHA2_224{}
 		} else {
 			e = errUnknownAlgo
 		}
 	case "sha2-256":
-		if extra == "" || extra == "256" {
+		if size == 0 {
+			size = 256/8
+		}
+		if size == 256/8 {
 			d = DigestSHA2_256{}
 		} else {
 			e = errUnknownAlgo
 		}
 	case "sha2-384":
-		if extra == "" || extra == "384" {
+		if size == 0 {
+			size = 384/8
+		}
+		if size == 384/8 {
 			d = DigestSHA2_384{}
 		} else {
 			e = errUnknownAlgo
 		}
 	case "sha2-512":
-		if extra == "" || extra == "512" {
-			d = DigestSHA2_512{s: 512}
-		} else if extra == "256" {
-			d = DigestSHA2_512{s: 256}
-		} else if extra == "224" {
-			d = DigestSHA2_512{s: 224}
+		if size == 0 {
+			size = 512/8
+		}
+		if size == 512/8 || size==256/8 || size==224/8
+			d = DigestSHA2_512{s: size}
 		} else {
 			e = errUnknownAlgo
 		}
 	// SHA3/Keccak
 	case "sha3-224":
-		if extra == "" || extra == "224" {
+		if size == 0 {
+			size = 224/8
+		}
+		if size == 224/8 {
 			d = DigestSHA3_224{}
 		} else {
 			e = errUnknownAlgo
