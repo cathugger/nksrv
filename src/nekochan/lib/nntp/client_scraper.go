@@ -302,23 +302,26 @@ func (c *NNTPScraper) Run(d Dialer, network, address string) {
 			time.Sleep(10 * time.Second)
 			continue
 		}
+
 		c.s = clientState{}
 		c.w = tp.NewWriter(bufio.NewWriter(conn))
 		c.r = bufreader.NewBufReader(conn)
 		c.dr = nil
+
 		c.log.LogPrintf(DEBUG, "scraping...")
-		for {
-			e = c.main()
-			if e != nil {
-				break
-			}
-			c.log.LogPrintf(WARN, "scraper done, will wait 90 secs")
-			time.Sleep(90 * time.Second)
-		}
+
+		e = c.main()
+
 		conn.Close()
-		c.log.LogPrintf(WARN, "scraper error: %v", e)
-		c.log.LogPrintf(WARN, "will reconnect after 10 secs")
-		time.Sleep(10 * time.Second)
+
+		if e != nil {
+			c.log.LogPrintf(WARN, "scraper error: %v", e)
+			c.log.LogPrintf(WARN, "will reconnect after 10 secs")
+			time.Sleep(10 * time.Second)
+		} else {
+			c.log.LogPrintf(WARN, "scraper closed, will wait 120 secs")
+			time.Sleep(120 * time.Second)
+		}
 	}
 }
 
@@ -929,51 +932,9 @@ func (c *NNTPScraper) eatGroup(
 	return
 }
 
-func (c *NNTPScraper) main() error {
+func (c *NNTPScraper) groupScanLoop() error {
 	var e error
-
-	e = c.handleInitial()
-	if e != nil {
-		return e
-	}
-
-	e, fatal := c.doCapabilities()
-	if e != nil {
-		if fatal {
-			return fmt.Errorf("doCapabilities() failed: %v", e)
-		} else {
-			c.log.LogPrintf(WARN, "doCapabilities() failed: %v", e)
-		}
-	}
-
-	if !c.s.capReader {
-		e = c.w.PrintfLine("MODE READER")
-		if e != nil {
-			return fmt.Errorf("error writing mode-reader command: %v", e)
-		}
-		code, rest, e, fatal := c.readResponse()
-		if e == nil {
-			if code == 200 {
-				c.s.initialResponseAllowPost = true
-			} else if code > 200 && code < 300 {
-				c.s.initialResponseAllowPost = false
-			} else if code == 502 {
-				return fmt.Errorf(
-					"bad mode-reader response %d %q", code, au.TrimWSBytes(rest))
-			} else if code == 500 || code == 501 {
-				// do nothing if not implemented
-			} else {
-				c.log.LogPrintf(WARN, "weird mode-reader response %d %q",
-					code, au.TrimWSBytes(rest))
-			}
-		} else {
-			if fatal {
-				return fmt.Errorf("error reading mode-reader response: %v", e)
-			} else {
-				c.log.LogPrintf(WARN, "error reading mode-reader response: %v", e)
-			}
-		}
-	}
+	var fatal bool
 
 	gotGroupList := false
 	if !gotGroupList && !c.s.badActiveList {
@@ -1066,6 +1027,62 @@ func (c *NNTPScraper) main() error {
 
 	c.db.DoneTempGroups()
 
-	// amount of arguments is defined by response code
-	return nil // TODO
+	return nil
+}
+
+func (c *NNTPScraper) main() error {
+	var e error
+	var fatal bool
+
+	e = c.handleInitial()
+	if e != nil {
+		return e
+	}
+
+	e, fatal = c.doCapabilities()
+	if e != nil {
+		if fatal {
+			return fmt.Errorf("doCapabilities() failed: %v", e)
+		} else {
+			c.log.LogPrintf(WARN, "doCapabilities() failed: %v", e)
+		}
+	}
+
+	if !c.s.capReader {
+		e = c.w.PrintfLine("MODE READER")
+		if e != nil {
+			return fmt.Errorf("error writing mode-reader command: %v", e)
+		}
+		code, rest, e, fatal := c.readResponse()
+		if e == nil {
+			if code == 200 {
+				c.s.initialResponseAllowPost = true
+			} else if code > 200 && code < 300 {
+				c.s.initialResponseAllowPost = false
+			} else if code == 502 {
+				return fmt.Errorf(
+					"bad mode-reader response %d %q", code, au.TrimWSBytes(rest))
+			} else if code == 500 || code == 501 {
+				// do nothing if not implemented
+			} else {
+				c.log.LogPrintf(WARN, "weird mode-reader response %d %q",
+					code, au.TrimWSBytes(rest))
+			}
+		} else {
+			if fatal {
+				return fmt.Errorf("error reading mode-reader response: %v", e)
+			} else {
+				c.log.LogPrintf(WARN, "error reading mode-reader response: %v", e)
+			}
+		}
+	}
+
+	for {
+		e = c.groupScanLoop()
+		if e != nil {
+			return e
+		}
+		c.log.LogPrintf(WARN, "groupScanLoop() done, will wait 90 secs")
+		time.Sleep(90 * time.Second)
+	}
 }
