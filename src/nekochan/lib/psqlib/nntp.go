@@ -442,7 +442,7 @@ func (sp *PSQLIB) ListNewNews(
 		for rows.Next() {
 			var msgid string
 
-			err = rows.Scan((*string)(&msgid))
+			err = rows.Scan(&msgid)
 			if err != nil {
 				rows.Close()
 				sp.sqlError("newnews query rows scan", err)
@@ -471,7 +471,7 @@ func (sp *PSQLIB) ListNewNews(
 
 		dw = aw.OpenDotWriter()
 		for rows.Next() {
-			var msgid CoreMsgID
+			var msgid string
 			var bname []byte
 
 			err = rows.Scan(&msgid, &bname)
