@@ -895,7 +895,7 @@ func (c *NNTPScraper) eatGroupSlice(
 }
 
 const oneSliceSize = 800
-const maxListSize = 950
+const maxListSize = 2048
 
 func (c *NNTPScraper) eatGroup(
 	group string, old_id, new_id uint64) (err error, fatal bool) {
@@ -918,6 +918,11 @@ func (c *NNTPScraper) eatGroup(
 		if r_end < 0 {
 			// this was supposed to be last one
 			break
+		}
+		// if we taken in more than we requested
+		if maxid > r_end {
+			// don't request that stuff again
+			r_end = maxid
 		}
 		r_begin = r_end + 1
 		if uint64(r_begin) > new_id {
