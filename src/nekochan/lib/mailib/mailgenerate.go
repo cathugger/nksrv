@@ -31,7 +31,7 @@ func modifyMultipartType(ct string) (_ string, rb string, _ error) {
 	if ct == "" {
 		return "", "", errNoContentType
 	}
-	return ct + "; boundary=\"" + rb + "\"", rb, nil
+	return ct + "; boundary=" + rb, rb, nil
 }
 
 func GenerateMessage(
