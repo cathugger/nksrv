@@ -85,17 +85,33 @@ func GenerateMessage(
 
 			r = f
 		}
+
+		var clsr io.Closer
+
 		if !binary {
 			r = au.NewUnixTextReader(r)
 		} else {
-			w = base64.NewEncoder(
+			wc := base64.NewEncoder(
 				base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
+
+			w = wc
+			clsr = wc
 		}
 
 		_, err = io.Copy(w, r)
 		if err != nil {
 			err = fmt.Errorf("error copying: %v", err)
+			return
 		}
+
+		if clsr != nil {
+			err = clsr.Close()
+			if err != nil {
+				err = fmt.Errorf("error closing writer: %v", err)
+				return
+			}
+		}
+
 		return
 	}
 
@@ -103,7 +119,11 @@ func GenerateMessage(
 		w io.Writer, binary bool, bo BodyObject) error {
 
 		if poi, ok := bo.Data.(PostObjectIndex); ok {
-			return generateBody(w, binary, poi)
+			e := generateBody(w, binary, poi)
+			if e != nil {
+				e = fmt.Errorf("generateBody err: %v", e)
+			}
+			return e
 		}
 		if bo.Data == nil {
 			return nil
