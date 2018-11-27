@@ -56,7 +56,7 @@ func OpenFStore(cfg Config) (s FStore, _ error) {
 		s.root = cfg.Path
 	}
 	if i > 0 {
-		e := os.MkdirAll(s.root[:i-1], 0777)
+		e := os.MkdirAll(s.root[:len(s.root)-1], 0777)
 		if e != nil {
 			return FStore{}, e
 		}
