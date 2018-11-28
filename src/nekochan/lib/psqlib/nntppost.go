@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"time"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
@@ -38,7 +39,7 @@ func (sp *PSQLIB) shouldAutoAddNNTPPostGroup(group string) bool {
 }
 
 func (sp *PSQLIB) acceptArticleHead(
-	board string, troot FullMsgIDStr) (
+	board string, troot FullMsgIDStr, pdate int64) (
 	ins insertSqlInfo, err error, unexpected bool, wantroot bool) {
 
 	var jbPL xtypes.JSONText // board post limits
@@ -116,10 +117,11 @@ xb AS (
 	LIMIT 1
 )
 SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xtp.bid,xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.title
+	xtp.bid,xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,
+	xtp.title,xtp.pdate
 FROM xb
 FULL JOIN (
-	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.title
+	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.title,xp.pdate
 	FROM ib0.threads xt
 	JOIN ib0.posts xp
 	ON xt.bid=xp.bid AND xt.tid=xp.tid
@@ -134,9 +136,11 @@ ON TRUE`
 		var xtbid sql.NullInt64
 		var xtid sql.NullInt64
 		var xsubject sql.NullString
+		var xreftime time.Time
 
 		err = sp.db.DB.QueryRow(q, board, string(mm.CutMessageIDStr(troot))).
-			Scan(&xbid, &jbPL, &jbXL, &xtbid, &xtid, &jtRL, &jbTO, &jtTO, &xsubject)
+			Scan(&xbid, &jbPL, &jbXL, &xtbid, &xtid, &jtRL, &jbTO, &jtTO,
+				&xsubject, &xreftime)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errNoSuchBoard
@@ -183,6 +187,11 @@ ON TRUE`
 			// no such thread exists
 			err = errNoSuchThread
 			wantroot = true
+			return
+		}
+
+		if xreftime.Unix() > pdate {
+			err = errors.New("post has date before post it refers to")
 			return
 		}
 

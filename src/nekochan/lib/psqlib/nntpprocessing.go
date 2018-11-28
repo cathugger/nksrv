@@ -187,7 +187,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// actual DB check on group and refered article
 	var wr bool
 	info.insertSqlInfo, err, unexpected, wr =
-		sp.acceptArticleHead(hgroup, troot)
+		sp.acceptArticleHead(hgroup, troot, info.PostedDate)
 	if err != nil {
 		if err == errNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
