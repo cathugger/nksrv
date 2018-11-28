@@ -143,7 +143,10 @@ var dbIb0InitStatements = []string{
 
 func (sp *PSQLIB) InitIb0() {
 	for i := range dbIb0InitStatements {
-		sp.db.DB.MustExec(dbIb0InitStatements[i])
+		_, e := sp.db.DB.Exec(dbIb0InitStatements[i])
+		if e != nil {
+			panic(fmt.Errorf("err on stmt %d: %v", i, e))
+		}
 	}
 }
 

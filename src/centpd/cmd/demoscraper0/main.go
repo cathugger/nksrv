@@ -48,7 +48,7 @@ func main() {
 	defer func() {
 		if e := recover(); e != nil {
 			errorcode = 1
-			mlg.LogPrint(CRITICAL, "caught panic: %v", e)
+			mlg.LogPrintf(CRITICAL, "caught panic: %v", e)
 			if mlg.LockWrite(CRITICAL) {
 				mlg.Write(debug.Stack())
 				mlg.Close()
