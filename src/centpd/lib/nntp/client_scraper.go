@@ -453,6 +453,10 @@ func (c *NNTPScraper) handleArticleResponse(
 func (c *NNTPScraper) processTODOList(
 	group string, maxid int64) (new_maxid int64, err error, fatal bool) {
 
+	// TODO
+	// we should rescan group again if we find articles we can't take in
+	// right now but maybe will be able if their references are satisfied
+
 	new_maxid = -1
 	defer func() {
 		c.log.LogPrintf(DEBUG, "processTODOList defer: maxid(%d) new_maxid(%d)",
@@ -984,6 +988,7 @@ func (c *NNTPScraper) groupScanLoop() error {
 			group, new_id, old_id)
 
 		// maybe we don't need to bother with this group
+		// TODO we should treat old_id as 0 if we find lower value
 		if new_id >= 0 && old_id >= uint64(new_id) {
 			if old_id != uint64(new_id) {
 				// keep track of reduction too
