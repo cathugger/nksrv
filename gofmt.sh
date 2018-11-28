@@ -4,4 +4,4 @@
 
 [ x"$1" = x'-u' ] && go get -u golang.org/x/tools/cmd/goimports
 
-GOPATH=`pwd` exec goimports -local 'nekochan/' -w src/nekochan
+GOPATH=`pwd` exec goimports -local 'centpd/' -w src/centpd

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"runtime/debug"
 
 	"golang.org/x/net/proxy"
 
@@ -20,9 +21,6 @@ import (
 )
 
 func main() {
-	var errorcode int
-	defer os.Exit(errorcode)
-
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
@@ -45,6 +43,19 @@ func main() {
 	mlg.LogPrint(WARN, "testing WARN log message")
 	mlg.LogPrint(ERROR, "testing ERROR log message")
 	mlg.LogPrint(CRITICAL, "testing CRITICAL log message")
+
+	var errorcode int
+	defer func() {
+		if e := recover(); e != nil {
+			errorcode = 1
+			mlg.LogPrint(CRITICAL, "caught panic: %v", e)
+			if mlg.LockWrite(CRITICAL) {
+				mlg.Write(debug.Stack())
+				mlg.Close()
+			}
+		}
+		os.Exit(errorcode)
+	}()
 
 	db, err := psql.OpenPSQL(psql.Config{
 		Logger:  lgr,

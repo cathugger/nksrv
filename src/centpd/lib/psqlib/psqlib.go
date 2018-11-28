@@ -88,7 +88,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	// TODO make configurable
 	p.fpp.MaxFileCount = 100
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
-	p.instance = "centpd"          // TODO config
+	p.instance = "nekochan"          // TODO config
 	p.maxArticleBodySize = 256 << 20 // TODO config
 
 	p.autoAddNNTPPostGroup = cfg.AddBoardOnNNTPPost
