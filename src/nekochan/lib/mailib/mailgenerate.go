@@ -18,7 +18,7 @@ import (
 var errNoContentType = errors.New("no Content-Type")
 
 func randomBoundary() string {
-	var b [36]byte
+	var b [33]byte
 	_, err := io.ReadFull(crand.Reader, b[:])
 	if err != nil {
 		panic(err)
