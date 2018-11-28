@@ -133,6 +133,7 @@ ON sg.bid = st.bid`
 				if !s.autoAddGroup(unsafe_sgroup) || loopn >= 20 {
 					return -1, nil
 				}
+				// proceed with adding
 			} else {
 				// SQL error
 				return -1, s.sp.sqlError("GetGroupID query scan", e)
@@ -154,13 +155,23 @@ ON sg.bid = st.bid`
 	}
 }
 func (s *ScraperDB) UpdateGroupID(group string, id uint64) error {
-	q := `UPDATE ib0.scraper_group_track AS st
+	var q string
+	var es string
+	if id != 0 {
+		q = `UPDATE ib0.scraper_group_track AS st
 SET last_max = $3
 FROM ib0.boards AS xb
 WHERE st.sid=$1 AND xb.bname=$2 AND st.bid=xb.bid`
+		es = "scraper_group_track update query execution"
+	} else {
+		q = `DELETE FROM ib0.scraper_group_track AS st
+USING ib0.boards xb
+WHERE st.sid=$1 AND xb.bname=$2 AND st.bid=xb.bid`
+		es = "scraper_group_track clear query execution"
+	}
 	_, e := s.sp.db.DB.Exec(q, s.id, group, id)
 	if e != nil {
-		return s.sp.sqlError("scraper_group_track update query execution", e)
+		return s.sp.sqlError(es, e)
 	}
 	return nil
 }

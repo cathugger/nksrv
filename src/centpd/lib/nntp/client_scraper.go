@@ -987,15 +987,21 @@ func (c *NNTPScraper) groupScanLoop() error {
 		c.log.LogPrintf(DEBUG, "LoadTempGroup(): g:%q n:%d o:%d",
 			group, new_id, old_id)
 
-		// maybe we don't need to bother with this group
-		// TODO we should treat old_id as 0 if we find lower value
-		if new_id >= 0 && old_id >= uint64(new_id) {
-			if old_id != uint64(new_id) {
-				// keep track of reduction too
-				c.db.UpdateGroupID(group, uint64(new_id))
+		// if we got info about group
+		if new_id >= 0 {
+			// maybe we don't need to bother with this group
+			if old_id == uint64(new_id) {
+				// skip this
+				continue
 			}
-			// skip this
-			continue
+			if old_id > uint64(new_id) {
+				// new id is somehow lower
+				// trigger rescan from the start - stuff may be changed
+				old_id = 0
+				// ensure we're aware of difference later on
+				c.db.UpdateGroupID(group, old_id)
+				// we could skip there if new_id == 0 but lets check group
+			}
 		}
 
 		var g_id int64
@@ -1010,19 +1016,31 @@ func (c *NNTPScraper) groupScanLoop() error {
 			// next group, I guess..
 			continue
 		}
+		if notexists {
+			// weird. ohwell. just ensure we will trigger full rescan if next time happens
+			c.db.UpdateGroupID(group, 0)
+			continue
+		}
 		// in case we had no info about new_id before, or it's higher..
 		if new_id < 0 || g_id > new_id {
 			new_id = g_id
 
-			// recheck
-			if old_id >= uint64(new_id) {
-				if old_id != uint64(new_id) {
-					// keep track of reduction too
-					c.db.UpdateGroupID(group, uint64(new_id))
-				}
+			// maybe we don't need to bother
+			if old_id == uint64(new_id) {
 				// skip this
 				continue
 			}
+			if old_id > uint64(new_id) {
+				// new id is somehow lower
+				// trigger rescan from the start - stuff may be changed
+				old_id = 0
+				// ensure we're aware of difference later on
+				c.db.UpdateGroupID(group, old_id)
+			}
+		}
+		// redo check
+		if old_id == uint64(new_id) {
+			continue
 		}
 
 		e, fatal = c.eatGroup(group, old_id, uint64(new_id))
