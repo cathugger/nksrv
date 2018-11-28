@@ -9,9 +9,9 @@ import (
 )
 
 func NewRandomMessageID(t int64, name string) FullMsgIDStr {
-	// TAI64
+	// TAI64 format kinda
 	var b [8]byte
-	u := uint64(t) + 4611686018427387914
+	u := uint64(t + 0x4000000000000000)
 	b[7] = byte(u)
 	u >>= 8
 	b[6] = byte(u)
@@ -29,11 +29,12 @@ func NewRandomMessageID(t int64, name string) FullMsgIDStr {
 	b[0] = byte(u)
 
 	// random
-	var r [12]byte
+	var r [10]byte
 	crand.Read(r[:])
 
-	return FullMsgIDStr("<" + ht.SBase64Enc.EncodeToString(b[:]) + "." +
-		ht.SBase64Enc.EncodeToString(r[:]) + "@" + name + ">")
+	return FullMsgIDStr("<" +
+		ht.LowerBase32HexEnc.EncodeToString(b[:]) + "." +
+		ht.LowerBase32HexEnc.EncodeToString(r[:]) + "@" + name + ">")
 }
 
 // TODO: more algos

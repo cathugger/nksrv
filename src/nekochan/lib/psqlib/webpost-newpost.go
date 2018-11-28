@@ -51,6 +51,9 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	b.WriteString(st1)
 
 	if !t.sage {
+		// bump algo:
+		// sages are still counted against bump limit
+		// (currently, idk if ok) OP is counted against bump limit
 		st_bump := `
 	ut AS (
 		UPDATE ib0.threads
