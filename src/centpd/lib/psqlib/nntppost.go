@@ -136,7 +136,7 @@ ON TRUE`
 		var xtbid sql.NullInt64
 		var xtid sql.NullInt64
 		var xsubject sql.NullString
-		var xreftime time.Time
+		var xreftime *time.Time
 
 		err = sp.db.DB.QueryRow(q, board, string(mm.CutMessageIDStr(troot))).
 			Scan(&xbid, &jbPL, &jbXL, &xtbid, &xtid, &jtRL, &jbTO, &jtTO,
