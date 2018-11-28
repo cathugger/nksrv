@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-var currIb0Version = "demo0"
+const currIb0Version = "demo0"
 
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
@@ -138,7 +138,7 @@ var dbIb0InitStatements = []string{
 )`,
 	`CREATE INDEX ON ib0.scraper_group_track (sid,last_use)`,
 
-	`INSERT INTO capabilities(component,version) VALUES ('ib0','')`,
+	`INSERT INTO capabilities(component,version) VALUES ('ib0','` + currIb0Version + `')`,
 }
 
 func (sp *PSQLIB) InitIb0() {
