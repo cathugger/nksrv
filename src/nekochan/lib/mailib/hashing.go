@@ -11,7 +11,7 @@ import (
 func NewRandomMessageID(t int64, name string) FullMsgIDStr {
 	// TAI64 format kinda
 	var b [8]byte
-	u := uint64(t + 0x4000000000000000)
+	u := uint64(0x4000000000000000 + t)
 	b[7] = byte(u)
 	u >>= 8
 	b[6] = byte(u)
@@ -32,6 +32,7 @@ func NewRandomMessageID(t int64, name string) FullMsgIDStr {
 	var r [10]byte
 	crand.Read(r[:])
 
+	// non-recent nntpchan (fixed in 2d3c304c81b5) can't handle base64url...
 	return FullMsgIDStr("<" +
 		ht.LowerBase32HexEnc.EncodeToString(b[:]) + "." +
 		ht.LowerBase32HexEnc.EncodeToString(r[:]) + "@" + name + ">")
