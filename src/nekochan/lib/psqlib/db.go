@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-var currIb0Version = ""
+var currIb0Version = "demo0"
 
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
@@ -33,6 +33,7 @@ var dbIb0InitStatements = []string{
 	UNIQUE      (bname),
 	PRIMARY KEY (bid)
 )`,
+	`CREATE INDEX ON ib0.boards (badded)`,
 
 	`CREATE TABLE ib0.threads (
 	bid   INTEGER                     NOT NULL, /* internal board ID this thread belongs to */
@@ -60,7 +61,7 @@ var dbIb0InitStatements = []string{
 
 	msgid   TEXT      COLLATE C         NOT NULL, /* Message-ID */
 	author  TEXT                        NOT NULL, /* author name */
-	trip    TEXT                        NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
+	trip    TEXT      COLLATE C         NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
 	title   TEXT                        NOT NULL, /* message title/subject field */
 	message TEXT,                                 /* post message, in UTF-8 */
 	headers JSONB,                                -- map of lists of strings
@@ -69,27 +70,28 @@ var dbIb0InitStatements = []string{
 	extras  JSONB,                                /* dunno if really need this field */
 
 	UNIQUE      (msgid),
-	UNIQUE      (bid,pname),
 	PRIMARY KEY (bid,pid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
 	FOREIGN KEY (bid,tid) REFERENCES ib0.threads
 )`,
 	`CREATE INDEX ON ib0.posts (bid)`,
 	`CREATE INDEX ON ib0.posts (bid,tid)`,
+	`CREATE INDEX ON ib0.posts (padded,bid)`,
+	`CREATE UNIQUE INDEX ON ib0.posts (pname text_pattern_ops,bid)`,
 
 	`CREATE TYPE ftype_t AS ENUM ('file', 'msg', 'text', 'image')`,
 	`CREATE TABLE ib0.files (
-	fid      BIGSERIAL NOT NULL, /* internal file ID of this file */
-	bid      INTEGER   NOT NULL, /* internal board ID post of this file belongs to */
-	pid      BIGINT    NOT NULL, /* internal post ID of post this file belongs to */
-	ftype    ftype_t   NOT NULL, /* file type */
-	fsize    BIGINT    NOT NULL, /* file size */
-	fname    TEXT      NOT NULL, /* internal file name of original file. not unique! */
-	thumb    TEXT      NOT NULL, /* filename of thumbnail. not unique! */
-	oname    TEXT      NOT NULL, /* original file name of this file */
-	filecfg  JSONB,              /* additional info about original file. like metadata */
-	thumbcfg JSONB,              /* additional info about thumbnail. like width/height */
-	extras   JSONB,              /* extra info not used for display but sometimes useful. undecided. */
+	fid      BIGSERIAL            NOT NULL, /* internal file ID of this file */
+	bid      INTEGER              NOT NULL, /* internal board ID post of this file belongs to */
+	pid      BIGINT               NOT NULL, /* internal post ID of post this file belongs to */
+	ftype    ftype_t              NOT NULL, /* file type */
+	fsize    BIGINT               NOT NULL, /* file size */
+	fname    TEXT     COLLATE C   NOT NULL, /* internal file name of original file. not unique! */
+	thumb    TEXT     COLLATE C   NOT NULL, /* filename of thumbnail. not unique! */
+	oname    TEXT     COLLATE C   NOT NULL, /* original file name of this file */
+	filecfg  JSONB,                         /* additional info about original file. like metadata */
+	thumbcfg JSONB,                         /* additional info about thumbnail. like width/height */
+	extras   JSONB,                         /* extra info not used for display but sometimes useful. undecided. */
 
 	PRIMARY KEY (fid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
@@ -99,9 +101,9 @@ var dbIb0InitStatements = []string{
 	`CREATE INDEX ON ib0.files (fname)`,
 
 	`CREATE TABLE ib0.scraper_list (
-	sid      BIGSERIAL NOT NULL,
-	sname    TEXT      NOT NULL,
-	last_use BIGINT    NOT NULL, -- used for cleanup
+	sid      BIGSERIAL             NOT NULL,
+	sname    TEXT       COLLATE C  NOT NULL,
+	last_use BIGINT                NOT NULL, -- used for cleanup
 
 	PRIMARY KEY (sid),
 	UNIQUE (sname)
