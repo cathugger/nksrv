@@ -181,7 +181,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	if cfg.WebPostProvider != nil {
 
 		h_bthing := handler.NewMethod().
-			Handle("UPDATE", http.HandlerFunc(
+			Handle("PATCH", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 
 					ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
