@@ -534,6 +534,38 @@ func (sp *PSQLIB) IBPostNewReply(
 	return sp.commonNewPost(r, f, board, thread, true)
 }
 
+func (sp *PSQLIB) IBUpdateBoard(
+	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+
+	q := `UPDATE ib0.boards
+SET
+	badded = $2,
+	bdesc = $3,
+	threads_per_page = $4,
+	max_active_pages = $5,
+	max_pages = $6
+WHERE bname = $1`
+	res, e := sp.db.DB.Exec(q, bi.Name, bi.Description,
+		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages)
+	if e != nil {
+		err = sp.sqlError("board update query row scan", e)
+		code = http.StatusInternalServerError
+		return
+	}
+	aff, e := res.RowsAffected()
+	if e != nil {
+		err = sp.sqlError("board update query result check", e)
+		code = http.StatusInternalServerError
+		return
+	}
+	if aff == 0 {
+		err = errors.New("no such board")
+		code = http.StatusNotFound
+		return
+	}
+	return nil, 0
+}
+
 func (sp *PSQLIB) IBDeleteBoard(
 	r *http.Request, board string) (err error, code int) {
 

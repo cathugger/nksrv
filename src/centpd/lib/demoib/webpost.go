@@ -182,6 +182,16 @@ func (IBProviderDemo) IBPostNewReply(
 	return commonNewPost(r, f, board, thread, true)
 }
 
+func (IBProviderDemo) IBUpdateBoard(
+	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+
+	if bi.Name == "test" {
+		return nil, 0
+	} else {
+		return errors.New("board not found"), http.StatusNotFound
+	}
+}
+
 func (IBProviderDemo) IBDeleteBoard(
 	r *http.Request, board string) (err error, code int) {
 

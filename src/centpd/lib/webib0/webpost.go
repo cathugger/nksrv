@@ -49,6 +49,8 @@ type IBWebPostProvider interface {
 		r *http.Request, f form.Form, board, thread string) (
 		rInfo IBPostedInfo, err error, code int)
 
+	IBUpdateBoard(r *http.Request, bi IBNewBoardInfo) (err error, code int)
+
 	IBDeleteBoard(r *http.Request, board string) (err error, code int)
 
 	IBDeletePost(

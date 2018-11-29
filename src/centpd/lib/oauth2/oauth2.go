@@ -168,6 +168,20 @@ func (s *IBOAuth2) IBPostNewReply(
 	return s.IBWebPostProvider.IBPostNewReply(r, f, board, thread)
 }
 
+func (s *IBOAuth2) IBUpdateBoard(
+	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+
+	var claims jwt.MapClaims
+	claims, err, code = s.validateOAuth2(r)
+	if err != nil {
+		return
+	}
+	if !isAdmin(claims) {
+		return errors.New("admin privilege needed"), 401
+	}
+	return s.IBWebPostProvider.IBUpdateBoard(r, bi)
+}
+
 func (s *IBOAuth2) IBDeleteBoard(
 	r *http.Request, board string) (err error, code int) {
 
