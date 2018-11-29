@@ -68,17 +68,16 @@ func (s *IBOAuth2) Login(
 	return
 }
 
-func isStillValid(claims jwt.MapClaims) (stillvalid bool, okaytok bool) {
+func isStillValid(claims jwt.MapClaims) (stillvalid bool, tokerr error) {
 	expclaim, ok := claims["exp"]
 	if !ok {
-		return false, false
+		return false, errors.New("invalid: no exp claim")
 	}
 	timetoexp, ok := expclaim.(int64)
 	if !ok {
-		return false, false
+		return false, errors.New("invalid: timetoexp isn't int64")
 	}
 	stillvalid = time.Now().Unix() < timetoexp
-	okaytok = true
 	return
 }
 
@@ -105,9 +104,9 @@ func (s *IBOAuth2) validateOAuth2(
 		return
 	}
 	claims = tok.Claims.(jwt.MapClaims)
-	stillvalid, isvalid := isStillValid(claims)
-	if !isvalid {
-		err = errors.New("token invalid")
+	var stillvalid bool
+	stillvalid, err = isStillValid(claims)
+	if err != nil {
 		code = 401
 		return
 	}
