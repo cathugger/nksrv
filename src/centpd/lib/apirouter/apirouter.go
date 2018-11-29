@@ -178,7 +178,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	h.Handle("/boards", true, h_boards)
 
 	if cfg.Auth != nil {
-		h.Handle("/auth/login", true, http.HandlerFunc(
+		h.Handle("/auth/login", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 
 				ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
