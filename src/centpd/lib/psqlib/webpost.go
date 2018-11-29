@@ -539,11 +539,10 @@ func (sp *PSQLIB) IBUpdateBoard(
 
 	q := `UPDATE ib0.boards
 SET
-	badded = $2,
-	bdesc = $3,
-	threads_per_page = $4,
-	max_active_pages = $5,
-	max_pages = $6
+	bdesc = $2,
+	threads_per_page = $3,
+	max_active_pages = $4,
+	max_pages = $5
 WHERE bname = $1`
 	res, e := sp.db.DB.Exec(q, bi.Name, bi.Description,
 		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages)
