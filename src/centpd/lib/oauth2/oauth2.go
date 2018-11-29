@@ -78,6 +78,7 @@ func isStillValid(claims jwt.MapClaims) (stillvalid bool, okaytok bool) {
 		return false, false
 	}
 	stillvalid = time.Now().Unix() < timetoexp
+	okaytok = true
 	return
 }
 
