@@ -568,10 +568,8 @@ WHERE bname = $1`
 func (sp *PSQLIB) IBDeleteBoard(
 	r *http.Request, board string) (err error, code int) {
 
-	return nil, 0
-
+	// TODO delet any of posts in board
 	var bid boardID
-	// TODO
 	q := `DELETE FROM ib0.boards WHERE bname=$1 RETURNING bid`
 	e := sp.db.DB.QueryRow(q, board).Scan(&bid)
 	if e != nil {
