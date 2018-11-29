@@ -11,6 +11,7 @@ import (
 
 	"centpd/lib/handler"
 	"centpd/lib/mail/form"
+	"centpd/lib/oauth2"
 	"centpd/lib/renderer"
 	ib0 "centpd/lib/webib0"
 )
@@ -18,6 +19,7 @@ import (
 type Cfg struct {
 	Renderer        renderer.Renderer     // handles everything else?
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
+	Auth            *oauth2.IBOAuth2
 	// fallback?
 }
 
@@ -174,6 +176,45 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	h_boards.Handle("/{{b}}", true, h_bcontent)
 
 	h.Handle("/boards", true, h_boards)
+
+	if cfg.Auth != nil {
+		h.Handle("/auth/login", true, http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+
+				ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+				if e != nil {
+					http.Error(
+						w, fmt.Sprintf("failed to parse content type: %v", e),
+						http.StatusBadRequest)
+					return
+				}
+				if ct != "application/json" {
+					http.Error(w, "bad Content-Type", http.StatusBadRequest)
+					return
+				}
+
+				jd := json.NewDecoder(r.Body)
+				logininfo := struct {
+					User string `json:"user"`
+					Pass string `json:"pass"`
+				}{}
+				e = jd.Decode(&logininfo)
+				if e != nil {
+					http.Error(
+						w, fmt.Sprintf("failed to parse content: %v", e),
+						http.StatusBadRequest)
+					return
+				}
+
+				tok, err, code := cfg.Auth.Login(r, logininfo.User, logininfo.Pass)
+				if err != nil {
+					http.Error(w, err.Error(), code)
+					return
+				}
+				w.Write([]byte(tok))
+			}))
+	}
+
 	h.Fallback(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 	}))

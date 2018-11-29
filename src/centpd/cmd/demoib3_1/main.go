@@ -12,15 +12,15 @@ import (
 
 	ar "centpd/lib/apirouter"
 	di "centpd/lib/demoib"
+	"centpd/lib/demousrdb"
 	fl "centpd/lib/filelogger"
 	"centpd/lib/fstore"
 	ir "centpd/lib/ibrouter"
 	rj "centpd/lib/jsonrenderer"
 	"centpd/lib/logx"
+	"centpd/lib/oauth2"
 	"centpd/lib/psql"
 	"centpd/lib/psqlib"
-	"centpd/lib/demousrdb"
-	"centpd/lib/oauth2"
 )
 
 func main() {
@@ -134,10 +134,10 @@ func main() {
 		errorcode = 1
 		runtime.Goexit()
 	}
-	
+
 	seckey := []byte("secrettt")
 	wpp := oauth2.NewOAuth2Checker(dbib, seckey, demousrdb.DemoUsrDB{})
-	
+
 	ah := ar.NewAPIRouter(ar.Cfg{
 		Renderer:        rend,
 		WebPostProvider: wpp,

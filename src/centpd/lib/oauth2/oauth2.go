@@ -24,12 +24,12 @@ type IBOAuth2 struct {
 }
 
 func NewOAuth2Checker(
-	wpp ib0.IBWebPostProvider, key []byte, usrprov UserProvider) (*IBOAuth2) {
+	wpp ib0.IBWebPostProvider, key []byte, usrprov UserProvider) *IBOAuth2 {
 
 	return &IBOAuth2{
 		IBWebPostProvider: wpp,
-		signKey: key,
-		usrprov: usrprov,
+		signKey:           key,
+		usrprov:           usrprov,
 	}
 }
 
@@ -115,7 +115,7 @@ func (s *IBOAuth2) validateOAuth2(
 		code = 401
 		return
 	}
-	
+
 	return
 }
 
