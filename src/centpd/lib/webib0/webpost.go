@@ -39,7 +39,7 @@ type IBWebPostProvider interface {
 	IBGetPostParams() (*form.ParserParams, form.FileOpener)
 
 	IBDefaultBoardInfo() IBNewBoardInfo
-	IBPostNewBoard(bi IBNewBoardInfo) (err error, code int)
+	IBPostNewBoard(r *http.Request, bi IBNewBoardInfo) (err error, code int)
 
 	IBPostNewThread(
 		r *http.Request, f form.Form, board string) (

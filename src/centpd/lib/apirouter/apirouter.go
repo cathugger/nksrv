@@ -165,7 +165,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					return
 				}
 
-				e, code := cfg.WebPostProvider.IBPostNewBoard(nbi)
+				e, code := cfg.WebPostProvider.IBPostNewBoard(r, nbi)
 				cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 			}))

@@ -506,7 +506,7 @@ RETURNING bid`
 }
 
 func (sp *PSQLIB) IBPostNewBoard(
-	bi ib0.IBNewBoardInfo) (err error, code int) {
+	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
 
 	err, duplicate := sp.addNewBoard(bi)
 	if err != nil {

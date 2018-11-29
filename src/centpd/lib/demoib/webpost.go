@@ -159,7 +159,7 @@ func (IBProviderDemo) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 }
 
 func (IBProviderDemo) IBPostNewBoard(
-	bi ib0.IBNewBoardInfo) (err error, code int) {
+	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
 
 	if bi.Name != "test" {
 		return nil, 0
