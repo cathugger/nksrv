@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -68,16 +69,24 @@ func (s *IBOAuth2) Login(
 	return
 }
 
+func verifyExp(exp int64) bool {
+	return time.Now().Unix() < exp
+}
+
 func isStillValid(claims jwt.MapClaims) (stillvalid bool, tokerr error) {
 	expclaim, ok := claims["exp"]
 	if !ok {
 		return false, errors.New("invalid: no exp claim")
 	}
-	timetoexp, ok := expclaim.(int64)
-	if !ok {
-		return false, errors.New("invalid: timetoexp isn't int64")
+	switch exp := expclaim.(type) {
+	case float64:
+		stillvalid = verifyExp(int64(exp))
+	case json.Number:
+		v, _ := exp.Int64()
+		stillvalid = verifyExp(v)
+	default:
+		return false, errors.New("invalid: exp is bad type")
 	}
-	stillvalid = time.Now().Unix() < timetoexp
 	return
 }
 
