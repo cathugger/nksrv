@@ -141,7 +141,9 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	h_boards := handler.NewRegexPath()
 	h_boardsroot := handler.NewMethod().
 		Handle("GET", http.HandlerFunc(cfg.Renderer.ServeBoardList))
+
 	if cfg.WebPostProvider != nil {
+
 		h_boardsroot.Handle("POST", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 
@@ -171,9 +173,59 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 			}))
+
 	}
 	h_boards.Handle("/", false, h_boardsroot)
 	h_boards.Handle("/{{b}}", true, h_bcontent)
+
+	if cfg.WebPostProvider != nil {
+
+		h_bthing := handler.NewMethod().
+			Handle("UPDATE", http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+
+					ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+					if e != nil {
+						http.Error(
+							w, fmt.Sprintf("failed to parse content type: %v", e),
+							http.StatusBadRequest)
+						return
+					}
+					if ct != "application/json" {
+						http.Error(w, "bad Content-Type", http.StatusBadRequest)
+						return
+					}
+
+					jd := json.NewDecoder(r.Body)
+					nbi := cfg.WebPostProvider.IBDefaultBoardInfo()
+					e = jd.Decode(&nbi)
+					if e != nil {
+						http.Error(
+							w, fmt.Sprintf("failed to parse content: %v", e),
+							http.StatusBadRequest)
+						return
+					}
+
+					nbi.Name = r.Context().Value("b").(string)
+
+					e, code := cfg.WebPostProvider.IBUpdateBoard(r, nbi)
+					cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
+
+				})).
+			Handle("DELETE", http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					b := r.Context().Value("b").(string)
+					e, code := cfg.WebPostProvider.IBDeleteBoard(r, b)
+					if e != nil {
+						http.Error(w, e.Error(), code)
+						return
+					}
+					http.Error(w, "deleted", 200)
+				}))
+
+		h_boards.Handle("/{{b}}", false, h_bthing)
+
+	}
 
 	h.Handle("/boards", true, h_boards)
 
