@@ -141,6 +141,7 @@ func main() {
 	ah := ar.NewAPIRouter(ar.Cfg{
 		Renderer:        rend,
 		WebPostProvider: wpp,
+		Auth:            wpp,
 	})
 	rcfg := ir.Cfg{
 		HTMLRenderer:    rend,
