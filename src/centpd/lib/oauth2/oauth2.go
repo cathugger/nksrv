@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,7 +33,9 @@ func NewOAuth2Checker(
 	}
 }
 
-var methodWeUse = jwt.SigningMethodHS256
+type methodTypeWeUse = *jwt.SigningMethodHMAC
+
+var methodValueWeUse methodTypeWeUse = jwt.SigningMethodHS256
 
 var _ ib0.IBWebPostProvider = (*IBOAuth2)(nil)
 
@@ -48,14 +49,11 @@ func (s *IBOAuth2) Login(
 		return
 	}
 
-	token := jwt.New(methodWeUse)
+	token := jwt.New(methodValueWeUse)
 	claims := token.Claims.(jwt.MapClaims)
 	for k, v := range attrs {
 		claims[k] = v
 	}
-
-	//claims["admin"] = true
-	//claims["name"] = "Ado Kukic"
 
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
@@ -69,25 +67,8 @@ func (s *IBOAuth2) Login(
 	return
 }
 
-func verifyExp(exp int64) bool {
-	return time.Now().Unix() < exp
-}
-
-func isStillValid(claims jwt.MapClaims) (stillvalid bool, tokerr error) {
-	expclaim, ok := claims["exp"]
-	if !ok {
-		return false, errors.New("invalid: no exp claim")
-	}
-	switch exp := expclaim.(type) {
-	case float64:
-		stillvalid = verifyExp(int64(exp))
-	case json.Number:
-		v, _ := exp.Int64()
-		stillvalid = verifyExp(v)
-	default:
-		return false, errors.New("invalid: exp is bad type")
-	}
-	return
+func isStillValid(claims jwt.MapClaims) bool {
+	return claims.VerifyExpiresAt(time.Now().Unix(), true)
 }
 
 func (s *IBOAuth2) validateOAuth2(
@@ -96,8 +77,8 @@ func (s *IBOAuth2) validateOAuth2(
 	tok, err := jwtreq.ParseFromRequest(
 		r, jwtreq.OAuth2Extractor, jwt.Keyfunc(
 			func(token *jwt.Token) (interface{}, error) {
-				m, ok := token.Method.(*jwt.SigningMethodHMAC)
-				if !ok || m != methodWeUse {
+				m, ok := token.Method.(methodTypeWeUse)
+				if !ok || m != methodValueWeUse {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 				return s.signKey, nil
@@ -113,13 +94,7 @@ func (s *IBOAuth2) validateOAuth2(
 		return
 	}
 	claims = tok.Claims.(jwt.MapClaims)
-	var stillvalid bool
-	stillvalid, err = isStillValid(claims)
-	if err != nil {
-		code = 401
-		return
-	}
-	if !stillvalid {
+	if !isStillValid(claims) {
 		err = errors.New("token expired")
 		code = 401
 		return
