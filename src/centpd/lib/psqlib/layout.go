@@ -118,20 +118,22 @@ func (sp *PSQLIB) fillWebPostDetails(
 	//   It is permissible to use Content-Disposition on the main body of an
 	//   [RFC 822] message.
 	//
-	// I wonder how well this will work in pratice
-	if !hastext && len(i.FI) == 1 {
-		// single attachment
-		if len(i.FI[0].ContentType) == 0 {
-			panic("Content-Type not set")
+	// however other impls don't really expect that so don't do it
+	/*
+		if !hastext && len(i.FI) == 1 {
+			// single attachment
+			if len(i.FI[0].ContentType) == 0 {
+				panic("Content-Type not set")
+			}
+			i.H["Content-Type"] = mail.OneHeaderVal(
+				attachmentConentType(i.FI[0].ContentType, i.FI[0].Original))
+			i.H["Content-Disposition"] =
+				mail.OneHeaderVal(attachmentDisposition(i.FI[0].Original))
+			i.L.Body.Data = mailib.PostObjectIndex(1)
+			i.L.Binary = true
+			return i
 		}
-		i.H["Content-Type"] = mail.OneHeaderVal(
-			attachmentConentType(i.FI[0].ContentType, i.FI[0].Original))
-		i.H["Content-Disposition"] =
-			mail.OneHeaderVal(attachmentDisposition(i.FI[0].Original))
-		i.L.Body.Data = mailib.PostObjectIndex(1)
-		i.L.Binary = true
-		return i
-	}
+	*/
 
 	nparts := len(i.FI)
 	if hastext {
