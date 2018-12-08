@@ -79,7 +79,8 @@ func (s *IBOAuth2) validateOAuth2(
 			func(token *jwt.Token) (interface{}, error) {
 				m, ok := token.Method.(methodTypeWeUse)
 				if !ok || m != methodValueWeUse {
-					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+					return nil, fmt.Errorf(
+						"Unexpected signing method: %v", token.Header["alg"])
 				}
 				return s.signKey, nil
 			}))

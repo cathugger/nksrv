@@ -461,7 +461,13 @@ ON xb.bid=xtp.bid`
 				}
 				files[i].Remove()
 			}
+			x++
 		}
+	}
+	if x != len(pInfo.FI) {
+		panic(fmt.Errorf(
+			"file number mismatch: have %d should have %d",
+			x, len(pInfo.FI)))
 	}
 
 	if !isReply {

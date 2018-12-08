@@ -113,6 +113,7 @@ var dbIb0InitStatements = []string{
 	`CREATE TABLE ib0.scraper_last_newnews (
 	sid          BIGINT NOT NULL,
 	last_newnews BIGINT NOT NULL,
+
 	PRIMARY KEY (sid),
 	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
 )`,
