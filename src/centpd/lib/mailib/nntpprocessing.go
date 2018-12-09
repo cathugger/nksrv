@@ -487,7 +487,7 @@ func DevourMessageBody(
 			if prt != nil {
 				partI.HasNull = prt.HasNull
 				partI.Has8Bit = prt.Has8Bit && !prt.HasNull
-				if prt.Has8Bit && !prt.HasNull {
+				if partI.Has8Bit {
 					has8bit = true
 				}
 			}
@@ -531,7 +531,7 @@ func DevourMessageBody(
 
 	if xrt != nil {
 		pi.L.HasNull = xrt.HasNull
-		pi.L.Has8Bit = xrt.Has8Bit
+		pi.L.Has8Bit = xrt.Has8Bit && !xrt.HasNull
 	}
 
 	return
