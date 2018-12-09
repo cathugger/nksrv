@@ -6,7 +6,6 @@ import (
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/bufreader"
-	. "centpd/lib/logx"
 	"centpd/lib/mail"
 )
 
@@ -243,16 +242,16 @@ func (c *NNTPScraper) eatHdrMsgIDLine(
 		return
 	}
 
-	c.log.LogPrintf(DEBUG, "eatHdrMsgIDLine line: %q", line)
+	//c.log.LogPrintf(DEBUG, "eatHdrMsgIDLine line: %q", line)
 
 	i := 0
 	skipWS := func() {
-		for i < len(line) && (i == ' ' || i == '\t') {
+		for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
 			i++
 		}
 	}
 	skipNonWS := func() {
-		for i < len(line) && i != ' ' && i != '\t' {
+		for i < len(line) && line[i] != ' ' && line[i] != '\t' {
 			i++
 		}
 	}
