@@ -677,8 +677,13 @@ func (c *NNTPScraper) eatHdrOutput(
 
 		if len(c.todoList) >= maxListSize {
 			// safeguard
+			c.log.LogPrintf(DEBUG,
+				"eatHdrOutput: skipping excess %d %s", id, msgid)
 			continue
 		}
+
+		c.log.LogPrintf(DEBUG,
+			"eatHdrOutput: adding %d %s", id, msgid)
 
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
@@ -721,6 +726,8 @@ func (c *NNTPScraper) eatOverOutput(
 
 		if len(c.todoList) >= maxListSize {
 			// safeguard
+			c.log.LogPrintf(DEBUG,
+				"eatOverOutput: skipping excess %d %s", id, msgid)
 			continue
 		}
 
@@ -728,6 +735,10 @@ func (c *NNTPScraper) eatOverOutput(
 		if len(ref) != 0 {
 			sref = FullMsgIDStr(ref)
 		}
+
+		c.log.LogPrintf(DEBUG,
+			"eatOverOutput: adding %d %q %q", id, msgid, sref)
+
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
 			id:    id,
