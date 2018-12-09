@@ -834,6 +834,10 @@ func (c *NNTPScraper) eatGroupSlice(
 	if hdrD {
 		// parse HDR/XHDR lines
 		err = c.eatHdrOutput(r_begin, r_end)
+		if err != nil {
+			c.log.LogPrintf(WARN, "error parsing HDR output: %v", err)
+			return
+		}
 		// loaded list.. now process it
 		new_maxid, err, fatal = c.processTODOList(group, maxid)
 		return
@@ -911,6 +915,10 @@ func (c *NNTPScraper) eatGroupSlice(
 	if overD {
 		// uhh... gotta parse OVER/XOVER lines now..
 		err = c.eatOverOutput(r_begin, r_end)
+		if err != nil {
+			c.log.LogPrintf(WARN, "error parsing OVER output: %v", err)
+			return
+		}
 		// loaded list.. now process it
 		new_maxid, err, fatal = c.processTODOList(group, maxid)
 		return
