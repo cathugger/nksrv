@@ -106,7 +106,7 @@ func GenerateMessage(
 			return
 		}
 		if lr != nil && lr.N != 1 {
-			err = fmt.Errorf("wrong amount copied", err)
+			err = errors.New("wrong amount copied")
 			return
 		}
 
