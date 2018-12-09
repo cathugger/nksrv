@@ -420,6 +420,8 @@ func DevourMessageBody(
 	if xismultipart && xct_par != nil && xct_par["boundary"] != "" &&
 		len(XH["Content-Disposition"]) == 0 {
 
+		has8bit := false
+
 		pr := mail.NewPartReader(xr, xct_par["boundary"])
 		var pis []PartInfo
 		for {
@@ -464,16 +466,32 @@ func DevourMessageBody(
 			pxr, pbinary, err =
 				processMessagePrepareReader(pcte, pismultipart, pr)
 
+			var prt *readTracker
+			if !pbinary {
+				prt = &readTracker{R: pxr}
+				pxr = prt
+			}
+
 			var partI PartInfo
 			partI.ContentType = pct
 			partI.Binary = pbinary
 			partI.Headers = PH
+
 			partI.Body, err =
 				guttleBody(pxr, PH, pct_t, pct_par, pbinary)
 			if err != nil {
 				err = fmt.Errorf("guttleBody: %v", err)
 				break
 			}
+
+			if prt != nil {
+				partI.HasNull = prt.HasNull
+				partI.Has8Bit = prt.Has8Bit
+				if prt.Has8Bit && !prt.HasNull {
+					has8bit = true
+				}
+			}
+
 			pis = append(pis, partI)
 		}
 		pr.Close()
@@ -491,6 +509,7 @@ func DevourMessageBody(
 		pi.H = XH
 		pi.L.Binary = xbinary
 		pi.L.Body.Data = pis
+		pi.L.Has8Bit = has8bit
 
 		return // done there
 	}
@@ -500,8 +519,20 @@ func DevourMessageBody(
 	pi.H = XH
 	// since this is toplvl dont set ContentType or other headers
 	pi.L.Binary = xbinary
+
+	var xrt *readTracker
+	if !xbinary {
+		xrt = &readTracker{R: xr}
+		xr = xrt
+	}
+
 	pi.L.Body, err =
 		guttleBody(xr, XH, xct_t, xct_par, xbinary)
+
+	if xrt != nil {
+		pi.L.HasNull = xrt.HasNull
+		pi.L.Has8Bit = xrt.Has8Bit
+	}
 
 	return
 }
