@@ -678,8 +678,12 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	dw.Close()
 }
 
-func replaceTab(s string) string {
-	return strings.Replace(s, "\t", " ", -1)
+var headerReplacer = strings.NewReplacer(
+	"\t", " ", "\r", "", "\n", " ", "\000", "")
+
+// safeHeader prepares header value for OVER/HDR output
+func safeHeader(s string) string {
+	return headerReplacer.Replace(s)
 }
 
 func (sp *PSQLIB) printOver(
@@ -698,8 +702,8 @@ func (sp *PSQLIB) printOver(
 		We also add Xref header field
 	*/
 	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s %s:%d\n",
-		num, replaceTab(title), replaceTab(hfrom), replaceTab(hdate), msgid,
-		replaceTab(hrefs), "", "", sp.instance, bname, pid)
+		num, safeHeader(title), safeHeader(hfrom), safeHeader(hdate), msgid,
+		safeHeader(hrefs), "", "", sp.instance, bname, pid)
 }
 
 // + ok: 224{ResOverviewInformationFollows}
@@ -929,12 +933,12 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		w.ResHdrFollow()
 		dw := w.DotWriter()
 		fmt.Fprintf(dw, "%d %s\n",
-			artnumInGroup(cs, bid, pid), replaceTab(h.String))
+			artnumInGroup(cs, bid, pid), safeHeader(h.String))
 		dw.Close()
 	} else {
 		w.ResXHdrFollow()
 		dw := w.DotWriter()
-		fmt.Fprintf(dw, "<%s> %s\n", sid, replaceTab(h.String))
+		fmt.Fprintf(dw, "<%s> %s\n", sid, safeHeader(h.String))
 		dw.Close()
 	}
 
@@ -1036,7 +1040,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 			dw = w.DotWriter()
 		}
 
-		fmt.Fprintf(dw, "%d %s\n", pid, replaceTab(h.String))
+		fmt.Fprintf(dw, "%d %s\n", pid, safeHeader(h.String))
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -1139,7 +1143,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	}
 
 	dw := w.DotWriter()
-	fmt.Fprintf(dw, "%d %s\n", gs.pid, replaceTab(h.String))
+	fmt.Fprintf(dw, "%d %s\n", gs.pid, safeHeader(h.String))
 	dw.Close()
 
 	return true

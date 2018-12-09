@@ -3,6 +3,7 @@ package mail
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 
 	"centpd/lib/bufreader"
@@ -120,6 +121,7 @@ func estimateNumHeaders(br *bufreader.BufReader) (n int, e error) {
 
 func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 	h := hdrPool.Get().(*bytes.Buffer)
+	h.Reset()
 
 	H = make(Headers)
 
@@ -133,8 +135,13 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 
 	var splits []uint32
 
-	finishCurrent := func() {
+	finishCurrent := func() error {
 		if len(currHeader) != 0 {
+			if bytes.IndexByte(h.Bytes(), '\000') >= 0 {
+				h.Reset()
+				return fmt.Errorf(
+					"null byte found in %q header value", origHeader)
+			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
 				H: origHeader,
 				V: string(h.Bytes()),
@@ -154,6 +161,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 			currHeader = ""
 		}
 		h.Reset()
+		return nil
 	}
 
 	for {
@@ -190,7 +198,10 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 			if wb[0] != ' ' && wb[0] != '\t' {
 				// not a continuation
 				// finish current, if any
-				finishCurrent()
+				e = finishCurrent()
+				if e != nil {
+					break
+				}
 				// process it
 				n := bytes.IndexByte(wb, ':')
 				if n < 0 {
@@ -204,8 +215,12 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 					hn--
 				}
 				// empty or invalid
-				if hn == 0 || !ValidHeader(wb[:hn]) {
+				if hn == 0 {
 					e = errEmptyHeaderName
+					break
+				}
+				if !ValidHeaderName(wb[:hn]) {
+					e = fmt.Errorf("invalid header name: %q", wb[:hn])
 					break
 				}
 				currHeader, origHeader =
@@ -239,7 +254,11 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 		_, e = br.FillBufferAtleast(1)
 	}
 endHeaders:
-	finishCurrent()
+	if e == nil {
+		e = finishCurrent()
+	} else {
+		h.Reset()
+	}
 	hdrPool.Put(h)
 	return
 }

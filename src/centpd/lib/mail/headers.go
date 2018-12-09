@@ -7,7 +7,7 @@ import (
 	au "centpd/lib/asciiutils"
 )
 
-func ValidHeader(h []byte) bool {
+func ValidHeaderName(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
 }
 
