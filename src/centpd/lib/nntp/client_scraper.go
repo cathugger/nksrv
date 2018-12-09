@@ -659,6 +659,7 @@ func (c *NNTPScraper) eatHdrOutput(
 		id, msgid, err = c.eatHdrMsgIDLine(dr)
 		if err != nil {
 			if err == io.EOF {
+				c.log.LogPrintf(DEBUG, "eatHdrOutput: EOF")
 				err = nil
 				break
 			}
@@ -687,7 +688,9 @@ func (c *NNTPScraper) eatHdrOutput(
 
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
-			id: id, msgid: FullMsgIDStr(msgid)})
+			id:    id,
+			msgid: FullMsgIDStr(msgid),
+		})
 	}
 
 	return
