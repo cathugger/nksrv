@@ -551,7 +551,13 @@ func (c *NNTPScraper) processTODOList(
 		default:
 		}
 
-		wanted, e := c.db.IsArticleWanted(c.todoList[i].msgid)
+		var wanted bool
+		var e error
+		if c.todoList[i].msgid != "" {
+			wanted, e = c.db.IsArticleWanted(c.todoList[i].msgid)
+		} else {
+			wanted = true
+		}
 		if e != nil {
 			c.log.LogPrintf(ERROR,
 				"IsArticleWanted(%s) fail: %v", c.todoList[i].msgid, e)
@@ -573,7 +579,7 @@ func (c *NNTPScraper) processTODOList(
 
 			continue
 		}
-		c.log.LogPrintf(DEBUG, "TODO list %d %s wanted",
+		c.log.LogPrintf(DEBUG, "TODO list %d %q wanted",
 			c.todoList[i].id, c.todoList[i].msgid)
 
 		select {
