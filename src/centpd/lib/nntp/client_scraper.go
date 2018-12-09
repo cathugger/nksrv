@@ -540,7 +540,7 @@ func (c *NNTPScraper) processTODOList(
 	// start worker
 	go responseLoop(todochan, finishchan)
 
-	c.log.LogPrintf(DEBUG, "start TODO list")
+	c.log.LogPrintf(DEBUG, "start TODO list (len %d)", len(c.todoList))
 	for i := range c.todoList {
 
 		select {
@@ -649,6 +649,7 @@ func (c *NNTPScraper) eatHdrOutput(
 			dr.Discard(-1)
 		}
 	}()
+
 	c.todoList = c.todoList[:0] // reuse
 
 	for {
@@ -669,6 +670,8 @@ func (c *NNTPScraper) eatHdrOutput(
 			(r_end >= 0 && id > uint64(r_end)) ||
 			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
+			c.log.LogPrintf(DEBUG,
+				"eatHdrOutput: skipping unwanted %d %s", id, msgid)
 			continue
 		}
 
@@ -711,6 +714,8 @@ func (c *NNTPScraper) eatOverOutput(
 			(r_end >= 0 && id > uint64(r_end)) ||
 			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
+			c.log.LogPrintf(DEBUG,
+				"eatOverOutput: skipping unwanted %d %s", id, msgid)
 			continue
 		}
 
