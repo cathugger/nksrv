@@ -16,7 +16,9 @@ func (sp *PSQLIB) nntpGenerate(
 	w io.Writer, num uint64, msgid CoreMsgIDStr) (err error) {
 
 	// fetch info about post. some of info we don't care about
-	q := `SELECT jp.title,jp.message,jp.headers,jp.layout,jf.fname
+	q := `SELECT
+	jp.title,jp.message,jp.headers,jp.layout,
+	jf.fname,jf.fsize
 FROM ib0.posts AS jp
 LEFT JOIN ib0.files AS jf
 USING (bid,pid)
@@ -34,9 +36,12 @@ ORDER BY jf.fid`
 	for rows.Next() {
 		var jH, jL xtypes.JSONText
 		var fid sql.NullString
+		var fsize sql.NullInt64
 
 		// XXX is it okay to overwrite stuff there?
-		err = rows.Scan(&pi.MI.Title, &pi.MI.Message, &jH, &jL, &fid)
+		err = rows.Scan(
+			&pi.MI.Title, &pi.MI.Message, &jH, &jL,
+			&fid, &fsize)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("posts x files query rows scan", err)
@@ -65,7 +70,10 @@ ORDER BY jf.fid`
 		}
 
 		if fid.Valid && fid.String != "" {
-			pi.FI = append(pi.FI, mailib.FileInfo{ID: fid.String})
+			pi.FI = append(pi.FI, mailib.FileInfo{
+				ID:   fid.String,
+				Size: fsize.Int64,
+			})
 		}
 
 		havesomething = true

@@ -67,6 +67,7 @@ func GenerateMessage(
 		w io.Writer, binary bool, poi PostObjectIndex) (err error) {
 
 		var r io.Reader
+		var lr *io.LimitedReader
 		if poi == 0 {
 			r = strings.NewReader(pi.MI.Message)
 		} else {
@@ -83,7 +84,8 @@ func GenerateMessage(
 			}
 			defer f.Close()
 
-			r = f
+			lr = &io.LimitedReader{R: f, N: pi.FI[poi-1].Size + 1}
+			r = lr
 		}
 
 		var clsr io.Closer
@@ -101,6 +103,10 @@ func GenerateMessage(
 		_, err = io.Copy(w, r)
 		if err != nil {
 			err = fmt.Errorf("error copying: %v", err)
+			return
+		}
+		if lr != nil && lr.N != 1 {
+			err = fmt.Errorf("wrong amount copied", err)
 			return
 		}
 
