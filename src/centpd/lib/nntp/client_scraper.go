@@ -589,7 +589,7 @@ func (c *NNTPScraper) processTODOList(
 		default:
 		}
 
-		if c.todoList[i].ref != "" {
+		if c.todoList[i].ref != "" && c.todoList[i].ref != c.todoList[i].msgid {
 			exists, e := c.db.DoesReferenceExist(c.todoList[i].ref)
 			if e != nil {
 				c.log.LogPrintf(ERROR,

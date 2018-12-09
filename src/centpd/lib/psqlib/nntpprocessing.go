@@ -182,6 +182,9 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	var troot FullMsgIDStr
 	if len(H["References"]) != 0 {
 		troot = mail.ExtractFirstValidReference(H["References"][0].V)
+		if troot == info.FullMsgIDStr {
+			troot = ""
+		}
 	}
 
 	// actual DB check on group and refered article
