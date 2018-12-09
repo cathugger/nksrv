@@ -28,10 +28,10 @@ func randomBoundary() string {
 }
 
 func modifyMultipartType(ct string) (_ string, rb string, _ error) {
-	rb = randomBoundary()
 	if ct == "" {
 		return "", "", errNoContentType
 	}
+	rb = randomBoundary()
 	return ct + "; boundary=" + rb, rb, nil
 }
 
@@ -82,7 +82,6 @@ func GenerateMessage(
 		pi.H, xcw, xcc = setCTE(pi.H, pi.L, xw)
 	} else {
 		if pi.H == nil || pi.H.GetFirst("Content-Type") == "" {
-
 			return errNoContentType
 		}
 
