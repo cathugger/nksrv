@@ -104,6 +104,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		} else {
 			i.L.Body.Data = mailib.PostObjectIndex(0)
 			if text8bit {
+				i.L.Has8Bit = true
 				i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
 				i.H["Content-Type"] = mail.OneHeaderVal(plainUTF8Type)
 			}
@@ -143,6 +144,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 	x := 0
 	if hastext {
 		if text8bit {
+			xparts[0].Has8Bit = true
 			xparts[0].ContentType = plainUTF8Type
 		}
 		xparts[0].Body.Data = mailib.PostObjectIndex(0)
@@ -164,5 +166,6 @@ func (sp *PSQLIB) fillWebPostDetails(
 	}
 	i.H["Content-Type"] = mail.OneHeaderVal("multipart/mixed")
 	i.L.Body.Data = xparts
+	i.L.Has8Bit = text8bit
 	return i
 }
