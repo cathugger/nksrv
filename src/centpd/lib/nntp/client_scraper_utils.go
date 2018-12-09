@@ -3,6 +3,7 @@ package nntp
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/bufreader"
@@ -120,7 +121,7 @@ func parseListActiveLine(
 
 func (c *NNTPScraper) getOverLineInfo(
 	dr *bufreader.DotReader) (
-	id uint64, msgid, ref FullMsgID, err error) {
+	id uint64, msgid, ref FullMsgID, err error, fatal bool) {
 
 	i := 0
 	nomore := false
@@ -132,6 +133,9 @@ func (c *NNTPScraper) getOverLineInfo(
 		for {
 			b, e := dr.ReadByte()
 			if e != nil {
+				if e != io.EOF {
+					fatal = true
+				}
 				err = e
 				return
 			}
@@ -159,6 +163,9 @@ func (c *NNTPScraper) getOverLineInfo(
 		for {
 			b, e := dr.ReadByte()
 			if e != nil {
+				if e != io.EOF {
+					fatal = true
+				}
 				err = e
 				return
 			}
@@ -177,6 +184,12 @@ func (c *NNTPScraper) getOverLineInfo(
 			for {
 				b, e := dr.ReadByte()
 				if e != nil || b == '\n' {
+					if e != nil && err == nil {
+						err = e
+					}
+					if e != nil && e != io.EOF {
+						fatal = true
+					}
 					return
 				}
 			}

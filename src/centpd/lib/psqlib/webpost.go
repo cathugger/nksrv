@@ -183,7 +183,7 @@ func generateFileConfig(
 	}
 
 	if len(ext) != 0 {
-		s += "." + ext
+		s += "." + strings.ToLower(ext)
 	}
 
 	fi.ID = s

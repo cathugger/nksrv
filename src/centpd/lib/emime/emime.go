@@ -12,47 +12,55 @@ var (
 	mimeLock       sync.RWMutex
 	mimeTypes      map[string][]string // extension -> types
 	mimeExtensions map[string][]string // type -> extensions
+	mimePrefExt    map[string]string   // prefered extensions
 )
 
-func setExtensionType(ext, mimeType string) error {
+// ext MUST be lowercase
+func setExtensionType(
+	ext, mimeType string) (pureExt string, pref bool, err error) {
+
 	justType, param, err := mm.ParseMediaType(mimeType)
 	if err != nil {
-		return err
+		return
 	}
 	// treat text files as UTF-8 by default
-	if strings.HasPrefix(mimeType, "text/") && param["charset"] == "" {
+	if strings.HasPrefix(justType, "text/") && param["charset"] == "" {
 		param["charset"] = "utf-8"
 	}
 	// ensure proper formatting
 	mimeType = mm.FormatMediaType(justType, param)
-	var extLower string
-	if len(ext) != 0 && (ext[0] == '.' || ext[0] == '!') {
-		extLower = strings.ToLower(ext[1:])
+	if len(ext) != 0 && (ext[0] == '.' || ext[0] == '!' || ext[0] == '=') {
+		pureExt = ext[1:]
+		if ext[0] == '=' {
+			pref = true
+		}
 	} else {
-		extLower = strings.ToLower(ext)
+		pureExt = ext
 	}
 
-	mtypes := mimeTypes[extLower]
+	mtypes := mimeTypes[pureExt]
 	for _, v := range mtypes {
 		if v == mimeType {
 			goto skipMIMEAdd
 		}
 	}
-	mimeTypes[extLower] = append(mtypes, mimeType)
+	// add
+	mimeTypes[pureExt] = append(mtypes, mimeType)
 skipMIMEAdd:
 
 	if ext == "*" || (len(ext) != 0 && ext[0] == '!') {
-		return nil
+		return
 	}
 
 	exts := mimeExtensions[justType]
 	for _, v := range exts {
-		if v == extLower {
-			return nil
+		if v == pureExt {
+			return
 		}
 	}
-	mimeExtensions[justType] = append(exts, extLower)
-	return nil
+	// add
+	mimeExtensions[justType] = append(exts, pureExt)
+	return
 }
 
 func mimeTypesByExtension(ext string) []string {
@@ -109,6 +117,7 @@ func MIMETypeByExtension(ext string) string {
 }
 
 func mimeIsCanonical(ext, typ string) bool {
+	ext = strings.ToLower(ext)
 	if typext, err := mimeExtensionsByType(typ); err == nil {
 		for _, tex := range typext {
 			if ext == tex {
@@ -195,18 +204,47 @@ func LoadMIMEDatabase(dbfile string) (err error) {
 			continue
 		}
 		mimeType := fields[0]
-		for _, ext := range fields[1:] {
-			if ext[0] == '#' || ext[0] == '/' {
-				break
-			}
-			e := setExtensionType(ext, mimeType)
-			if err == nil {
-				err = e
-			}
+		e := setExtensionsType(fields[1:], mimeType)
+		if err == nil {
+			err = e
 		}
 	}
 	if e := scanner.Err(); e != nil {
 		err = e
+	}
+	return
+}
+
+func setExtensionsType(exts []string, mimeType string) (err error) {
+	numpref := -1
+	for i, ext := range exts {
+		if ext[0] == '#' || ext[0] == '/' {
+			break
+		}
+
+		ext, pref, e := setExtensionType(strings.ToLower(ext), mimeType)
+		exts[i] = ext
+
+		if err == nil {
+			err = e
+		}
+		if pref && numpref < 0 {
+			numpref = i
+		}
+	}
+	if numpref >= 0 && exts[numpref] != "" {
+		for i, ext := range exts {
+			if i == numpref || ext == "" {
+				continue
+			}
+			if ext[0] == '#' || ext[0] == '/' {
+				break
+			}
+			_, exists := mimePrefExt[ext]
+			if !exists {
+				mimePrefExt[ext] = exts[numpref]
+			}
+		}
 	}
 	return
 }

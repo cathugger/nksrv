@@ -540,6 +540,7 @@ func (c *NNTPScraper) processTODOList(
 	// start worker
 	go responseLoop(todochan, finishchan)
 
+	numunwanted := 0
 	c.log.LogPrintf(DEBUG, "start TODO list (len %d)", len(c.todoList))
 	for i := range c.todoList {
 
@@ -560,8 +561,9 @@ func (c *NNTPScraper) processTODOList(
 		}
 
 		if !wanted {
-			c.log.LogPrintf(DEBUG, "TODO list %d %s unwanted",
-				c.todoList[i].id, c.todoList[i].msgid)
+			numunwanted++
+			//c.log.LogPrintf(DEBUG, "TODO list %d %s unwanted",
+			//	c.todoList[i].id, c.todoList[i].msgid)
 
 			maxidMu.Lock()
 			if int64(c.todoList[i].id) > new_maxid {
@@ -625,7 +627,7 @@ func (c *NNTPScraper) processTODOList(
 			return
 		}
 	}
-	c.log.LogPrintf(DEBUG, "end TODO list")
+	c.log.LogPrintf(DEBUG, "end TODO list (num unwanted: %d)", numunwanted)
 
 	close(todochan)
 	c.log.LogPrintf(DEBUG, "waiting for worker to quit")
@@ -671,8 +673,8 @@ func (c *NNTPScraper) eatHdrOutput(
 			(r_end >= 0 && id > uint64(r_end)) ||
 			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
-			c.log.LogPrintf(DEBUG,
-				"eatHdrOutput: skipping unwanted %d %s", id, msgid)
+			//c.log.LogPrintf(DEBUG,
+			//	"eatHdrOutput: skipping unwanted %d %s", id, msgid)
 			continue
 		}
 
@@ -683,8 +685,8 @@ func (c *NNTPScraper) eatHdrOutput(
 			continue
 		}
 
-		c.log.LogPrintf(DEBUG,
-			"eatHdrOutput: adding %d %s", id, msgid)
+		//c.log.LogPrintf(DEBUG,
+		//	"eatHdrOutput: adding %d %s", id, msgid)
 
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
@@ -697,7 +699,7 @@ func (c *NNTPScraper) eatHdrOutput(
 }
 
 func (c *NNTPScraper) eatOverOutput(
-	r_begin, r_end int64) (err error) {
+	group string, r_begin, r_end int64) (err error) {
 
 	dr := c.openDotReader()
 	defer func() {
@@ -709,21 +711,33 @@ func (c *NNTPScraper) eatOverOutput(
 	for {
 		var id uint64
 		var msgid, ref FullMsgID
-		id, msgid, ref, err = c.getOverLineInfo(dr)
+		var fatal bool
+		id, msgid, ref, err, fatal = c.getOverLineInfo(dr)
 		if err != nil {
 			if err == io.EOF {
 				err = nil
 				break
 			}
-			return
+
+			if !fatal {
+				c.log.LogPrintf(WARN,
+					"eatOverOutput: g(%q) id(%d) getOverLineInfo soft err: %v",
+					group, id, err)
+				err = nil // keep going
+			} else {
+				c.log.LogPrintf(WARN,
+					"eatOverOutput: g(%q) id(%d) getOverLineInfo fatal err: %v",
+					group, id, err)
+				return
+			}
 		}
 		// if we didn't ask for this, don't include
 		if id == 0 || id < uint64(r_begin) ||
 			(r_end >= 0 && id > uint64(r_end)) ||
 			(r_end < 0 && id >= uint64(r_begin)+maxListSize) {
 
-			c.log.LogPrintf(DEBUG,
-				"eatOverOutput: skipping unwanted %d %s", id, msgid)
+			//c.log.LogPrintf(DEBUG,
+			//	"eatOverOutput: skipping unwanted %d %s", id, msgid)
 			continue
 		}
 
@@ -739,8 +753,8 @@ func (c *NNTPScraper) eatOverOutput(
 			sref = FullMsgIDStr(ref)
 		}
 
-		c.log.LogPrintf(DEBUG,
-			"eatOverOutput: adding %d %q %q", id, msgid, sref)
+		//c.log.LogPrintf(DEBUG,
+		//	"eatOverOutput: adding %d %q %q", id, msgid, sref)
 
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
@@ -914,7 +928,7 @@ func (c *NNTPScraper) eatGroupSlice(
 	}
 	if overD {
 		// uhh... gotta parse OVER/XOVER lines now..
-		err = c.eatOverOutput(r_begin, r_end)
+		err = c.eatOverOutput(group, r_begin, r_end)
 		if err != nil {
 			c.log.LogPrintf(WARN, "error parsing OVER output: %v", err)
 			return
