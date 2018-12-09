@@ -214,7 +214,8 @@ func validFormText(s string) bool {
 var lineReplacer = strings.NewReplacer(
 	"\r", "",
 	"\n", " ",
-	"\t", " ")
+	"\t", " ",
+	"\000", "")
 
 func optimiseFormLine(line string) (s string) {
 	s = lineReplacer.Replace(line)

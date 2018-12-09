@@ -307,7 +307,9 @@ func DevourMessageBody(
 	defer func() {
 		if err != nil {
 			for _, fn := range tmpfilenames {
-				os.Remove(fn)
+				if fn != "" {
+					os.Remove(fn)
+				}
 			}
 			tmpfilenames = []string(nil)
 		}
@@ -360,7 +362,11 @@ func DevourMessageBody(
 			}
 			pi.MI.Message = str
 			if finished {
-				obj.Data = PostObjectIndex(0)
+				if str != "" {
+					obj.Data = PostObjectIndex(0)
+				} else {
+					obj.Data = nil
+				}
 				return
 			}
 		}

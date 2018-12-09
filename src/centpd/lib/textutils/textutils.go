@@ -7,6 +7,10 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+var replacer = strings.NewReplacer(
+	"\r", "",
+	"\000", "")
+
 func NormalizeTextMessage(msg string) (s string) {
 	// normalise using form C
 	s = norm.NFC.String(msg)
@@ -22,7 +26,7 @@ func NormalizeTextMessage(msg string) (s string) {
 		lines = lines[:i]
 	}
 	s = strings.Join(lines, "\n")
-	// ensure we don't have any CR left
-	s = strings.Replace(s, "\r", "", -1)
+	// ensure we don't have any silly stuff left
+	s = replacer.Replace(s)
 	return
 }
