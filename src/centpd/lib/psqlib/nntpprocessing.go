@@ -182,7 +182,11 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	var troot FullMsgIDStr
 	if len(H["References"]) != 0 {
 		troot = mail.ExtractFirstValidReference(H["References"][0].V)
-		if troot == info.FullMsgIDStr {
+		if troot == info.FullMsgIDStr && info.FullMsgIDStr != "" {
+			if post {
+				err = errors.New("self-references not allowed")
+				return
+			}
 			troot = ""
 		}
 	}
