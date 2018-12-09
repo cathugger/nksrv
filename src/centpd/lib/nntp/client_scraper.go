@@ -754,6 +754,10 @@ func (c *NNTPScraper) eatGroupSlice(
 	group string, r_begin, r_end, maxid int64) (
 	new_maxid int64, err error, fatal bool) {
 
+	c.log.LogPrintf(DEBUG,
+		"eatGroupSlice called group(%s) begin(%d) end(%d)",
+		group, r_begin, r_end)
+
 	printHdrLine := func(hdr string) error {
 		if r_end >= 0 {
 			if r_begin != r_end {
