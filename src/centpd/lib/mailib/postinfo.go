@@ -129,7 +129,11 @@ type PartInfoInner struct {
 }
 
 func (i *PartInfoInner) onlyBody() bool {
-	return i.ContentType == "" && !i.Binary && len(i.Headers) == 0
+	return i.ContentType == "" &&
+		!i.Binary &&
+		!i.HasNull &&
+		!i.Has8Bit &&
+		len(i.Headers) == 0
 }
 
 type PartInfo struct {
