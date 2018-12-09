@@ -724,6 +724,7 @@ func (c *NNTPScraper) eatOverOutput(
 					"eatOverOutput: g(%q) id(%d) getOverLineInfo soft err: %v",
 					group, id, err)
 				err = nil // keep going
+				continue
 			} else {
 				c.log.LogPrintf(WARN,
 					"eatOverOutput: g(%q) id(%d) getOverLineInfo fatal err: %v",
