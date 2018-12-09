@@ -122,6 +122,8 @@ func (i *BodyObject) UnmarshalJSON(b []byte) (err error) {
 type PartInfoInner struct {
 	ContentType string       `json:"t,omitempty"`
 	Binary      bool         `json:"x,omitempty"`
+	HasNull     bool         `json:"0,omitempty"`
+	Has8Bit     bool         `json:"8,omitempty"`
 	Headers     mail.Headers `json:"h,omitempty"`
 	Body        BodyObject   `json:"b"`
 }

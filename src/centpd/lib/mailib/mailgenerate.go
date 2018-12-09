@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/quotedprintable"
 	"os"
 	"strings"
 
@@ -34,23 +35,61 @@ func modifyMultipartType(ct string) (_ string, rb string, _ error) {
 	return ct + "; boundary=" + rb, rb, nil
 }
 
+func setCTE(
+	H mail.Headers, pi PartInfo, w io.Writer) (
+	_ mail.Headers, cw io.Writer, cc io.Closer) {
+
+	cw = w // default
+
+	if pi.Binary {
+		if H == nil {
+			H = make(mail.Headers)
+		}
+		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
+
+		ww := base64.NewEncoder(
+			base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
+		cw = ww
+		cc = ww
+	} else if pi.HasNull {
+		if H == nil {
+			H = make(mail.Headers)
+		}
+		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("quoted-printable")
+
+		ww := quotedprintable.NewWriter(w)
+		cw = ww
+		cc = ww
+	} else if pi.Has8Bit {
+		if H == nil {
+			H = make(mail.Headers)
+		}
+		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("8bit")
+	}
+
+	return H, cw, cc
+}
+
 func GenerateMessage(
 	src *fstore.FStore, xw io.Writer, pi PostInfo) (err error) {
+
+	var xcw io.Writer
+	var xcc io.Closer
 
 	pis, ismp := pi.L.Body.Data.([]PartInfo)
 	var mpboundary string
 	if !ismp {
-		// XXX should we announce 8bit text?
-		if pi.L.Binary {
-			if pi.H == nil {
-				pi.H = make(mail.Headers)
-			}
-			pi.H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
-		}
+		pi.H, xcw, xcc = setCTE(pi.H, pi.L, xw)
 	} else {
-		if pi.H == nil || len(pi.H["Content-Type"]) == 0 {
+		if pi.H == nil || pi.H.GetFirst("Content-Type") == "" {
+
 			return errNoContentType
 		}
+
+		if pi.L.Has8Bit && !pi.L.HasNull {
+			pi.H["Content-Transfer-Encoding"] = mail.OneHeaderVal("8bit")
+		}
+
 		pi.H["Content-Type"] = pi.H["Content-Type"][:1]
 		pi.H["Content-Type"][0].V, mpboundary, err =
 			modifyMultipartType(pi.H["Content-Type"][0].V)
@@ -88,16 +127,8 @@ func GenerateMessage(
 			r = lr
 		}
 
-		var clsr io.Closer
-
 		if !binary {
 			r = au.NewUnixTextReader(r)
-		} else {
-			wc := base64.NewEncoder(
-				base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
-
-			w = wc
-			clsr = wc
 		}
 
 		_, err = io.Copy(w, r)
@@ -110,31 +141,29 @@ func GenerateMessage(
 			return
 		}
 
-		if clsr != nil {
-			err = clsr.Close()
-			if err != nil {
-				err = fmt.Errorf("error closing writer: %v", err)
-				return
-			}
-		}
-
 		return
 	}
 
 	generateSomething := func(
-		w io.Writer, binary bool, bo BodyObject) error {
+		w io.Writer, c io.Closer, binary bool, bo BodyObject) (err error) {
 
 		if poi, ok := bo.Data.(PostObjectIndex); ok {
-			e := generateBody(w, binary, poi)
-			if e != nil {
-				e = fmt.Errorf("generateBody err: %v", e)
+			err = generateBody(w, binary, poi)
+			if err != nil {
+				return fmt.Errorf("generateBody err: %v", err)
 			}
-			return e
+		} else if bo.Data == nil {
+			// write nothing
+		} else {
+			panic("bad bo.Data type")
 		}
-		if bo.Data == nil {
-			return nil
+		if c != nil {
+			err = c.Close()
+			if err != nil {
+				return fmt.Errorf("error closing content writer: %v", err)
+			}
 		}
-		panic("bad bo.Data type")
+		return
 	}
 
 	var generateMultipart func(
@@ -145,6 +174,9 @@ func GenerateMessage(
 
 		pw := mail.NewPartWriter(w, boundary, "")
 		for i := range pis {
+			var pcw io.Writer
+			var pcc io.Closer
+
 			ppis, ismp := pis[i].Body.Data.([]PartInfo)
 			var pb string
 			if !ismp {
@@ -155,18 +187,21 @@ func GenerateMessage(
 					pis[i].Headers["Content-Type"] =
 						mail.OneHeaderVal(pis[i].ContentType)
 				}
-				// XXX should we announce 8bit text?
-				if pis[i].Binary {
-					if pis[i].Headers == nil {
-						pis[i].Headers = make(mail.Headers)
-					}
-					pis[i].Headers["Content-Transfer-Encoding"] =
-						mail.OneHeaderVal("base64")
-				}
+				pis[i].Headers, pcw, pcc = setCTE(pis[i].Headers, pis[i], w)
 			} else {
+				if pis[i].ContentType == "" {
+					return errNoContentType
+				}
+
 				if pis[i].Headers == nil {
 					pis[i].Headers = make(mail.Headers)
 				}
+
+				if pis[i].Has8Bit && !pis[i].HasNull {
+					pis[i].Headers["Content-Transfer-Encoding"] =
+						mail.OneHeaderVal("8bit")
+				}
+
 				pis[i].Headers["Content-Type"] = []mail.HeaderVal{{}}
 				pis[i].Headers["Content-Type"][0].V, pb, err =
 					modifyMultipartType(pis[i].ContentType)
@@ -181,7 +216,7 @@ func GenerateMessage(
 			}
 
 			if !ismp {
-				err = generateSomething(w, pis[i].Binary, pis[i].Body)
+				err = generateSomething(pcw, pcc, pis[i].Binary, pis[i].Body)
 			} else {
 				err = generateMultipart(w, pb, ppis)
 			}
@@ -193,7 +228,7 @@ func GenerateMessage(
 	}
 
 	if !ismp {
-		return generateSomething(xw, pi.L.Binary, pi.L.Body)
+		return generateSomething(xcw, xcc, pi.L.Binary, pi.L.Body)
 	} else {
 		return generateMultipart(xw, mpboundary, pis)
 	}
