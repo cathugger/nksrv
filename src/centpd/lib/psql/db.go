@@ -5,19 +5,32 @@ package psql
 
 import (
 	"fmt"
+	"strings"
 )
 
 var currDBVersion = ""
 
 var dbInitStatements = []string{
 	`CREATE TABLE capabilities (
-	component TEXT NOT NULL UNIQUE,
+	component TEXT NOT NULL PRIMARY KEY,
 	version   TEXT NOT NULL
 )`,
 	`INSERT INTO capabilities(component,version) VALUES ('','')`,
 }
 
 func (sp PSQL) InitDB() {
+	var charset string
+	err := sp.DB.
+		QueryRow(`SELECT character_set_name FROM information_schema.character_sets`).
+		Scan(&charset)
+	if err != nil {
+		panic(err)
+	}
+	if !strings.EqualFold(charset, "UTF8") {
+		panic(fmt.Errorf(
+			"bad database charset: expected \"UTF8\" got %q", charset))
+	}
+
 	for i := range dbInitStatements {
 		sp.DB.MustExec(dbInitStatements[i])
 	}
