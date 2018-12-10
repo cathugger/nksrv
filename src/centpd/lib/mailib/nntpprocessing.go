@@ -230,9 +230,6 @@ func processMessageAttachment(
 		if e == nil {
 			oname = tr_oname
 		}
-		if !utf8.ValidString(oname) {
-			oname = ""
-		}
 	}
 	if oname == "" && ct_par != nil && ct_par["name"] != "" {
 		oname = ct_par["name"]
@@ -240,9 +237,6 @@ func processMessageAttachment(
 		tr_oname, e := mail.DecodeMIMEWordHeader(oname)
 		if e == nil {
 			oname = tr_oname
-		}
-		if !utf8.ValidString(oname) {
-			oname = ""
 		}
 	}
 	// ensure oname is clean

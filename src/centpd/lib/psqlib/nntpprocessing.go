@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	nmail "net/mail"
 	"os"
 	"time"
 
@@ -305,7 +304,9 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	if len(H["Subject"]) != 0 {
 		sh := H["Subject"][0].V
-		ssub := au.TrimWSString(sh)
+
+		ssub := sh
+
 		if len(H["MIME-Version"]) != 0 {
 			// undo MIME hacks, if any
 			dsub, e := mail.DecodeMIMEWordHeader(ssub)
@@ -313,6 +314,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 				ssub = dsub
 			}
 		}
+
+		// ensure safety and sanity
+		ssub = au.TrimWSString(safeHeader(ssub))
+
 		if !isSubjectEmpty(ssub, info.isReply, info.refSubject) {
 			pi.MI.Title = ssub
 			if pi.MI.Title == sh && len(H["Subject"]) == 1 {
@@ -322,11 +327,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}
 
-	if len(H["From"]) != 0 && au.TrimWSString(H["From"][0].V) != "" {
-		a, e := nmail.ParseAddress(H["From"][0].V)
+	fromhdr := au.TrimWSString(H.GetFirst("From"))
+	if fromhdr != "" {
+		a, e := mail.ParseAddressX(fromhdr)
 		if e == nil {
 			// XXX should we filter out "Anonymous" names? would save some bytes
-			pi.MI.Author = a.Name
+			pi.MI.Author = au.TrimWSString(safeHeader(a.Name))
+		} else {
+			pi.MI.Author = "[Invalid From header]"
 		}
 	}
 

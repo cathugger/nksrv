@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	au "centpd/lib/asciiutils"
 	. "centpd/lib/logx"
@@ -679,7 +680,10 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 }
 
 var headerReplacer = strings.NewReplacer(
-	"\t", " ", "\r", "", "\n", " ", "\000", "")
+	"\t", " ",
+	"\r", string(unicode.ReplacementChar),
+	"\n", string(unicode.ReplacementChar),
+	"\000", string(unicode.ReplacementChar))
 
 // safeHeader prepares header value for OVER/HDR output
 func safeHeader(s string) string {
