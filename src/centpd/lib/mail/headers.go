@@ -3,12 +3,26 @@ package mail
 import (
 	"encoding/json"
 	"errors"
+	"unicode/utf8"
 
 	au "centpd/lib/asciiutils"
 )
 
 func ValidHeaderName(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
+}
+
+func validHeaderContent(b []byte) bool {
+	has8bit := false
+	for _, c := range b {
+		if c == '\000' || c == '\r' {
+			return false
+		}
+		if c&0x80 != 0 {
+			has8bit = true
+		}
+	}
+	return !has8bit || utf8.Valid(b)
 }
 
 const maxHeaderLen = 2000

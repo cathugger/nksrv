@@ -137,14 +137,14 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 
 	finishCurrent := func() error {
 		if len(currHeader) != 0 {
-			if bytes.IndexByte(h.Bytes(), '\000') >= 0 {
+			hcont := h.Bytes()
+			if !validHeaderContent(hcont) {
 				h.Reset()
-				return fmt.Errorf(
-					"null byte found in %q header value", origHeader)
+				return fmt.Errorf("invalid %q header content", currHeader)
 			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
 				H: origHeader,
-				V: string(h.Bytes()),
+				V: string(hcont),
 				S: splits,
 			}}
 			splits = []uint32(nil)
@@ -183,7 +183,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				wb = b[:n-1]
 			}
 
-			//fmt.Printf("!hdr full line>%s\n", wb)
+			//fmt.Printf("!hdr full line %q\n", wb)
 
 			b = b[n+1:]
 			br.Discard(n + 1)
