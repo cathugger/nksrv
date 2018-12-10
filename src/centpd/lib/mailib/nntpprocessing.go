@@ -23,7 +23,19 @@ import (
 
 const DefaultHeaderSizeLimit = 2 << 20
 
-func processMessagePrepareReader(
+type MailProcessorConfig struct {
+	TryUTF8      bool   // whether we should try decoding not specified charset as UTF8
+	AllowBinary  bool   // whether we should allow "binary" Content-Transfer-Encoding
+	EmptyCharset string // what encoding should we try if charset is unspecified
+}
+
+var DefaultMailProcessorConfig = MailProcessorConfig{
+	TryUTF8:      true,
+	AllowBinary:  false,
+	EmptyCharset: "ISO-8859-1",
+}
+
+func (cfg *MailProcessorConfig) processMessagePrepareReader(
 	cte string, ismultipart bool, r io.Reader) (
 	_ io.Reader, binary bool, err error) {
 
@@ -46,7 +58,7 @@ func processMessagePrepareReader(
 		}
 		r = qp.NewReader(r)
 		binary = false
-	} else if au.EqualFoldString(cte, "binary") {
+	} else if au.EqualFoldString(cte, "binary") && cfg.AllowBinary {
 		binary = true
 	} else {
 		err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
@@ -55,7 +67,7 @@ func processMessagePrepareReader(
 	return r, binary, err
 }
 
-func processMessageText(
+func (cfg *MailProcessorConfig) processMessageText(
 	r io.Reader, binary bool, ct_t string, ct_par map[string]string) (
 	_ io.Reader, rstr string, finished bool, msgattachment bool, err error) {
 
@@ -88,23 +100,26 @@ func processMessageText(
 
 		if strings.IndexByte(str, 0) < 0 {
 
-			EorUorA := cset == "" || UorA
-
+			EorUorA := UorA || (cset == "" && cfg.TryUTF8)
 			// expect UTF-8 in most cases
 			if (EorUorA && utf8.ValidString(str)) ||
-				(!EorUorA && // all ISO-8859-* are ASCII compatible
-					au.StartsWithFoldString(cset, "ISO-8859-") &&
+				(!EorUorA &&
+					(cset == "" ||
+						// ISO-8859- and KOI8- variants are ASCII compatible
+						au.StartsWithFoldString(cset, "ISO-8859-") ||
+						au.StartsWithFoldString(cset, "KOI8-")) &&
 					au.Is7BitString(str)) {
 
 				// normal processing - no need to have copy
 				if !binary {
+					// trim unneeded trailing newline without violating format
 					str = au.TrimUnixNL(str)
 				}
 				return r, str, true, false, nil
 
 			} else if cset == "" {
-				// fallback to ISO-8859-1
-				cset = "ISO-8859-1"
+				// fallback
+				cset = cfg.EmptyCharset
 			}
 		}
 
@@ -300,7 +315,7 @@ func processMessageAttachment(
 // also sometimes modifies "Content-Type" header.
 // info.ContentParams must be non-nil only if info.ContentType requires
 // processing of params (text/*, multipart/*).
-func DevourMessageBody(
+func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
 	pi PostInfo, tmpfilenames []string, err error) {
 
@@ -356,7 +371,7 @@ func DevourMessageBody(
 			var str string
 			var finished bool
 			r, str, finished, msgattachment, err =
-				processMessageText(r, binary, ct_t, ct_par)
+				cfg.processMessageText(r, binary, ct_t, ct_par)
 			if err != nil {
 				return
 			}
@@ -412,7 +427,7 @@ func DevourMessageBody(
 
 	var xbinary bool
 	xr, xbinary, err =
-		processMessagePrepareReader(xcte, xismultipart, xr)
+		cfg.processMessagePrepareReader(xcte, xismultipart, xr)
 	if err != nil {
 		return
 	}
@@ -464,7 +479,7 @@ func DevourMessageBody(
 			var pxr io.Reader
 			var pbinary bool
 			pxr, pbinary, err =
-				processMessagePrepareReader(pcte, pismultipart, pr)
+				cfg.processMessagePrepareReader(pcte, pismultipart, pr)
 
 			var prt *readTracker
 			if !pbinary {
@@ -535,6 +550,13 @@ func DevourMessageBody(
 	}
 
 	return
+}
+
+func DevourMessageBody(
+	src *fstore.FStore, XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
+	pi PostInfo, tmpfilenames []string, err error) {
+
+	return DefaultMailProcessorConfig.DevourMessageBody(src, XH, info, xr)
 }
 
 func CleanContentTypeAndTransferEncoding(H mail.Headers) {
