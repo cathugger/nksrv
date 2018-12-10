@@ -111,8 +111,8 @@ func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 func writeHeaderLines(w io.Writer, h string, v []HeaderVal, force bool) error {
 	for _, x := range v {
 		hh := h
-		if x.H != "" {
-			hh = x.H
+		if x.O != "" {
+			hh = x.O
 		}
 		if e := writeHeaderLine(w, hh, x.V, force); e != nil {
 			return e

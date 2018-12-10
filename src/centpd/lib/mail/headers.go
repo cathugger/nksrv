@@ -38,7 +38,7 @@ const maxCommonHdrLen = 32
 
 type HeaderValInner struct {
 	V string   `json:"v"`           // value
-	H string   `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
+	O string   `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
 	S []uint32 `json:"s,omitempty"` // split points, for folding/unfolding
 }
 
@@ -47,7 +47,7 @@ type HeaderVal struct {
 }
 
 func (hv HeaderVal) MarshalJSON() ([]byte, error) {
-	if hv.H == "" && len(hv.S) == 0 {
+	if hv.O == "" && len(hv.S) == 0 {
 		return json.Marshal(hv.V)
 	} else {
 		return json.Marshal(hv.HeaderValInner)
@@ -57,7 +57,7 @@ func (hv HeaderVal) MarshalJSON() ([]byte, error) {
 func (hv *HeaderVal) UnmarshalJSON(b []byte) (err error) {
 	err = json.Unmarshal(b, &hv.V)
 	if err == nil {
-		hv.H = ""
+		hv.O = ""
 		hv.S = []uint32(nil)
 		return
 	}

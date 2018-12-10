@@ -143,8 +143,8 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				return fmt.Errorf("invalid %q header content", currHeader)
 			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
-				H: origHeader,
 				V: string(hcont),
+				O: origHeader,
 				S: splits,
 			}}
 			splits = []uint32(nil)
