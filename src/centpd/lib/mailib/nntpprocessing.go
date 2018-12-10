@@ -105,9 +105,13 @@ func (cfg *MailProcessorConfig) processMessageText(
 			if (EorUorA && utf8.ValidString(str)) ||
 				(!EorUorA &&
 					(cset == "" ||
-						// ISO-8859- and KOI8- variants are ASCII compatible
+						// ISO-8859-, Windows- and KOI8- variants are
+						// US-ASCII compatible
 						au.StartsWithFoldString(cset, "ISO-8859-") ||
+						au.StartsWithFoldString(cset, "Windows-") ||
 						au.StartsWithFoldString(cset, "KOI8-")) &&
+					// so in case they don't use any extended characters,
+					// they're effectively US-ASCII
 					au.Is7BitString(str)) {
 
 				// normal processing - no need to have copy
