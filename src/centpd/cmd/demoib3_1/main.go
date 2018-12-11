@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"centpd/lib/altthumber"
 	ar "centpd/lib/apirouter"
 	di "centpd/lib/demoib"
 	"centpd/lib/demousrdb"
@@ -91,12 +92,15 @@ func main() {
 		runtime.Goexit()
 	}
 
+	altthm := altthumber.AltThumber(di.DemoAltThumber{})
+
 	dbib, err := psqlib.NewPSQLIB(psqlib.Config{
-		DB:         db,
-		Logger:     lgr,
-		SrcCfg:     fstore.Config{"_demo/demoib0/src"},
-		ThmCfg:     fstore.Config{"_demo/demoib0/thm"},
-		AltThumber: di.DemoAltThumber{},
+		DB:         &db,
+		Logger:     &lgr,
+		SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
+		ThmCfg:     &fstore.Config{"_demo/demoib0/thm"},
+		NNTPFSCfg:  &fstore.Config{"_demo/demoib0/nntp"},
+		AltThumber: &altthm,
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewPSQLIB error:", err)

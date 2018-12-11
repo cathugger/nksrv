@@ -73,7 +73,9 @@ func nowTime() time.Time {
 	return time.Now()
 }
 
-func NewFileLogger(f *os.File, logLevel logx.Level, c useColor) (*FileLogger, error) {
+func NewFileLogger(
+	f *os.File, logLevel logx.Level, c useColor) (logx.LoggerX, error) {
+
 	l := &FileLogger{f: f, t: uint(c) & 1, m: logLevel}
 	fd := f.Fd()
 	if c != ColorOff && (isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)) {

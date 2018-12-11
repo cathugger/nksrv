@@ -40,12 +40,12 @@ type PSQLIB struct {
 }
 
 type Config struct {
-	DB                 psql.PSQL
-	Logger             LoggerX
-	SrcCfg             fstore.Config
-	ThmCfg             fstore.Config
-	NNTPFSCfg          fstore.Config
-	AltThumber         altthumber.AltThumber
+	DB                 *psql.PSQL
+	Logger             *LoggerX
+	SrcCfg             *fstore.Config
+	ThmCfg             *fstore.Config
+	NNTPFSCfg          *fstore.Config
+	AltThumber         *altthumber.AltThumber
 	AddBoardOnNNTPPost bool
 }
 
@@ -54,23 +54,23 @@ type Config struct {
 func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p = new(PSQLIB)
 
-	p.log = NewLogToX(cfg.Logger, fmt.Sprintf("psqlib.%p", p))
+	p.log = NewLogToX(*cfg.Logger, fmt.Sprintf("psqlib.%p", p))
 
-	p.db = cfg.DB
+	p.db = *cfg.DB
 
-	p.src, err = fstore.OpenFStore(cfg.SrcCfg)
+	p.src, err = fstore.OpenFStore(*cfg.SrcCfg)
 	if err != nil {
 		return nil, err
 	}
 	p.src.CleanTemp()
 
-	p.thm, err = fstore.OpenFStore(cfg.ThmCfg)
+	p.thm, err = fstore.OpenFStore(*cfg.ThmCfg)
 	if err != nil {
 		return nil, err
 	}
 	p.thm.CleanTemp()
 
-	p.nntpfs, err = fstore.OpenFStore(cfg.NNTPFSCfg)
+	p.nntpfs, err = fstore.OpenFStore(*cfg.NNTPFSCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.nntpmgr = newNNTPCacheMgr()
 
-	p.altthumb = cfg.AltThumber
+	p.altthumb = *cfg.AltThumber
 
 	p.ffo = formFileOpener{&p.src}
 
