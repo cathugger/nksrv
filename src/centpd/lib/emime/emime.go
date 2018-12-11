@@ -2,21 +2,26 @@ package emime
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	mm "mime"
 	"os"
 	"strings"
 	"sync"
 )
 
+var errNoInit = errors.New("emime not initialized")
+
 var (
 	mimeLock       sync.RWMutex
+	initialized    bool
 	mimeTypes      map[string][]string // extension -> types
 	mimeExtensions map[string][]string // type -> extensions
 	mimePrefExt    map[string]string   // prefered extensions
 )
 
 // ext MUST be lowercase
-func setExtensionType(
+func setExtensionTypeLocked(
 	ext, mimeType string) (pureExt string, pref bool, err error) {
 
 	justType, param, err := mm.ParseMediaType(mimeType)
@@ -29,6 +34,7 @@ func setExtensionType(
 	}
 	// ensure proper formatting
 	mimeType = mm.FormatMediaType(justType, param)
+
 	if len(ext) != 0 && (ext[0] == '.' || ext[0] == '!' || ext[0] == '=') {
 		pureExt = ext[1:]
 		if ext[0] == '=' {
@@ -63,7 +69,7 @@ skipMIMEAdd:
 	return
 }
 
-func mimeTypesByExtension(ext string) []string {
+func mimeTypesByExtensionLocked(ext string) []string {
 	// case-sensitive lookup
 	if v, ok := mimeTypes[ext]; ok && len(v) != 0 {
 		return v
@@ -99,8 +105,8 @@ notFound:
 	return nil
 }
 
-func mimeTypeByExtension(ext string) string {
-	if typ := mimeTypesByExtension(ext); len(typ) != 0 {
+func mimeTypeByExtensionLocked(ext string) string {
+	if typ := mimeTypesByExtensionLocked(ext); len(typ) != 0 {
 		return typ[0]
 	}
 	return ""
@@ -111,14 +117,22 @@ func mimeTypeByExtension(ext string) string {
 // Returns empty string on failure.
 func MIMETypeByExtension(ext string) string {
 	mimeLock.RLock()
-	typ := mimeTypeByExtension(ext)
+
+	if !initialized {
+		mimeLock.RUnlock()
+		panic(errNoInit)
+	}
+
+	typ := mimeTypeByExtensionLocked(ext)
+
 	mimeLock.RUnlock()
+
 	return typ
 }
 
-func mimeIsCanonical(ext, typ string) bool {
+func mimeIsCanonicalLocked(ext, typ string) bool {
 	ext = strings.ToLower(ext)
-	if typext, err := mimeExtensionsByType(typ); err == nil {
+	if typext, err := mimeExtensionsByTypeLocked(typ); err == nil {
 		for _, tex := range typext {
 			if ext == tex {
 				return true
@@ -133,15 +147,23 @@ func mimeIsCanonical(ext, typ string) bool {
 // Some extensions lead to certain MIME types which aren't official.
 func MIMEIsCanonical(ext, typ string) bool {
 	mimeLock.RLock()
-	can := mimeIsCanonical(ext, typ)
+
+	if !initialized {
+		mimeLock.RUnlock()
+		panic(errNoInit)
+	}
+
+	can := mimeIsCanonicalLocked(ext, typ)
+
 	mimeLock.RUnlock()
+
 	return can
 }
 
-func mimeCanonicalTypeByExtension(ext string) string {
-	typ := mimeTypesByExtension(ext)
+func mimeCanonicalTypeByExtensionLocked(ext string) string {
+	typ := mimeTypesByExtensionLocked(ext)
 	for _, t := range typ {
-		if mimeIsCanonical(ext, t) {
+		if mimeIsCanonicalLocked(ext, t) {
 			return t
 		}
 	}
@@ -152,17 +174,27 @@ func mimeCanonicalTypeByExtension(ext string) string {
 // for given extension.
 func MIMECanonicalTypeByExtension(ext string) string {
 	mimeLock.RLock()
-	typ := mimeCanonicalTypeByExtension(ext)
+
+	if !initialized {
+		mimeLock.RUnlock()
+		panic(errNoInit)
+	}
+
+	typ := mimeCanonicalTypeByExtensionLocked(ext)
+
 	mimeLock.RUnlock()
+
 	return typ
 }
 
-func mimeExtensionsByType(mimeType string) ([]string, error) {
+func mimeExtensionsByTypeLocked(mimeType string) ([]string, error) {
 	justType, _, err := mm.ParseMediaType(mimeType)
 	if err != nil {
 		return nil, err
 	}
+
 	s := mimeExtensions[justType]
+
 	return s, nil
 }
 
@@ -170,41 +202,77 @@ func mimeExtensionsByType(mimeType string) ([]string, error) {
 // for it.
 func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 	mimeLock.RLock()
-	ext, err = mimeExtensionsByType(mimeType)
+
+	if !initialized {
+		mimeLock.RUnlock()
+		panic(errNoInit)
+	}
+
+	ext, err = mimeExtensionsByTypeLocked(mimeType)
+
 	mimeLock.RUnlock()
+
 	return
 }
 
 // LoadMIMEDatabase loads MIME database from specified path.
 // Extensions may start with "." which will be ignored.
 // Specify wildcard extensions with "*", empty extensions as ".",
-// start non-canonical extensions with "!".
+// start non-canonical extensions with "!", start prefered extensions with "=".
 // "!" alone can be used for empty non-canonical extension.
+// Prefered extension should be specified first.
 // Types like "application/octet-stream" should use non-canonical extensions.
-func LoadMIMEDatabase(dbfile string) (err error) {
+func LoadMIMEDatabase(dbfile ...string) (err error) {
 	mimeLock.Lock()
 	defer mimeLock.Unlock()
 
+	// initialize maps
+	initialized = true
 	mimeTypes = make(map[string][]string)
 	mimeExtensions = make(map[string][]string)
+	mimePrefExt = make(map[string]string)
 
+	for _, fname := range dbfile {
+		err = loadMIMEDatabaseFromFileLocked(fname)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// ignore file doesn't exist error
+				err = nil
+				continue
+			}
+			return
+		}
+	}
+
+	return
+}
+
+func loadMIMEDatabaseFromFileLocked(dbfile string) (err error) {
 	if dbfile == "" {
 		return nil
 	}
+
 	f, err := os.Open(dbfile)
 	if err != nil {
 		return
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
+	err = loadMIMEDatabaseFromReaderLocked(f)
+
+	f.Close()
+
+	return
+}
+
+func loadMIMEDatabaseFromReaderLocked(r io.Reader) (err error) {
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) <= 1 || fields[0][0] == '#' || fields[0][0] == '/' {
 			continue
 		}
 		mimeType := fields[0]
-		e := setExtensionsType(fields[1:], mimeType)
+		e := setExtensionsTypeLocked(fields[1:], mimeType)
 		if err == nil {
 			err = e
 		}
@@ -215,26 +283,35 @@ func LoadMIMEDatabase(dbfile string) (err error) {
 	return
 }
 
-func setExtensionsType(exts []string, mimeType string) (err error) {
-	numpref := -1
+func setExtensionsTypeLocked(exts []string, mimeType string) (err error) {
+
+	prefext := ""
+
 	for i, ext := range exts {
 		if ext[0] == '#' || ext[0] == '/' {
 			break
 		}
 
-		ext, pref, e := setExtensionType(strings.ToLower(ext), mimeType)
-		exts[i] = ext
+		ext, pref, e := setExtensionTypeLocked(strings.ToLower(ext), mimeType)
 
 		if err == nil {
 			err = e
 		}
-		if pref && numpref < 0 {
-			numpref = i
+
+		if pref && ext != "" {
+			if prefext == "" {
+				prefext = ext
+			}
+			// handle more than one prefered extension
+			exts[i] = ""
+		} else {
+			exts[i] = ext
 		}
 	}
-	if numpref >= 0 && exts[numpref] != "" {
-		for i, ext := range exts {
-			if i == numpref || ext == "" {
+
+	if prefext != "" {
+		for _, ext := range exts {
+			if ext == "" {
 				continue
 			}
 			if ext[0] == '#' || ext[0] == '/' {
@@ -242,9 +319,33 @@ func setExtensionsType(exts []string, mimeType string) (err error) {
 			}
 			_, exists := mimePrefExt[ext]
 			if !exists {
-				mimePrefExt[ext] = exts[numpref]
+				mimePrefExt[ext] = prefext
 			}
 		}
 	}
+
 	return
+}
+
+// MIMEGetPreferedExtension gets prefered extension.
+// As side effect, it also forces extension lowercase.
+func MIMEGetPreferedExtension(ext string) string {
+	ext = strings.ToLower(ext)
+
+	mimeLock.RLock()
+
+	if !initialized {
+		mimeLock.RUnlock()
+		panic(errNoInit)
+	}
+
+	pext := mimePrefExt[ext]
+
+	mimeLock.RUnlock()
+
+	if pext != "" {
+		return pext
+	} else {
+		return ext
+	}
 }

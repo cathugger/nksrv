@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	mm "centpd/lib/emime"
+	"centpd/lib/emime"
 	"centpd/lib/fserve"
 )
 
@@ -36,9 +36,9 @@ func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 
 	var mimeType string
 	if i := strings.LastIndexByte(id, '.'); i >= 0 {
-		mimeType = mm.MIMETypeByExtension(id[i+1:])
+		mimeType = emime.MIMETypeByExtension(id[i+1:])
 	} else {
-		mimeType = mm.MIMETypeByExtension("")
+		mimeType = emime.MIMETypeByExtension("")
 	}
 	if mimeType != "" {
 		w.Header().Set("Content-Type", mimeType)
