@@ -289,7 +289,7 @@ func processMessageAttachment(
 	// even if we don't, that's okay
 	var iname string
 	if ext != "" {
-		iname = hash + "-" + hashtype + "." + strings.ToLower(ext)
+		iname = hash + "-" + hashtype + "." + emime.MIMEPreferedExtension(ext)
 	} else {
 		iname = hash + "-" + hashtype
 	}

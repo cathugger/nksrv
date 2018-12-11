@@ -183,7 +183,7 @@ func generateFileConfig(
 	}
 
 	if len(ext) != 0 {
-		s += "." + strings.ToLower(ext)
+		s += "." + emime.MIMEPreferedExtension(ext)
 	}
 
 	fi.ID = s

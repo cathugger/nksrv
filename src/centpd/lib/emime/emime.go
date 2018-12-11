@@ -329,7 +329,7 @@ func setExtensionsTypeLocked(exts []string, mimeType string) (err error) {
 
 // MIMEGetPreferedExtension gets prefered extension.
 // As side effect, it also forces extension lowercase.
-func MIMEGetPreferedExtension(ext string) string {
+func MIMEPreferedExtension(ext string) string {
 	ext = strings.ToLower(ext)
 
 	mimeLock.RLock()

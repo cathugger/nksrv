@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"centpd/lib/altthumber"
@@ -23,9 +22,6 @@ import (
 )
 
 func main() {
-	var errorcode int
-	defer os.Exit(errorcode)
-
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
@@ -53,15 +49,14 @@ func main() {
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
-		os.Exit(1)
+		return
 	}
 	defer db.Close()
 
 	valid, err := db.IsValidDB()
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
-		errorcode = 1
-		runtime.Goexit()
+		return
 	}
 	// if not valid, try to create
 	if !valid {
@@ -73,21 +68,18 @@ func main() {
 		valid, err = db.IsValidDB()
 		if err != nil {
 			mlg.LogPrintln(logx.CRITICAL, "second psql.OpenPSQL error:", err)
-			errorcode = 1
-			runtime.Goexit()
+			return
 		}
 		if !valid {
 			mlg.LogPrintln(logx.CRITICAL, "psql.IsValidDB failed second validation")
-			errorcode = 1
-			runtime.Goexit()
+			return
 		}
 	}
 
 	err = db.CheckVersion()
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psql.CheckVersion: ", err)
-		errorcode = 1
-		runtime.Goexit()
+		return
 	}
 
 	altthm := altthumber.AltThumber(di.DemoAltThumber{})
@@ -102,15 +94,13 @@ func main() {
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewPSQLIB error:", err)
-		errorcode = 1
-		runtime.Goexit()
+		return
 	}
 
 	valid, err = dbib.CheckIb0()
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0:", err)
-		errorcode = 1
-		runtime.Goexit()
+		return
 	}
 	if !valid {
 		mlg.LogPrint(logx.NOTICE, "uninitialized PSQLIB db, attempting to initialize")
@@ -120,21 +110,18 @@ func main() {
 		valid, err = dbib.CheckIb0()
 		if err != nil {
 			mlg.LogPrintln(logx.CRITICAL, "second psqlib.CheckIb0:", err)
-			errorcode = 1
-			runtime.Goexit()
+			return
 		}
 		if !valid {
 			mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0 failed second validation")
-			errorcode = 1
-			runtime.Goexit()
+			return
 		}
 	}
 
 	rend, err := rj.NewJSONRenderer(dbib, rj.Config{Indent: "  "})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rj.NewJSONRenderer error:", err)
-		errorcode = 1
-		runtime.Goexit()
+		return
 	}
 	ah := ar.NewAPIRouter(ar.Cfg{
 		Renderer:        rend,
