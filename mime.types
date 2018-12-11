@@ -1,0 +1,55 @@
+# this file specifies MIME types and extension preferences
+# format is based on /etc/mime.types used in unixes
+# extensions can optionally start with dot, which will be ignored
+# extensions can optionally start with bang, which will make extension non-canonical (which means that MIME type can get returned looking up by that extension, but that extension cannot be obtained by MIME type)
+# extensions can optionally start with equal sign, which will make extension prefered to other extensions in same line
+
+# comment
+// also comment
+
+# type[;param=val...]           [(.|!|=)]extension ...
+
+text/plain                      txt
+text/html                       =html htm
+text/html                       shtml           // SSI HTML
+text/css                        css
+text/xml                        xml
+text/javascript                 js
+
+image/jpeg                      =jpg jpeg jpe
+image/gif                       gif
+image/png                       png
+image/webp                      webp
+image/x-icon                    ico
+image/bmp                       bmp
+image/avif                      avif
+image/svg+xml                   svg svgz
+image/tiff                      =tiff tif
+
+audio/ogg                       ogg oga
+audio/ogg;codecs=opus           opus
+audio/mpeg                      mp3 mp2
+audio/mp4                       m4a
+audio/wav                       wav
+audio/flac                      flac
+audio/midi                      mid midi
+audio/webm                      weba
+
+video/webm                      webm
+video/mp4                       mp4 m4v
+video/3gpp                      3gpp 3gp
+video/x-msvideo                 avi
+video/x-flv                     flv
+
+application/atom+xml                    atom
+application/rss+xml                     rss
+application/json                        json
+application/xhtml+xml                   xhtml
+application/zip                         zip
+application/x-rar-compressed            rar
+application/x-7z-compressed             7z
+application/gzip                        gz
+application/pdf                         pdf
+application/rtf                         rtf
+application/msword                      doc dot
+application/x-shockwave-flash           swf

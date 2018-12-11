@@ -12,6 +12,7 @@ import (
 	"centpd/lib/altthumber"
 	ar "centpd/lib/apirouter"
 	di "centpd/lib/demoib"
+	"centpd/lib/emime"
 	fl "centpd/lib/filelogger"
 	"centpd/lib/fstore"
 	ir "centpd/lib/ibrouter"
@@ -42,6 +43,12 @@ func main() {
 	mlg.LogPrint(logx.WARN, "testing WARN log message")
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
 	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
+
+	err = emime.LoadMIMEDatabase("mime.types")
+	if err != nil {
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDatabase err:", err)
+		return
+	}
 
 	db, err := psql.OpenPSQL(psql.Config{
 		Logger:  lgr,
