@@ -3,6 +3,7 @@ package psqlib
 // database stuff
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -145,12 +146,39 @@ var dbIb0InitStatements = []string{
 	`INSERT INTO capabilities(component,version) VALUES ('ib0','` + currIb0Version + `')`,
 }
 
-func (sp *PSQLIB) InitIb0() {
-	for i := range dbIb0InitStatements {
-		_, e := sp.db.DB.Exec(dbIb0InitStatements[i])
-		if e != nil {
-			panic(fmt.Errorf("err on stmt %d: %v", i, e))
+func (sp *PSQLIB) doDbIbit() (err error) {
+	tx, err := sp.db.DB.BeginTx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return fmt.Errorf("err on BeginTx: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
 		}
+	}()
+
+	for i := range dbIb0InitStatements {
+		_, err = tx.Exec(dbIb0InitStatements[i])
+		if err != nil {
+			err = fmt.Errorf("err on stmt %d: %v", i, err)
+			return
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		err = fmt.Errorf("err on Commit: %v", err)
+	}
+	return
+}
+
+func (sp *PSQLIB) InitIb0() {
+	e := sp.doDbIbit()
+	if e != nil {
+		panic(e)
 	}
 }
 
