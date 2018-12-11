@@ -423,15 +423,15 @@ func (sp *PSQLIB) ListNewNews(
 			q := `SELECT msgid
 	FROM ib0.posts
 	WHERE padded >= $1
-	ORDER BY padded,bid,pid`
+	ORDER BY padded,global_post_id`
 			rows, err = sp.db.DB.Query(q, qt)
 		} else {
 			q := `SELECT xp.msgid
 	FROM ib0.posts AS xp
 	JOIN ib0.boards AS xb
 	USING (bid)
-	WHERE xb.bname = $1 AND xp.padded >= $2
-	ORDER BY xp.padded,xp.bid,xp.pid`
+	WHERE xp.padded >= $2 AND xb.bname = $1
+	ORDER BY xp.padded,xp.global_post_id`
 			rows, err = sp.db.DB.Query(q, swildmat, qt)
 		}
 		if err != nil {
@@ -463,7 +463,7 @@ func (sp *PSQLIB) ListNewNews(
 	JOIN ib0.boards AS xb
 	USING (bid)
 	WHERE xp.padded >= $1
-	ORDER BY xp.padded,xp.bid,xp.pid`
+	ORDER BY xp.padded,xp.global_post_id`
 		rows, err = sp.db.DB.Query(q, qt)
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
@@ -509,7 +509,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	USING (bid)
 	WHERE xb.badded >= $1
 	GROUP BY xb.bid
-	ORDER BY xb.badded`
+	ORDER BY xb.badded,xb.bid`
 	rows, err := sp.db.DB.Query(q, qt)
 	if err != nil {
 		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))

@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-const currIb0Version = "demo0"
+const currIb0Version = "demo1"
 
 var dbIb0InitStatements = []string{
 	`CREATE SCHEMA IF NOT EXISTS ib0`,
@@ -45,39 +45,42 @@ var dbIb0InitStatements = []string{
 	thread_opts  JSONB, /* inherits from thread_opts of ib0.boards */
 	attrib       JSONB, /* extra attributes */
 
-	UNIQUE      (bid,tname),
 	PRIMARY KEY (bid,tid),
+	UNIQUE      (bid,tname),
 	FOREIGN KEY (bid) REFERENCES ib0.boards
 )`,
+	`CREATE INDEX ON ib0.threads (bid,bump)`,
 
 	`CREATE TABLE ib0.posts (
-	bid     INTEGER                      NOT NULL, /* internal board ID this post belongs to */
-	pname   TEXT      COLLATE ucs_basic  NOT NULL, /* extermal post identifier */
-	pid     BIGINT                       NOT NULL, /* internal post ID of this post. if pid==tid then this is OP */
-	tid     BIGINT                       NOT NULL, /* internal thread ID this post belongs to */
-	padded  TIMESTAMP WITHOUT TIME ZONE  NOT NULL, /* date field used for sorting. will actually contain delivery date */
-	pdate   TIMESTAMP WITHOUT TIME ZONE  NOT NULL, /* real date field */
-	sage    BOOLEAN                      NOT NULL, /* if true this isn't bump */
+	bid            INTEGER                      NOT NULL, -- internal board ID this post belongs to
+	pid            BIGINT                       NOT NULL, -- internal post ID of this post. if pid==tid then this is OP
+	global_post_id BIGSERIAL                    NOT NULL, -- global internal post ID
+	tid            BIGINT                       NOT NULL, -- internal thread ID this post belongs to
+	pname          TEXT      COLLATE ucs_basic  NOT NULL, -- extermal post identifier
+	padded         TIMESTAMP WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
+	pdate          TIMESTAMP WITHOUT TIME ZONE  NOT NULL, -- real date field
+	sage           BOOLEAN                      NOT NULL, -- if true this isn't bump
 
-	msgid   TEXT      COLLATE ucs_basic  NOT NULL, /* Message-ID */
-	author  TEXT                         NOT NULL, /* author name */
-	trip    TEXT      COLLATE ucs_basic  NOT NULL, /* XXX should we have it there and not in attrib? probably yes, we could benefit from search */
-	title   TEXT                         NOT NULL, /* message title/subject field */
-	message TEXT,                                 /* post message, in UTF-8 */
-	headers JSONB,                                -- map of lists of strings
-	attrib  JSONB,                                /* extra attributes which are optional */
-	layout  JSONB,                                /* multipart msg and attachment layout */
-	extras  JSONB,                                /* dunno if really need this field */
+	msgid   TEXT      COLLATE ucs_basic  NOT NULL, -- Message-ID
+	author  TEXT                         NOT NULL, -- author name
+	trip    TEXT      COLLATE ucs_basic  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
+	title   TEXT                         NOT NULL, -- message title/subject field
+	message TEXT                         NOT NULL, -- post message, in UTF-8
+	headers JSONB,                                 -- map of lists of strings
+	attrib  JSONB,                                 -- extra attributes which are optional
+	layout  JSONB,                                 -- multipart msg and attachment layout
+	extras  JSONB,                                 -- dunno if really need this field
 
-	UNIQUE      (msgid),
 	PRIMARY KEY (bid,pid),
+	UNIQUE      (global_post_id),
+	UNIQUE      (msgid),
 	FOREIGN KEY (bid)     REFERENCES ib0.boards,
 	FOREIGN KEY (bid,tid) REFERENCES ib0.threads
 )`,
-	`CREATE INDEX ON ib0.posts (bid)`,
-	`CREATE INDEX ON ib0.posts (bid,tid)`,
-	`CREATE INDEX ON ib0.posts (padded,bid)`,
-	`CREATE UNIQUE INDEX ON ib0.posts (pname text_pattern_ops,bid)`,
+	`CREATE INDEX ON ib0.posts (bid,tid,padded) -- in thread, for listing`,
+	`CREATE INDEX ON ib0.posts (bid,tid,pdate) -- in thread, for bump`,
+	`CREATE INDEX ON ib0.posts (padded,bid) -- for NEWNEWS`,
+	`CREATE UNIQUE INDEX ON ib0.posts (pname text_pattern_ops,bid) -- for post num lookup`,
 
 	`CREATE TYPE ftype_t AS ENUM ('file', 'msg', 'text', 'image')`,
 	`CREATE TABLE ib0.files (
