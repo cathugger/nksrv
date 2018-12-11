@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/date"
@@ -330,7 +331,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	fromhdr := au.TrimWSString(H.GetFirst("From"))
 	if fromhdr != "" {
 		a, e := mail.ParseAddressX(fromhdr)
-		if e == nil {
+		if e == nil && utf8.ValidString(a.Name) {
 			// XXX should we filter out "Anonymous" names? would save some bytes
 			pi.MI.Author = au.TrimWSString(safeHeader(a.Name))
 		} else {
