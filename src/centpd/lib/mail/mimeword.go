@@ -62,7 +62,7 @@ func ParseAddressX(s string) (a *gmail.Address, err error) {
 				// tolerate non-compliant messages from some older nntpchan nodes
 				a = &gmail.Address{
 					Name:    strings.TrimSpace(s[:i]),
-					Address: strings.TrimSpace(s[i+1 : i+1+j]),
+					Address: s[i+1 : i+1+j],
 				}
 				err = nil
 			}
