@@ -3,7 +3,6 @@ package psqlib
 import (
 	"fmt"
 	"mime"
-	gmail "net/mail"
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/mail"
@@ -70,10 +69,8 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 	// From
 	// XXX should we hardcode "Anonymous" incase Author is empty?
-	i.H["From"] = mail.OneHeaderVal((&gmail.Address{
-		Name:    i.MI.Author,
-		Address: "poster@" + sp.instance,
-	}).String())
+	i.H["From"] = mail.OneHeaderVal(
+		mail.FormatAddress(i.MI.Author, "poster@"+sp.instance))
 
 	// Newsgroups
 	i.H["Newsgroups"] = mail.OneHeaderVal(board)
