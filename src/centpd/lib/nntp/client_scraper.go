@@ -1162,7 +1162,7 @@ func (c *NNTPScraper) main() error {
 		if e != nil {
 			return e
 		}
-		c.log.LogPrintf(WARN, "groupScanLoop() done, will wait 90 secs")
+		c.log.LogPrintf(INFO, "groupScanLoop() done, will wait 90 secs")
 		time.Sleep(90 * time.Second)
 	}
 }
