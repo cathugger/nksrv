@@ -96,20 +96,14 @@ func isQtext(r rune) bool {
 }
 
 func writeQuoted(b *strings.Builder, s string) {
-	last := 0
 	b.WriteByte('"')
-	for i, r := range s {
-		if !isQtext(r) && !isWSP(r) {
-			if i > last {
-				b.WriteString(s[last:i])
-			}
+	for _, r := range s {
+		if isQtext(r) || isWSP(r) {
+			b.WriteRune(r)
+		} else {
 			b.WriteByte('\\')
 			b.WriteRune(r)
-			last = i + utf8.RuneLen(r)
 		}
-	}
-	if last < len(s) {
-		b.WriteString(s[last:])
 	}
 	b.WriteByte('"')
 }
@@ -122,14 +116,20 @@ func FormatAddress(name, email string) string {
 	if name != "" {
 		needsEncoding := false
 		needsQuoting := false
-		for _, r := range name {
+		for i, r := range name {
 			if r >= 0x80 || (!isWSP(r) && !isVchar(r)) {
 				needsEncoding = true
 				break
 			}
-			if !isAtext(r) {
-				needsQuoting = true
+			if isAtext(r) {
+				continue
 			}
+			if r == ' ' && i > 0 && name[i-1] != ' ' && i < len(name)-1 {
+				// allow spaces but only surrounded by non-spaces
+				// otherwise they will be removed by receiver
+				continue
+			}
+			needsQuoting = true
 		}
 
 		if needsEncoding {

@@ -12,7 +12,9 @@ func TestFormatAddress(t *testing.T) {
 	tests := []testcase{
 		testcase{name: "", email: "a@b", result: "<a@b>"},
 		testcase{name: "a", email: "a@b", result: "a <a@b>"},
-		testcase{name: "a b", email: "a@b", result: "\"a b\" <a@b>"},
+		testcase{name: "a b c", email: "a@b", result: "a b c <a@b>"},
+		testcase{name: "a b\tc", email: "a@b", result: "\"a b\tc\" <a@b>"},
+		testcase{name: " a  b  c ", email: "a@b", result: "\" a  b  c \" <a@b>"},
 		testcase{name: "a@b", email: "a@b", result: "\"a@b\" <a@b>"},
 		testcase{name: "a\"\"\"b", email: "a@b", result: "\"a\\\"\\\"\\\"b\" <a@b>"},
 		testcase{name: "a\\\\\\b", email: "a@b", result: "\"a\\\\\\\\\\\\b\" <a@b>"},
