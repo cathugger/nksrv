@@ -48,7 +48,7 @@ func setCTE(
 		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
 
 		ww := base64.NewEncoder(
-			base64.StdEncoding, &au.SplitWriter{W: w, N: 116})
+			base64.StdEncoding, &au.SplitWriter{W: w, N: 76})
 		cw = ww
 		cc = ww
 	} else if pi.HasNull {
