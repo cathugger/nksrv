@@ -1,6 +1,7 @@
 package mail
 
 import (
+	gmail "net/mail"
 	"testing"
 )
 
@@ -22,7 +23,7 @@ func TestFormatAddress(t *testing.T) {
 		if res != wantres {
 			t.Errorf("FormatAddress returned %q wanted %q", res, wantres)
 		}
-		a, e := ParseAddressX(res)
+		a, e := gmail.ParseAddress(res)
 		if e != nil {
 			t.Errorf("ParseAddressX err: %v", e)
 		}

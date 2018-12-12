@@ -52,8 +52,23 @@ func DecodeMIMEWordHeader(s string) (_ string, err error) {
 
 var addrParser = gmail.AddressParser{WordDecoder: &mimeWordDecoder}
 
-func ParseAddressX(s string) (*gmail.Address, error) {
-	return addrParser.Parse(s)
+func ParseAddressX(s string) (a *gmail.Address, err error) {
+	a, err = addrParser.Parse(s)
+	if err != nil {
+		i := strings.IndexByte(s, '<')
+		if i >= 0 {
+			j := strings.IndexByte(s[i+1:], '>')
+			if j > 0 {
+				// tolerate non-compliant messages from some older nntpchan nodes
+				a = &gmail.Address{
+					Name:    strings.TrimSpace(s[:i]),
+					Address: strings.TrimSpace(s[i : i+1+j+1]),
+				}
+				err = nil
+			}
+		}
+	}
+	return
 }
 
 func isVchar(r rune) bool {
