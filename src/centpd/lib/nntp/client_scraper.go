@@ -50,6 +50,11 @@ type todoArticle struct {
 	ref   FullMsgIDStr
 }
 
+// for HDR/XHDR/OVER/XOVER
+const smallSliceSize = 800
+const largeSliceSize = 2048
+const maxListSize = 2048
+
 type NNTPScraper struct {
 	NNTPClient
 
@@ -274,10 +279,14 @@ func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
 			c.args, _ = parseResponseArguments(line[x:], 6, c.args[:0])
 			if len(c.args) != 0 {
 				impl := unsafeBytesToStr(c.args[0])
-				if au.EqualFoldString(impl, "SRNDv2") {
-					c.log.LogPrintf(INFO, "detected SRNDv2")
+				if au.EqualFoldString(impl, "srndv2") {
+					c.log.LogPrintf(INFO, "detected srndv2")
 					// workarounds for some jeff' stuff
 					c.s.workaroundStupidActiveList = true
+					c.s.allowLargeOver = true
+				} else if au.EqualFoldString(impl, "CNTPD") {
+					c.log.LogPrintf(INFO, "detected CNTPD")
+					c.s.allowLargeOver = true
 				}
 			}
 		}
@@ -667,7 +676,7 @@ func (c *NNTPScraper) eatHdrOutput(
 		id, msgid, err = c.eatHdrMsgIDLine(dr)
 		if err != nil {
 			if err == io.EOF {
-				c.log.LogPrintf(DEBUG, "eatHdrOutput: EOF")
+				//c.log.LogPrintf(DEBUG, "eatHdrOutput: EOF")
 				err = nil
 				break
 			}
@@ -950,9 +959,6 @@ func (c *NNTPScraper) eatGroupSlice(
 	return
 }
 
-const oneSliceSize = 800
-const maxListSize = 2048
-
 func (c *NNTPScraper) eatGroup(
 	group string, old_id, new_id uint64) (err error, fatal bool) {
 
@@ -960,8 +966,15 @@ func (c *NNTPScraper) eatGroup(
 
 	r_begin = int64(old_id) + 1
 
-	if new_id > uint64(r_begin)+oneSliceSize-1 {
-		r_end = r_begin + oneSliceSize - 1
+	var useSliceSize uint64
+	if c.s.allowLargeOver {
+		useSliceSize = largeSliceSize
+	} else {
+		useSliceSize = smallSliceSize
+	}
+
+	if new_id > uint64(r_begin)+useSliceSize-1 {
+		r_end = r_begin + int64(useSliceSize) - 1
 	} else {
 		r_end = -1
 	}
@@ -984,8 +997,8 @@ func (c *NNTPScraper) eatGroup(
 		if uint64(r_begin) > new_id {
 			break
 		}
-		if new_id > uint64(r_begin)+oneSliceSize-1 {
-			r_end = r_begin + oneSliceSize - 1
+		if new_id > uint64(r_begin)+useSliceSize-1 {
+			r_end = r_begin + int64(useSliceSize) - 1
 		} else {
 			r_end = -1
 		}

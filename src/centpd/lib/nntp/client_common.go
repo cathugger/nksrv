@@ -28,6 +28,8 @@ type clientState struct {
 	capOver   bool
 	capReader bool
 
+	allowLargeOver bool
+
 	workaroundStupidActiveList bool
 }
 
