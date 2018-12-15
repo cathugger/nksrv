@@ -79,7 +79,7 @@ func FormatMediaTypeX(t string, param map[string]string) string {
 			ch := value[idx]
 			// UTF-8, but also non-WSP CTLs, because they're
 			// not allowed in RFC 5322 quoted-string
-			if ch >= 0x7F || (ch < 0x20 && ch != '\t') {
+			if ch >= 0x7F || (ch < ' ' && ch != '\t') {
 				needsEscaping = true
 				break
 			}
@@ -102,7 +102,7 @@ func FormatMediaTypeX(t string, param map[string]string) string {
 				ch := value[index]
 				// {RFC 2231 section 7}
 				// attribute-char := <any (US-ASCII) CHAR except SPACE, CTLs, "*", "'", "%", or tspecials>
-				if ch <= 0x20 || ch >= 0x7F ||
+				if ch <= ' ' || ch >= 0x7F ||
 					ch == '*' || ch == '\'' || ch == '%' ||
 					isTSpecial(rune(ch)) {
 
