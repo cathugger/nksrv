@@ -137,9 +137,9 @@ func FormatAddress(name, email string) string {
 			// characters like quotes or parentheses (see RFC 2047 section 5.3).
 			// When this is the case encode the name using base64 encoding.
 			if strings.ContainsAny(name, "\"#$%&'(),.:;<>@[]^`{|}~") {
-				b.WriteString(mime.BEncoding.Encode("utf-8", name))
+				b.WriteString(mime.BEncoding.Encode("UTF-8", name))
 			} else {
-				b.WriteString(mime.QEncoding.Encode("utf-8", name))
+				b.WriteString(mime.QEncoding.Encode("UTF-8", name))
 			}
 		} else if needsQuoting {
 			writeQuoted(b, name)
