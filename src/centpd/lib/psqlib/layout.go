@@ -10,16 +10,8 @@ import (
 )
 
 func attachmentDisposition(oname string) (cdis string) {
-	cdis = mime.FormatMediaType(
+	cdis = mail.FormatMediaTypeX(
 		"attachment", map[string]string{"filename": oname})
-	// if failed to encode, or has invalid chars
-	if cdis == "" || au.ContainsControlString(cdis) {
-		// escape using mime hackery
-		// because apparently mime.FormatMediaType was too shit to do that
-		oname = mime.BEncoding.Encode("UTF-8", oname)
-		cdis = mime.FormatMediaType(
-			"attachment", map[string]string{"filename": oname})
-	}
 	return
 }
 
@@ -30,23 +22,10 @@ func attachmentConentType(ctype string, oname string) string {
 		return ctype
 	}
 
-	cpar["name"] = oname
-	ct = mime.FormatMediaType(ct, cpar)
-
-	// if failed to encode, or has invalid chars
-	if ct == "" || au.ContainsControlString(ct) {
-		// escape using mime hackery
-		// because apparently mime.FormatMediaType was too shit to do that
-		cpar["name"] = mime.BEncoding.Encode("UTF-8", oname)
-		ct = mime.FormatMediaType(ct, cpar)
-	}
-
-	if ct != "" {
-		return ct
-	} else {
-		// if formatting failed, return original
-		return ctype
-	}
+	// always escape using bencoding if needed, for compat,
+	// proper readers will use disposition anyway
+	cpar["name"] = mime.BEncoding.Encode("UTF-8", oname)
+	return mail.FormatMediaTypeX(ct, cpar)
 }
 
 const plainUTF8Type = "text/plain; charset=UTF-8"
