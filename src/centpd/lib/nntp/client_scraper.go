@@ -739,6 +739,7 @@ func (c *NNTPScraper) eatOverOutput(
 					"eatOverOutput: g(%q) id(%d) getOverLineInfo soft err: %v",
 					group, id, err)
 				err = nil // keep going
+				// TODO don't skip
 				continue
 			} else {
 				c.log.LogPrintf(WARN,
@@ -826,6 +827,9 @@ func (c *NNTPScraper) eatGroupSlice(
 		} else if code == 423 || code == 420 {
 			// can happen
 			return
+		} else if code == 500 {
+			// unsupported
+			c.s.badHdr = true
 		} else {
 			c.log.LogPrintf(WARN,
 				"unexpected HDR response %d %q, falling back to XHDR",
@@ -854,6 +858,9 @@ func (c *NNTPScraper) eatGroupSlice(
 		} else if code == 423 || code == 420 {
 			// can happen
 			return
+		} else if code == 500 {
+			// unsupported
+			c.s.badXHdr = true
 		} else {
 			c.log.LogPrintf(WARN,
 				"unexpected XHDR response %d %q",
@@ -908,6 +915,9 @@ func (c *NNTPScraper) eatGroupSlice(
 		} else if code == 423 || code == 420 {
 			// can happen
 			return
+		} else if code == 500 {
+			// unsupported
+			c.s.badOver = true
 		} else {
 			c.log.LogPrintf(WARN,
 				"unexpected OVER response %d %q, falling back to XOVER",
@@ -935,6 +945,9 @@ func (c *NNTPScraper) eatGroupSlice(
 		} else if code == 423 || code == 420 {
 			// can happen
 			return
+		} else if code == 500 {
+			// unsupported
+			c.s.badXOver = true
 		} else {
 			c.log.LogPrintf(WARN,
 				"unexpected XOVER response %d %q",

@@ -1,14 +1,29 @@
 package mail
 
 import (
+	"errors"
 	"fmt"
 	nmail "net/mail"
 	"time"
 )
 
-func ParseDate(date string) (time.Time, error) {
+func ParseDateX(date string) (t time.Time, err error) {
 	// im lazy
-	return nmail.ParseDate(date)
+	t, err = nmail.ParseDate(date)
+	if err == nil {
+		return
+	}
+	// try some more
+	fallbacks := []string{
+		"02 Jan 2006 15:04:05",
+	}
+	for _, l := range fallbacks {
+		t, err = time.Parse(l, date)
+		if err == nil {
+			return
+		}
+	}
+	return time.Time{}, errors.New("unsupported date format")
 }
 
 func FormatDate(t time.Time) string {
