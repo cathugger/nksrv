@@ -7,20 +7,22 @@ import (
 	"time"
 )
 
-func ParseDateX(date string) (t time.Time, err error) {
+func ParseDateX(date string, permissive bool) (t time.Time, err error) {
 	// im lazy
 	t, err = nmail.ParseDate(date)
 	if err == nil {
 		return
 	}
-	// try some more
-	fallbacks := []string{
-		"02 Jan 2006 15:04:05",
-	}
-	for _, l := range fallbacks {
-		t, err = time.Parse(l, date)
-		if err == nil {
-			return
+	if permissive {
+		// try some more
+		fallbacks := []string{
+			"02 Jan 2006 15:04:05",
+		}
+		for _, l := range fallbacks {
+			t, err = time.Parse(l, date)
+			if err == nil {
+				return
+			}
 		}
 	}
 	return time.Time{}, errors.New("unsupported date format")

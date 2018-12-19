@@ -149,7 +149,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// Date
 	if len(H["Date"]) != 0 {
 		hdate := H.GetFirst("Date")
-		pdate, e := mail.ParseDateX(hdate)
+		pdate, e := mail.ParseDateX(hdate, !post)
 		if e != nil {
 			err = fmt.Errorf("error parsing Date header %q: %v", hdate, e)
 			return
