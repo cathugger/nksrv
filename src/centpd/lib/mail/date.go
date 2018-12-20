@@ -8,14 +8,15 @@ import (
 )
 
 func ParseDateX(date string, permissive bool) (t time.Time, err error) {
-	// im lazy
+	// try using stdlib defaults first
 	t, err = nmail.ParseDate(date)
 	if err == nil {
 		return
 	}
 	if permissive {
-		// try some more
-		fallbacks := []string{
+		// try some known workarounds
+		fallbacks := [...]string{
+			// lots of posts in ano.paste with this idk why
 			"02 Jan 2006 15:04:05",
 		}
 		for _, l := range fallbacks {
