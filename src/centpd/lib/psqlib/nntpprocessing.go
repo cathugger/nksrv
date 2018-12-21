@@ -277,8 +277,10 @@ func (sp *PSQLIB) netnewsSubmitFullArticle(
 	}
 }
 
-const maxNameLen = 128
-const maxSubjectLen = 256
+const (
+	maxNameLen    = 255
+	maxSubjectLen = 255
+)
 
 func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
