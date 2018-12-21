@@ -15,6 +15,7 @@ import (
 	"centpd/lib/mail"
 	"centpd/lib/mailib"
 	"centpd/lib/nntp"
+	tu "centpd/lib/textutils"
 )
 
 type headerRestriction struct {
@@ -276,6 +277,9 @@ func (sp *PSQLIB) netnewsSubmitFullArticle(
 	}
 }
 
+const maxNameLen = 128
+const maxSubjectLen = 256
+
 func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
 	err error, unexpected bool) {
@@ -318,7 +322,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 
 		// ensure safety and sanity
-		ssub = au.TrimWSString(safeHeader(ssub))
+		ssub = au.TrimWSString(safeHeader(tu.TruncateText(ssub, maxSubjectLen)))
 
 		if !isSubjectEmpty(ssub, info.isReply, info.refSubject) {
 			pi.MI.Title = ssub
@@ -334,7 +338,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		a, e := mail.ParseAddressX(fromhdr)
 		if e == nil && utf8.ValidString(a.Name) {
 			// XXX should we filter out "Anonymous" names? would save some bytes
-			pi.MI.Author = au.TrimWSString(safeHeader(a.Name))
+			pi.MI.Author = au.TrimWSString(safeHeader(
+				tu.TruncateText(a.Name, maxNameLen)))
 		} else {
 			pi.MI.Author = "[Invalid From header]"
 		}

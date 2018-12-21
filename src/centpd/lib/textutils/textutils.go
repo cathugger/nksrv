@@ -3,6 +3,7 @@ package textutils
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -29,4 +30,19 @@ func NormalizeTextMessage(msg string) (s string) {
 	// ensure we don't have any silly stuff left
 	s = replacer.Replace(s)
 	return
+}
+
+// TruncateText truncates valid utf8 string
+// to specified length or less without breaking it.
+func TruncateText(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for ; n != 0; n-- {
+		// cut off only in places before next full rune
+		if utf8.RuneStart(s[n]) {
+			return s[:n]
+		}
+	}
+	return ""
 }
