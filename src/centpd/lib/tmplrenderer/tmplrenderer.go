@@ -23,7 +23,8 @@ import (
 var _ renderer.Renderer = (*TmplRenderer)(nil)
 
 const (
-	tmplBoardList = iota
+	tmplMessage = iota
+	tmplBoardList
 	tmplBoardListErr
 	tmplThreadListPage
 	tmplThreadListPageErr
