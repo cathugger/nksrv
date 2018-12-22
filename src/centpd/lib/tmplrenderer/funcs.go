@@ -1,6 +1,7 @@
 package tmplrenderer
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -10,6 +11,21 @@ import (
 )
 
 var funcs = map[string]interface{}{
+	// basics which should be there by default but apparently aren't
+	"list": func(args ...interface{}) []interface{} {
+		return args
+	},
+	"map": func(args ...interface{}) (m map[interface{}]interface{}, _ error) {
+		if len(args)%2 != 0 {
+			return nil, errors.New("odd number of arguments to map")
+		}
+		m = make(map[interface{}]interface{})
+		for i := 0; i+1 < len(args); i += 2 {
+			m[args[i]] = args[i+1]
+		}
+		return m, nil
+	},
+	// stuff
 	"urlpath":    urlPath,
 	"truncatefn": truncatefn,
 	"filesize":   filesize,

@@ -91,7 +91,6 @@ type tmplTOMLSection struct {
 	FileName    string `toml:"file"`
 	ContentType string `toml:"content_type"`
 	Charset     string `toml:"charset"`
-	recognised  bool
 }
 
 type tmplTOML map[string]*tmplTOMLSection
@@ -126,101 +125,88 @@ func nopWCCreator(w http.ResponseWriter) io.WriteCloser {
 var _ wcCreator = nopWCCreator
 
 func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
-	var tt *tmplTOML
-	var t *template.Template
-	var f []byte
+	var tt tmplTOML
 	var err error
 
-	tn := "templates.toml"
-	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
+	const tn = "templates.toml"
+	cfginfo, err := ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
 	if err != nil {
 		tr.l.LogPrintf(INFO, "couldn't read %q: %v", tn, err)
 	} else {
-		fukugo := make(tmplTOML)
-		tt = &fukugo
-		err = toml.Unmarshal(f, tt)
+		tt = make(tmplTOML)
+		err = toml.Unmarshal(cfginfo, &tt)
 		if err != nil {
-			tr.l.LogPrintf(ERROR, "failed to parse TOML file %q: %v", tn, err)
-			return fmt.Errorf("failed to parse TOML file %q: %v", tn, err)
+			//tr.l.LogPrintf(ERROR, "failed to parse TOML file %q: %v", tn, err)
+			return fmt.Errorf(
+				"failed to parse TOML file %q: %v", tn, err)
 		}
 	}
-	var dcharset string
-	if tt != nil {
-		s, ok := (*tt)["default"]
+
+	root := template.New("").Funcs(funcs)
+
+	doTemplate := func(name string) (
+		t *template.Template, ct string, fe error) {
+
+		filename := name + ".tmpl"
+		s, ok := tt[name]
 		if ok {
-			(*tt)["default"].recognised = true
-			dcharset = s.Charset
+			if s.FileName != "" {
+				filename = s.FileName
+			}
+			ct = s.ContentType
 		}
+
+		tinfo, fe := ioutil.ReadFile(path.Join(
+			cfg.TemplateDir, filename))
+		if fe != nil {
+			fe = fmt.Errorf(
+				"failed to read template file %q: %v", filename, err)
+			return
+		}
+
+		t, fe = root.New(name).Parse(string(tinfo))
+		if fe != nil {
+			fe = fmt.Errorf("failed to parse template file %q: %v",
+				filename, fe)
+			return
+		}
+
+		return
 	}
-	if dcharset == "" {
-		dcharset = "UTF-8"
-	}
+
 	for i := 0; i < tmplMax; i++ {
-		filename := names[i] + ".tmpl"
-		charset := dcharset
+		t, ct, e := doTemplate(names[i])
+		if e != nil {
+			return e
+		}
+
 		// default content type for error pages is text/plain
-		var contenttype string
-		if i&1 == 0 {
-			contenttype = "text/html"
-		} else {
-			contenttype = "text/plain"
-		}
-		if tt != nil {
-			s, ok := (*tt)[names[i]]
-			if ok {
-				(*tt)[names[i]].recognised = true
-				if s.FileName != "" {
-					filename = s.FileName
-				}
-				if s.ContentType != "" {
-					contenttype = s.ContentType
-				}
-				if s.Charset != "" {
-					charset = s.Charset
-				}
+		if ct == "" {
+			if i&1 == 0 {
+				ct = "text/html"
+			} else {
+				ct = "text/plain"
 			}
 		}
-		lenc := strings.ToLower(charset)
-		var cset string
-		switch lenc {
-		case "utf-8", "utf8":
-			tr.t[i].w = nopWCCreator
-			cset = charset[:3] + "-8"
-		default:
-			tr.l.LogPrintf(ERROR, "unknown charset: %s", charset)
-			return fmt.Errorf("unknown charset: %s", charset)
+
+		mt, par, e := mime.ParseMediaType(ct)
+		if e != nil {
+			return fmt.Errorf(
+				"couldn't parse Content-Type %q: %v", ct, e)
 		}
-		mt, par, err := mime.ParseMediaType(contenttype)
-		if err != nil {
-			tr.l.LogPrintf(ERROR, "couldn't parse Content-Type %q: %v",
-				contenttype, err)
-			return fmt.Errorf("couldn't parse Content-Type %q: %v",
-				contenttype, err)
+		if strings.HasPrefix(mt, "text/") {
+			par["charset"] = "UTF-8"
 		}
 
-		par["charset"] = cset
-		tr.t[i].m = mime.FormatMediaType(mt, par)
-
-		f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, filename))
-		if err != nil {
-			tr.l.LogPrintf(ERROR, "failed to read %q: %v", filename, err)
-			return fmt.Errorf("failed to read %q: %v", filename, err)
-		}
-		t = template.New(filename).Funcs(funcs)
-		t, err = t.Parse(string(f))
-		if err != nil {
-			tr.l.LogPrintf(ERROR, "failed to parse template file %q: %v",
-				filename, err)
-			return fmt.Errorf("failed to parse template file %q: %v",
-				filename, err)
-		}
 		tr.t[i].t = t
+		tr.t[i].m = mime.FormatMediaType(mt, par)
+		tr.t[i].w = nopWCCreator
+		delete(tt, names[i])
 	}
-	if tt != nil {
-		for n := range *tt {
-			if !(*tt)[n].recognised {
-				tr.l.LogPrintf(WARN, "unrecognised %q section %q", tn, n)
-			}
+	for n := range tt {
+		_, _, e := doTemplate(n)
+		if e != nil {
+			return e
 		}
 	}
 	return nil
