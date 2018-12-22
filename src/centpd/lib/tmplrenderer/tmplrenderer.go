@@ -41,6 +41,7 @@ const (
 )
 
 var names = [tmplMax]string{
+	"message",
 	"board_list",
 	"board_list_err",
 	"thread_list_page",
@@ -136,7 +137,6 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		tt = make(tmplTOML)
 		err = toml.Unmarshal(cfginfo, &tt)
 		if err != nil {
-			//tr.l.LogPrintf(ERROR, "failed to parse TOML file %q: %v", tn, err)
 			return fmt.Errorf(
 				"failed to parse TOML file %q: %v", tn, err)
 		}
@@ -180,15 +180,9 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 			return e
 		}
 
-		// default content type for error pages is text/plain
 		if ct == "" {
-			if i&1 == 0 {
-				ct = "text/html"
-			} else {
-				ct = "text/plain"
-			}
+			ct = "text/html"
 		}
-
 		mt, par, e := mime.ParseMediaType(ct)
 		if e != nil {
 			return fmt.Errorf(
@@ -253,18 +247,19 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	var f []byte
 	var err error
 
-	tn := "message.toml"
+	const tn = "message.toml"
 	f, err = ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
 	if err != nil {
-		tr.l.LogPrintf(ERROR, "failed to read %q: %v", tn, err)
 		return fmt.Errorf("failed to read %q: %v", tn, err)
 	}
+
 	mtoml := &msgFmtTOML{}
 	_, err = toml.Decode(string(f), mtoml)
 	if err != nil {
 		tr.l.LogPrintf(ERROR, "failed to parse toml file %q: %v", tn, err)
 		return fmt.Errorf("failed to parse toml file %q: %v", tn, err)
 	}
+
 	tr.m = msgFmtCfg{
 		PreMsg:  []byte(mtoml.PreMsg),
 		PostMsg: []byte(mtoml.PostMsg),
@@ -279,18 +274,21 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 		PreQuote:  []byte(mtoml.PreQuote),
 		PostQuote: []byte(mtoml.PostQuote),
 	}
+
 	if mtoml.PreFirstLine == "" {
 		tr.m.PreFirstLine = []byte(mtoml.PreLine)
 	}
 	if mtoml.PreNonFirstLine == "" {
 		tr.m.PreNonFirstLine = []byte(mtoml.PreLine)
 	}
+
 	if mtoml.PostFinalLine == "" {
 		tr.m.PostFinalLine = []byte(mtoml.PostLine)
 	}
 	if mtoml.PostNonFinalLine == "" {
 		tr.m.PostNonFinalLine = []byte(mtoml.PostLine)
 	}
+
 	if mtoml.FinalNewline == "" {
 		tr.m.FinalNewline = []byte(mtoml.Newline)
 	}
