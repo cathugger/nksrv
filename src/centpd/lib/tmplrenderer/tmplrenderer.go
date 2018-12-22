@@ -320,25 +320,23 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 }
 
 func NewTmplRenderer(
-	p ib0.IBProvider, cfg TmplRendererCfg) (*TmplRenderer, error) {
+	p ib0.IBProvider, cfg TmplRendererCfg) (tr *TmplRenderer, err error) {
 
-	var err error
-
-	tr := &TmplRenderer{p: p}
+	tr = &TmplRenderer{p: p}
 
 	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
 
 	err = tr.configTemplates(cfg)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	err = tr.configMessage(cfg)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return tr, nil
+	return
 }
 
 func (tr *TmplRenderer) ServeBoardList(
