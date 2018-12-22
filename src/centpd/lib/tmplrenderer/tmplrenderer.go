@@ -153,7 +153,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		}
 	}
 	if dcharset == "" {
-		dcharset = "utf-8"
+		dcharset = "UTF-8"
 	}
 	for i := 0; i < tmplMax; i++ {
 		filename := names[i] + ".tmpl"
@@ -186,21 +186,6 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		case "utf-8", "utf8":
 			tr.t[i].w = nopWCCreator
 			cset = charset[:3] + "-8"
-		case "ascii", "us-ascii", "iso-8859-1":
-			tr.t[i].w = nopWCCreator
-			cset = charset
-		case "utf-16", "utf16", "utf-16/be", "utf16/be":
-			tr.t[i].w = utf16beWCCreator
-			cset = charset[:3] + "-16"
-		case "utf-16/le", "utf16/le":
-			tr.t[i].w = utf16leWCCreator
-			cset = charset[:3] + "-16"
-		case "utf16be", "utf-16be":
-			tr.t[i].w = utf16beNBOMWCCreator
-			cset = charset[:3] + "-16" + charset[len(charset)-2:]
-		case "utf16le", "utf-16le":
-			tr.t[i].w = utf16leNBOMWCCreator
-			cset = charset[:3] + "-16" + charset[len(charset)-2:]
 		default:
 			tr.l.LogPrintf(ERROR, "unknown charset: %s", charset)
 			return fmt.Errorf("unknown charset: %s", charset)
