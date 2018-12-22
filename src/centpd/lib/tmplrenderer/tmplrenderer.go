@@ -256,7 +256,6 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	mtoml := &msgFmtTOML{}
 	_, err = toml.Decode(string(f), mtoml)
 	if err != nil {
-		tr.l.LogPrintf(ERROR, "failed to parse toml file %q: %v", tn, err)
 		return fmt.Errorf("failed to parse toml file %q: %v", tn, err)
 	}
 
