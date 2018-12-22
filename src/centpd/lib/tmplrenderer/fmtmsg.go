@@ -47,19 +47,48 @@ type msgLineFmtCfg struct {
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
 	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
-	p *webib0.IBPostInfo, linelimit, charsperline int) {
+	p *webib0.IBPostInfo, linelimit, charsperline int) (err error) {
 
-	w.Write(tr.m.PreMsg)
+	_, err = w.Write(tr.m.PreMsg)
+	if err != nil {
+		return
+	}
 
 	lines := 0
 	src, last := 0, 0
 	greentext := false
 	b := p.Message
 	blen := len(b)
-	n := true // whether we're at start of new line
+	n := true               // whether we're at start of new line
+	pendingnewline := false // whether there's pending newline to write
+	flushnewline := func(final bool) (fe error) {
+		if pendingnewline {
+			if !final {
+				_, fe = w.Write(tr.m.PostNonFinalLine)
+				if fe != nil {
+					return
+				}
+				_, fe = w.Write(tr.m.NonFinalNewline)
+				if fe != nil {
+					return
+				}
+			} else {
+				_, fe = w.Write(tr.m.PostFinalLine)
+				if fe != nil {
+					return
+				}
+				_, fe = w.Write(tr.m.FinalNewline)
+				if fe != nil {
+					return
+				}
+			}
+			pendingnewline = false
+		}
+		return
+	}
 	// if we're in for next line, preline checks whether we can write it,
 	// if we can it writes preline, else it writes truncation msg.
-	preline := func() bool {
+	preline := func() (_ bool, fe error) {
 		if n {
 			// truncation
 			if linelimit != 0 {
@@ -92,26 +121,35 @@ func formatmsg(
 						P: p,
 						N: ni,
 					}
-					tr.m.TruncationLineTmpl.Execute(w, d)
-					return false
+					fe = tr.m.TruncationLineTmpl.Execute(w, d)
+					return false, fe
 				}
 			}
 
+			fe = flushnewline(false)
+			if fe != nil {
+				return
+			}
+
 			if src != 0 {
-				w.Write(tr.m.PreFirstLine)
+				_, fe = w.Write(tr.m.PreFirstLine)
 			} else {
-				w.Write(tr.m.PreNonFirstLine)
+				_, fe = w.Write(tr.m.PreNonFirstLine)
+			}
+			if fe != nil {
+				return
 			}
 			n = false
 		}
-		return true
+		return true, nil
 	}
 	r := 0
-	normalfmt := func(end int) bool {
+	normalfmt := func(end int) (ok bool, fe error) {
 		for src < end {
 			firstch := n
-			if !preline() {
-				return false
+			ok, fe = preline()
+			if !ok || fe != nil {
+				return
 			}
 			c := b[src]
 			inc := 1 // default ammout to skip is one character
@@ -129,13 +167,22 @@ func formatmsg(
 				if firstch {
 					greentext = true
 					// flush
-					w.Write(b[last:src])
+					_, fe = w.Write(b[last:src])
+					if fe != nil {
+						return
+					}
 					src++
 					last = src
 					// pre-greentext
-					w.Write(tr.m.PreQuote)
+					_, fe = w.Write(tr.m.PreQuote)
+					if fe != nil {
+						return
+					}
 					// rest of text is normal
-					w.Write(htmlGt)
+					_, fe = w.Write(htmlGt)
+					if fe != nil {
+						return
+					}
 					continue
 				}
 				esc = htmlGt
@@ -143,24 +190,24 @@ func formatmsg(
 				esc = htmlNull
 			case '\n':
 				// flush
-				w.Write(b[last:src])
+				_, fe = w.Write(b[last:src])
+				if fe != nil {
+					return
+				}
 				src++
 				last = src
+
 				if greentext {
 					// terminate greentext
-					w.Write(tr.m.PostQuote)
+					_, fe = w.Write(tr.m.PostQuote)
+					if fe != nil {
+						return
+					}
 					greentext = false
 				}
-				// TODO defer
-				// write out post-line stuff
-				if src < blen {
-					w.Write(tr.m.PostNonFinalLine)
-					w.Write(tr.m.NonFinalNewline)
-				} else {
-					w.Write(tr.m.PostFinalLine)
-					w.Write(tr.m.FinalNewline)
-				}
+
 				n = true
+				pendingnewline = true
 				continue
 			case '\r':
 				// skip
@@ -170,31 +217,55 @@ func formatmsg(
 				continue
 			}
 			// flush stuff before replacement
-			w.Write(b[last:src])
+			_, fe = w.Write(b[last:src])
+			if fe != nil {
+				return
+			}
 			// write replacement
-			w.Write(esc)
+			_, fe = w.Write(esc)
+			if fe != nil {
+				return
+			}
 			// skip some ammount
 			src += inc
 			// set new mark
 			last = src
 		}
 		// flush
-		w.Write(b[last:src])
+		_, fe = w.Write(b[last:src])
+		if fe != nil {
+			return
+		}
 		last = src
-		return true
+
+		return true, nil
 	}
+
+	var cont bool
+
 	rlen := len(p.References)
 	for ; r < rlen; r++ {
 		rr := &p.References[r]
 		if rr.Start > rr.End || rr.End > uint(blen) {
 			break
 		}
-		if !normalfmt(int(rr.Start)) {
+
+		cont, err = normalfmt(int(rr.Start))
+		if err != nil {
+			return
+		}
+		if !cont {
 			goto endmsg
 		}
-		if !preline() {
+
+		cont, err = preline()
+		if err != nil {
+			return
+		}
+		if !cont {
 			goto endmsg
 		}
+
 		d := struct {
 			D *webib0.IBReference
 			N *NodeInfo
@@ -202,35 +273,69 @@ func formatmsg(
 			D: &rr.IBReference,
 			N: ni,
 		}
-		tr.m.PreRefTmpl.Execute(w, d)
+		err = tr.m.PreRefTmpl.Execute(w, d)
+		if err != nil {
+			return
+		}
+
 		t.HTMLEscape(w, b[src:rr.End])
 		src = int(rr.End)
 		last = src
-		tr.m.PostRefTmpl.Execute(w, d)
+
+		err = tr.m.PostRefTmpl.Execute(w, d)
+		if err != nil {
+			return
+		}
 	}
-	if !normalfmt(blen) {
+
+	cont, err = normalfmt(blen)
+	if err != nil {
+		return
+	}
+	if !cont {
 		goto endmsg
 	}
+
+	err = flushnewline(true)
+	if err != nil {
+		return
+	}
+
 	if !n {
 		if greentext {
 			// terminate greentext
-			w.Write(tr.m.PostQuote)
+			_, err = w.Write(tr.m.PostQuote)
+			if err != nil {
+				return
+			}
 			//greentext = false
 		}
-		w.Write(tr.m.PostFinalLine)
+
+		_, err = w.Write(tr.m.PostFinalLine)
+		if err != nil {
+			return
+		}
 	}
 
 endmsg:
-	w.Write(tr.m.PostMsg)
+	_, err = w.Write(tr.m.PostMsg)
+	return
 }
 
-func fmtmsg(tr *TmplRenderer, n *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) string {
+func fmtmsg(
+	tr *TmplRenderer, n *NodeInfo,
+	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
+	p *webib0.IBPostInfo, linelimit, charsperline int) (
+	_ string, err error) {
+
 	var b strings.Builder
-	formatmsg(&b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
-	return b.String()
+	err = formatmsg(&b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
+	return b.String(), err
 }
 
-func fmtmsgcat(tr *TmplRenderer, n *NodeInfo, p *webib0.IBThreadCatalogThread) string {
+func fmtmsgcat(
+	tr *TmplRenderer, n *NodeInfo, p *webib0.IBThreadCatalogThread) string {
+
 	var b strings.Builder
 	t.HTMLEscape(&b, p.Message) // TODO
 	return b.String()
