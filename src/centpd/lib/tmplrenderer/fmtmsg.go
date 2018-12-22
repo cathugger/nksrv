@@ -44,7 +44,11 @@ type msgLineFmtCfg struct {
 	NonFinalNewline  []byte
 }
 
-func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread, p *webib0.IBPostInfo, linelimit, charsperline int) {
+func formatmsg(
+	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
+	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
+	p *webib0.IBPostInfo, linelimit, charsperline int) {
+
 	w.Write(tr.m.PreMsg)
 
 	lines := 0
@@ -52,7 +56,9 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IB
 	greentext := false
 	b := p.Message
 	blen := len(b)
-	n := true
+	n := true // whether we're at start of new line
+	// if we're in for next line, preline checks whether we can write it,
+	// if we can it writes preline, else it writes truncation msg.
 	preline := func() bool {
 		if n {
 			// truncation
@@ -90,6 +96,7 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IB
 					return false
 				}
 			}
+
 			if src != 0 {
 				w.Write(tr.m.PreFirstLine)
 			} else {
@@ -144,6 +151,7 @@ func formatmsg(w io.Writer, tr *TmplRenderer, ni *NodeInfo, boardInfo *webib0.IB
 					w.Write(tr.m.PostQuote)
 					greentext = false
 				}
+				// TODO defer
 				// write out post-line stuff
 				if src < blen {
 					w.Write(tr.m.PostNonFinalLine)
