@@ -23,7 +23,8 @@ import (
 var _ renderer.Renderer = (*TmplRenderer)(nil)
 
 const (
-	tmplMessage = iota
+	tmplOP = iota
+	tmplReply
 	tmplBoardList
 	tmplBoardListErr
 	tmplThreadListPage
@@ -42,7 +43,8 @@ const (
 )
 
 var names = [tmplMax]string{
-	"message",
+	"op",
+	"reply",
 	"board_list",
 	"board_list_err",
 	"thread_list_page",
@@ -128,18 +130,17 @@ var _ wcCreator = nopWCCreator
 
 func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	var tt tmplTOML
-	var err error
 
 	const tn = "templates.toml"
-	cfginfo, err := ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
-	if err != nil {
-		tr.l.LogPrintf(INFO, "couldn't read %q: %v", tn, err)
+	cfginfo, xe := ioutil.ReadFile(path.Join(cfg.TemplateDir, tn))
+	if xe != nil {
+		tr.l.LogPrintf(INFO, "couldn't read %q: %v", tn, xe)
 	} else {
 		tt = make(tmplTOML)
-		err = toml.Unmarshal(cfginfo, &tt)
-		if err != nil {
+		e := toml.Unmarshal(cfginfo, &tt)
+		if e != nil {
 			return fmt.Errorf(
-				"failed to parse TOML file %q: %v", tn, err)
+				"failed to parse TOML file %q: %v", tn, e)
 		}
 	}
 
@@ -161,7 +162,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 			cfg.TemplateDir, filename))
 		if fe != nil {
 			fe = fmt.Errorf(
-				"failed to read template file %q: %v", filename, err)
+				"failed to read template file %q: %v", filename, fe)
 			return
 		}
 
