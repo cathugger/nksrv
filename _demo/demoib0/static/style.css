@@ -64,7 +64,7 @@ html {
 .showmorefiles {
 	display: none;
 }
-#file ~ .showmorefiles {
+#file:enabled ~ .showmorefiles {
 	display: inline;
 	float: right;
 }
