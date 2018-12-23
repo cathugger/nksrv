@@ -1,0 +1,83 @@
+{{/*
+
+args map:
+	"root" - root
+	"board" - board
+	"thread" - thread
+
+*/ -}}
+
+{{$X := $.root -}}
+{{$B := $.board -}}
+{{$T := $.thread -}}
+
+
+<form action="{{$X.N.PRoot}}/_post" method="POST">
+ <input name="board" type="hidden" value="{{$B}}" />
+ {{if $T -}}
+ <input name="thread" type="hidden" value="{{$T}}" />
+ {{end -}}
+
+ <table border="1" style="margin: 0 auto;">
+  <tr>
+   <th><label for="title">Subject</label></th>
+   <td><input
+    name="title"
+    id="title"
+    type="text"
+    placeholder="None"
+   /></td>
+  </tr>
+  <tr>
+   <th><label for="name">Name</label></th>
+   <td><input
+    name="name"
+    id="name"
+    type="text"
+    placeholder="Anonymous"
+   /></td>
+  </tr>
+  <tr>
+   <th><label for="message">Comment</label></th>
+   <td><textarea
+    name="message"
+    id="message"
+    rows="6"
+    cols="45"
+   ></textarea></td>
+  </tr>
+  <tr>
+   <th><label for="file">File(s)</label></th>
+   <td>
+    {{- range $i, $v := emptylist 5 -}}
+     <input
+      type="file"
+      name="{{if eq $i 0}}file{{else}}file{{add_i $i 1}}{{end}}"
+      {{if eq $i 0 -}}
+      id="file"
+      {{else -}}
+      class="morefiles"
+      {{end -}}
+      multiple="1"
+     />
+     {{if eq $i 0 -}}
+      <input
+       type="checkbox"
+       id="showmorefiles"
+       class="showmorefiles"
+      /><label
+       for="showmorefiles"
+       class="showmorefiles"
+      >More</label>
+     {{end -}}
+    {{- end -}}
+   </td>
+  </tr>
+  <tr>
+   <th></th>
+   <td><div
+    style="text-align: right"
+   ><input type="submit" value="Post" /></div></td>
+  </tr>
+ </table>
+</form>
