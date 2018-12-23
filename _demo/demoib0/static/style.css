@@ -73,6 +73,6 @@ html {
 	float: right;
 }
 
-#showmorefiles:unchecked ~ .morefiles {
+#showmorefiles:enabled ~ .morefiles {
 	display: none;
 }
