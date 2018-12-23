@@ -12,9 +12,13 @@
 
   {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
 
-  {{- range $.D.Replies}}
-   {{- template "reply" list $ (threadptr $.D.IBCommonThread) (postptr .) 0 0 0}}
+  {{- $i, $v := range $.D.Replies}}
+   {{- if ne $i 0}}
+   <div style="clear:both"></div>
+   {{- end}}
+   {{- template "reply" list $ (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
   {{- end}}
+  <div style="clear:both"></div>
 
   <hr />
 
