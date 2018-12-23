@@ -1,32 +1,31 @@
 <!DOCTYPE html>
- <html>
-  <head>
-   <title>/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}} - Page {{$.D.Number}}</title>
-   <link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
-  </head>
-  <body>
-   <!-- xxx: node name? board list? -->
+<html>
+ <head>
+  <title>/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}} - Page {{$.D.Number}}</title>
+  <link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
+ </head>
+ <body>
+  <!-- xxx: node name? board list? -->
 
-   <hr />
-   {{- template "_boardinfo" $ -}}
+  <hr />
+  {{- template "_boardinfo" $ -}}
 
-   <p><h1>New thread</h1></p>
-   {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
-   <hr />
-   {{template "_thread_list_nav" list $ 0}}
-   <hr />
+  <p><h1>New thread</h1></p>
+  {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
+  <hr />
+  {{template "_thread_list_nav" list $ 0}}
+  <hr />
 
-   {{range $T := $.D.Threads -}}
-    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
-
-    {{range $i, $v := $T.Replies -}}
-     {{if ne $i 0 -}}
-     <div style="clear:both"></div>
-     {{end -}}
-     {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
-    {{end -}}
+  {{range $T := $.D.Threads -}}
+   {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
+   {{range $i, $v := $T.Replies -}}
+    {{if ne $i 0 -}}
     <div style="clear:both"></div>
+    {{end -}}
+    {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
    {{end -}}
+   <div style="clear:both"></div>
+  {{end -}}
 
   <hr />
 
