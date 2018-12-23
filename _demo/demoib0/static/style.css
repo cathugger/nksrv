@@ -61,10 +61,18 @@ html {
 	display: block;
 }
 
-#showmorefiles:unchecked ~ .morefiles {
+/*
+ * by default don't display and activate only if browser supports
+ * capability this button uses for its actions
+ */
+.showmorefiles {
 	display: none;
 }
-
-.showmorefiles {
+#file ~ .showmorefiles {
+	display: inline;
 	float: right;
+}
+
+#showmorefiles:unchecked ~ .morefiles {
+	display: none;
 }
