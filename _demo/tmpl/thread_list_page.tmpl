@@ -13,6 +13,8 @@
    <p><h1>New thread</h1></p>
    {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
    <hr />
+   {{template "_thread_list_nav" $ 0}}
+   <hr />
 
    {{range $T := $.D.Threads -}}
     {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
@@ -28,17 +30,7 @@
 
   <hr />
 
-  <p class="nav">
-  {{range $i, $v := emptylist $.D.Available -}}
-   {{$ui := add_i $i 1 -}}
-   {{- if eq $i $.D.Number -}}
-    [<b class="nav">{{$ui}}</b>]
-   {{- else -}}
-    [<a class="nav" href="./{{if ne $i 0}}{{$ui}}{{end}}">{{$ui}}</a>]
-   {{- end -}}
-  {{end -}}
-  [<a href="./catalog">Catalog</a>]
-  </p>
+  {{template "_thread_list_nav" $ 1}}
 
  </body>
 </html>
