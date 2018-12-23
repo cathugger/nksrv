@@ -47,10 +47,10 @@ html {
 	padding: 0px 0px 6px 0px;
 }
 
-span.subject {
+.subject {
 	color: #117743;
 }
 
-span.name {
+.name {
 	color: #0F0C5D;
 }
