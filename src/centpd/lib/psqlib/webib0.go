@@ -19,7 +19,10 @@ import (
 func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	var err error
 
-	rows, err := sp.db.DB.Query("SELECT bname,bdesc,attrib FROM ib0.boards")
+	q := `SELECT bname,bdesc,attrib
+FROM ib0.boards
+ORDER BY bname`
+	rows, err := sp.db.DB.Query(q)
 	if err != nil {
 		return sp.sqlError("boards query", err), http.StatusInternalServerError
 	}
