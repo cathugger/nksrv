@@ -72,6 +72,15 @@ LEFT JOIN (
 }
 */
 
+func (sp *PSQLIB) ensureThumb(
+	t ib0.IBThumbInfo, fname, ftype string) ib0.IBThumbInfo {
+
+	if t.ID == "" {
+		t.Alt, t.Width, t.Height = sp.altthumb.GetAltThumb(fname, ftype)
+	}
+	return t
+}
+
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	board string, num uint32) (error, int) {
 
@@ -258,7 +267,9 @@ ORDER BY fid ASC`,
 				fattrib := make(map[string]interface{})
 				tattrib := defaultThumbAttributes
 
-				err = rows.Scan(&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original, &jcfg, &jcfg2)
+				err = rows.Scan(
+					&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original,
+					&jcfg, &jcfg2)
 				if err != nil {
 					rows.Close()
 					return sp.sqlError("files query rows scan", err), http.StatusInternalServerError
@@ -278,6 +289,7 @@ ORDER BY fid ASC`,
 
 				fi.Options = fattrib
 				fi.Thumb.Width, fi.Thumb.Height = tattrib.Width, tattrib.Height
+				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
 				pi.Files = append(pi.Files, fi)
 			}
 			if err = rows.Err(); err != nil {
@@ -370,7 +382,7 @@ ORDER BY bump DESC,tid ASC`,
 		var ftype string
 		err = sp.db.DB.
 			QueryRow("SELECT fname,thumb,ftype,thumbcfg FROM ib0.files WHERE bid=$1 AND pid=$2 ORDER BY fid ASC LIMIT 1", bid, tid).
-			Scan(&fname, &t.ID, &ftype, &jcfg)
+			Scan(&fname, &t.Thumb.ID, &ftype, &jcfg)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				return sp.sqlError("files row query scan", err), http.StatusInternalServerError
@@ -378,7 +390,7 @@ ORDER BY bump DESC,tid ASC`,
 
 			t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb("", "")
 		} else {
-			if t.ID == "" {
+			if t.Thumb.ID == "" {
 				t.Thumb.Alt, t.Thumb.Width, t.Thumb.Height = sp.altthumb.GetAltThumb(fname, ftype)
 			} else {
 				tattrib := defaultThumbAttributes
@@ -466,7 +478,9 @@ ORDER BY padded ASC,pid ASC`,
 		var pid postID
 		var pdate time.Time
 
-		err = rows.Scan(&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Subject, &pdate, (*[]byte)(&pi.Message), &jcfg)
+		err = rows.Scan(
+			&pi.ID, &pid, &pi.Name, &pi.Trip, &pi.Subject, &pdate,
+			(*[]byte)(&pi.Message), &jcfg)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("posts query rows scan", err), http.StatusInternalServerError
@@ -517,7 +531,9 @@ ORDER BY fid ASC`,
 			fattrib := make(map[string]interface{})
 			tattrib := defaultThumbAttributes
 
-			err = rows.Scan(&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original, &jcfg, &jcfg2)
+			err = rows.Scan(
+				&fi.ID, &fi.Type, &fi.Size, &fi.Thumb.ID, &fi.Original,
+				&jcfg, &jcfg2)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError("files query rows scan", err), http.StatusInternalServerError
@@ -537,6 +553,7 @@ ORDER BY fid ASC`,
 
 			fi.Options = fattrib
 			fi.Thumb.Width, fi.Thumb.Height = tattrib.Width, tattrib.Height
+			fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
 			pi.Files = append(pi.Files, fi)
 		}
 		if err = rows.Err(); err != nil {
