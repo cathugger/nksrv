@@ -28,7 +28,10 @@ func attachmentConentType(ctype string, oname string) string {
 	return mail.FormatMediaTypeX(ct, cpar)
 }
 
-const plainUTF8Type = "text/plain; charset=UTF-8"
+const (
+	plainTextType = "text/plain"
+	plainUTF8Type = "text/plain; charset=UTF-8"
+)
 
 func (sp *PSQLIB) fillWebPostDetails(
 	i mailib.PostInfo, board string, ref CoreMsgIDStr) mailib.PostInfo {
@@ -119,7 +122,10 @@ func (sp *PSQLIB) fillWebPostDetails(
 	xparts := make([]mailib.PartInfo, nparts)
 	x := 0
 	if hastext {
-		if text8bit {
+		if !text8bit {
+			// workaround for nntpchan before 2018-12-23
+			xparts[0].ContentType = plainTextType
+		} else {
 			xparts[0].Has8Bit = true
 			xparts[0].ContentType = plainUTF8Type
 		}
