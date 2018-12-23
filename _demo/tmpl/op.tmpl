@@ -36,8 +36,10 @@ arguments list:
   >{{date $P.Date}}</time>
 
   <a
-   href="{{if $fullURLs}}{{$X.N.Root}}/{{escboard $X.D.Board.Name}}/thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
+   href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
   >No.</a> {{$P.ID}}
+
+  {{- if $fullURLs}}[<a href="thread/{{$T.ID}}">Reply</a>]{{end}}
 
   {{- range $P.BackReferences}}
    <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>
