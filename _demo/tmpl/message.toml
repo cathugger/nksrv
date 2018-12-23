@@ -1,13 +1,15 @@
-pre_msg         = ""
-post_msg        = ""
-pre_line        = ""
-post_line       = ""
-newline         = "<br />"
-pre_quote       = "<span class=\"quote\">"
-post_quote      = "</span>"
-pre_reference   = "<a class=\"ref\" href=\"#test\">"
-post_reference  = "</a>"
-truncation_line = """
+pre_msg          = '<div class="body">'
+post_msg         = "</div>"
+pre_line         = ""
+post_line        = ""
+newline          = ""
+final_newline    = ""
+nonfinal_newline = "<br />"
+pre_quote        = "<span class=\"quote\">"
+post_quote       = "</span>"
+pre_reference    = "<a class=\"ref\" href=\"#test\">"
+post_reference   = "</a>"
+truncation_line  = """
 <p class=\"trunc\">\
 message truncated. click
 <a
