@@ -69,6 +69,10 @@ html {
 	float: right;
 }
 
+/*
+ * if browser doesn't support capabilities we need display all;
+ * else by default don't display all, but only when checkbox gets checked.
+ */
 .morefiles {
 	display: block;
 }

@@ -54,13 +54,14 @@ args map:
    <th><label for="file">File(s)</label></th>
    <td>
     {{- range $i, $v := emptylist 5 -}}
+     {{if ne $i 0 -}}
+     <div class="morefiles">
+     {{end -}}
      <input
       type="file"
       name="file{{if ne $i 0}}{{add_i $i 1}}{{end}}"
       {{if eq $i 0 -}}
       id="file"
-      {{else -}}
-      class="morefiles"
       {{end -}}
       multiple="1"
      />
@@ -73,6 +74,8 @@ args map:
        for="showmorefiles"
        class="showmorefiles"
       >More</label>
+     {{else}}
+     </div>
      {{end -}}
     {{- end -}}
    </td>
