@@ -40,11 +40,14 @@ html {
 }
 
 .reply {
-	float: left;
+	display: inline-block;
 	background-color: #CCEEFF;
 	border: 1px dotted blue;
 	margin: 6px 3px 3px 3px;
 	padding: 0px 0px 6px 0px;
+}
+
+.reply-outer {
 }
 
 .subject {

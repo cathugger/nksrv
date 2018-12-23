@@ -20,6 +20,7 @@ arguments list:
 {{$maxCPL   := index $ 5 -}}
 
 {{with $P -}}
+ <div class="reply-outer">
  <div class="reply">
 
   <p class="rinfo" id="p{{$P.ID}}">
@@ -74,6 +75,6 @@ arguments list:
   {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
 
   {{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL}}
-  <div style="clear:both"></div>
+ </div>
  </div>
 {{end -}}
