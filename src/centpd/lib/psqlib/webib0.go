@@ -95,8 +95,11 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 	// XXX SQL needs more work
 
+	q := `SELECT bid,bdesc,attrib,threads_per_page,max_pages
+FROM ib0.boards
+WHERE bname=$1`
 	err = sp.db.DB.
-		QueryRow("SELECT bid,bdesc,attrib,threads_per_page,max_pages FROM ib0.boards WHERE bname=$1", board).
+		QueryRow(q, board).
 		Scan(&bid, &bdesc, &jcfg, &threadsPerPage, &maxPages)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -113,10 +116,9 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 	if threadsPerPage <= 0 {
 		threadsPerPage = 0
-		maxPages = 1
-	}
-	if maxPages != 0 && num > maxPages {
-		return errNoSuchPage, http.StatusNotFound
+		if num > 0 {
+			return errNoSuchPage, http.StatusNotFound
+		}
 	}
 
 	page.Board = ib0.IBBoardInfo{
@@ -185,6 +187,10 @@ LIMIT $2 OFFSET $3`,
 	}
 	if err = rows.Err(); err != nil {
 		return sp.sqlError("threads query rows iteration", err), http.StatusInternalServerError
+	}
+
+	if len(tpids) == 0 && num != 0 {
+		return errNoSuchPage, http.StatusNotFound
 	}
 
 	// one SQL query per thread, horrible
