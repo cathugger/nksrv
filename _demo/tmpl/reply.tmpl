@@ -5,54 +5,59 @@
 {{$maxCPL   := index $ 4 -}}
 
 {{with $P -}}
-<div class="reply">
+ <div class="reply">
 
-<p class="rinfo" id="p{{$P.ID}}">
-{{- if $P.Subject -}}
-<span class="subject">{{html $P.Subject}}</span>
-{{- end}}
+  <p class="rinfo" id="p{{$P.ID}}">
+   {{- if $P.Subject -}}
+    <span class="subject">{{html $P.Subject}}</span>
+   {{- end}}
 
-<span class="name">{{html $P.Name}}</span>
+   <span class="name">{{html $P.Name}}</span>
 
-{{- if $P.Trip}}<span class="trip">{{html $P.Trip}}</span>{{end}}
+   {{- if $P.Trip}}<span class="trip">{{html $P.Trip}}</span>{{end}}
 
-<time
-	class="pdate"
-	datetime="{{dateISO $P.Date}}"
-	title="{{dateAlt $P.Date}}"
->{{date $P.Date}}</time>
+   <time
+    class="pdate"
+    datetime="{{dateISO $P.Date}}"
+    title="{{dateAlt $P.Date}}"
+   >{{date $P.Date}}</time>
 
-<a href="#p{{$P.ID}}">No.</a> {{$P.ID}}
-{{- range .BackReferences}} <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>{{end}}
+   <a href="#p{{$P.ID}}">No.</a> {{$P.ID}}
+   {{- range .BackReferences}}
+    <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>
+   {{- end}}
 
-</p>
+  </p>
 
-{{- range .Files}}
-<div class="rimg">
+  {{- range .Files}}
+   <div class="rimg">
 
-<p class="imginfo">
-File: <a
-	class="filelink"
-	title="{{html .Original}}"
-	href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}/{{urlpath .Original}}"
->{{html (truncatefn .Original 24)}}</a>
-(<span title="{{.Size}} bytes">{{filesize .Size}}</span>{{/* TODO: WxH for images */}})
-</p>
+    <p class="imginfo">File:
+     <a
+      class="filelink"
+      title="{{html .Original}}"
+      href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}/{{urlpath .Original}}"
+     >{{html (truncatefn .Original 24)}}</a>
 
-<a class="imglink" href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}">
-	{{- if .Thumb.ID -}}
-		<img class="imgthumb" src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
-	{{- else -}}
-		<img class="imgthumb" src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
-	{{- end -}}
-</a>
+     {{/* TODO: should print more info about file */ -}}
+     (<span title="{{.Size}} bytes">{{filesize .Size}}</span>)
+    </p>
 
-</div>
-{{- end}}
+    <a class="imglink" href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}">
+     {{- if .Thumb.ID -}}
+      <img class="imgthumb" src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+     {{- else -}}
+      <img class="imgthumb" src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+     {{- end -}}
+    </a>
 
-{{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
+   </div>
+  {{- end}}
 
-{{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL}}
-<div style="clear:both"></div>
-</div>
+  {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
+
+  {{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL}}
+  <div style="clear:both"></div>
+ </div>
+ <div style="clear:both"></div>
 {{end -}}
