@@ -46,3 +46,11 @@ html {
 	margin: 6px 3px 3px 3px;
 	padding: 0px 0px 6px 0px;
 }
+
+span.subject {
+	color: #117743;
+}
+
+span.name {
+	color: #0F0C5D;
+}
