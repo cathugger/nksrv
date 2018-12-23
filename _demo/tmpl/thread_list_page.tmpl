@@ -13,7 +13,7 @@
    <p><h1>New thread</h1></p>
    {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
    <hr />
-   {{template "_thread_list_nav" $ 0}}
+   {{template "_thread_list_nav" list $ 0}}
    <hr />
 
    {{range $T := $.D.Threads -}}
@@ -30,7 +30,7 @@
 
   <hr />
 
-  {{template "_thread_list_nav" $ 1}}
+  {{template "_thread_list_nav" list $ 1}}
 
  </body>
 </html>
