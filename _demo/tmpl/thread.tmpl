@@ -7,7 +7,7 @@
  <body>
   {{- /* xxx: node name? board list? */}}
   <hr />
-  {{- template "_boardinfo" -}}
+  {{- template "_boardinfo" $ -}}
   <hr />
 
   {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
