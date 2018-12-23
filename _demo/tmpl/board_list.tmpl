@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html>
-<head>
-<title>{{html $.N.Name}} board list</title>
-<link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
-</head>
-<body>
-<table>
-<tr>
-<th>Name</th>
-<th>Description</th>
-<th>Tags</th>
-</tr>
-{{- range $.D.Boards}}
-<tr>
-<td>{{html .Name}}</td>
-<td>{{html .Description}}</td>
-<td>{{range $i, $v := .Tags}}{{if (ne $i 0)}} {{end}}{{html $v}}{{end}}</td>
-</tr>
-{{end -}}
-</table>
-</body>
+ <head>
+  <title>{{if $.N.Name}}{{html $.N.Name}} {{end}}board list</title>
+  <link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
+ </head>
+ <body>
+  <table border="1">
+   <thead>
+    <tr>
+     <th>Name</th>
+     <th>Description</th>
+     <th>Tags</th>
+    </tr>
+   </thead>
+   <tbody>
+    {{range $.D.Boards -}}
+     <tr>
+      <td><a href="{{$.N.Root}}/{{escboard .Name}}/">{{html .Name}}</a></td>
+      <td>{{html .Description}}</td>
+      <td>{{range $i, $v := .Tags}}{{if (ne $i 0)}} {{end}}{{html $v}}{{end}}</td>
+     </tr>
+    {{end -}}
+   </tbody>
+  </table>
+ </body>
 </html>

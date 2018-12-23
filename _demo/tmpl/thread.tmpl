@@ -7,10 +7,7 @@
  <body>
   {{- /* xxx: node name? board list? */}}
   <hr />
-
-  <h1><p style="text-align: center;">/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}}</p></h1>
-  <p style="text-align: center;">{{html $.D.Board.Info}}</p>
-
+  {{- template "_boardinfo" -}}
   <hr />
 
   {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
