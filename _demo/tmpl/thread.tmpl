@@ -18,5 +18,10 @@
 
   <hr />
 
+  <p><h1>New reply</h1></p>
+  {{- template "_postform" map "root" $ "board" $.D.Board.Name "thread" $.D.ID -}}
+
+  <hr />
+
  </body>
 </html>

@@ -9,6 +9,9 @@
 
    <hr />
    {{- template "_boardinfo" $ -}}
+
+   <p><h1>New thread</h1></p>
+   {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
    <hr />
 
    {{range $T := $.D.Threads -}}

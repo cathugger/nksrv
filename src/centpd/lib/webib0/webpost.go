@@ -23,6 +23,7 @@ var IBWebFormFileFields = []string{
 
 var (
 	IBWebFormTextTitle   = "title"
+	IBWebFormTextName    = "name"
 	IBWebFormTextMessage = "message"
 )
 

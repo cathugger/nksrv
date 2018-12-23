@@ -39,7 +39,7 @@ arguments list:
    href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
   >No.</a> {{$P.ID}}
 
-  {{- if $fullURLs}}[<a href="thread/{{$T.ID}}">Reply</a>]{{end}}
+  {{- if $fullURLs}} [<a href="thread/{{$T.ID}}">Reply</a>]{{end}}
 
   {{- range $P.BackReferences}}
    <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>

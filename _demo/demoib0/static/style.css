@@ -56,3 +56,15 @@ html {
 	color: #0F0C5D;
 	font-weight: bold;
 }
+
+.morefiles {
+	display: none;
+}
+
+#showmorefiles:checked ~ .morefiles {
+	display: block;
+}
+
+.showmorefiles {
+	float: right;
+}
