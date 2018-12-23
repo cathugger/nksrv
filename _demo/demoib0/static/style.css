@@ -58,11 +58,11 @@ html {
 }
 
 .morefiles {
-	display: none;
+	display: block;
 }
 
-#showmorefiles:checked ~ .morefiles {
-	display: block;
+#showmorefiles:unchecked ~ .morefiles {
+	display: none;
 }
 
 .showmorefiles {
