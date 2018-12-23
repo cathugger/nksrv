@@ -13,10 +13,10 @@
 
   <hr />
 
-  {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0}}
+  {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
 
   {{- range $.D.Replies}}
-   {{- template "reply" list $ (threadptr $.D.IBCommonThread) (postptr .) 0 0}}
+   {{- template "reply" list $ (threadptr $.D.IBCommonThread) (postptr .) 0 0 0}}
   {{- end}}
 
   <hr />

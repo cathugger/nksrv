@@ -222,13 +222,6 @@ type TmplRendererCfg struct {
 	Logger      LoggerX
 }
 
-// TODO utilize this
-type NodeInfo struct {
-	Name  string
-	Root  string
-	FRoot string
-}
-
 func (tr *TmplRenderer) execTmpl(t int, w io.WriteCloser, d interface{}) {
 	err := tr.t[t].t.Execute(w, d)
 	if err != nil {

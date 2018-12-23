@@ -101,7 +101,7 @@ type IBBoardInfo struct {
 
 type IBThreadListPage struct {
 	Board       IBBoardInfo              `json:"board"`              // info about this board
-	Number      uint32                   `json:"pnum"`               // this page num
+	Number      uint32                   `json:"pnum"`               // this page num (starting from 0)
 	Available   uint32                   `json:"pavail"`             // num of pages
 	Threads     []IBThreadListPageThread `json:"threads,omitempty"`  // threads
 	HasBackRefs bool                     `json:"hasbrefs,omitempty"` // whether backreferences are already calculated

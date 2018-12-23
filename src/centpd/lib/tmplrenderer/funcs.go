@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
 	"strings"
 	"unicode/utf8"
 
@@ -27,10 +28,26 @@ func f_dict(args ...interface{}) (m map[interface{}]interface{}, _ error) {
 }
 
 var funcs = map[string]interface{}{
-	// basics which should be there by default but apparently aren't
+	// basics which should be there by default but aren't
 	"list": f_list,
 	"dict": f_dict,
 	"map":  f_dict,
+	"emptylist": func(v interface{}) ([]struct{}, error) {
+		rv := reflect.ValueOf(v)
+		var n int
+		switch rv.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			n = int(rv.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			n = int(rv.Uint())
+		default:
+			return nil, errors.New("emptylist: passed value is not int")
+		}
+		return make([]struct{}, n), nil
+	},
+	"add_i": func(a, b int) int {
+		return a + b
+	},
 	// hacks
 	"threadptr": func(x *webib0.IBCommonThread) *webib0.IBCommonThread {
 		return x
@@ -40,6 +57,7 @@ var funcs = map[string]interface{}{
 	},
 	// stuff
 	"urlpath":    urlPath,
+	"escboard":   escBoard,
 	"truncatefn": truncatefn,
 	"filesize":   filesize,
 	// normal display style, kinda inspired by RFC 3339
@@ -74,6 +92,14 @@ var funcs = map[string]interface{}{
 
 func urlPath(p string) string {
 	return (&url.URL{Path: p}).EscapedPath()
+}
+
+func escBoard(b string) string {
+	b = urlPath(b)
+	if len(b) != 0 && b[0] == '_' {
+		b = "_" + b
+	}
+	return b
 }
 
 func truncatefn(s string, l int) string {

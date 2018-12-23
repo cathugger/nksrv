@@ -7,4 +7,11 @@ pre_quote       = "<span class=\"quote\">"
 post_quote      = "</span>"
 pre_reference   = "<a class=\"ref\" href=\"#test\">"
 post_reference  = "</a>"
-truncation_line = "<p class=\"trunc\">message truncated. click <a href=\"/{{urlpath .B.Name}}/thread/{{.T.ID}}#{{.P.ID}}\">here</a> to see whole.</p>"
+truncation_line = """
+<p class=\"trunc\">\
+message truncated. click
+<a
+ href=\"{{$.N.Root}}/{{escboard .B.Name}}/thread/{{.T.ID}}#{{.P.ID}}\"
+>here</a>
+to see whole.\
+</p>"""

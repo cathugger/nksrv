@@ -1,8 +1,23 @@
+{{/*
+
+single reply to thread
+
+arguments list:
+	*root_data
+	*IBCommonThread
+	*IBPostInfo
+	FullURLs
+	MaxLines
+	MaxCharsPerLine
+
+*/ -}}
+
 {{$X := index $ 0 -}}
 {{$T := index $ 1 -}}
 {{$P := index $ 2 -}}
-{{$maxLines := index $ 3 -}}
-{{$maxCPL   := index $ 4 -}}
+{{$fullURLs := index $ 3 -}}
+{{$maxLines := index $ 4 -}}
+{{$maxCPL   := index $ 5 -}}
 
 {{with $P -}}
  <div class="reply">
@@ -22,7 +37,9 @@
     title="{{dateAlt $P.Date}}"
    >{{date $P.Date}}</time>
 
-   <a href="#p{{$P.ID}}">No.</a> {{$P.ID}}
+   <a
+    href="{{if $fullURLs}}{{$X.N.Root}}/{{escboard $X.D.Board.Name}}/thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
+   >No.</a> {{$P.ID}}
    {{- range .BackReferences}}
     <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>
    {{- end}}

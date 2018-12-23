@@ -15,14 +15,26 @@
    <hr />
 
    {{range $T := $.D.Threads -}}
-    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 4 0 -}}
+    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
 
     {{range $T.Replies -}}
-     {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr .) 4 0 -}}
+     {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr .) 1 4 0 -}}
     {{end -}}
    {{end -}}
 
   <hr />
+
+  <p class="nav">
+  {{range $i, $v := emptylist $.D.Available -}}
+   {{$ui := add_i $i 1 -}}
+   {{- if eq $i $.D.Number -}}
+    [<b class="nav">{{$ui}}</b>]
+   {{- else -}}
+    [<a class="nav" href="./{{if ne $i 0}}{{$ui}}{{end}}">{{$ui}}</a>]
+   {{- end -}}
+  {{end -}}
+  [<a href="./catalog">Catalog</a>]
+  </p>
 
  </body>
 </html>
