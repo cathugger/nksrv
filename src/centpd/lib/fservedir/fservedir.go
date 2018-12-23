@@ -1,10 +1,10 @@
 package fservedir
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"centpd/lib/emime"
 	"centpd/lib/fserve"
@@ -26,6 +26,9 @@ func NewFServeDir(dir string) FServeDir {
 
 func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 	fname := d.dir + id
+
+	// TODO make configurable
+	w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 
 	f, err := os.Open(fname)
 	if err != nil {
@@ -49,6 +52,7 @@ func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 		http.ServeContent(w, r, fname, fi.ModTime(), f)
 	} else {
 		// shouldn't happen
-		http.ServeContent(w, r, fname, time.Time{}, f)
+		//http.ServeContent(w, r, fname, time.Time{}, f)
+		panic(fmt.Errorf("f.Stat() failed: %v", err))
 	}
 }
