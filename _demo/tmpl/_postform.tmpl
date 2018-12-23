@@ -12,7 +12,11 @@ args map:
 {{$T := $.thread -}}
 
 
-<form action="{{$X.N.PRoot}}/_post" method="POST">
+<form
+ action="{{$X.N.PRoot}}/_post"
+ method="POST"
+ enctype="multipart/form-data"
+>
  <input name="board" type="hidden" value="{{$B}}" />
  {{if $T -}}
  <input name="thread" type="hidden" value="{{$T}}" />
