@@ -328,15 +328,15 @@ func fmtmsg(
 	p *webib0.IBPostInfo, linelimit, charsperline int) (
 	_ string, err error) {
 
-	var b strings.Builder
-	err = formatmsg(&b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
+	b := &strings.Builder{}
+	err = formatmsg(b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
 	return b.String(), err
 }
 
 func fmtmsgcat(
 	tr *TmplRenderer, n *NodeInfo, p *webib0.IBThreadCatalogThread) string {
 
-	var b strings.Builder
-	t.HTMLEscape(&b, p.Message) // TODO
+	b := &strings.Builder{}
+	t.HTMLEscape(b, p.Message) // TODO
 	return b.String()
 }

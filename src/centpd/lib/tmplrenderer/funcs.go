@@ -8,22 +8,35 @@ import (
 	"unicode/utf8"
 
 	"centpd/lib/date"
+	"centpd/lib/webib0"
 )
+
+func f_list(args ...interface{}) []interface{} {
+	return args
+}
+
+func f_dict(args ...interface{}) (m map[interface{}]interface{}, _ error) {
+	if len(args)%2 != 0 {
+		return nil, errors.New("odd number of arguments to map")
+	}
+	m = make(map[interface{}]interface{})
+	for i := 0; i+1 < len(args); i += 2 {
+		m[args[i]] = args[i+1]
+	}
+	return m, nil
+}
 
 var funcs = map[string]interface{}{
 	// basics which should be there by default but apparently aren't
-	"list": func(args ...interface{}) []interface{} {
-		return args
+	"list": f_list,
+	"dict": f_dict,
+	"map":  f_dict,
+	// hacks
+	"threadptr": func(x *webib0.IBCommonThread) *webib0.IBCommonThread {
+		return x
 	},
-	"map": func(args ...interface{}) (m map[interface{}]interface{}, _ error) {
-		if len(args)%2 != 0 {
-			return nil, errors.New("odd number of arguments to map")
-		}
-		m = make(map[interface{}]interface{})
-		for i := 0; i+1 < len(args); i += 2 {
-			m[args[i]] = args[i+1]
-		}
-		return m, nil
+	"postptr": func(x *webib0.IBPostInfo) *webib0.IBPostInfo {
+		return x
 	},
 	// stuff
 	"urlpath":    urlPath,

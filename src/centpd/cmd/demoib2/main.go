@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	di "centpd/lib/demoib"
+	"centpd/lib/emime"
 	fl "centpd/lib/filelogger"
 	ir "centpd/lib/ibrouter"
 	"centpd/lib/logx"
@@ -29,6 +30,12 @@ func main() {
 	mlg.LogPrint(logx.WARN, "testing WARN log message")
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
 	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
+
+	err = emime.LoadMIMEDatabase("mime.types")
+	if err != nil {
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDatabase err:", err)
+		return
+	}
 
 	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
 		TemplateDir: "_demo/tmpl",
