@@ -57,7 +57,7 @@ var st_names = [st_max]string{
 	"nntp_select_and_list",
 
 	"nntp_next",
-	"nntp_prev",
+	"nntp_last",
 
 	"nntp_newnews_all",
 	"nntp_newnews_one",
