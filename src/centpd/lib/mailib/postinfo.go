@@ -15,6 +15,7 @@ type PostInfo struct {
 
 	MI MessageInfo
 	FI []FileInfo
+	FC int // file count -- may be less than len(FI)
 
 	H mail.Headers
 	L PartInfo

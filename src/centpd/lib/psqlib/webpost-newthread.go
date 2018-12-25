@@ -36,21 +36,90 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	// header
 	sth := `WITH
 	ub AS (
-		UPDATE ib0.boards
-		SET lastid = lastid+1
-		WHERE bid = $1
-		RETURNING lastid
+		UPDATE
+			ib0.boards
+		SET
+			lastid = lastid + 1,
+			t_count = t_count + 1,
+			p_count = p_count + 1,
+		WHERE
+			bid = $1
+		RETURNING
+			lastid
 	),
 	ut AS (
-		INSERT INTO ib0.threads (bid,tid,tname,bump)
-		SELECT $1,lastid,$2,$3
-		FROM ub
+		INSERT INTO
+			ib0.threads (
+				b_id,
+				t_id,
+				t_name,
+				bump
+			)
+		SELECT
+			$1,
+			lastid,
+			$2,
+			$3
+		FROM
+			ub
 	),
-	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pname,pdate,padded,sage,msgid,title,author,trip,message,headers,layout)
-		SELECT $1,lastid,lastid,$2,$3,NOW(),FALSE,$4,$5,$6,$7,$8,$9,$10
-		FROM ub
-		RETURNING pid
+	ugp AS (
+		INSERT INTO
+			ib0.posts (
+				pdate,
+				padded,
+				sage,
+				msgid,
+				title,
+				author,
+				trip,
+				message,
+				headers,
+				layout,
+				f_count,
+			)
+		VALUES
+			(
+				$3,
+				NOW(),
+				FALSE,
+				$4,
+				$5,
+				$6,
+				$7,
+				$8,
+				$9,
+				$10,
+				$11
+			)
+		RETURNING
+			g_p_id,pdate,padded
+	),
+	ubp AS (
+		INSERT INTO
+			ib0.bposts (
+				b_id,
+				t_id,
+				b_p_id,
+				p_name,
+				g_p_id,
+				pdate,
+				padded,
+				sage
+			)
+		SELECT
+			$1,
+			lastid,
+			lastid,
+			$2,
+			ugp.g_p_id,
+			ugp.pdate,
+			ugp.padded,
+			FALSE
+		FROM
+			ub
+		CROSS JOIN
+			ugp
 	)`
 	// footer
 	stf := `

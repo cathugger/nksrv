@@ -69,8 +69,8 @@ CREATE TABLE ib0.posts (
 	msgid  TEXT       COLLATE ucs_basic  NOT NULL, -- Message-ID
 
 	-- redundant
-	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	pdate  TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- real date field
+	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
 
 	f_count INTEGER NOT NULL, -- attachment count
@@ -98,8 +98,8 @@ CREATE TABLE ib0.bposts (
 	g_p_id BIGINT                      NOT NULL, -- global internal post ID
 
 	-- redundant
-	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	pdate  TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- real date field
+	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
 
 	PRIMARY KEY (b_id,b_p_id),

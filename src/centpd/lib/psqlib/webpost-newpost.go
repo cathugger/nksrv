@@ -15,7 +15,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 13
+const postRQMsgArgCount = 14
 const postRQFileArgCount = 5
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -43,10 +43,15 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	// head
 	st1 := `WITH
 	ub AS (
-		UPDATE ib0.boards
-		SET lastid = lastid+1
-		WHERE bid = $2
-		RETURNING lastid
+		UPDATE
+			ib0.boards
+		SET
+			lastid = lastid + 1,
+			p_count = p_count + 1
+		WHERE
+			b_id = $2
+		RETURNING
+			lastid
 	),`
 	b.WriteString(st1)
 
@@ -56,52 +61,141 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		// (currently, idk if ok) OP is counted against bump limit
 		st_bump := `
 	ut AS (
-		UPDATE ib0.threads
-		SET bump = pdate
-		FROM (
-			SELECT pdate
-			FROM (
-				SELECT pdate,pid,sage
-				FROM ib0.posts
-				WHERE bid = $2 AND tid = $3 -- count sages against bump limit. because others do it like that :<
-				UNION ALL
-				SELECT $4,lastid,FALSE
-				FROM ub
-				ORDER BY pdate ASC,pid ASC
-				LIMIT $1
-				-- take bump posts, sorted by original date, only upto bump limit
-			) AS tt
-			WHERE sage != TRUE
-			ORDER BY pdate DESC,pid DESC
-			LIMIT 1
-			-- and pick latest one
-		) as xbump
-		WHERE bid = $2 AND tid = $3
+		UPDATE
+			ib0.threads
+		SET
+			bump = pdate,
+			p_count = p_count + 1,
+			f_count = f_count + $14
+		FROM
+			(
+				SELECT
+					pdate
+				FROM (
+					SELECT
+						pdate,
+						b_p_id,
+						sage
+					FROM
+						ib0.bposts
+					WHERE
+						b_id = $2 AND t_id = $3 -- count sages against bump limit. because others do it like that :<
+					UNION ALL
+					SELECT
+						$4,lastid,FALSE
+					FROM
+						ub
+					ORDER BY
+						pdate ASC,
+						b_p_id ASC
+					LIMIT
+						$1
+					-- take bump posts, sorted by original date, only upto bump limit
+				) AS tt
+				WHERE
+					sage != TRUE
+				ORDER BY
+					pdate DESC,pid DESC
+				LIMIT
+					1
+				-- and pick latest one
+			) as xbump
+		WHERE
+			bid = $2 AND tid = $3
 	),`
 		b.WriteString(st_bump)
 	} else {
 		st_nobump := `
-	ut AS (SELECT 1 LIMIT $1),`
+	ut AS (
+		UPDATE
+			ib0.threads
+		SET
+			p_count = p_count + 1,
+			f_count = f_count + $14
+		WHERE
+			bid = $2 AND tid = $3
+	),
+	utx AS (SELECT 1 LIMIT $1),`
 		b.WriteString(st_nobump)
 	}
 
 	st2 := `
-	up AS (
-		INSERT INTO ib0.posts (bid,tid,pid,pdate,padded,sage,pname,msgid,title,author,trip,message,headers,layout)
-		SELECT $2,$3,lastid,$4,NOW(),$5,$6,$7,$8,$9,$10,$11,$12,$13
-		FROM ub
-		RETURNING pid
+	ugp AS (
+		INSERT INTO
+			ib0.posts (
+				pdate,
+				padded,
+				sage,
+				msgid,
+				title,
+				author,
+				trip,
+				message,
+				headers,
+				layout,
+				f_count
+			)
+		VALUES
+			(
+				$4,
+				NOW(),
+				$5,
+				$7,
+				$8,
+				$9,
+				$10,
+				$11,
+				$12,
+				$13,
+				$14
+			)
+		RETURNING
+			g_p_id,pdate,padded,sage
+	),
+	ubp AS (
+		INSERT INTO
+			ib0.bposts (
+				b_id,
+				t_id,
+				b_p_id,
+				pname,
+				g_p_id,
+				pdate,
+				padded,
+				sage
+			)
+		SELECT
+			$2,
+			$3,
+			ub.lastid,
+			$6,
+			ugp.g_p_id,
+			ugp.pdate,
+			ugp.padded,
+			ugp.sage
+		FROM
+			ub
+		CROSS JOIN
+			ugp
 	)`
 	b.WriteString(st2)
 
 	if t.n != 0 {
 		stf1 := `,
 	uf AS (
-		INSERT INTO ib0.files (bid,pid,ftype,fsize,fname,thumb,oname)
+		INSERT INTO
+			ib0.files (
+				g_p_id,
+				ftype,
+				fsize,
+				fname,
+				thumb,
+				oname
+			)
 		SELECT *
 		FROM (
-			SELECT $2,pid
-			FROM up
+			SELECT g_p_id
+			FROM ugp
 		) AS q0
 		CROSS JOIN (
 			VALUES `
@@ -170,14 +264,25 @@ func (sp *PSQLIB) insertNewReply(
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
-			rti.bumpLimit, rti.bid, rti.tid, pInfo.Date, pInfo.MI.Sage,
-			pInfo.ID, pInfo.MessageID,
-			pInfo.MI.Title, pInfo.MI.Author, pInfo.MI.Trip, pInfo.MI.Message,
-			Hjson, Ljson)
+			rti.bumpLimit,
+			rti.bid,
+			rti.tid,
+			pInfo.Date,
+			pInfo.MI.Sage,
+			pInfo.ID,
+			pInfo.MessageID,
+			pInfo.MI.Title,
+			pInfo.MI.Author,
+			pInfo.MI.Trip,
+			pInfo.MI.Message,
+			Hjson,
+			Ljson,
+			pInfo.FC)
 	} else {
 		x := postRQMsgArgCount
 		xf := postRQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
+
 		args[0] = rti.bumpLimit
 		args[1] = rti.bid
 		args[2] = rti.tid
@@ -191,12 +296,16 @@ func (sp *PSQLIB) insertNewReply(
 		args[10] = pInfo.MI.Message
 		args[11] = Hjson
 		args[12] = Ljson
+		args[13] = pInfo.FC
+
 		for i := range pInfo.FI {
+
 			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
 			args[x+4] = pInfo.FI[i].Original
+
 			x += xf
 		}
 		r = stmt.QueryRow(args...)
