@@ -62,10 +62,10 @@ ORDER BY
 WITH
 	z AS (
 		SELECT
-			xb.b_id,
-			xb.p_count,
-			MIN(xp.b_p_id),
-			MAX(xp.b_p_id)
+			xb.b_id        AS b_id,
+			xb.p_count     AS p_count,
+			MIN(xp.b_p_id) AS lo,
+			MAX(xp.b_p_id) AS hi
 		FROM
 			ib0.boards AS xb
 		LEFT JOIN
@@ -185,7 +185,7 @@ LIMIT
 
 -- :name nntp_newnews_all
 -- input: {time since}
-SELECT
+SELECT DISTINCT ON (xbp.padded,xbp.g_p_id)
 	xp.msgid
 FROM
 	ib0.bposts AS xbp
@@ -198,8 +198,6 @@ WHERE
 ORDER BY
 	xbp.padded,
 	xbp.g_p_id
-GROUP BY
-	xp.g_p_id
 
 -- :name nntp_newnews_one
 -- input: {time since} {board name}
@@ -226,7 +224,7 @@ ORDER BY
 -- clientside filtering of multiple posts to one board
 SELECT
 	xp.msgid,
-	xb.bname
+	xb.b_name
 FROM
 	ib0.boards AS xb
 JOIN
@@ -256,7 +254,7 @@ FROM
 LEFT JOIN
 	ib0.bposts AS xbp
 USING
-	(bid)
+	(b_id)
 WHERE
 	xb.badded >= $1
 GROUP BY
@@ -294,11 +292,11 @@ FROM
 LEFT JOIN
 	ib0.bposts AS xbp
 USING
-	(bid)
+	(b_id)
 WHERE
 	xb.b_name = $1
 GROUP BY
-	xb.bid
+	xb.b_id
 LIMIT
 	1
 
@@ -417,8 +415,8 @@ LIMIT
 -- :name nntp_hdr_msgid_msgid
 -- input: {msgid} {bid}
 SELECT
-	xbp.bid,
-	xbp.pid
+	xbp.b_id,
+	xbp.b_p_id
 FROM
 	ib0.posts AS xp
 JOIN
@@ -435,8 +433,8 @@ LIMIT
 -- :name nntp_hdr_msgid_subject
 -- input: {msgid} {bid}
 SELECT
-	xbp.bid,
-	xbp.pid,
+	xbp.b_id,
+	xbp.b_p_id,
 	xp.title,
 	xp.headers -> 'Subject' ->> 0
 FROM
@@ -452,11 +450,11 @@ ORDER BY
 LIMIT
 	1
 
--- :name nntp_hdr_msgid_subject
+-- :name nntp_hdr_msgid_any
 -- input: {msgid} {bid}
 SELECT
-	xbp.bid,
-	xbp.pid,
+	xbp.b_id,
+	xbp.b_p_id,
 	xp.headers -> $3 ->> 0
 FROM
 	ib0.posts AS xp

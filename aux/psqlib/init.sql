@@ -94,7 +94,7 @@ CREATE TABLE ib0.bposts (
 	b_id   INTEGER                     NOT NULL, -- internal board ID this post belongs to
 	b_p_id BIGINT                      NOT NULL, -- internal post ID of this post. if pid==tid then this is OP
 	p_name TEXT     COLLATE ucs_basic  NOT NULL, -- external post identifier
-	t_id BIGINT                      NOT NULL, -- internal thread ID this post belongs to
+	t_id   BIGINT                      NOT NULL, -- internal thread ID this post belongs to
 	g_p_id BIGINT                      NOT NULL, -- global internal post ID
 
 	-- redundant
@@ -104,9 +104,9 @@ CREATE TABLE ib0.bposts (
 
 	PRIMARY KEY (b_id,b_p_id),
 	UNIQUE      (g_p_id,b_id),
-	FOREIGN KEY (b_id)        REFERENCES ib0.boards,
-	FOREIGN KEY (b_id,b_t_id) REFERENCES ib0.threads,
-	FOREIGN KEY (g_p_id)      REFERENCES ib0.posts
+	FOREIGN KEY (b_id)      REFERENCES ib0.boards,
+	FOREIGN KEY (b_id,t_id) REFERENCES ib0.threads,
+	FOREIGN KEY (g_p_id)    REFERENCES ib0.posts
 )
 -- :next
 CREATE INDEX

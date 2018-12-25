@@ -20,9 +20,6 @@ import (
 )
 
 func main() {
-	var errorcode int
-	defer os.Exit(errorcode)
-
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")

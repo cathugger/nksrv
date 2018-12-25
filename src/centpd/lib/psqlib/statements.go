@@ -79,7 +79,7 @@ var st_names = [st_max]string{
 	"nntp_hdr_range_subject",
 	"nntp_hdr_range_any",
 	"nntp_hdr_curr_msgid",
-	"nntp_hdr_curr_range",
+	"nntp_hdr_curr_subject",
 	"nntp_hdr_curr_any",
 }
 
