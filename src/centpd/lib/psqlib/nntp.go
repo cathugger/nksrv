@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"github.com/lib/pq"
 	"strings"
 	"time"
 	"unicode"
@@ -21,7 +22,8 @@ var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 type groupState struct {
 	bname string
 	bid   boardID
-	pid   postID
+	bpid  postID
+	gpid  postID
 }
 
 type (
@@ -34,12 +36,20 @@ type (
 	ConnState         = nntp.ConnState
 )
 
-func artnumInGroup(cs *ConnState, bid boardID, num uint64) uint64 {
-	if cg, _ := cs.CurrentGroup.(*groupState); cg != nil && cg.bid == bid {
-		return num
-	} else {
-		return 0
+func artnumInGroupsNum(cbid boardID, bids []boardID, bpids []postID) postID {
+	for i, bid := range bids {
+		if cbid == bid {
+			return bpids[i]
+		}
 	}
+	return 0
+}
+
+func artnumInGroups(cs *ConnState, bids []boardID, bpids []postID) postID {
+	if cg, _ := cs.CurrentGroup.(*groupState); cg != nil {
+		return artnumInGroupsNum(cg.bid, bids, bpids)
+	}
+	return 0
 }
 
 func getGroupState(cs *ConnState) *groupState {
@@ -49,6 +59,13 @@ func getGroupState(cs *ConnState) *groupState {
 
 func isGroupSelected(gs *groupState) bool {
 	return gs != nil && gs.bid != 0
+}
+
+func currSelectedGroupID(cs *ConnState) boardID {
+	if cg, _ := cs.CurrentGroup.(*groupState); cg != nil {
+		return cg.bid
+	}
+	return 0
 }
 
 func (*PSQLIB) SupportsNewNews() bool     { return true }
@@ -183,14 +200,14 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 	sgroup := unsafeBytesToStr(group)
 
 	var bid uint32
-	var lo, hi sql.NullInt64
-	q := `SELECT xb.bid,MIN(xp.pid),MAX(xp.pid)
-	FROM ib0.boards AS xb
-	LEFT JOIN ib0.posts AS xp
-	USING (bid)
-	WHERE xb.bname = $1
-	GROUP BY xb.bid`
-	err := sp.db.DB.QueryRow(q, sgroup).Scan(&bid, &lo, &hi)
+	var cnt uint64
+	var lo, hi, g_lo sql.NullInt64
+
+	q := st_list[st_NNTP_SelectGroup]
+
+	err := sp.db.DB.
+		QueryRow(q, sgroup).
+		Scan(&bid, &cnt, &lo, &hi, &g_lo)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -209,15 +226,15 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 		// sgroup is unsafe
 		gs.bname = string(group)
 	}
-	gs.pid = uint64(lo.Int64)
+	gs.bpid = uint64(lo.Int64)
+	gs.gpid = uint64(g_lo.Int64)
 
 	if lo.Int64 > 0 {
 		if hi.Int64 < lo.Int64 {
 			hi = lo // paranoia
 		}
 		w.ResGroupSuccessfullySelected(
-			uint64(hi.Int64)-uint64(lo.Int64)+1,
-			uint64(lo.Int64), uint64(hi.Int64), sgroup)
+			cnt, uint64(lo.Int64), uint64(hi.Int64), sgroup)
 	} else {
 		w.ResGroupSuccessfullySelected(0, 0, 0, sgroup)
 	}
@@ -246,29 +263,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 		sgroup = gs.bname
 	}
 
-	// TODO optimise
-	q := `SELECT x1.bid,x2.lo,x2.hi,x3.pid
-	FROM ib0.boards AS x1
-	LEFT JOIN (
-		SELECT xb.bid AS bid,MIN(xp.pid) AS lo,MAX(xp.pid) AS hi
-		FROM ib0.boards AS xb
-		LEFT JOIN ib0.posts AS xp
-		USING (bid)
-		WHERE xb.bname = $1
-		GROUP BY xb.bid
-		LIMIT 1
-	) x2
-	ON x1.bid = x2.bid
-	LEFT JOIN (
-		SELECT xb.bid AS bid,xp.pid AS pid
-		FROM ib0.boards AS xb
-		LEFT JOIN ib0.posts AS xp
-		USING (bid)
-		WHERE xb.bname = $1 AND xp.pid >= $2 AND ($3 < 0 OR xp.pid <= $3)
-	) x3
-	ON x1.bid = x3.bid
-	WHERE x1.bname = $1
-	ORDER BY x3.pid`
+	q := st_list[st_NNTP_SelectAndListGroup]
+
 	rows, err := sp.db.DB.Query(q, sgroup, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("board-posts query", err))
@@ -278,9 +274,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 	var dw io.WriteCloser
 	for rows.Next() {
 		var bid boardID
-		var lo, hi sql.NullInt64
-		var pid postID
-		err = rows.Scan(&bid, &lo, &hi, &pid)
+		var lo, hi, g_lo, bpid sql.NullInt64
+		err = rows.Scan(&bid, &lo, &hi, &g_lo, &bpid)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("board-post query rows scan", err)
@@ -298,7 +293,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 				// sgroup is unsafe
 				gs.bname = string(group)
 			}
-			gs.pid = postID(lo.Int64)
+			gs.bpid = postID(lo.Int64)
+			gs.gpid = postID(g_lo.Int64)
 
 			if lo.Int64 > 0 {
 				if uint64(hi.Int64) < uint64(lo.Int64) {
@@ -314,8 +310,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 			dw = w.DotWriter()
 		}
 
-		if pid != 0 {
-			fmt.Fprintf(dw, "%d\n", pid)
+		if bpid.Int64 != 0 {
+			fmt.Fprintf(dw, "%d\n", bpid)
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -342,20 +338,19 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 		w.ResNoNewsgroupSelected()
 		return
 	}
-	if gs.pid == 0 {
+	if gs.bpid == 0 {
 		w.ResCurrentArticleNumberIsInvalid()
 		return
 	}
 
+	var nbpid postID
+	var ngpid postID
 	var msgid CoreMsgIDStr
-	var npid postID
 
-	q := `SELECT pid,msgid
-	FROM ib0.posts
-	WHERE bid = $1 AND pid > $2
-	ORDER BY pid ASC
-	LIMIT 1`
-	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&npid, &msgid)
+	q := st_list[st_NNTP_SelectNextArticle]
+	err := sp.db.DB.
+		QueryRow(q, gs.bid, gs.bpid).
+		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.ResNoNextArticleInThisGroup()
@@ -365,8 +360,9 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 		return
 	}
 
-	gs.pid = npid
-	w.ResArticleFound(npid, msgid)
+	gs.bpid = nbpid
+	gs.gpid = ngpid
+	w.ResArticleFound(nbpid, msgid)
 	return
 }
 func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
@@ -375,20 +371,19 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 		w.ResNoNewsgroupSelected()
 		return
 	}
-	if gs.pid == 0 {
+	if gs.bpid == 0 {
 		w.ResCurrentArticleNumberIsInvalid()
 		return
 	}
 
+	var nbpid postID
+	var ngpid postID
 	var msgid CoreMsgIDStr
-	var npid postID
 
-	q := `SELECT pid,msgid
-	FROM ib0.posts
-	WHERE bid = $1 AND pid < $2
-	ORDER BY pid DESC
-	LIMIT 1`
-	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&npid, &msgid)
+	q := st_list[st_NNTP_SelectPrevArticle]
+	err := sp.db.DB.
+		QueryRow(q, gs.bid, gs.bpid).
+		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.ResNoPrevArticleInThisGroup()
@@ -398,8 +393,9 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 		return
 	}
 
-	gs.pid = npid
-	w.ResArticleFound(npid, msgid)
+	gs.bpid = nbpid
+	gs.gpid = ngpid
+	w.ResArticleFound(nbpid, msgid)
 	return
 }
 
@@ -420,19 +416,11 @@ func (sp *PSQLIB) ListNewNews(
 
 	if wmany || wmgrp {
 		if wmany {
-			q := `SELECT msgid
-	FROM ib0.posts
-	WHERE padded >= $1
-	ORDER BY padded,global_post_id`
+			q := st_list[st_NNTP_ListNewNews_all]
 			rows, err = sp.db.DB.Query(q, qt)
 		} else {
-			q := `SELECT xp.msgid
-	FROM ib0.posts AS xp
-	JOIN ib0.boards AS xb
-	USING (bid)
-	WHERE xp.padded >= $2 AND xb.bname = $1
-	ORDER BY xp.padded,xp.global_post_id`
-			rows, err = sp.db.DB.Query(q, swildmat, qt)
+			q := st_list[st_NNTP_ListNewNews_one]
+			rows, err = sp.db.DB.Query(q, qt, swildmat)
 		}
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
@@ -458,12 +446,7 @@ func (sp *PSQLIB) ListNewNews(
 		// that would be a little complicated, though
 		wm := nntp.CompileWildmat(wildmat)
 
-		q := `SELECT xp.msgid,xb.bname
-	FROM ib0.posts AS xp
-	JOIN ib0.boards AS xb
-	USING (bid)
-	WHERE xp.padded >= $1
-	ORDER BY xp.padded,xp.global_post_id`
+		q := st_list[st_NNTP_ListNewNews_all_group]
 		rows, err = sp.db.DB.Query(q, qt)
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
@@ -471,6 +454,7 @@ func (sp *PSQLIB) ListNewNews(
 		}
 
 		dw = aw.OpenDotWriter()
+		last_msgid := ""
 		for rows.Next() {
 			var msgid string
 			var bname []byte
@@ -483,7 +467,13 @@ func (sp *PSQLIB) ListNewNews(
 				return
 			}
 
+			if last_msgid == msgid {
+				// skip duplicates
+				continue
+			}
+
 			if wm.CheckBytes(bname) {
+				last_msgid = msgid
 				fmt.Fprintf(dw, "<%s>\n", msgid)
 			}
 		}
@@ -503,13 +493,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	// name hiwm lowm status
 	// for now lets use status of "y"
 	// TODO put something else in status when needed
-	q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
-	FROM ib0.boards AS xb
-	LEFT JOIN ib0.posts AS xp
-	USING (bid)
-	WHERE xb.badded >= $1
-	GROUP BY xb.bid
-	ORDER BY xb.badded,xb.bid`
+	q := st_list[st_NNTP_ListNewGroups]
 	rows, err := sp.db.DB.Query(q, qt)
 	if err != nil {
 		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
@@ -563,20 +547,10 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	}
 
 	if !wmgrp {
-		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
-	FROM ib0.boards AS xb
-	LEFT JOIN ib0.posts AS xp
-	USING (bid)
-	GROUP BY xb.bid
-	ORDER BY xb.bname`
+		q := st_list[st_NNTP_ListActiveGroups_all]
 		rows, err = sp.db.DB.Query(q)
 	} else {
-		q := `SELECT xb.bname,MIN(xp.pid),MAX(xp.pid)
-	FROM ib0.boards AS xb
-	LEFT JOIN ib0.posts AS xp
-	USING (bid)
-	WHERE xb.bname = $1
-	GROUP BY xb.bid`
+		q := st_list[st_NNTP_ListActiveGroups_one]
 		rows, err = sp.db.DB.Query(q, wildmat)
 	}
 	if err != nil {
@@ -633,10 +607,10 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	}
 
 	if !wmgrp {
-		q := `SELECT bname,bdesc FROM ib0.boards ORDER BY bname`
+		q := `SELECT b_name,bdesc FROM ib0.boards ORDER BY b_name`
 		rows, err = sp.db.DB.Query(q)
 	} else {
-		q := `SELECT bname,bdesc FROM ib0.boards WHERE bname = $1`
+		q := `SELECT b_name,bdesc FROM ib0.boards WHERE b_name = $1 LIMIT 1`
 		rows, err = sp.db.DB.Query(q, wildmat)
 	}
 	if err != nil {
@@ -691,8 +665,10 @@ func safeHeader(s string) string {
 }
 
 func (sp *PSQLIB) printOver(
-	w io.Writer, num uint64, pid uint64, msgid CoreMsgIDStr,
-	bname, title, hfrom, hdate, hrefs string) {
+	w io.Writer, bpid postID, msgid CoreMsgIDStr,
+	hsubject, hfrom, hdate, hrefs string,
+	bnames []string, bpids []postID) {
+
 	/*
 		The first 8 fields MUST be the following, in order:
 			"0" or article number (see below)
@@ -705,9 +681,15 @@ func (sp *PSQLIB) printOver(
 			:lines metadata item
 		We also add Xref header field
 	*/
-	fmt.Fprintf(w, "%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s %s:%d\n",
-		num, safeHeader(title), safeHeader(hfrom), safeHeader(hdate), msgid,
-		safeHeader(hrefs), "", "", sp.instance, bname, pid)
+
+	fmt.Fprintf(w,
+		"%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s", bpid,
+		safeHeader(hsubject), safeHeader(hfrom), safeHeader(hdate), msgid,
+		safeHeader(hrefs), "", "", sp.instance)
+	for i := range bnames {
+		fmt.Fprintf(w, " %s:%d", bnames[i], bpids[i])
+	}
+	fmt.Fprintf(w, "\n")
 }
 
 // + ok: 224{ResOverviewInformationFollows}
@@ -719,24 +701,29 @@ func (sp *PSQLIB) printOver(
 func (sp *PSQLIB) GetOverByMsgID(
 	w Responder, cs *ConnState, msgid CoreMsgID) bool {
 
-	sid := unsafeCoreMsgIDToStr(msgid)
+	smsgid := unsafeCoreMsgIDToStr(msgid)
 
-	var bid boardID
-	var bname string
-	var pid postID
-	var title string
-	var hsubject, hfrom, hdate, hrefs sql.NullString
+	var (
+		bids   []boardID
+		bpids  []postID
+		bnames []string
+		title  string
 
-	q := `SELECT xp.bid, xb.bname, xp.pid, xp.title,
-		xp.headers -> 'Subject' ->> 0, xp.headers -> 'From' ->> 0,
-		xp.headers -> 'Date' ->> 0, xp.headers -> 'References' ->> 0
-	FROM ib0.posts AS xp
-	JOIN ib0.boards AS xb
-	USING (bid)
-	WHERE xp.msgid = $1
-	LIMIT 1`
-	err := sp.db.DB.QueryRow(q, sid).Scan(
-		&bid, &bname, &pid, &title, &hsubject, &hfrom, &hdate, &hrefs)
+		hsubject, hfrom, hdate, hrefs sql.NullString
+	)
+
+	q := st_list[st_NNTP_GetOverByMsgID]
+	err := sp.db.DB.
+		QueryRow(q, smsgid).
+		Scan(
+			pq.Array(&bids),
+			pq.Array(&bpids),
+			pq.Array(&bnames),
+			&title,
+			&hsubject,
+			&hfrom,
+			&hdate,
+			&hrefs)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -750,8 +737,9 @@ func (sp *PSQLIB) GetOverByMsgID(
 
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	sp.printOver(dw, artnumInGroup(cs, bid, pid), pid, sid, bname,
-		hsubject.String, hfrom.String, hdate.String, hrefs.String)
+	sp.printOver(dw, artnumInGroups(cs, bids, bpids), smsgid,
+		hsubject.String, hfrom.String, hdate.String, hrefs.String,
+		bnames, bpids)
 	dw.Close()
 	return true
 }
@@ -767,12 +755,7 @@ func (sp *PSQLIB) GetOverByRange(
 
 	var dw io.WriteCloser
 
-	q := `SELECT pid, msgid, title,
-		headers -> 'Subject' ->> 0, headers -> 'From' ->> 0,
-		headers -> 'Date' ->> 0, headers -> 'References' ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
-	ORDER BY pid ASC`
+	q := st_list[st_NNTP_GetOverByRange]
 	rows, err := sp.db.DB.Query(q, gs.bid, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("overview query", err))
@@ -780,12 +763,28 @@ func (sp *PSQLIB) GetOverByRange(
 	}
 
 	for rows.Next() {
-		var pid postID
-		var msgid CoreMsgIDStr
-		var title string
-		var hsubject, hfrom, hdate, hrefs sql.NullString
+		var (
+			bids   []boardID
+			bpids  []postID
+			bnames []string
+			cbpid  postID
+			msgid  CoreMsgIDStr
+			title  string
 
-		err = rows.Scan(&pid, &msgid, &title, &hsubject, &hfrom, &hdate, &hrefs)
+			hsubject, hfrom, hdate, hrefs sql.NullString
+		)
+
+		err = rows.Scan(
+			pq.Array(&bids),
+			pq.Array(&bpids),
+			pq.Array(&bnames),
+			&cbpid,
+			&msgid,
+			&title,
+			&hsubject,
+			&hfrom,
+			&hdate,
+			&hrefs)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("overview query rows scan", err)
@@ -805,8 +804,9 @@ func (sp *PSQLIB) GetOverByRange(
 			dw = w.DotWriter()
 		}
 
-		sp.printOver(dw, pid, pid, msgid, gs.bname,
-			hsubject.String, hfrom.String, hdate.String, hrefs.String)
+		sp.printOver(dw, cbpid, msgid,
+			hsubject.String, hfrom.String, hdate.String, hrefs.String,
+			bnames, bpids)
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
@@ -837,23 +837,33 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	if gs.pid == 0 {
+	if gs.gpid == 0 {
 		return false
 	}
 
-	var msgid CoreMsgIDStr
-	var title string
-	var hsubject, hfrom, hdate, hrefs sql.NullString
+	var (
+		bids   []boardID
+		bpids  []postID
+		bnames []string
+		msgid  CoreMsgIDStr
+		title  string
 
-	// XXX maybe we should check for headers -> 'Subject' too?
-	q := `SELECT msgid, title,
-		headers -> 'Subject' ->> 0, headers -> 'From' ->> 0,
-		headers -> 'Date' ->> 0, headers -> 'References' ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid = $2
-	LIMIT 1`
-	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).
-		Scan(&msgid, &title, &hsubject, &hfrom, &hdate, &hrefs)
+		hsubject, hfrom, hdate, hrefs sql.NullString
+	)
+
+	q := st_list[st_NNTP_GetOverByCurr]
+	err := sp.db.DB.
+		QueryRow(q, gs.gpid).
+		Scan(
+			pq.Array(&bids),
+			pq.Array(&bpids),
+			pq.Array(&bnames),
+			&msgid,
+			&title,
+			&hsubject,
+			&hfrom,
+			&hdate,
+			&hrefs)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
@@ -867,8 +877,9 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 
 	w.ResOverviewInformationFollows()
 	dw := w.DotWriter()
-	sp.printOver(dw, gs.pid, gs.pid, msgid, gs.bname,
-		hsubject.String, hfrom.String, hdate.String, hrefs.String)
+	sp.printOver(dw, gs.bpid, msgid,
+		hsubject.String, hfrom.String, hdate.String, hrefs.String,
+		bnames, bpids)
 	dw.Close()
 	return true
 }
@@ -883,33 +894,48 @@ func canonicalHeaderQueryStr(hdr []byte) (shdr string) {
 	return
 }
 
+func bpidIfGroupEq(cbid, bid boardID, bpid postID) postID {
+	if cbid == bid {
+		return bpid
+	}
+	return 0
+}
+
 func (sp *PSQLIB) commonGetHdrByMsgID(
 	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
 
 	sid := unsafeCoreMsgIDToStr(msgid)
 	shdr := canonicalHeaderQueryStr(hdr)
+	cbid := currSelectedGroupID(cs)
 
 	var bid boardID
-	var pid postID
+	var bpid postID
 	var err error
 	var h sql.NullString
 
 	if shdr == "Message-ID" {
-		q := `SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1`
-		err = sp.db.DB.QueryRow(q, msgid).Scan(&bid, &pid)
+
+		q := st_list[st_NNTP_GetHdrByMsgID_msgid]
+
+		err = sp.db.DB.
+			QueryRow(q, msgid, cbid).
+			Scan(&bid, &bpid)
 		if err == nil {
 			h.String = fmt.Sprintf("<%s>", sid)
 		}
+
 	} else if shdr == "Subject" {
-		q := `SELECT bid,pid,title,headers -> $2 ->> 0
-	FROM ib0.posts
-	WHERE msgid = $1
-	LIMIT 1`
+
+		q := st_list[st_NNTP_GetHdrByMsgID_subject]
+
 		var title string
-		err = sp.db.DB.QueryRow(q, msgid, shdr).Scan(&bid, &pid, &title, &h)
+		err = sp.db.DB.
+			QueryRow(q, msgid, cbid).
+			Scan(&bid, &bpid, &title, &h)
 		if err == nil && !h.Valid {
 			h.String = title
 		}
+
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
 		w.PrintfLine("503 %q header unsupported", shdr)
@@ -919,11 +945,13 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		w.PrintfLine("503 %q header unsupported", shdr)
 		return true
 	} else {
-		q := `SELECT bid,pid,headers -> $2 ->> 0
-	FROM ib0.posts
-	WHERE msgid = $1
-	LIMIT 1`
-		err = sp.db.DB.QueryRow(q, msgid, shdr).Scan(&bid, &pid, &h)
+
+		q := st_list[st_NNTP_GetHdrByMsgID_any]
+
+		err = sp.db.DB.
+			QueryRow(q, msgid, cbid, shdr).
+			Scan(&bid, &bpid, &h)
+
 	}
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -937,7 +965,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		w.ResHdrFollow()
 		dw := w.DotWriter()
 		fmt.Fprintf(dw, "%d %s\n",
-			artnumInGroup(cs, bid, pid), safeHeader(h.String))
+			bpidIfGroupEq(cbid, bid, bpid), safeHeader(h.String))
 		dw.Close()
 	} else {
 		w.ResXHdrFollow()
@@ -968,22 +996,17 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	if shdr == "Message-ID" {
 
-		q := `SELECT pid,'<' || msgid || '>'
-	FROM ib0.posts
-	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
-	ORDER BY pid ASC`
+		q := st_list[st_NNTP_GetHdrByRange_msgid]
 
-		rows, err = sp.db.DB.Query(q, gs.bid, rmin, rmax)
+		rows, err = sp.db.DB.
+			Query(q, gs.bid, rmin, rmax)
 
 	} else if shdr == "Subject" {
 
-		q := `SELECT pid,title,headers -> $4 ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
-	ORDER BY pid ASC`
+		q := st_list[st_NNTP_GetHdrByRange_subject]
 
 		rows, err = sp.db.DB.
-			Query(q, gs.bid, rmin, rmax, shdr)
+			Query(q, gs.bid, rmin, rmax)
 
 		rowsscan = func(r *sql.Rows, pid *postID, h *sql.NullString) error {
 			var title string
@@ -1004,12 +1027,10 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		return true
 	} else {
 
-		q := `SELECT pid,headers -> $4 ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid >= $2 AND ($3 < 0 OR pid <= $3)
-	ORDER BY pid ASC`
+		q := st_list[st_NNTP_GetHdrByRange_any]
 
-		rows, err = sp.db.DB.Query(q, gs.bid, rmin, rmax, shdr)
+		rows, err = sp.db.DB.
+			Query(q, gs.bid, rmin, rmax, shdr)
 
 	}
 	if err != nil {
@@ -1072,7 +1093,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		w.ResNoNewsgroupSelected()
 		return true
 	}
-	if gs.pid == 0 {
+	if gs.gpid == 0 {
 		return false
 	}
 
@@ -1088,21 +1109,15 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	if shdr == "Message-ID" {
 
-		q := `SELECT '<' || msgid || '>'
-	FROM ib0.posts
-	WHERE bid = $1 AND pid = $2
-	LIMIT 1`
+		q := st_list[st_NNTP_GetHdrByCurr_msgid]
 
-		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid)
+		row = sp.db.DB.QueryRow(q, gs.gpid)
 
 	} else if shdr == "Subject" {
 
-		q := `SELECT title,headers -> $3 ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid = $2
-	LIMIT 1`
+		q := st_list[st_NNTP_GetHdrByCurr_subject]
 
-		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
+		row = sp.db.DB.QueryRow(q, gs.gpid)
 
 		rowscan = func(r *sql.Row, h *sql.NullString) error {
 			var title string
@@ -1123,12 +1138,9 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		return true
 	} else {
 
-		q := `SELECT headers -> $3 ->> 0
-	FROM ib0.posts
-	WHERE bid = $1 AND pid = $2
-	LIMIT 1`
+		q := st_list[st_NNTP_GetHdrByCurr_any]
 
-		row = sp.db.DB.QueryRow(q, gs.bid, gs.pid, shdr)
+		row = sp.db.DB.QueryRow(q, gs.gpid, shdr)
 
 	}
 	err = rowscan(row, &h)
@@ -1147,7 +1159,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	}
 
 	dw := w.DotWriter()
-	fmt.Fprintf(dw, "%d %s\n", gs.pid, safeHeader(h.String))
+	fmt.Fprintf(dw, "%d %s\n", gs.bpid, safeHeader(h.String))
 	dw.Close()
 
 	return true

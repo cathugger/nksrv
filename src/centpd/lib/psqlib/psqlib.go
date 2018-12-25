@@ -54,6 +54,11 @@ type Config struct {
 func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p = new(PSQLIB)
 
+	st_once.Do(loadStatements)
+	if st_loaderr != nil {
+		return nil, st_loaderr
+	}
+
 	p.log = NewLogToX(*cfg.Logger, fmt.Sprintf("psqlib.%p", p))
 
 	p.db = *cfg.DB

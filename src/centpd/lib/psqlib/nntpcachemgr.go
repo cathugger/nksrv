@@ -53,7 +53,7 @@ func newNNTPCacheMgr() nntpCacheMgr {
 
 func obtainFromCache(
 	w nntpCopyer, filename string, off int64,
-	num uint64, msgid CoreMsgIDStr) (bool, error) {
+	bpid postID, msgid CoreMsgIDStr, gpid postID) (bool, error) {
 
 	f, e := os.Open(filename)
 	if e != nil {
@@ -71,7 +71,7 @@ func obtainFromCache(
 		}
 	}
 
-	_, e = w.Copy(num, msgid, f)
+	_, e = w.Copy(bpid, msgid, gpid, f)
 
 	return true, e
 }
@@ -88,19 +88,27 @@ func (sp *PSQLIB) makeFilename(id CoreMsgIDStr) string {
 func (sp *PSQLIB) nntpObtainItemByMsgID(
 	w nntpCopyer, cs *ConnState, msgid CoreMsgIDStr) error {
 
-	var bid boardID
-	var pid postID
+	cbid := currSelectedGroupID(cs)
 
-	q := "SELECT bid,pid FROM ib0.posts WHERE msgid = $1 LIMIT 1"
-	err := sp.db.DB.QueryRow(q, string(msgid)).Scan(&bid, &pid)
+	var bid boardID
+	var bpid postID
+	var gpid postID
+
+	q := st_list[st_NNTP_articleNumByMsgID]
+
+	err := sp.db.DB.
+		QueryRow(q, string(msgid), cbid).
+		Scan(&bid, &bpid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
-	num := artnumInGroup(cs, bid, pid)
-	return sp.nntpObtainItemOrStat(w, num, msgid)
+
+	cpnum := bpidIfGroupEq(cbid, bid, bpid)
+
+	return sp.nntpObtainItemOrStat(w, cpnum, msgid, gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByNum(
@@ -112,16 +120,25 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 	}
 
 	var msgid CoreMsgIDStr
-	q := "SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1"
-	err := sp.db.DB.QueryRow(q, gs.bid, num).Scan(&msgid)
+	var gpid postID
+
+	q := st_list[st_NNTP_articleMsgIDByNum]
+
+	err := sp.db.DB.
+		QueryRow(q, gs.bid, num).
+		Scan(&msgid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
+
+	// this kind of query modifies current article ID
+	// therefore pass state to copyer so it can set it
 	w.SetGroupState(gs)
-	return sp.nntpObtainItemOrStat(w, num, msgid)
+
+	return sp.nntpObtainItemOrStat(w, num, msgid, gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
@@ -129,36 +146,42 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	if !isGroupSelected(gs) {
 		return errNoBoardSelected
 	}
-	if gs.pid <= 0 {
+	if gs.bpid <= 0 {
 		return errNotExist
 	}
 
 	var msgid CoreMsgIDStr
-	q := "SELECT msgid FROM ib0.posts WHERE bid = $1 AND pid = $2 LIMIT 1"
-	err := sp.db.DB.QueryRow(q, gs.bid, gs.pid).Scan(&msgid)
+	var gpid postID
+
+	q := st_list[st_NNTP_articleMsgIDByNum]
+
+	err := sp.db.DB.
+		QueryRow(q, gs.bid, gs.bpid).
+		Scan(&msgid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
-	return sp.nntpObtainItemOrStat(w, gs.pid, msgid)
+
+	return sp.nntpObtainItemOrStat(w, gs.bpid, msgid, gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemOrStat(
-	w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+	w nntpCopyer, bpid postID, msgid CoreMsgIDStr, gpid postID) error {
 
 	if _, ok := w.(*statNNTPCopyer); !ok {
-		return sp.nntpObtainItem(w, num, msgid)
+		return sp.nntpObtainItem(w, bpid, msgid, gpid)
 	} else {
 		// interface abuse
-		_, err := w.Copy(num, msgid, nil)
+		_, err := w.Copy(bpid, msgid, gpid, nil)
 		return err
 	}
 }
 
 func (sp *PSQLIB) nntpObtainItem(
-	w nntpCopyer, num uint64, msgid CoreMsgIDStr) error {
+	w nntpCopyer, bpid postID, msgid CoreMsgIDStr, gpid postID) error {
 
 	var f *os.File
 	var err error
@@ -174,7 +197,7 @@ func (sp *PSQLIB) nntpObtainItem(
 	c.m.RUnlock()
 
 	if o == nil {
-		exists, err := obtainFromCache(w, filename, 0, num, msgid)
+		exists, err := obtainFromCache(w, filename, 0, bpid, msgid, gpid)
 		if exists || err != nil {
 			// if we finished successfuly, or failed in a way we cannot recover
 			return err
@@ -215,7 +238,7 @@ func (sp *PSQLIB) nntpObtainItem(
 	go func() {
 		var we error // dangerous
 
-		we = sp.nntpGenerate(cpub, num, msgid)
+		we = sp.nntpGenerate(cpub, bpid, msgid, gpid)
 		if we != nil {
 			if we == io.EOF {
 				we = io.ErrUnexpectedEOF
@@ -261,7 +284,7 @@ func (sp *PSQLIB) nntpObtainItem(
 readExisting:
 
 	r := o.p.NewReader()
-	done, err := w.Copy(num, msgid, r)
+	done, err := w.Copy(bpid, msgid, gpid, r)
 	if !xos.IsClosed(err) {
 		// nil(which would mean full success) or non-recoverable error
 		if err == nil {
@@ -290,7 +313,7 @@ readExisting:
 		return fmt.Errorf("nntpObtainItem: finisherr: %v", err)
 	}
 	// read from stable storage
-	exists, err := obtainFromCache(w, filename, done, num, msgid)
+	exists, err := obtainFromCache(w, filename, done, bpid, msgid, gpid)
 	if exists || err != nil {
 		// if we finished successfuly, or failed in a way we cannot recover
 		if err == nil {

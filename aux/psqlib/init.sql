@@ -94,7 +94,7 @@ CREATE TABLE ib0.bposts (
 	b_id   INTEGER                     NOT NULL, -- internal board ID this post belongs to
 	b_p_id BIGINT                      NOT NULL, -- internal post ID of this post. if pid==tid then this is OP
 	p_name TEXT     COLLATE ucs_basic  NOT NULL, -- external post identifier
-	b_t_id BIGINT                      NOT NULL, -- internal thread ID this post belongs to
+	t_id BIGINT                      NOT NULL, -- internal thread ID this post belongs to
 	g_p_id BIGINT                      NOT NULL, -- global internal post ID
 
 	-- redundant
@@ -110,7 +110,7 @@ CREATE TABLE ib0.bposts (
 )
 -- :next
 CREATE INDEX
-	ON ib0.bposts (b_id,b_t_id,pdate) -- in thread, for bump
+	ON ib0.bposts (b_id,t_id,pdate) -- in thread, for bump
 -- :next
 CREATE INDEX
 	ON ib0.bposts (padded,g_p_id,b_id) -- for NEWNEWS

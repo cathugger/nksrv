@@ -5,9 +5,12 @@ import (
 )
 
 type nntpCopyer interface {
-	Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	Copy(
+		bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
 		written int64, err error)
+
 	SetGroupState(gs *groupState)
+
 	IsClosed() bool
 }
 
@@ -23,7 +26,7 @@ func (c *fullNNTPCopyer) SetGroupState(gs *groupState) {
 }
 
 func (c *fullNNTPCopyer) Copy(
-	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
 	written int64, err error) {
 
 	buf := make([]byte, 32*1024)
@@ -39,10 +42,13 @@ func (c *fullNNTPCopyer) Copy(
 			err = er
 			return
 		}
+
+		// successful get - set new id
 		if c.gs != nil {
-			c.gs.pid = num
+			c.gs.bpid = bpid
 		}
-		c.w.ResArticleFollows(num, msgid)
+
+		c.w.ResArticleFollows(bpid, msgid)
 		c.dw = c.w.DotWriter()
 	}
 
@@ -95,7 +101,10 @@ func (c *headNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *headNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (written int64, err error) {
+func (c *headNNTPCopyer) Copy(
+	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
+	written int64, err error) {
+
 	buf := make([]byte, 32*1024)
 
 	var nr, nw int
@@ -109,10 +118,14 @@ func (c *headNNTPCopyer) Copy(num uint64, msgid CoreMsgIDStr, src io.Reader) (wr
 			err = er
 			return
 		}
+
+		// successful get - set new id
 		if c.gs != nil {
-			c.gs.pid = num
+			c.gs.bpid = bpid
+			c.gs.gpid = gpid
 		}
-		c.w.ResHeadFollows(num, msgid)
+
+		c.w.ResHeadFollows(bpid, msgid)
 		c.dw = c.w.DotWriter()
 	}
 
@@ -195,7 +208,7 @@ func (c *bodyNNTPCopyer) SetGroupState(gs *groupState) {
 }
 
 func (c *bodyNNTPCopyer) Copy(
-	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
 	written int64, err error) {
 
 	buf := make([]byte, 32*1024)
@@ -212,10 +225,14 @@ func (c *bodyNNTPCopyer) Copy(
 			err = er
 			return
 		}
+
+		// successful get - set new id
 		if c.gs != nil {
-			c.gs.pid = num
+			c.gs.bpid = bpid
+			c.gs.gpid = gpid
 		}
-		c.w.ResBodyFollows(num, msgid)
+
+		c.w.ResBodyFollows(bpid, msgid)
 		c.dw = c.w.DotWriter()
 	}
 
@@ -287,14 +304,17 @@ func (c *statNNTPCopyer) SetGroupState(gs *groupState) {
 }
 
 func (c statNNTPCopyer) Copy(
-	num uint64, msgid CoreMsgIDStr, src io.Reader) (
+	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
 	written int64, err error) {
 
+	// successful get - set new id
 	if c.gs != nil {
-		c.gs.pid = num
+		c.gs.bpid = bpid
+		c.gs.gpid = gpid
 	}
+
 	// interface abuse
-	c.w.ResArticleFound(num, msgid)
+	c.w.ResArticleFound(bpid, msgid)
 	return 0, nil
 }
 

@@ -13,18 +13,11 @@ import (
 )
 
 func (sp *PSQLIB) nntpGenerate(
-	w io.Writer, num uint64, msgid CoreMsgIDStr) (err error) {
+	w io.Writer, bpid postID, msgid CoreMsgIDStr, gpid postID) (err error) {
 
 	// fetch info about post. some of info we don't care about
-	q := `SELECT
-	jp.title,jp.message,jp.headers,jp.layout,
-	jf.fname,jf.fsize
-FROM ib0.posts AS jp
-LEFT JOIN ib0.files AS jf
-USING (bid,pid)
-WHERE jp.msgid = $1
-ORDER BY jf.fid`
-	rows, err := sp.db.DB.Query(q, string(msgid))
+	q := st_list[st_NNTP_articleGetByGPID]
+	rows, err := sp.db.DB.Query(q, gpid)
 	if err != nil {
 		return sp.sqlError("posts x files query", err)
 	}
