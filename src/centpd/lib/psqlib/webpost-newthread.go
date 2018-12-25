@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mailib"
 )
 
-const postTQMsgArgCount = 10
+const postTQMsgArgCount = 11
 const postTQFileArgCount = 5
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -53,13 +53,17 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				b_id,
 				t_id,
 				t_name,
-				bump
+				bump,
+				p_count,
+				f_count
 			)
 		SELECT
 			$1,
 			lastid,
 			$2,
-			$3
+			$3,
+			1,
+			$11
 		FROM
 			ub
 	),
@@ -109,8 +113,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			)
 		SELECT
 			$1,
-			lastid,
-			lastid,
+			ub.lastid,
+			ub.lastid,
 			$2,
 			ugp.g_p_id,
 			ugp.pdate,
@@ -132,11 +136,19 @@ SELECT * FROM up`
 
 		st1 := sth + `,
 	uf AS (
-		INSERT INTO ib0.files (bid,pid,ftype,fsize,fname,thumb,oname)
+		INSERT INTO
+			ib0.files (
+				g_p_id,
+				ftype,
+				fsize,
+				fname,
+				thumb,
+				oname
+			)
 		SELECT *
 		FROM (
-			SELECT $1,pid
-			FROM up
+			SELECT g_p_id
+			FROM ugp
 		) AS q0
 		CROSS JOIN (
 			VALUES `
@@ -197,7 +209,7 @@ func (sp *PSQLIB) insertNewThread(
 			bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
 			pInfo.MI.Title, pInfo.MI.Author,
 			pInfo.MI.Trip, pInfo.MI.Message,
-			Hjson, Ljson)
+			Hjson, Ljson, pInfo.FC)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
@@ -212,6 +224,7 @@ func (sp *PSQLIB) insertNewThread(
 		args[7] = pInfo.MI.Message
 		args[8] = Hjson
 		args[9] = Ljson
+		args[10] = pInfo.FC
 		for i := range pInfo.FI {
 			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
