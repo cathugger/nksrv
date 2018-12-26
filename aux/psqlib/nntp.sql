@@ -469,7 +469,7 @@ WHERE
 	xbp.b_id = $1 AND
 		xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
 ORDER BY
-	xbp.b_p_pid ASC
+	xbp.b_p_id ASC
 
 -- :name nntp_hdr_range_subject
 -- input: bid min max
@@ -487,7 +487,7 @@ WHERE
 	xbp.b_id = $1 AND
 		xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
 ORDER BY
-	xbp.b_p_pid ASC
+	xbp.b_p_id ASC
 
 -- :name nntp_hdr_range_any
 -- input: bid min max hdr
@@ -504,7 +504,7 @@ WHERE
 	xbp.b_id = $1 AND
 		xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
 ORDER BY
-	xbp.b_p_pid ASC
+	xbp.b_p_id ASC
 
 
 -- :name nntp_hdr_curr_msgid
@@ -533,7 +533,6 @@ LIMIT
 -- :name nntp_hdr_curr_any
 -- input: gpid hdr
 SELECT
-	title,
 	headers -> $2 ->> 0
 FROM
 	ib0.posts
