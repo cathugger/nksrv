@@ -76,13 +76,13 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		UPDATE
 			ib0.boards
 		SET
-			lastid = lastid + 1,
+			last_id = last_id + 1,
 			p_count = p_count + 1
 		WHERE
 			-- TODO insert into multiple boards
 			b_id = $11
 		RETURNING
-			lastid
+			last_id
 	),`
 	b.WriteString(st1)
 
@@ -116,7 +116,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					UNION ALL
 					SELECT
 						$1,
-						lastid,
+						last_id,
 						FALSE
 					FROM
 						ub
@@ -174,10 +174,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				sage
 			)
 		SELECT
-			$11,       -- b_id
-			$12,       -- t_id
-			ub.lastid,
-			$14,       -- p_name
+			$11,        -- b_id
+			$12,        -- t_id
+			ub.last_id,
+			$14,        -- p_name
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
@@ -227,7 +227,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	}
 
 	st3 := `
-SELECT * FROM up`
+SELECT g_p_id FROM ugp`
 	b.WriteString(st3)
 
 	st := b.String()

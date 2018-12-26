@@ -275,8 +275,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 	var dw io.WriteCloser
 	for rows.Next() {
 		var bid boardID
-		var lo, hi, g_lo, bpid sql.NullInt64
-		err = rows.Scan(&bid, &lo, &hi, &g_lo, &bpid)
+		var pcnt, lo, hi, g_lo, bpid sql.NullInt64
+		err = rows.Scan(&bid, &pcnt, &lo, &hi, &g_lo, &bpid)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("board-post query rows scan", err)
@@ -302,7 +302,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 					hi = lo // paranoia
 				}
 				w.ResArticleNumbersFollow(
-					uint64(hi.Int64)-uint64(lo.Int64)+1,
+					uint64(pcnt.Int64),
 					uint64(lo.Int64), uint64(hi.Int64), sgroup)
 			} else {
 				w.ResArticleNumbersFollow(0, 0, 0, sgroup)
@@ -312,7 +312,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 		}
 
 		if bpid.Int64 != 0 {
-			fmt.Fprintf(dw, "%d\n", bpid)
+			fmt.Fprintf(dw, "%d\n", bpid.Int64)
 		}
 	}
 	if err = rows.Err(); err != nil {

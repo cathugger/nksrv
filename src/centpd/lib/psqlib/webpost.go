@@ -519,11 +519,29 @@ func (sp *PSQLIB) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 func (sp *PSQLIB) addNewBoard(
 	bi ib0.IBNewBoardInfo) (err error, duplicate bool) {
 
-	q := `INSERT INTO ib0.boards (
-	bname,badded,bdesc,threads_per_page,max_active_pages,max_pages)
-VALUES ($1,NOW(),$2,$3,$4,$5)
-ON CONFLICT DO NOTHING
-RETURNING bid`
+	q := `INSERT INTO
+	ib0.boards (
+		b_name,
+		badded,
+		bdesc,
+		threads_per_page,
+		max_active_pages,
+		max_pages
+	)
+VALUES
+	(
+		$1,
+		NOW(),
+		$2,
+		$3,
+		$4,
+		$5
+	)
+ON CONFLICT
+	DO NOTHING
+RETURNING
+	b_id`
+
 	var bid boardID
 	e := sp.db.DB.QueryRow(q, bi.Name, bi.Description,
 		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages).Scan(&bid)
@@ -604,7 +622,7 @@ func (sp *PSQLIB) IBDeleteBoard(
 
 	// TODO delet any of posts in board
 	var bid boardID
-	q := `DELETE FROM ib0.boards WHERE bname=$1 RETURNING bid`
+	q := `DELETE FROM ib0.boards WHERE b_name=$1 RETURNING bid`
 	e := sp.db.DB.QueryRow(q, board).Scan(&bid)
 	if e != nil {
 		if e == sql.ErrNoRows {

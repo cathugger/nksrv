@@ -40,7 +40,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			ib0.posts (
 				pdate, padded, -- 1
 				sage,          -- _
-				f_count        -- 2
+				f_count,       -- 2
 				msgid,         -- 3
 				title,         -- 4
 				author,        -- 5
@@ -69,13 +69,13 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		UPDATE
 			ib0.boards
 		SET
-			lastid = lastid + 1,
+			last_id = last_id + 1,
 			t_count = t_count + 1,
-			p_count = p_count + 1,
+			p_count = p_count + 1
 		WHERE
-			bid = $10
+			b_id = $10
 		RETURNING
-			lastid
+			last_id
 	),
 	ut AS (
 		INSERT INTO
@@ -88,12 +88,12 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				f_count
 			)
 		SELECT
-			$10,    -- b_id
-			lastid, -- t_id
-			$11,    -- t_name
-			$1,     -- pdate
-			1,      -- p_count
-			$2      -- f_count
+			$10,     -- b_id
+			last_id, -- t_id
+			$11,     -- t_name
+			$1,      -- pdate
+			1,       -- p_count
+			$2       -- f_count
 		FROM
 			ub
 	),
@@ -111,8 +111,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			)
 		SELECT
 			$10,
-			ub.lastid,
-			ub.lastid,
+			ub.last_id,
+			ub.last_id,
 			$11,
 			ugp.g_p_id,
 			ugp.pdate,
@@ -125,7 +125,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	)`
 	// footer
 	stf := `
-SELECT * FROM up`
+SELECT g_p_id FROM ugp`
 	if n == 0 {
 		st = sth + stf
 	} else {
@@ -204,10 +204,18 @@ func (sp *PSQLIB) insertNewThread(
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
-			bid, pInfo.ID, pInfo.Date, pInfo.MessageID,
-			pInfo.MI.Title, pInfo.MI.Author,
-			pInfo.MI.Trip, pInfo.MI.Message,
-			Hjson, Ljson, pInfo.FC)
+			pInfo.Date,
+			pInfo.FC,
+			pInfo.MessageID,
+			pInfo.MI.Title,
+			pInfo.MI.Author,
+			pInfo.MI.Trip,
+			pInfo.MI.Message,
+			Hjson,
+			Ljson,
+
+			bid,
+			pInfo.ID)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount

@@ -53,7 +53,7 @@ USING
 WHERE
 	jp.g_p_id = $1
 ORDER BY
-	jf.fid
+	jf.f_id
 
 
 
@@ -139,7 +139,7 @@ LEFT JOIN
 USING
 	(b_id)
 WHERE
-	x3.b_p_id >= $2 AND ($3 < 0 OR x3.b_p_id <= $3)
+	(x3.b_p_id >= $2 AND ($3 < 0 OR x3.b_p_id <= $3)) OR (x3.b_p_id IS NULL)
 ORDER BY
 	x3.b_p_id
 
@@ -376,10 +376,10 @@ JOIN
 	ib0.boards AS zb
 ON
 	zbp.b_id = zb.b_id
-ORDER BY
-	xbp.b_p_id ASC
 GROUP BY
 	zp.g_p_id
+ORDER BY
+	zp.b_p_id ASC
 
 -- :name nntp_over_curr
 -- input: {gpid}
