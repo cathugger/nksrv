@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	//. "centpd/lib/logx"
+
 	ib0 "centpd/lib/webib0"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -155,6 +157,12 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			return sp.sqlError("BxTxBPxPxF query rows scan", err), http.StatusInternalServerError
 		}
 
+		/*sp.log.LogPrintln(DEBUG, "sql thread list",
+		bid, bdesc,
+		t_id, t_name,
+		b_p_id, p_name,
+		f_id)*/
+
 		if x_bid != bid {
 			battrs := defaultBoardAttributes
 
@@ -278,6 +286,11 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 			x_fid = f_id.Int64
 		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return sp.sqlError("BxTxBPxPxF query rows iteration", err),
+			http.StatusInternalServerError
 	}
 
 	if x_bid == 0 {

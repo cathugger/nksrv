@@ -93,7 +93,7 @@ LEFT JOIN
 	) AS xt
 ON
 	TRUE
-JOIN
+LEFT JOIN
 	LATERAL (
 		SELECT
 			b_id,
@@ -142,8 +142,8 @@ JOIN
 		) AS ttt
 	) AS xbp
 ON
-	xt.b_id = xbp.b_p_id AND xt.t_id = xbp.t_id
-JOIN
+	TRUE
+LEFT JOIN
 	ib0.posts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id

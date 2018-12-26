@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/lib/pq"
+	"github.com/luna-duclos/instrumentedsql"
 
 	"centpd/lib/altthumber"
 	ar "centpd/lib/apirouter"
@@ -27,6 +31,7 @@ func main() {
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
+	logsql := flag.Bool("logsql", false, "sql logging")
 
 	flag.Parse()
 
@@ -50,10 +55,24 @@ func main() {
 		return
 	}
 
-	db, err := psql.OpenPSQL(psql.Config{
-		Logger:  lgr,
-		ConnStr: *dbconnstr,
-	})
+	sqlconf := psql.DefaultConfig
+	sqlconf.Logger = lgr
+	sqlconf.ConnStr = *dbconnstr
+
+	if *logsql {
+		logger := instrumentedsql.LoggerFunc(
+			func(ctx context.Context, msg string, keyvals ...interface{}) {
+				mlg.LogPrintf(logx.DEBUG, "SQL: %s %v", msg, keyvals)
+			})
+		const drvstr = "instrumented-postgres"
+		sql.Register(drvstr,
+			instrumentedsql.WrapDriver(&pq.Driver{},
+				instrumentedsql.WithLogger(logger),
+				instrumentedsql.WithTraceRowsNext()))
+		sqlconf.ConnDriver = drvstr
+	}
+
+	db, err := psql.OpenPSQL(sqlconf)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
 		return

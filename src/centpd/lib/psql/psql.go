@@ -14,6 +14,7 @@ import (
 )
 
 type Config struct {
+	ConnDriver      string
 	ConnStr         string
 	ConnMaxLifetime float64
 	MaxIdleConns    int32
@@ -22,6 +23,7 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
+	ConnDriver:      "postgres",
 	ConnStr:         "",
 	ConnMaxLifetime: 0.0,
 	MaxIdleConns:    0,
@@ -35,7 +37,7 @@ type PSQL struct {
 }
 
 func OpenPSQL(cfg Config) (PSQL, error) {
-	db, err := sqlx.Open("postgres", cfg.ConnStr)
+	db, err := sqlx.Open(cfg.ConnDriver, cfg.ConnStr)
 	if err != nil {
 		return PSQL{}, err
 	}

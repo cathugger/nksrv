@@ -117,7 +117,7 @@ func loadStatements() {
 				"wrong count %d for statement %s", len(sl), sn)
 			return
 		}
-		st_list[i] = sl[0]
+		st_list[i] = sl[0] + "\n"
 	}
 }
 
