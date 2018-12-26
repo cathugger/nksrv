@@ -37,18 +37,13 @@ type (
 	ConnState         = nntp.ConnState
 )
 
-func artnumInGroupsNum(cbid boardID, bids []boardID, bpids []postID) postID {
-	for i, bid := range bids {
-		if cbid == bid {
-			return bpids[i]
-		}
-	}
-	return 0
-}
-
-func artnumInGroups(cs *ConnState, bids []boardID, bpids []postID) postID {
+func artnumInGroups(cs *ConnState, bids []int64, bpids []int64) postID {
 	if cg, _ := cs.CurrentGroup.(*groupState); cg != nil {
-		return artnumInGroupsNum(cg.bid, bids, bpids)
+		for i, bid := range bids {
+			if cg.bid == boardID(bid) {
+				return postID(bpids[i])
+			}
+		}
 	}
 	return 0
 }
@@ -668,7 +663,7 @@ func safeHeader(s string) string {
 func (sp *PSQLIB) printOver(
 	w io.Writer, bpid postID, msgid CoreMsgIDStr,
 	hsubject, hfrom, hdate, hrefs string,
-	bnames []string, bpids []postID) {
+	bnames []string, bpids []int64) {
 
 	/*
 		The first 8 fields MUST be the following, in order:
@@ -705,8 +700,8 @@ func (sp *PSQLIB) GetOverByMsgID(
 	smsgid := unsafeCoreMsgIDToStr(msgid)
 
 	var (
-		bids   []boardID
-		bpids  []postID
+		bids   []int64
+		bpids  []int64
 		bnames []string
 		title  string
 
@@ -765,8 +760,8 @@ func (sp *PSQLIB) GetOverByRange(
 
 	for rows.Next() {
 		var (
-			bids   []boardID
-			bpids  []postID
+			bids   []int64
+			bpids  []int64
 			bnames []string
 			cbpid  postID
 			msgid  CoreMsgIDStr
@@ -843,8 +838,8 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 	}
 
 	var (
-		bids   []boardID
-		bpids  []postID
+		bids   []int64
+		bpids  []int64
 		bnames []string
 		msgid  CoreMsgIDStr
 		title  string

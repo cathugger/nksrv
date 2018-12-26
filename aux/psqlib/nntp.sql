@@ -333,53 +333,37 @@ LIMIT
 
 -- :name nntp_over_range
 -- input: {bid} {min} {max}
-WITH
-	zp AS (
-		SELECT
-			xbp.b_id   AS b_id,
-			xbp.b_p_id AS b_p_id,
-			xp.g_p_id  AS g_p_id,
-			xp.msgid   AS msgid,
-			xp.title   AS title,
-			xp.headers -> 'Subject' ->> 0    AS hsubject,
-			xp.headers -> 'From' ->> 0       AS hfrom,
-			xp.headers -> 'Date' ->> 0       AS hdate,
-			xp.headers -> 'References' ->> 0 AS href
-		FROM
-			ib0.bposts AS xbp
-		JOIN
-			ib0.posts AS xp
-		USING
-			(g_p_id)
-		WHERE
-			xbp.b_id = $1 AND
-				xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
-	)
 SELECT
 	array_agg(zbp.b_id),
 	array_agg(zbp.b_p_id),
 	array_agg(zb.b_name),
-	zp.b_p_id,
-	zp.msgid,
-	zp.title,
-	zp.hsubject,
-	zp.hfrom,
-	zp.hdate,
-	zp.href
+	xbp.b_p_id,
+	xp.msgid,
+	xp.title,
+	xp.headers -> 'Subject' ->> 0,
+	xp.headers -> 'From' ->> 0,
+	xp.headers -> 'Date' ->> 0,
+	xp.headers -> 'References' ->> 0
 FROM
-	zp
+	ib0.bposts AS xbp
+JOIN
+	ib0.posts AS xp
+ON
+	xbp.g_p_id = xp.g_p_id
 JOIN
 	ib0.bposts AS zbp
 ON
-	zp.g_p_id = zbp.g_p_id
+	xp.g_p_id = zbp.g_p_id
 JOIN
 	ib0.boards AS zb
 ON
 	zbp.b_id = zb.b_id
+WHERE
+	xbp.b_id = $1 AND xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
 GROUP BY
-	zp.g_p_id
+	xp.g_p_id,xbp.b_p_id
 ORDER BY
-	zp.b_p_id ASC
+	xbp.b_p_id ASC
 
 -- :name nntp_over_curr
 -- input: {gpid}
