@@ -42,6 +42,36 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 
 	// head
 	st1 := `WITH
+	ugp AS (
+		INSERT INTO
+			ib0.posts (
+				pdate, padded, -- 1
+				sage,          -- 2
+				f_count        -- 3
+				msgid,         -- 4
+				title,         -- 5
+				author,        -- 6
+				trip,          -- 7
+				message,       -- 8
+				headers,       -- 9
+				layout         -- 10
+			)
+		VALUES
+			(
+				$1, NOW(), -- pdate, padded
+				$2,        -- sage
+				$3,        -- f_count
+				$4,        -- msgid
+				$5,        -- title
+				$6,        -- author
+				$7,        -- trip
+				$8,        -- message
+				$9,        -- headers
+				$10        -- layout
+			)
+		RETURNING
+			g_p_id,pdate,padded,sage
+	),
 	ub AS (
 		UPDATE
 			ib0.boards
@@ -49,7 +79,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			lastid = lastid + 1,
 			p_count = p_count + 1
 		WHERE
-			b_id = $2
+			-- TODO insert into multiple boards
+			b_id = $11
 		RETURNING
 			lastid
 	),`
@@ -66,7 +97,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		SET
 			bump = pdate,
 			p_count = p_count + 1,
-			f_count = f_count + $14
+			f_count = f_count + $3
 		FROM
 			(
 				SELECT
@@ -79,18 +110,23 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					FROM
 						ib0.bposts
 					WHERE
-						b_id = $2 AND t_id = $3 -- count sages against bump limit. because others do it like that :<
+						-- count sages against bump limit.
+						-- because others do it like that :<
+						b_id = $11 AND t_id = $12
 					UNION ALL
 					SELECT
-						$4,lastid,FALSE
+						$1,
+						lastid,
+						FALSE
 					FROM
 						ub
 					ORDER BY
 						pdate ASC,
 						b_p_id ASC
 					LIMIT
-						$1
-					-- take bump posts, sorted by original date, only upto bump limit
+						$13
+					-- take bump posts, sorted by original date,
+					-- only upto bump limit
 				) AS tt
 				WHERE
 					sage != TRUE
@@ -101,7 +137,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				-- and pick latest one
 			) as xbump
 		WHERE
-			bid = $2 AND tid = $3
+			bid = $11 AND tid = $12
 	),`
 		b.WriteString(st_bump)
 	} else {
@@ -111,47 +147,20 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ib0.threads
 		SET
 			p_count = p_count + 1,
-			f_count = f_count + $14
+			f_count = f_count + $3
 		WHERE
-			bid = $2 AND tid = $3
+			bid = $11 AND tid = $12
 	),
-	utx AS (SELECT 1 LIMIT $1),`
+	utx AS (
+		SELECT
+			1
+		LIMIT
+			$13
+	),`
 		b.WriteString(st_nobump)
 	}
 
 	st2 := `
-	ugp AS (
-		INSERT INTO
-			ib0.posts (
-				pdate,
-				padded,
-				sage,
-				msgid,
-				title,
-				author,
-				trip,
-				message,
-				headers,
-				layout,
-				f_count
-			)
-		VALUES
-			(
-				$4,
-				NOW(),
-				$5,
-				$7,
-				$8,
-				$9,
-				$10,
-				$11,
-				$12,
-				$13,
-				$14
-			)
-		RETURNING
-			g_p_id,pdate,padded,sage
-	),
 	ubp AS (
 		INSERT INTO
 			ib0.bposts (
@@ -165,10 +174,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				sage
 			)
 		SELECT
-			$2,
-			$3,
+			$11,       -- b_id
+			$12,       -- t_id
 			ub.lastid,
-			$6,
+			$14,       -- p_name
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
@@ -264,12 +273,9 @@ func (sp *PSQLIB) insertNewReply(
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
-			rti.bumpLimit,
-			rti.bid,
-			rti.tid,
 			pInfo.Date,
 			pInfo.MI.Sage,
-			pInfo.ID,
+			pInfo.FC,
 			pInfo.MessageID,
 			pInfo.MI.Title,
 			pInfo.MI.Author,
@@ -277,26 +283,33 @@ func (sp *PSQLIB) insertNewReply(
 			pInfo.MI.Message,
 			Hjson,
 			Ljson,
-			pInfo.FC)
+
+			rti.bid,
+			rti.tid,
+			rti.bumpLimit,
+
+			pInfo.ID)
 	} else {
 		x := postRQMsgArgCount
 		xf := postRQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
 
-		args[0] = rti.bumpLimit
-		args[1] = rti.bid
-		args[2] = rti.tid
-		args[3] = pInfo.Date
-		args[4] = pInfo.MI.Sage
-		args[5] = pInfo.ID
-		args[6] = pInfo.MessageID
-		args[7] = pInfo.MI.Title
-		args[8] = pInfo.MI.Author
-		args[9] = pInfo.MI.Trip
-		args[10] = pInfo.MI.Message
-		args[11] = Hjson
-		args[12] = Ljson
-		args[13] = pInfo.FC
+		args[0] = pInfo.Date
+		args[1] = pInfo.MI.Sage
+		args[2] = pInfo.FC
+		args[3] = pInfo.MessageID
+		args[4] = pInfo.MI.Title
+		args[5] = pInfo.MI.Author
+		args[6] = pInfo.MI.Trip
+		args[7] = pInfo.MI.Message
+		args[8] = Hjson
+		args[9] = Ljson
+
+		args[10] = rti.bid
+		args[11] = rti.tid
+		args[12] = rti.bumpLimit
+
+		args[13] = pInfo.ID
 
 		for i := range pInfo.FI {
 

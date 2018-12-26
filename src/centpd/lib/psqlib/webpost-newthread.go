@@ -35,6 +35,36 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	var st string
 	// header
 	sth := `WITH
+	ugp AS (
+		INSERT INTO
+			ib0.posts (
+				pdate, padded, -- 1
+				sage,          -- _
+				f_count        -- 2
+				msgid,         -- 3
+				title,         -- 4
+				author,        -- 5
+				trip,          -- 6
+				message,       -- 7
+				headers,       -- 8
+				layout         -- 9
+			)
+		VALUES
+			(
+				$1, NOW(), -- pdate, padded
+				FALSE,     -- sage
+				$2,        -- f_count
+				$3,        -- msgid
+				$4,        -- title
+				$5,        -- author
+				$6,        -- trip
+				$7,        -- message
+				$8,        -- headers
+				$9         -- layout
+			)
+		RETURNING
+			g_p_id,pdate,padded
+	),
 	ub AS (
 		UPDATE
 			ib0.boards
@@ -43,7 +73,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			t_count = t_count + 1,
 			p_count = p_count + 1,
 		WHERE
-			bid = $1
+			bid = $10
 		RETURNING
 			lastid
 	),
@@ -58,46 +88,14 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				f_count
 			)
 		SELECT
-			$1,
-			lastid,
-			$2,
-			$3,
-			1,
-			$11
+			$10,    -- b_id
+			lastid, -- t_id
+			$11,    -- t_name
+			$1,     -- pdate
+			1,      -- p_count
+			$2      -- f_count
 		FROM
 			ub
-	),
-	ugp AS (
-		INSERT INTO
-			ib0.posts (
-				pdate,
-				padded,
-				sage,
-				msgid,
-				title,
-				author,
-				trip,
-				message,
-				headers,
-				layout,
-				f_count,
-			)
-		VALUES
-			(
-				$3,
-				NOW(),
-				FALSE,
-				$4,
-				$5,
-				$6,
-				$7,
-				$8,
-				$9,
-				$10,
-				$11
-			)
-		RETURNING
-			g_p_id,pdate,padded
 	),
 	ubp AS (
 		INSERT INTO
@@ -112,10 +110,10 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				sage
 			)
 		SELECT
-			$1,
+			$10,
 			ub.lastid,
 			ub.lastid,
-			$2,
+			$11,
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
@@ -214,17 +212,20 @@ func (sp *PSQLIB) insertNewThread(
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
-		args[0] = bid
-		args[1] = pInfo.ID
-		args[2] = pInfo.Date
-		args[3] = pInfo.MessageID
-		args[4] = pInfo.MI.Title
-		args[5] = pInfo.MI.Author
-		args[6] = pInfo.MI.Trip
-		args[7] = pInfo.MI.Message
-		args[8] = Hjson
-		args[9] = Ljson
-		args[10] = pInfo.FC
+
+		args[0] = pInfo.Date
+		args[1] = pInfo.FC
+		args[2] = pInfo.MessageID
+		args[3] = pInfo.MI.Title
+		args[4] = pInfo.MI.Author
+		args[5] = pInfo.MI.Trip
+		args[6] = pInfo.MI.Message
+		args[7] = Hjson
+		args[8] = Ljson
+
+		args[9] = bid
+		args[10] = pInfo.ID
+
 		for i := range pInfo.FI {
 			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
