@@ -57,9 +57,9 @@ func (sp *PSQLIB) acceptArticleHead(
 	if !ins.isReply {
 
 		// new thread
-		q := `SELECT bid,post_limits,newthread_limits
+		q := `SELECT b_id,post_limits,newthread_limits
 FROM ib0.boards
-WHERE bname=$1`
+WHERE b_name=$1`
 
 		//sp.log.LogPrintf(DEBUG, "executing acceptArticleHead board query:\n%s\n", q)
 
@@ -110,23 +110,39 @@ WHERE bname=$1`
 		// new post
 		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
 		q := `WITH
-xb AS (
-	SELECT bid,post_limits,reply_limits,thread_opts
-	FROM ib0.boards
-	WHERE bname=$1
-	LIMIT 1
-)
-SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xtp.bid,xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,
+	xb AS (
+		SELECT
+			b_id,post_limits,reply_limits,thread_opts
+		FROM
+			ib0.boards
+		WHERE
+			b_name=$1
+		LIMIT
+			1
+	)
+SELECT
+	xb.b_id,xb.post_limits,xb.reply_limits,
+	xtp.b_id,xtp.t_id,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,
 	xtp.title,xtp.pdate
-FROM xb
+FROM
+	xb
 FULL JOIN (
-	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.title,xp.pdate
-	FROM ib0.threads xt
-	JOIN ib0.posts xp
-	ON xt.bid=xp.bid AND xt.tid=xp.tid
-	WHERE xp.msgid=$2
-	LIMIT 1
+	SELECT
+		xt.b_id,xt.t_id,xt.reply_limits,xt.thread_opts,xp.title,xp.pdate
+	FROM
+		ib0.threads xt
+	JOIN
+		ib0.bposts xbp
+	ON
+		xt.b_id=xbp.b_id AND xt.t_id=xbp.t_id
+	JOIN
+		ib0.posts xp
+	ON
+		xbp.g_p_id = xp.g_p_id
+	WHERE
+		xp.msgid=$2
+	LIMIT
+		1
 ) AS xtp
 ON TRUE`
 

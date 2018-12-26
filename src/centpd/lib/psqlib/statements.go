@@ -1,13 +1,14 @@
 package psqlib
 
 import (
-	"centpd/lib/sqlbucket"
 	"fmt"
 	"sync"
+
+	"centpd/lib/sqlbucket"
 )
 
 const (
-	st_NNTP_articleNumByMsgID  = iota
+	st_NNTP_articleNumByMsgID = iota
 	st_NNTP_articleMsgIDByNum
 
 	st_NNTP_articleGetByGPID

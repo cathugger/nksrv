@@ -310,6 +310,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	pi.ID = mailib.HashPostID_SHA1(info.FullMsgIDStr)
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
+	pi.FC = countRealFiles(pi.FI)
+
 	if len(H["Subject"]) != 0 {
 		sh := H["Subject"][0].V
 

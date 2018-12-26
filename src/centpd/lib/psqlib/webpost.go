@@ -223,6 +223,15 @@ func optimiseFormLine(line string) (s string) {
 	return
 }
 
+func countRealFiles(FI []mailib.FileInfo) (FC int) {
+	for i := range FI {
+		if FI[i].Type != mailib.FTypeMsg {
+			FC++
+		}
+	}
+	return
+}
+
 func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
@@ -273,9 +282,9 @@ func (sp *PSQLIB) commonNewPost(
 	if !isReply {
 
 		// new thread
-		q := `SELECT bid,post_limits,newthread_limits
+		q := `SELECT b_id,post_limits,newthread_limits
 FROM ib0.boards
-WHERE bname=$1`
+WHERE b_name=$1`
 
 		//sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
 
@@ -300,26 +309,42 @@ WHERE bname=$1`
 		// new post
 		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
 		q := `WITH
-xb AS (
-	SELECT bid,post_limits,reply_limits,thread_opts
-	FROM ib0.boards
-	WHERE bname=$1
-	LIMIT 1
-)
-SELECT xb.bid,xb.post_limits,xb.reply_limits,
-	xtp.tid,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.msgid
-FROM xb
-LEFT JOIN (
-	SELECT xt.bid,xt.tid,xt.reply_limits,xt.thread_opts,xp.msgid
-	FROM ib0.threads xt
-	JOIN xb
-	ON xb.bid = xt.bid
-	JOIN ib0.posts xp
-	ON xb.bid=xp.bid AND xt.tid=xp.pid
-	WHERE xt.tname=$2
-	LIMIT 1
-) AS xtp
-ON xb.bid=xtp.bid`
+	xb AS (
+		SELECT b_id,post_limits,reply_limits,thread_opts
+		FROM ib0.boards
+		WHERE b_name=$1
+		LIMIT 1
+	)
+SELECT
+	xb.b_id,xb.post_limits,xb.reply_limits,
+	xtp.t_id,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.msgid
+FROM
+	xb
+LEFT JOIN
+	(
+		SELECT
+			xt.b_id,xt.t_id,xt.reply_limits,xt.thread_opts,xp.msgid
+		FROM
+			ib0.threads xt
+		JOIN
+			xb
+		ON
+			xb.b_id = xt.b_id
+		JOIN
+			ib0.bposts xbp
+		ON
+			xt.b_id=xbp.b_id AND xt.t_id=xbp.b_p_id
+		JOIN
+			ib0.posts xp
+		ON
+			xbp.g_p_id = xp.g_p_id
+		WHERE
+			xt.tname=$2
+		LIMIT
+			1
+	) AS xtp
+ON
+	xb.b_id=xtp.b_id`
 
 		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
@@ -430,6 +455,8 @@ ON xb.bid=xtp.bid`
 	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
 	pInfo.MessageID = cutMsgID(fmsgids)
 	pInfo.ID = mailib.HashPostID_SHA1(fmsgids)
+
+	pInfo.FC = countRealFiles(pInfo.FI)
 
 	// perform insert
 	if !isReply {

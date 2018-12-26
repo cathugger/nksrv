@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"github.com/lib/pq"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/lib/pq"
 
 	au "centpd/lib/asciiutils"
 	. "centpd/lib/logx"
