@@ -19,9 +19,7 @@ import (
 func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	var err error
 
-	q := `SELECT bname,bdesc,attrib
-FROM ib0.boards
-ORDER BY bname`
+	q := st_list[st_Web_listboards]
 	rows, err := sp.db.DB.Query(q)
 	if err != nil {
 		return sp.sqlError("boards query", err), http.StatusInternalServerError
@@ -89,18 +87,17 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 	var err error
 	var bid boardID
-	var threadsPerPage, maxPages uint32
+	var threadsPerPage uint32
 	var jcfg, jcfg2 xtypes.JSONText
 	var bdesc string
 
 	// XXX SQL needs more work
 
-	q := `SELECT bid,bdesc,attrib,threads_per_page,max_pages
-FROM ib0.boards
-WHERE bname=$1`
+	q := st_list[st_Web_thread_list_page]
+
 	err = sp.db.DB.
 		QueryRow(q, board).
-		Scan(&bid, &bdesc, &jcfg, &threadsPerPage, &maxPages)
+		Scan(&bid, &bdesc, &jcfg, &threadsPerPage)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNoSuchBoard, http.StatusNotFound

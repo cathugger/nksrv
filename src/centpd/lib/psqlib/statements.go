@@ -42,6 +42,12 @@ const (
 	st_NNTP_GetHdrByCurr_subject
 	st_NNTP_GetHdrByCurr_any
 
+
+	st_Web_listboards
+
+	st_Web_thread_list_page
+
+
 	st_max
 )
 
@@ -87,6 +93,11 @@ var st_names = [st_max]st_reference{
 	st_reference{"nntp", "nntp_hdr_curr_msgid"},
 	st_reference{"nntp", "nntp_hdr_curr_subject"},
 	st_reference{"nntp", "nntp_hdr_curr_any"},
+
+
+	st_reference{"web", "web_listboards"},
+
+	st_reference{"web", "web_thread_list_page"},
 }
 
 func loadStatements() {
@@ -114,3 +125,16 @@ func loadStatements() {
 }
 
 var st_once sync.Once
+
+func (sp *PSQLIB) checkPrepareStatements() error {
+	for i := range st_list {
+		pst, err := sp.db.DB.Prepare(st_list[i])
+		if err != nil {
+			return fmt.Errorf("error preparing %d %q statement: %v",
+				i, st_names[i].Name, err)
+		}
+		// TODO store somewhere and use later
+		pst.Close()
+	}
+	return nil
+}

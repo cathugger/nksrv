@@ -63,6 +63,11 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.db = *cfg.DB
 
+	err = p.checkPrepareStatements()
+	if err != nil {
+		return
+	}
+
 	p.src, err = fstore.OpenFStore(*cfg.SrcCfg)
 	if err != nil {
 		return nil, err

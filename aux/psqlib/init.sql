@@ -110,7 +110,7 @@ CREATE TABLE ib0.bposts (
 )
 -- :next
 CREATE INDEX
-	ON ib0.bposts (b_id,t_id,pdate) -- in thread, for bump
+	ON ib0.bposts (b_id,t_id,pdate,b_p_id) -- in thread, for bump
 -- :next
 CREATE INDEX
 	ON ib0.bposts (padded,g_p_id,b_id) -- for NEWNEWS
