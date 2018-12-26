@@ -47,10 +47,12 @@ func main() {
 		return
 	}
 
-	db, err := psql.OpenPSQL(psql.Config{
-		Logger:  lgr,
-		ConnStr: *dbconnstr,
-	})
+	psqlcfg := psql.DefaultConfig
+
+	psqlcfg.Logger = lgr
+	psqlcfg.ConnStr = *dbconnstr
+
+	db, err := psql.OpenPSQL(psqlcfg)
 	if err != nil {
 		mlg.LogPrintln(CRITICAL, "psql.OpenPSQL error:", err)
 		return
