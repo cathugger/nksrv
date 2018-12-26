@@ -16,10 +16,12 @@ SELECT
 	xt.t_id,
 	xt.t_name,
 	xt.p_count,
-	xt.f_count,
+	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
 	xbp.p_name,
 	xp.pdate,
+	xp.sage,
+	xp.f_count AS xp_f_count,
 	xp.author,
 	xp.trip,
 	xp.title,
@@ -145,7 +147,7 @@ JOIN
 	ib0.posts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
-JOIN
+LEFT JOIN
 	ib0.files AS xf
 ON
 	xp.g_p_id = xf.g_p_id

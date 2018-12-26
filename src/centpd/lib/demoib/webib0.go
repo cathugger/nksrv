@@ -194,8 +194,8 @@ var (
 					testPost5,
 				},
 			},
-			SkippedAttachments: 0,
-			SkippedReplies:     0,
+			SkippedFiles:   0,
+			SkippedReplies: 0,
 		}},
 		Available: 2,
 	}

@@ -68,6 +68,7 @@ type IBPostInfo struct {
 	Name           string                 `json:"name"`            // name of poster
 	Trip           string                 `json:"trip,omitempty"`  // tripcode, usually not set
 	Email          string                 `json:"email,omitempty"` // email field, usually useless, used for sage too
+	Sage           bool                   `json:"sage,omitempty"`  // sage
 	Date           int64                  `json:"date"`            // seconds since unix epoch
 	Message        IBMessage              `json:"msg"`             // message itself. formatted
 	References     []IBMessageReference   `json:"refs,omitempty"`  // posts Message refers to
@@ -86,8 +87,8 @@ type IBCommonThread struct {
 
 // thread in thread list page
 type IBThreadListPageThread struct {
-	SkippedReplies     uint32 `json:"skipreplies"` // number of replies not included
-	SkippedAttachments uint32 `json:"skipfiles"`   // number of attachments not included
+	SkippedReplies int64 `json:"skipreplies"` // number of replies not included
+	SkippedFiles   int64 `json:"skipfiles"`   // number of attachments not included
 
 	IBCommonThread
 }

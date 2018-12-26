@@ -42,11 +42,9 @@ const (
 	st_NNTP_GetHdrByCurr_subject
 	st_NNTP_GetHdrByCurr_any
 
-
 	st_Web_listboards
 
 	st_Web_thread_list_page
-
 
 	st_max
 )
@@ -93,7 +91,6 @@ var st_names = [st_max]st_reference{
 	st_reference{"nntp", "nntp_hdr_curr_msgid"},
 	st_reference{"nntp", "nntp_hdr_curr_subject"},
 	st_reference{"nntp", "nntp_hdr_curr_any"},
-
 
 	st_reference{"web", "web_listboards"},
 
