@@ -48,55 +48,62 @@ const (
 var st_list [st_max]string
 var st_loaderr error
 
-var st_names = [st_max]string{
-	"nntp_article_num_by_msgid",
-	"nntp_article_msgid_by_num",
+type st_reference struct {
+	Bucket string
+	Name   string
+}
 
-	"nntp_article_get_gpid",
+var st_names = [st_max]st_reference{
+	st_reference{"nntp", "nntp_article_num_by_msgid"},
+	st_reference{"nntp", "nntp_article_msgid_by_num"},
 
-	"nntp_select",
-	"nntp_select_and_list",
+	st_reference{"nntp", "nntp_article_get_gpid"},
 
-	"nntp_next",
-	"nntp_last",
+	st_reference{"nntp", "nntp_select"},
+	st_reference{"nntp", "nntp_select_and_list"},
 
-	"nntp_newnews_all",
-	"nntp_newnews_one",
-	"nntp_newnews_all_group",
+	st_reference{"nntp", "nntp_next"},
+	st_reference{"nntp", "nntp_last"},
 
-	"nntp_newgroups",
+	st_reference{"nntp", "nntp_newnews_all"},
+	st_reference{"nntp", "nntp_newnews_one"},
+	st_reference{"nntp", "nntp_newnews_all_group"},
 
-	"nntp_listactive_all",
-	"nntp_listactive_one",
+	st_reference{"nntp", "nntp_newgroups"},
 
-	"nntp_over_msgid",
-	"nntp_over_range",
-	"nntp_over_curr",
+	st_reference{"nntp", "nntp_listactive_all"},
+	st_reference{"nntp", "nntp_listactive_one"},
 
-	"nntp_hdr_msgid_msgid",
-	"nntp_hdr_msgid_subject",
-	"nntp_hdr_msgid_any",
-	"nntp_hdr_range_msgid",
-	"nntp_hdr_range_subject",
-	"nntp_hdr_range_any",
-	"nntp_hdr_curr_msgid",
-	"nntp_hdr_curr_subject",
-	"nntp_hdr_curr_any",
+	st_reference{"nntp", "nntp_over_msgid"},
+	st_reference{"nntp", "nntp_over_range"},
+	st_reference{"nntp", "nntp_over_curr"},
+
+	st_reference{"nntp", "nntp_hdr_msgid_msgid"},
+	st_reference{"nntp", "nntp_hdr_msgid_subject"},
+	st_reference{"nntp", "nntp_hdr_msgid_any"},
+	st_reference{"nntp", "nntp_hdr_range_msgid"},
+	st_reference{"nntp", "nntp_hdr_range_subject"},
+	st_reference{"nntp", "nntp_hdr_range_any"},
+	st_reference{"nntp", "nntp_hdr_curr_msgid"},
+	st_reference{"nntp", "nntp_hdr_curr_subject"},
+	st_reference{"nntp", "nntp_hdr_curr_any"},
 }
 
 func loadStatements() {
-	var err error
-
-	const fn = "aux/psqlib/nntp.sql"
-	stmts, err := sqlbucket.LoadFromFile(fn)
-	if err != nil {
-		st_loaderr = fmt.Errorf("err loading %s: %v", fn, err)
-		return
-	}
-
+	bm := make(map[string]sqlbucket.Bucket)
 	for i := range st_names {
 		sn := st_names[i]
-		sl := stmts[sn]
+		if bm[sn.Bucket] == nil {
+			fn := "aux/psqlib/" + sn.Bucket + ".sql"
+			stmts, err := sqlbucket.LoadFromFile(fn)
+			if err != nil {
+				st_loaderr = fmt.Errorf("err loading %s: %v", fn, err)
+				return
+			}
+			bm[sn.Bucket] = stmts
+		}
+		sm := bm[sn.Bucket]
+		sl := sm[sn.Name]
 		if len(sl) != 1 {
 			st_loaderr = fmt.Errorf(
 				"wrong count %d for statement %s", len(sl), sn)
