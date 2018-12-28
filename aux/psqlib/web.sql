@@ -262,14 +262,19 @@ ON
 LEFT JOIN
 	LATERAL (
 		SELECT
-			t_id,
-			row_number() OVER (
-				ORDER BY
-					bump DESC,
-					t_id ASC
-			) AS t_pos
+			*
 		FROM
-			ib0.threads AS zt
+			(
+				SELECT
+					t_id,
+					row_number() OVER (
+						ORDER BY
+							bump DESC,
+							t_id ASC
+					) AS t_pos
+				FROM
+					ib0.threads
+			) AS zt
 		WHERE
 			xt.t_id = zt.t_id
 		LIMIT
