@@ -339,7 +339,7 @@ LEFT JOIN
 		ON
 			xbp.g_p_id = xp.g_p_id
 		WHERE
-			xt.tname=$2
+			xt.t_name=$2
 		LIMIT
 			1
 	) AS xtp
