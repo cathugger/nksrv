@@ -72,6 +72,17 @@ html {
 	background-color: #CCEEBB;
 }
 
+.thread_stats {
+	float: right;
+}
+
+/* breakpoint at 500px */
+@media screen and (max-width: 500px) {
+	.thread_stats {
+		float: none;
+	}
+}
+
 /*
  * by default don't display and activate only if browser supports
  * capability this button uses for its actions
