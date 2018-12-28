@@ -200,13 +200,16 @@ LEFT JOIN
 	LATERAL (
 		SELECT
 			zf.f_id,
-
+			zf.fname,
+			zf.ftype,
+			zf.thumb,
+			zf.thumbcfg
 		FROM
 			ib0.files AS zf
 		WHERE
 			xp.g_p_id = zf.g_p_id
 		ORDER BY
-			xp.f_id
+			zf.f_id
 		LIMIT
 			1
 	) AS xf
@@ -231,6 +234,7 @@ SELECT
 	xt.t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
+	xto.t_pos,
 	xbp.b_p_id,
 	xbp.p_name,
 	xp.pdate,
@@ -255,6 +259,24 @@ LEFT JOIN
 	ib0.threads AS xt
 ON
 	xb.b_id = xt.b_id
+LEFT JOIN
+	LATERAL (
+		SELECT
+			t_id,
+			row_number() OVER (
+				ORDER BY
+					bump DESC,
+					t_id ASC
+			) AS t_pos
+		FROM
+			ib0.threads AS zt
+		WHERE
+			xt.t_id = zt.t_id
+		LIMIT
+			1
+	) AS xto
+ON
+	TRUE
 LEFT JOIN
 	ib0.bposts AS xbp
 ON
