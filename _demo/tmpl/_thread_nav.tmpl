@@ -18,7 +18,7 @@ arguments list:
    {{- with $X.D.ThreadStats -}}
     <span title="Replies">R: {{.NumReplies}}</span> /
     <span title="Attachments">A: {{.NumFiles}}</span> /
-    <span title="Page">P: {{.PageNum}}</span>
+    <span title="Page">P: {{add_u32 .PageNum 1}}</span>
    {{- end -}}
   </div>
  </div>

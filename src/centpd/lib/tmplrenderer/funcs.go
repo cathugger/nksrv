@@ -48,6 +48,9 @@ var funcs = map[string]interface{}{
 	"add_i": func(a, b int) int {
 		return a + b
 	},
+	"add_u32": func(a, b uint32) uint32 {
+		return a + b
+	},
 	// hacks
 	"threadptr": func(x *webib0.IBCommonThread) *webib0.IBCommonThread {
 		return x
