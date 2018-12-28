@@ -13,7 +13,9 @@ arguments list:
 
 <nav class="nav">
  <div class="nav">
-  [<a href="../">Return</a>][<a href="../catalog">Catalog</a>][<a href="">Update</a>]
+  [<a href="../">Return</a>]
+  [<a href="../catalog">Catalog</a>]
+  {{if eq $B 1}}[<a href="">Update</a>]{{end}}
   <div class="thread_stats">
    {{- with $X.D.ThreadStats -}}
     <span title="Replies">R: {{.NumReplies}}</span> /
