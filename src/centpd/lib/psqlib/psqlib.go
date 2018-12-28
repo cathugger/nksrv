@@ -70,19 +70,19 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	p.src.CleanTemp()
+	//p.src.CleanTemp()
 
 	p.thm, err = fstore.OpenFStore(*cfg.ThmCfg)
 	if err != nil {
 		return nil, err
 	}
-	p.thm.CleanTemp()
+	//p.thm.CleanTemp()
 
 	p.nntpfs, err = fstore.OpenFStore(*cfg.NNTPFSCfg)
 	if err != nil {
 		return nil, err
 	}
-	p.nntpfs.RemoveDir(nntpIncomingTempDir)
+	//p.nntpfs.RemoveDir(nntpIncomingTempDir)
 	p.nntpfs.MakeDir(nntpIncomingDir)
 	p.nntpfs.MakeDir(nntpScraperDir)
 
