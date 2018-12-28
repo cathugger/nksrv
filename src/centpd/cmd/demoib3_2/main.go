@@ -56,45 +56,16 @@ func main() {
 	psqlcfg.Logger = lgr
 	psqlcfg.ConnStr = *dbconnstr
 
-	db, err := psql.OpenPSQL(psqlcfg)
+	db, err := psql.OpenAndPrepare(psqlcfg)
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
+		mlg.LogPrintln(logx.CRITICAL, "psql.OpenAndPrepare error:", err)
 		return
 	}
 	defer db.Close()
 
-	valid, err := db.IsValidDB()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
-		return
-	}
-	// if not valid, try to create
-	if !valid {
-		mlg.LogPrint(logx.NOTICE, "uninitialized PSQL db, attempting to initialize")
-
-		db.InitDB()
-
-		// revalidate
-		valid, err = db.IsValidDB()
-		if err != nil {
-			mlg.LogPrintln(logx.CRITICAL, "second psql.OpenPSQL error:", err)
-			return
-		}
-		if !valid {
-			mlg.LogPrintln(logx.CRITICAL, "psql.IsValidDB failed second validation")
-			return
-		}
-	}
-
-	err = db.CheckVersion()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.CheckVersion: ", err)
-		return
-	}
-
 	altthm := altthumber.AltThumber(di.DemoAltThumber{})
 
-	dbib, err := psqlib.NewPSQLIB(psqlib.Config{
+	dbib, err := psqlib.NewInitAndPrepare(psqlib.Config{
 		DB:         &db,
 		Logger:     &lgr,
 		SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
@@ -103,29 +74,8 @@ func main() {
 		AltThumber: &altthm,
 	})
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewPSQLIB error:", err)
+		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return
-	}
-
-	valid, err = dbib.CheckIb0()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0:", err)
-		return
-	}
-	if !valid {
-		mlg.LogPrint(logx.NOTICE, "uninitialized PSQLIB db, attempting to initialize")
-
-		dbib.InitIb0()
-
-		valid, err = dbib.CheckIb0()
-		if err != nil {
-			mlg.LogPrintln(logx.CRITICAL, "second psqlib.CheckIb0:", err)
-			return
-		}
-		if !valid {
-			mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0 failed second validation")
-			return
-		}
 	}
 
 	rend, err := rt.NewTmplRenderer(dbib, rt.TmplRendererCfg{

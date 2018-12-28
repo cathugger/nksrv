@@ -4,6 +4,7 @@ package psql
 // can be used by more concrete forum packages
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -68,4 +69,48 @@ func (p PSQL) Close() error {
 
 func (p PSQL) ID() string {
 	return p.id
+}
+
+func OpenAndPrepare(cfg Config) (db PSQL, err error) {
+	db, err = OpenPSQL(cfg)
+	if err != nil {
+		err = fmt.Errorf("error opening: %v", err)
+		return
+	}
+	defer func() {
+		if err != nil {
+			db.Close()
+		}
+	}()
+
+	valid, err := db.IsValidDB()
+	if err != nil {
+		err = fmt.Errorf("error validating: %v", err)
+		return
+	}
+	// if not valid, try to create
+	if !valid {
+		db.log.LogPrint(NOTICE, "uninitialized PSQL db, attempting to initialize")
+
+		db.InitDB()
+
+		// revalidate
+		valid, err = db.IsValidDB()
+		if err != nil {
+			err = fmt.Errorf("error validating (2): %v", err)
+			return
+		}
+		if !valid {
+			err = errors.New("database still not valid after initialization")
+			return
+		}
+	}
+
+	err = db.CheckVersion()
+	if err != nil {
+		err = fmt.Errorf("version check fail: %v", err)
+		return
+	}
+
+	return
 }

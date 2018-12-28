@@ -4,6 +4,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -65,11 +66,6 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.db = *cfg.DB
 
-	err = p.prepareStatements()
-	if err != nil {
-		return
-	}
-
 	p.src, err = fstore.OpenFStore(*cfg.SrcCfg)
 	if err != nil {
 		return nil, err
@@ -107,6 +103,60 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.ntStmts = make(map[int]*sql.Stmt)
 	p.npStmts = make(map[npTuple]*sql.Stmt)
+
+	return
+}
+
+func (sp *PSQLIB) Prepare() (err error) {
+	err = sp.prepareStatements()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (dbib *PSQLIB) InitAndPrepare() (err error) {
+	valid, err := dbib.CheckIb0()
+	if err != nil {
+		err = fmt.Errorf("error checking: %v", err)
+		return
+	}
+	if !valid {
+		dbib.log.LogPrint(NOTICE,
+			"uninitialized PSQLIB db, attempting to initialize")
+
+		dbib.InitIb0()
+
+		valid, err = dbib.CheckIb0()
+		if err != nil {
+			err = fmt.Errorf("error checking (2): %v", err)
+			return
+		}
+		if !valid {
+			err = errors.New("database still not valid after initialization")
+			return
+		}
+	}
+
+	err = dbib.Prepare()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func NewInitAndPrepare(cfg Config) (db *PSQLIB, err error) {
+	db, err = NewPSQLIB(cfg)
+	if err != nil {
+		return
+	}
+
+	err = db.InitAndPrepare()
+	if err != nil {
+		return
+	}
 
 	return
 }

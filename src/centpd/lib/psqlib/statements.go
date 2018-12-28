@@ -106,6 +106,9 @@ var st_names = [st_max]st_reference{
 }
 
 func loadStatements() {
+	if st_listx[0] != "" {
+		panic("already loaded")
+	}
 	bm := make(map[string]sqlbucket.Bucket)
 	for i := range st_names {
 		sn := st_names[i]
@@ -132,6 +135,9 @@ func loadStatements() {
 var st_once sync.Once
 
 func (sp *PSQLIB) prepareStatements() (err error) {
+	if sp.st_prep[0] != nil {
+		panic("already prepared")
+	}
 	for i := range st_listx {
 		sp.st_prep[i], err = sp.db.DB.Prepare(st_listx[i])
 		if err != nil {

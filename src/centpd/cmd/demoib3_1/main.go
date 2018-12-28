@@ -49,52 +49,20 @@ func main() {
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
 	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
 
-	db, err := psql.OpenPSQL(psql.Config{
-		Logger:  lgr,
-		ConnStr: *dbconnstr,
-	})
+	psqlcfg := psql.DefaultConfig
+	psqlcfg.Logger = lgr
+	psqlcfg.ConnStr = *dbconnstr
+
+	db, err := psql.OpenAndPrepare(psqlcfg)
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
-		os.Exit(1)
+		mlg.LogPrintln(logx.CRITICAL, "psql.OpenAndPrepare error:", err)
+		return
 	}
 	defer db.Close()
 
-	valid, err := db.IsValidDB()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.OpenPSQL error:", err)
-		errorcode = 1
-		runtime.Goexit()
-	}
-	// if not valid, try to create
-	if !valid {
-		mlg.LogPrint(logx.NOTICE, "uninitialized PSQL db, attempting to initialize")
-
-		db.InitDB()
-
-		// revalidate
-		valid, err = db.IsValidDB()
-		if err != nil {
-			mlg.LogPrintln(logx.CRITICAL, "second psql.OpenPSQL error:", err)
-			errorcode = 1
-			runtime.Goexit()
-		}
-		if !valid {
-			mlg.LogPrintln(logx.CRITICAL, "psql.IsValidDB failed second validation")
-			errorcode = 1
-			runtime.Goexit()
-		}
-	}
-
-	err = db.CheckVersion()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psql.CheckVersion: ", err)
-		errorcode = 1
-		runtime.Goexit()
-	}
-
 	altthm := altthumber.AltThumber(di.DemoAltThumber{})
 
-	dbib, err := psqlib.NewPSQLIB(psqlib.Config{
+	dbib, err := psqlib.NewInitAndPrepare(psqlib.Config{
 		DB:         &db,
 		Logger:     &lgr,
 		SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
@@ -103,33 +71,9 @@ func main() {
 		AltThumber: &altthm,
 	})
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewPSQLIB error:", err)
+		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		errorcode = 1
 		runtime.Goexit()
-	}
-
-	valid, err = dbib.CheckIb0()
-	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0:", err)
-		errorcode = 1
-		runtime.Goexit()
-	}
-	if !valid {
-		mlg.LogPrint(logx.NOTICE, "uninitialized PSQLIB db, attempting to initialize")
-
-		dbib.InitIb0()
-
-		valid, err = dbib.CheckIb0()
-		if err != nil {
-			mlg.LogPrintln(logx.CRITICAL, "second psqlib.CheckIb0:", err)
-			errorcode = 1
-			runtime.Goexit()
-		}
-		if !valid {
-			mlg.LogPrintln(logx.CRITICAL, "psqlib.CheckIb0 failed second validation")
-			errorcode = 1
-			runtime.Goexit()
-		}
 	}
 
 	rend, err := rj.NewJSONRenderer(dbib, rj.Config{Indent: "  "})
