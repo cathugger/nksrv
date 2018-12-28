@@ -19,8 +19,7 @@ import (
 func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	var err error
 
-	q := st_list[st_Web_listboards]
-	rows, err := sp.db.DB.Query(q)
+	rows, err := sp.st_prep[st_Web_listboards].Query()
 	if err != nil {
 		return sp.sqlError("boards query", err), http.StatusInternalServerError
 	}
@@ -66,9 +65,7 @@ func (sp *PSQLIB) ensureThumb(
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	board string, num uint32) (error, int) {
 
-	q := st_list[st_Web_thread_list_page]
-
-	rows, err := sp.db.DB.Query(q, board, num)
+	rows, err := sp.st_prep[st_Web_thread_list_page].Query(board, num)
 	if err != nil {
 		return sp.sqlError("Web_thread_list_page query", err),
 			http.StatusInternalServerError
@@ -292,9 +289,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 func (sp *PSQLIB) IBGetThreadCatalog(
 	page *ib0.IBThreadCatalog, board string) (error, int) {
 
-	q := st_list[st_Web_thread_catalog]
-
-	rows, err := sp.db.DB.Query(q, board)
+	rows, err := sp.st_prep[st_Web_thread_catalog].Query(board)
 	if err != nil {
 		return sp.sqlError("Web_catalog query", err),
 			http.StatusInternalServerError
@@ -422,9 +417,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	board string, threadid string) (error, int) {
 
-	q := st_list[st_Web_thread]
-
-	rows, err := sp.db.DB.Query(q, board, threadid)
+	rows, err := sp.st_prep[st_Web_thread].Query(board, threadid)
 	if err != nil {
 		return sp.sqlError("Web_thread query", err),
 			http.StatusInternalServerError

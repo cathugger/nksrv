@@ -94,10 +94,8 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(
 	var bpid postID
 	var gpid postID
 
-	q := st_list[st_NNTP_articleNumByMsgID]
-
-	err := sp.db.DB.
-		QueryRow(q, string(msgid), cbid).
+	err := sp.st_prep[st_NNTP_articleNumByMsgID].
+		QueryRow(string(msgid), cbid).
 		Scan(&bid, &bpid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -122,10 +120,8 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 	var msgid CoreMsgIDStr
 	var gpid postID
 
-	q := st_list[st_NNTP_articleMsgIDByNum]
-
-	err := sp.db.DB.
-		QueryRow(q, gs.bid, num).
+	err := sp.st_prep[st_NNTP_articleMsgIDByNum].
+		QueryRow(gs.bid, num).
 		Scan(&msgid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -153,10 +149,8 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	var msgid CoreMsgIDStr
 	var gpid postID
 
-	q := st_list[st_NNTP_articleMsgIDByNum]
-
-	err := sp.db.DB.
-		QueryRow(q, gs.bid, gs.bpid).
+	err := sp.st_prep[st_NNTP_articleMsgIDByNum].
+		QueryRow(gs.bid, gs.bpid).
 		Scan(&msgid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {

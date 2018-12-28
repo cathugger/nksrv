@@ -53,7 +53,7 @@ const (
 	st_max
 )
 
-var st_list [st_max]string
+var st_listx [st_max]string
 var st_loaderr error
 
 type st_reference struct {
@@ -125,21 +125,19 @@ func loadStatements() {
 				"wrong count %d for statement %s", len(sl), sn)
 			return
 		}
-		st_list[i] = sl[0] + "\n"
+		st_listx[i] = sl[0] + "\n"
 	}
 }
 
 var st_once sync.Once
 
-func (sp *PSQLIB) checkPrepareStatements() error {
-	for i := range st_list {
-		pst, err := sp.db.DB.Prepare(st_list[i])
+func (sp *PSQLIB) prepareStatements() (err error) {
+	for i := range st_listx {
+		sp.st_prep[i], err = sp.db.DB.Prepare(st_listx[i])
 		if err != nil {
 			return fmt.Errorf("error preparing %d %q statement: %v",
 				i, st_names[i].Name, err)
 		}
-		// TODO store somewhere and use later
-		pst.Close()
 	}
-	return nil
+	return
 }

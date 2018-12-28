@@ -199,10 +199,8 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 	var cnt uint64
 	var lo, hi, g_lo sql.NullInt64
 
-	q := st_list[st_NNTP_SelectGroup]
-
-	err := sp.db.DB.
-		QueryRow(q, sgroup).
+	err := sp.st_prep[st_NNTP_SelectGroup].
+		QueryRow(sgroup).
 		Scan(&bid, &cnt, &lo, &hi, &g_lo)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -259,9 +257,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 		sgroup = gs.bname
 	}
 
-	q := st_list[st_NNTP_SelectAndListGroup]
-
-	rows, err := sp.db.DB.Query(q, sgroup, rmin, rmax)
+	rows, err := sp.st_prep[st_NNTP_SelectAndListGroup].
+		Query(sgroup, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("board-posts query", err))
 		return true
@@ -343,9 +340,8 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	var ngpid postID
 	var msgid CoreMsgIDStr
 
-	q := st_list[st_NNTP_SelectNextArticle]
-	err := sp.db.DB.
-		QueryRow(q, gs.bid, gs.bpid).
+	err := sp.st_prep[st_NNTP_SelectNextArticle].
+		QueryRow(gs.bid, gs.bpid).
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -376,9 +372,8 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	var ngpid postID
 	var msgid CoreMsgIDStr
 
-	q := st_list[st_NNTP_SelectPrevArticle]
-	err := sp.db.DB.
-		QueryRow(q, gs.bid, gs.bpid).
+	err := sp.st_prep[st_NNTP_SelectPrevArticle].
+		QueryRow(gs.bid, gs.bpid).
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -412,11 +407,9 @@ func (sp *PSQLIB) ListNewNews(
 
 	if wmany || wmgrp {
 		if wmany {
-			q := st_list[st_NNTP_ListNewNews_all]
-			rows, err = sp.db.DB.Query(q, qt)
+			rows, err = sp.st_prep[st_NNTP_ListNewNews_all].Query(qt)
 		} else {
-			q := st_list[st_NNTP_ListNewNews_one]
-			rows, err = sp.db.DB.Query(q, qt, swildmat)
+			rows, err = sp.st_prep[st_NNTP_ListNewNews_one].Query(qt, swildmat)
 		}
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
@@ -442,8 +435,7 @@ func (sp *PSQLIB) ListNewNews(
 		// that would be a little complicated, though
 		wm := nntp.CompileWildmat(wildmat)
 
-		q := st_list[st_NNTP_ListNewNews_all_group]
-		rows, err = sp.db.DB.Query(q, qt)
+		rows, err = sp.st_prep[st_NNTP_ListNewNews_all_group].Query(qt)
 		if err != nil {
 			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
 			return
@@ -489,8 +481,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	// name hiwm lowm status
 	// for now lets use status of "y"
 	// TODO put something else in status when needed
-	q := st_list[st_NNTP_ListNewGroups]
-	rows, err := sp.db.DB.Query(q, qt)
+	rows, err := sp.st_prep[st_NNTP_ListNewGroups].Query(qt)
 	if err != nil {
 		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
 		return
@@ -543,11 +534,9 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	}
 
 	if !wmgrp {
-		q := st_list[st_NNTP_ListActiveGroups_all]
-		rows, err = sp.db.DB.Query(q)
+		rows, err = sp.st_prep[st_NNTP_ListActiveGroups_all].Query()
 	} else {
-		q := st_list[st_NNTP_ListActiveGroups_one]
-		rows, err = sp.db.DB.Query(q, wildmat)
+		rows, err = sp.st_prep[st_NNTP_ListActiveGroups_one].Query(wildmat)
 	}
 	if err != nil {
 		aw.GetResponder().ResInternalError(sp.sqlError("list active query", err))
@@ -708,9 +697,8 @@ func (sp *PSQLIB) GetOverByMsgID(
 		hsubject, hfrom, hdate, hrefs sql.NullString
 	)
 
-	q := st_list[st_NNTP_GetOverByMsgID]
-	err := sp.db.DB.
-		QueryRow(q, smsgid).
+	err := sp.st_prep[st_NNTP_GetOverByMsgID].
+		QueryRow(smsgid).
 		Scan(
 			pq.Array(&bids),
 			pq.Array(&bpids),
@@ -751,8 +739,8 @@ func (sp *PSQLIB) GetOverByRange(
 
 	var dw io.WriteCloser
 
-	q := st_list[st_NNTP_GetOverByRange]
-	rows, err := sp.db.DB.Query(q, gs.bid, rmin, rmax)
+	rows, err := sp.st_prep[st_NNTP_GetOverByRange].
+		Query(gs.bid, rmin, rmax)
 	if err != nil {
 		w.ResInternalError(sp.sqlError("overview query", err))
 		return true
@@ -847,9 +835,8 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		hsubject, hfrom, hdate, hrefs sql.NullString
 	)
 
-	q := st_list[st_NNTP_GetOverByCurr]
-	err := sp.db.DB.
-		QueryRow(q, gs.gpid).
+	err := sp.st_prep[st_NNTP_GetOverByCurr].
+		QueryRow(gs.gpid).
 		Scan(
 			pq.Array(&bids),
 			pq.Array(&bpids),
@@ -911,10 +898,8 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 	if shdr == "Message-ID" {
 
-		q := st_list[st_NNTP_GetHdrByMsgID_msgid]
-
-		err = sp.db.DB.
-			QueryRow(q, msgid, cbid).
+		err = sp.st_prep[st_NNTP_GetHdrByMsgID_msgid].
+			QueryRow(msgid, cbid).
 			Scan(&bid, &bpid)
 		if err == nil {
 			h.String = fmt.Sprintf("<%s>", sid)
@@ -922,11 +907,10 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 	} else if shdr == "Subject" {
 
-		q := st_list[st_NNTP_GetHdrByMsgID_subject]
-
 		var title string
-		err = sp.db.DB.
-			QueryRow(q, msgid, cbid).
+
+		err = sp.st_prep[st_NNTP_GetHdrByMsgID_subject].
+			QueryRow(msgid, cbid).
 			Scan(&bid, &bpid, &title, &h)
 		if err == nil && !h.Valid {
 			h.String = title
@@ -942,10 +926,8 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		return true
 	} else {
 
-		q := st_list[st_NNTP_GetHdrByMsgID_any]
-
-		err = sp.db.DB.
-			QueryRow(q, msgid, cbid, shdr).
+		err = sp.st_prep[st_NNTP_GetHdrByMsgID_any].
+			QueryRow(msgid, cbid, shdr).
 			Scan(&bid, &bpid, &h)
 
 	}
@@ -992,17 +974,13 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	if shdr == "Message-ID" {
 
-		q := st_list[st_NNTP_GetHdrByRange_msgid]
-
-		rows, err = sp.db.DB.
-			Query(q, gs.bid, rmin, rmax)
+		rows, err = sp.st_prep[st_NNTP_GetHdrByRange_msgid].
+			Query(gs.bid, rmin, rmax)
 
 	} else if shdr == "Subject" {
 
-		q := st_list[st_NNTP_GetHdrByRange_subject]
-
-		rows, err = sp.db.DB.
-			Query(q, gs.bid, rmin, rmax)
+		rows, err = sp.st_prep[st_NNTP_GetHdrByRange_subject].
+			Query(gs.bid, rmin, rmax)
 
 		rowsscan = func(r *sql.Rows, pid *postID, h *sql.NullString) error {
 			var title string
@@ -1023,10 +1001,8 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		return true
 	} else {
 
-		q := st_list[st_NNTP_GetHdrByRange_any]
-
-		rows, err = sp.db.DB.
-			Query(q, gs.bid, rmin, rmax, shdr)
+		rows, err = sp.st_prep[st_NNTP_GetHdrByRange_any].
+			Query(gs.bid, rmin, rmax, shdr)
 
 	}
 	if err != nil {
@@ -1105,15 +1081,11 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	if shdr == "Message-ID" {
 
-		q := st_list[st_NNTP_GetHdrByCurr_msgid]
-
-		row = sp.db.DB.QueryRow(q, gs.gpid)
+		row = sp.st_prep[st_NNTP_GetHdrByCurr_msgid].QueryRow(gs.gpid)
 
 	} else if shdr == "Subject" {
 
-		q := st_list[st_NNTP_GetHdrByCurr_subject]
-
-		row = sp.db.DB.QueryRow(q, gs.gpid)
+		row = sp.st_prep[st_NNTP_GetHdrByCurr_subject].QueryRow(gs.gpid)
 
 		rowscan = func(r *sql.Row, h *sql.NullString) error {
 			var title string
@@ -1134,9 +1106,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		return true
 	} else {
 
-		q := st_list[st_NNTP_GetHdrByCurr_any]
-
-		row = sp.db.DB.QueryRow(q, gs.gpid, shdr)
+		row = sp.st_prep[st_NNTP_GetHdrByCurr_any].QueryRow(gs.gpid, shdr)
 
 	}
 	err = rowscan(row, &h)

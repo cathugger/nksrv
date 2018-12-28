@@ -28,6 +28,8 @@ type PSQLIB struct {
 	maxArticleBodySize   int64
 	autoAddNNTPPostGroup bool
 
+	st_prep [st_max]*sql.Stmt
+
 	// newthread prepared statements and locking
 	ntStmts map[int]*sql.Stmt
 	ntMutex sync.RWMutex
@@ -63,7 +65,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.db = *cfg.DB
 
-	err = p.checkPrepareStatements()
+	err = p.prepareStatements()
 	if err != nil {
 		return
 	}
