@@ -67,8 +67,9 @@ func main() {
 		const drvstr = "instrumented-postgres"
 		sql.Register(drvstr,
 			instrumentedsql.WrapDriver(&pq.Driver{},
+				/*instrumentedsql.WithTraceRowsNext(),*/
 				instrumentedsql.WithLogger(logger),
-				instrumentedsql.WithTraceRowsNext()))
+				instrumentedsql.WithNoTraceRowsNext()))
 		sqlconf.ConnDriver = drvstr
 	}
 

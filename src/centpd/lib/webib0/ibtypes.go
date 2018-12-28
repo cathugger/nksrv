@@ -108,10 +108,18 @@ type IBThreadListPage struct {
 	HasBackRefs bool                     `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
 
+type IBThreadStats struct {
+	NumReplies int64  `json:"reply_count"` // not counting OP
+	NumFiles   int64  `json:"file_count"`  // including OP
+	PageNum    uint32 `json:"page_num"`    // starting from 0
+}
+
 type IBThreadPage struct {
-	Board IBBoardInfo `json:"board"` // info about this board
+	Board       IBBoardInfo   `json:"board"`              // info about this board
+	HasBackRefs bool          `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
+	ThreadStats IBThreadStats `json:"stats"`
+
 	IBCommonThread
-	HasBackRefs bool `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
 
 type IBThreadCatalogThread struct {
