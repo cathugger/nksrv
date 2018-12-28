@@ -68,6 +68,10 @@ html {
 	font-weight: bold;
 }
 
+.trunc {
+	background-color: #CCEEBB;
+}
+
 /*
  * by default don't display and activate only if browser supports
  * capability this button uses for its actions
