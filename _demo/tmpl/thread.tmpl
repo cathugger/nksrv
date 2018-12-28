@@ -9,6 +9,8 @@
   <hr />
   {{- template "_boardinfo" $ -}}
   <hr />
+  {{template "_thread_nav" list $ 0}}
+  <hr />
 
   {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
 
@@ -17,6 +19,8 @@
   {{- end}}
   <div style="clear:both"></div>
 
+  <hr />
+  {{template "_thread_nav" list $ 1}}
   <hr />
 
   <p><h1>New reply</h1></p>

@@ -1,29 +1,45 @@
 <!DOCTYPE html>
 <html>
-<head>
-<title>/{{html $.D.Board.Name}}/ - {{html $.D.Board.Description}} - Catalog</title>
-<link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
-</head>
-<body>
-<!-- xxx: node name? board list? -->
-<hr />
-{{- template "_boardinfo" $ -}}
-<hr />
-{{- range $.D.Threads}}
-<div class="cat_div">
-<a href="thread/{{urlpath .ID}}">
-{{if .Thumb.ID -}}
-<img src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
-{{else -}}
-<img src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
-{{end -}}
-</a>
-<br />
-R: {{.TotalReplies}} I: {{.TotalFiles}}<br />
-{{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{fmtmsgcat $.R $.N .}}
-</div>
-{{- end}}
-<div style="clear: both;"></div>
-<hr />
-</body>
+
+ <head>
+  <title>/{{html $.D.Board.Name}}/{{if $.D.Board.Description}} - {{html $.D.Board.Description}}{{end}} - Catalog</title>
+  <link rel="stylesheet" type="text/css" href="{{$.N.Root}}/_static/style.css" />
+ </head>
+
+ <body>
+  <!-- xxx: node name? board list? -->
+  <hr />
+
+  {{- template "_boardinfo" $ -}}
+
+  <hr />
+
+  {{template "_thread_catalog_nav" list $ 0}}
+
+  <hr />
+
+  {{- range $.D.Threads}}
+   <div class="cat_div">
+    <a href="thread/{{urlpath .ID}}">
+     {{if .Thumb.ID -}}
+      <img src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
+     {{else -}}
+      <img src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
+     {{end -}}
+    </a>
+    <br />
+    R: {{.TotalReplies}} I: {{.TotalFiles}}<br />
+    {{if .Subject}}<b>{{html .Subject}}{{if .Message}}: {{end}}</b>{{end}}{{fmtmsgcat $.R $.N .}}
+   </div>
+  {{- end}}
+
+  <div style="clear: both;"></div>
+
+  <hr />
+
+  {{template "_thread_catalog_nav" list $ 1}}
+
+  <hr />
+
+ </body>
 </html>
