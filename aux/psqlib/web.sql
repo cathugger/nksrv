@@ -266,6 +266,7 @@ LEFT JOIN
 		FROM
 			(
 				SELECT
+					b_id,
 					t_id,
 					row_number() OVER (
 						ORDER BY
@@ -273,10 +274,12 @@ LEFT JOIN
 							t_id ASC
 					) AS t_pos
 				FROM
-					ib0.threads
+					ib0.threads qt
+				WHERE
+					qt.b_id = xt.b_id
 			) AS zt
 		WHERE
-			xt.t_id = zt.t_id
+			xt.b_id = zt.b_id AND xt.t_id = zt.t_id
 		LIMIT
 			1
 	) AS xto
