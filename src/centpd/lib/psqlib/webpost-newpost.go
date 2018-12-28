@@ -47,7 +47,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ib0.posts (
 				pdate, padded, -- 1
 				sage,          -- 2
-				f_count        -- 3
+				f_count,       -- 3
 				msgid,         -- 4
 				title,         -- 5
 				author,        -- 6
@@ -131,13 +131,13 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				WHERE
 					sage != TRUE
 				ORDER BY
-					pdate DESC,pid DESC
+					pdate DESC,b_p_id DESC
 				LIMIT
 					1
 				-- and pick latest one
 			) as xbump
 		WHERE
-			bid = $11 AND tid = $12
+			b_id = $11 AND t_id = $12
 	),`
 		b.WriteString(st_bump)
 	} else {
@@ -149,7 +149,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1,
 			f_count = f_count + $3
 		WHERE
-			bid = $11 AND tid = $12
+			b_id = $11 AND t_id = $12
 	),
 	utx AS (
 		SELECT
@@ -167,7 +167,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				b_id,
 				t_id,
 				b_p_id,
-				pname,
+				p_name,
 				g_p_id,
 				pdate,
 				padded,

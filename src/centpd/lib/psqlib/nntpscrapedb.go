@@ -109,19 +109,19 @@ func (s *ScraperDB) GetGroupID(group []byte) (int64, error) {
 	for {
 		q := `WITH
 	sg AS (
-		SELECT bid FROM ib0.boards WHERE bname = $2 LIMIT 1
+		SELECT b_id FROM ib0.boards WHERE b_name = $2 LIMIT 1
 	),
 	st AS (
 		SELECT xt.bid AS bid, xt.last_max AS last_max
 		FROM ib0.scraper_group_track xt
 		JOIN sg
-		ON sg.bid = xt.bid
+		ON sg.b_id = xt.bid
 		WHERE xt.sid = $1
 	)
-SELECT sg.bid,st.last_max
+SELECT sg.b_id,st.last_max
 FROM sg
 LEFT JOIN st
-ON sg.bid = st.bid`
+ON sg.b_id = st.bid`
 		var bid boardID
 		var lid sql.NullInt64
 
@@ -161,12 +161,12 @@ func (s *ScraperDB) UpdateGroupID(group string, id uint64) error {
 		q = `UPDATE ib0.scraper_group_track AS st
 SET last_max = $3
 FROM ib0.boards AS xb
-WHERE st.sid=$1 AND xb.bname=$2 AND st.bid=xb.bid`
+WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
 		es = "scraper_group_track update query execution"
 	} else {
 		q = `DELETE FROM ib0.scraper_group_track AS st
 USING ib0.boards xb
-WHERE st.sid=$1 AND xb.bname=$2 AND st.bid=xb.bid`
+WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
 		es = "scraper_group_track clear query execution"
 	}
 	_, e := s.sp.db.DB.Exec(q, s.id, group, id)
@@ -202,9 +202,9 @@ func (s *ScraperDB) StoreTempGroupID(
 	group []byte, new_id uint64, old_id uint64) error {
 
 	q := `INSERT INTO ib0.scraper_group_track AS sgt (sid,bid,last_use,last_max,next_max)
-SELECT $1 AS sid, bid, $3, 0, $4
+SELECT $1 AS sid, b_id AS bid, $3, 0, $4
 FROM ib0.boards xb
-WHERE bname=$2
+WHERE b_name=$2
 ON CONFLICT (sid,bid)
 	DO UPDATE SET last_use=$3, next_max=$4
 	WHERE sgt.sid=EXCLUDED.sid AND sgt.bid=EXCLUDED.bid`
@@ -217,9 +217,9 @@ ON CONFLICT (sid,bid)
 }
 func (s *ScraperDB) StoreTempGroup(group []byte, old_id uint64) error {
 	q := `INSERT INTO ib0.scraper_group_track AS sgt (sid,bid,last_use,last_max,next_max)
-SELECT $1 AS sid, bid, $3, 0, -1
+SELECT $1 AS sid, b_id AS bid, $3, 0, -1
 FROM ib0.boards xb
-WHERE bname=$2
+WHERE b_name=$2
 ON CONFLICT (sid,bid)
 	DO UPDATE SET last_use=$3, next_max=-1
 	WHERE sgt.sid=EXCLUDED.sid AND sgt.bid=EXCLUDED.bid`
@@ -234,12 +234,12 @@ func (s *ScraperDB) LoadTempGroup() (
 	group string, new_id int64, old_id uint64, err error) {
 
 	if s.temp_rows == nil {
-		q := `SELECT xb.bname,xs.next_max,xs.last_max
+		q := `SELECT xb.b_name,xs.next_max,xs.last_max
 FROM ib0.scraper_group_track xs
 JOIN ib0.boards xb
-ON xs.bid = xb.bid
+ON xs.bid = xb.b_id
 WHERE xs.sid=$1 AND xs.last_use=$2
-ORDER BY xb.bname`
+ORDER BY xb.b_name`
 		s.temp_rows, err = s.sp.db.DB.Query(q, s.id, s.nonce)
 		if err != nil {
 			s.temp_rows = nil

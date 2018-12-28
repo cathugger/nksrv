@@ -87,8 +87,8 @@ type IBCommonThread struct {
 
 // thread in thread list page
 type IBThreadListPageThread struct {
-	SkippedReplies int64 `json:"skipreplies"` // number of replies not included
-	SkippedFiles   int64 `json:"skipfiles"`   // number of attachments not included
+	SkippedReplies int64 `json:"skipreplies,omitempty"` // number of replies not included
+	SkippedFiles   int64 `json:"skipfiles,omitempty"`   // number of attachments not included
 
 	IBCommonThread
 }
@@ -115,13 +115,13 @@ type IBThreadPage struct {
 }
 
 type IBThreadCatalogThread struct {
-	ID               string      `json:"id"`       // thread ID
-	Thumb            IBThumbInfo `json:"thumb"`    // thumbnail
-	TotalReplies     uint32      `json:"nreplies"` // number of replies
-	TotalAttachments uint32      `json:"nfiles"`   // number of attachments
-	BumpDate         int64       `json:"bdate"`    // bump date
-	Subject          string      `json:"subject"`  // subject
-	Message          IBMessage   `json:"msg"`      // message
+	ID           string      `json:"id"`       // thread ID
+	Thumb        IBThumbInfo `json:"thumb"`    // thumbnail
+	TotalReplies int64       `json:"nreplies"` // number of replies
+	TotalFiles   int64       `json:"nfiles"`   // number of attachments
+	BumpDate     int64       `json:"bdate"`    // bump date
+	Subject      string      `json:"subject"`  // subject
+	Message      IBMessage   `json:"msg"`      // message
 }
 
 type IBThreadCatalog struct {

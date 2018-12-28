@@ -62,10 +62,15 @@ func eatMessagePost(
 	return
 }
 
+func httpErrorBadRequest(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "bad request", http.StatusBadRequest)
+}
+
 func NewAPIRouter(cfg Cfg) http.Handler {
 	h_root := handler.NewCleanPath()
 
 	h := handler.NewSimplePath()
+	h.Fallback(http.HandlerFunc(httpErrorBadRequest))
 	h_root.Handle(h)
 
 	if cfg.Renderer == nil {
@@ -73,6 +78,8 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h_bcontent := handler.NewRegexPath()
+	h_bcontent.Fallback(http.HandlerFunc(httpErrorBadRequest))
+
 	h_bcontent.Handle("/pages/{{n:[0-9]+}}", false,
 		handler.NewMethod().Handle("GET", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +146,8 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h_boards := handler.NewRegexPath()
+	h_boards.Fallback(http.HandlerFunc(httpErrorBadRequest))
+
 	h_boardsroot := handler.NewMethod().
 		Handle("GET", http.HandlerFunc(cfg.Renderer.ServeBoardList))
 
@@ -266,10 +275,6 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				w.Write([]byte(tok))
 			}))
 	}
-
-	h.Fallback(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "bad request", http.StatusBadRequest)
-	}))
 
 	return h_root
 }

@@ -7,6 +7,7 @@ ORDER BY
 	b_name
 
 -- :name web_thread_list_page
+-- input: {b_name} {page num}
 SELECT
 	xb.b_id,
 	xb.bdesc,
@@ -154,6 +155,121 @@ ON
 ORDER BY
 	xt.bump DESC,
 	xt.t_id ASC,
+	xbp.pdate ASC,
+	xbp.b_p_id ASC,
+	xf.f_id ASC
+
+-- :name web_thread_catalog
+-- input: {b_name}
+SELECT
+	xb.b_id,
+	xb.bdesc,
+	xb.attrib,
+	xt.t_id,
+	xt.t_name,
+	xt.p_count,
+	xt.f_count AS xt_f_count,
+	xt.bump,
+	xbp.b_p_id,
+	xp.pdate,
+	xp.f_count AS xp_f_count,
+	xp.author,
+	xp.trip,
+	xp.title,
+	xp.message,
+	xf.f_id,
+	xf.fname,
+	xf.ftype,
+	xf.thumb,
+	xf.thumbcfg
+FROM
+	ib0.boards AS xb
+LEFT JOIN
+	ib0.threads AS xt
+ON
+	xb.b_id = xt.b_id
+LEFT JOIN
+	ib0.bposts AS xbp
+ON
+	xt.b_id = xbp.b_id AND xt.t_id = xbp.b_p_id
+LEFT JOIN
+	ib0.posts AS xp
+ON
+	xbp.g_p_id = xp.g_p_id
+LEFT JOIN
+	LATERAL (
+		SELECT
+			zf.f_id,
+
+		FROM
+			ib0.files AS zf
+		WHERE
+			xp.g_p_id = zf.g_p_id
+		ORDER BY
+			xp.f_id
+		LIMIT
+			1
+	) AS xf
+ON
+	TRUE
+WHERE
+	xb.b_name = $1
+ORDER BY
+	xt.bump DESC,
+	xt.t_id ASC,
+	xf.f_id ASC
+
+-- :name web_thread
+-- input: {b_name} {t_name}
+SELECT
+	xb.b_id,
+	xb.bdesc,
+	xb.attrib,
+	xb.threads_per_page,
+	xb.t_count,
+	xt.t_id,
+	xt.t_name,
+	xt.p_count,
+	xt.f_count AS xt_f_count,
+	xbp.b_p_id,
+	xbp.p_name,
+	xp.pdate,
+	xp.sage,
+	xp.f_count AS xp_f_count,
+	xp.author,
+	xp.trip,
+	xp.title,
+	xp.message,
+	xp.attrib,
+	xf.f_id,
+	xf.fname,
+	xf.ftype,
+	xf.fsize,
+	xf.thumb,
+	xf.oname,
+	xf.filecfg,
+	xf.thumbcfg
+FROM
+	ib0.boards AS xb
+LEFT JOIN
+	ib0.threads AS xt
+ON
+	xb.b_id = xt.b_id
+LEFT JOIN
+	ib0.bposts AS xbp
+ON
+	xt.b_id = xbp.b_id AND xt.t_id = xbp.t_id
+LEFT JOIN
+	ib0.posts AS xp
+ON
+	xbp.g_p_id = xp.g_p_id
+LEFT JOIN
+	ib0.files AS xf
+ON
+	xp.g_p_id = xf.g_p_id
+WHERE
+	xb.b_name=$1 AND xt.t_name = $2
+ORDER BY
 	xbp.pdate ASC,
 	xbp.b_p_id ASC,
 	xf.f_id ASC

@@ -13,14 +13,14 @@ import (
 // digesters
 
 type Digest interface {
-	Hasher() Hasher
+	NewHasher() Hasher
 	WriteIdentifier(w io.Writer)
 }
 
 // BLAKE2s
 type DigestBLAKE2s struct{}
 
-func (DigestBLAKE2s) Hasher() (h Hasher) {
+func (DigestBLAKE2s) NewHasher() (h Hasher) {
 	h.h, _ = blake2s.New256(nil)
 	return
 }
@@ -36,14 +36,11 @@ type DigestBLAKE2b struct {
 	s uint32 // in bytes
 }
 
-func (d DigestBLAKE2b) Hasher() (h Hasher) {
-	switch d.s * 8 {
-	case 512:
-		h.h, _ = blake2b.New512(nil)
-	case 384:
-		h.h, _ = blake2b.New384(nil)
-	case 256:
-		h.h, _ = blake2b.New256(nil)
+func (d DigestBLAKE2b) NewHasher() (h Hasher) {
+	var e error
+	h.h, e = blake2b.New(d.s, nil)
+	if e != nil {
+		panic(e)
 	}
 	return
 }
@@ -58,7 +55,7 @@ func (d DigestBLAKE2b) WriteIdentifier(w io.Writer) {
 // 224
 type DigestSHA2_224 struct{}
 
-func (DigestSHA2_224) Hasher() Hasher {
+func (DigestSHA2_224) NewHasher() Hasher {
 	return Hasher{h: sha256.New224()}
 }
 
@@ -71,7 +68,7 @@ func (DigestSHA2_224) WriteIdentifier(w io.Writer) {
 // 256
 type DigestSHA2_256 struct{}
 
-func (DigestSHA2_256) Hasher() Hasher {
+func (DigestSHA2_256) NewHasher() Hasher {
 	return Hasher{h: sha256.New()}
 }
 
@@ -84,7 +81,7 @@ func (DigestSHA2_256) WriteIdentifier(w io.Writer) {
 // 384
 type DigestSHA2_384 struct{}
 
-func (DigestSHA2_384) Hasher() Hasher {
+func (DigestSHA2_384) NewHasher() Hasher {
 	return Hasher{h: sha512.New384()}
 }
 
@@ -99,7 +96,7 @@ type DigestSHA2_512 struct {
 	s uint32 // in bytes
 }
 
-func (d DigestSHA2_512) Hasher() (h Hasher) {
+func (d DigestSHA2_512) NewHasher() (h Hasher) {
 	switch d.s * 8 {
 	case 512:
 		h.h = sha512.New()
@@ -121,7 +118,7 @@ func (d DigestSHA2_512) WriteIdentifier(w io.Writer) {
 // 224
 type DigestSHA3_224 struct{}
 
-func (DigestSHA3_224) Hasher() Hasher {
+func (DigestSHA3_224) NewHasher() Hasher {
 	return Hasher{h: sha3wrap{sha3.New224().(keccakstate)}}
 }
 
@@ -134,7 +131,7 @@ func (DigestSHA3_224) WriteIdentifier(w io.Writer) {
 // 256
 type DigestSHA3_256 struct{}
 
-func (DigestSHA3_256) Hasher() Hasher {
+func (DigestSHA3_256) NewHasher() Hasher {
 	return Hasher{h: sha3wrap{sha3.New256().(keccakstate)}}
 }
 
@@ -147,7 +144,7 @@ func (DigestSHA3_256) WriteIdentifier(w io.Writer) {
 // 384
 type DigestSHA3_384 struct{}
 
-func (DigestSHA3_384) Hasher() Hasher {
+func (DigestSHA3_384) NewHasher() Hasher {
 	return Hasher{h: sha3wrap{sha3.New384().(keccakstate)}}
 }
 
@@ -160,7 +157,7 @@ func (DigestSHA3_384) WriteIdentifier(w io.Writer) {
 // 512
 type DigestSHA3_512 struct{}
 
-func (DigestSHA3_512) Hasher() Hasher {
+func (DigestSHA3_512) NewHasher() Hasher {
 	return Hasher{h: sha3wrap{sha3.New512().(keccakstate)}}
 }
 
@@ -175,7 +172,7 @@ type DigestSHAKE_128 struct {
 	s uint32 // in bytes
 }
 
-func (d DigestSHAKE_128) Hasher() Hasher {
+func (d DigestSHAKE_128) NewHasher() Hasher {
 	return Hasher{
 		h: shakewrap{
 			keccakstate: sha3.NewShake128().(keccakstate),
@@ -194,7 +191,7 @@ type DigestSHAKE_256 struct {
 	s uint32 // in bytes
 }
 
-func (d DigestSHAKE_256) Hasher() Hasher {
+func (d DigestSHAKE_256) NewHasher() Hasher {
 	return Hasher{
 		h: shakewrap{
 			keccakstate: sha3.NewShake256().(keccakstate),

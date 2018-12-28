@@ -60,7 +60,7 @@ CREATE TABLE ib0.threads (
 )
 -- :next
 CREATE INDEX
-	ON ib0.threads (b_id,bump DESC,t_id)
+	ON ib0.threads (b_id,bump DESC,t_id ASC)
 
 
 -- :next
@@ -110,7 +110,12 @@ CREATE TABLE ib0.bposts (
 )
 -- :next
 CREATE INDEX
-	ON ib0.bposts (b_id,t_id,pdate,b_p_id) -- in thread, for bump
+	ON ib0.bposts (
+		b_id,
+		t_id,
+		pdate ASC,
+		b_p_id ASC
+	) -- in thread, for bump
 -- :next
 CREATE INDEX
 	ON ib0.bposts (padded,g_p_id,b_id) -- for NEWNEWS
@@ -142,6 +147,7 @@ CREATE TABLE ib0.files (
 CREATE INDEX ON ib0.files (g_p_id)
 -- :next
 CREATE INDEX ON ib0.files (fname)
+
 
 
 -- :next

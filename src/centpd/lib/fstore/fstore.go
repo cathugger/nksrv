@@ -96,20 +96,28 @@ func (fs *FStore) CleanTemp() error {
 	return fs.RemoveDir(tmpDir)
 }
 
-func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {
-	fulldir := fs.root + dir
-
+func (fs *FStore) ensureDir(fulldir, dir string) (err error) {
 	fs.initMu.Lock()
+	defer fs.initMu.Unlock()
+
 	if _, inited := fs.initDirs[dir]; !inited {
-		//fmt.Fprintf(os.Stderr, "initdir: %q\n", fulldir)
 		err = os.MkdirAll(fulldir, 0700)
 		if err != nil {
-			fs.initMu.Unlock()
-			return nil, fmt.Errorf("error at os.MkdirAll: %v", err)
+			return fmt.Errorf("error at os.MkdirAll: %v", err)
 		}
 		fs.initDirs[dir] = struct{}{}
 	}
-	fs.initMu.Unlock()
+
+	return
+}
+
+func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {
+	fulldir := fs.root + dir
+
+	err = fs.ensureDir(fulldir, dir)
+	if err != nil {
+		return
+	}
 
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
