@@ -14,6 +14,12 @@ arguments list:
 <nav class="nav">
  <div class="nav">
   [<a href="../">Return</a>][<a href="../catalog">Catalog</a>][<a href="">Update</a>]
-  <div style="float: right;">beep</div>
+  <div style="float: right;">
+   {{- with $X.ThreadStats -}}
+    <span title="Replies">R: {{.NumReplies}}</span> /
+    <span title="Attachments">A: {{.NumFiles}}</span> /
+    <span title="Page">P: {{.PageNum}}</span>
+   {{- end -}}
+  </div>
  </div>
 </nav>
