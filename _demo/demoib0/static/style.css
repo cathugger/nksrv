@@ -5,9 +5,10 @@ html {
 .cat_div {
 	float: left;
 	text-align: center;
-	width: 132;
+	max-width: 160px;
 	background-color: #EEEEEE;
 	margin: 2px 2px 2px 2px;
+	border: 1px solid #EE6666;
 }
 
 .opinfo, .rinfo {
