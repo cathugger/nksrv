@@ -94,7 +94,8 @@ html {
 }
 
 .trunc {
-	background-color: #CCEEBB;
+	/* background-color: #CCEEBB; */
+	color: gray;
 }
 
 .thread_stats {
