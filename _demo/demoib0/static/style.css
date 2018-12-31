@@ -116,6 +116,10 @@ html {
 		display: block;
 		border: 0px;
 	}
+	.reply {
+		margin-left: 0px;
+		margin-right: 0px;
+	}
 }
 
 #message {
