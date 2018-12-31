@@ -48,7 +48,7 @@ html {
 .opimg, .rimg {
 	float: left;
 	/* background-color: #DDFFCC; */
-	margin: 2px 8px 2px 12px;
+	margin: 2px 8px 0px 12px;
 }
 
 .imginfo {
