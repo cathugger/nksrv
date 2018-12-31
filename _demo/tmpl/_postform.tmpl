@@ -24,35 +24,35 @@ args map:
  {{end -}}
 
  <table border="1" style="margin: 0 auto;">
-  <tr>
-   <th><label for="name">Name</label></th>
-   <td><input
+  <tr class="pf_row">
+   <th class="pf_label"><label for="name">Name</label></th>
+   <td class="pf_input"><input
     name="name"
     id="name"
     type="text"
     placeholder="Anonymous"
    /></td>
   </tr>
-  <tr>
-   <th><label for="title">Subject</label></th>
-   <td><input
+  <tr class="pf_row">
+   <th class="pf_label"><label for="title">Subject</label></th>
+   <td class="pf_input"><input
     name="title"
     id="title"
     type="text"
    /></td>
   </tr>
-  <tr>
-   <th><label for="message">Comment</label></th>
-   <td><textarea
+  <tr class="pf_row">
+   <th class="pf_label"><label for="message">Comment</label></th>
+   <td class="pf_input"><textarea
     name="message"
     id="message"
     rows="6"
     cols="45"
    ></textarea></td>
   </tr>
-  <tr>
-   <th><label for="file">File(s)</label></th>
-   <td>
+  <tr class="pf_row">
+   <th class="pf_label"><label for="file">File(s)</label></th>
+   <td class="pf_input">
     {{- range $i, $v := emptylist 5 -}}
      {{if ne $i 0 -}}
      <div class="morefiles">
@@ -80,9 +80,9 @@ args map:
     {{- end -}}
    </td>
   </tr>
-  <tr>
-   <th></th>
-   <td><div
+  <tr class="pf_row">
+   <th class="pf_label"></th>
+   <td class="pf_input"><div
     style="text-align: right"
    ><input
     type="submit"

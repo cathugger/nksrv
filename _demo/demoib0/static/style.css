@@ -103,6 +103,16 @@ html {
 	.thread_stats, .opimg, .rimg {
 		float: none;
 	}
+	.pf_row {
+	}
+	.pf_label {
+		display: block;
+		border: 0px;
+	}
+	.pf_input {
+		display: block;
+		border: 0px;
+	}
 }
 
 /*
