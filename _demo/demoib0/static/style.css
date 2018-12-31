@@ -23,7 +23,7 @@ html {
 	font-family: 'Inter UI', Arial, Helvetica, sans-serif;
 	font-size: 13px;
 	font-feature-settings: "ss02";
-	background-color: #EEFFDD;
+	background-color: #CCFFBB;
 }
 
 .cat_div {
@@ -73,7 +73,7 @@ html {
 
 .reply {
 	display: inline-block;
-	background-color: #CCFFEE;
+	background-color: #CCFFDD;
 	border: 1px solid blue;
 	margin: 12px 16px 0px 8px;
 	padding: 0px 0px 6px 0px;
