@@ -1,5 +1,26 @@
+
+/* try out random font I found while browsing lobste.rs */
+
+@font-face {
+	font-family: 'Inter UI';
+	font-style: normal;
+	font-weight: normal; /* 400 */
+	src:
+		url("Inter-UI-Regular.woff2") format("woff2"),
+		url("Inter-UI-Regular.woff") format("woff");
+}
+
+@font-face {
+	font-family: 'Inter UI';
+	font-style:  normal;
+	font-weight: bold; /* 700 */
+	src:
+		url("Inter-UI-Bold.woff2") format("woff2"),
+		url("Inter-UI-Bold.woff") format("woff");
+}
+
 html {
-	font-family: Arial, Helvetica, sans-serif;
+	font-family: 'Inter UI', Arial, Helvetica, sans-serif;
 }
 
 .cat_div {
@@ -76,7 +97,7 @@ html {
 	float: right;
 }
 
-/* breakpoint at 500px */
+/* breakpoint at 600px */
 @media screen and (max-width: 600px) {
 	.thread_stats, .opimg, .rimg {
 		float: none;
