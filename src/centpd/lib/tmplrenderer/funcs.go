@@ -89,6 +89,13 @@ var funcs = map[string]interface{}{
 		return fmt.Sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
 			Y, M, D, h, m, s)
 	},
+	"anonname": func(s string) string {
+		// TODO configurable?
+		if s == "" {
+			return "Anonymous"
+		}
+		return s
+	},
 	"fmtmsg":    fmtmsg,
 	"fmtmsgcat": fmtmsgcat,
 }

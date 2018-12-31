@@ -25,7 +25,7 @@ arguments list:
    <span class="subject">{{html $P.Subject}}</span>
   {{- end}}
 
-  <span class="name">{{html $P.Name}}</span>
+  <span class="name">{{html (anonname $P.Name)}}</span>
 
   {{- if $P.Trip}}<span class="trip">{{html $P.Trip}}</span>{{end}}
 
