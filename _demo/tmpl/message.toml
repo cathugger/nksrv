@@ -10,10 +10,10 @@ post_quote       = "</span>"
 pre_reference    = "<a class=\"ref\" href=\"#test\">"
 post_reference   = "</a>"
 truncation_line  = """
-<b class=\"trunc\">\
+<div><strong class=\"trunc\">\
 message truncated. click
 <a
  href=\"{{$.N.Root}}/{{escboard .B.Name}}/thread/{{.T.ID}}#p{{.P.ID}}\"
 >here</a>
 to see whole.\
-</b>"""
+</strong></div>"""
