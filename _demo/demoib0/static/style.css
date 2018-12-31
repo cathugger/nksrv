@@ -24,6 +24,7 @@ html {
 	font-size: 13px;
 	font-feature-settings: "ss02";
 	background-color: #CCFFBB;
+	word-wrap: break-word;
 }
 
 .cat_div {
@@ -74,6 +75,7 @@ html {
 	border: 1px solid blue;
 	margin: 12px 16px 0px 8px;
 	padding: 0px 0px 6px 0px;
+	max-width: 100%;
 }
 
 .reply-outer {
