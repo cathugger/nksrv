@@ -58,7 +58,7 @@ html {
 
 .body {
 	/* background-color: #FFFFCC; */
-	margin: 8px 12px 0px 20px;
+	margin: 8px 12px 4px 20px;
 }
 
 .quote {
@@ -74,7 +74,7 @@ html {
 	background-color: #CCFFDD;
 	border: 1px solid #99EEBB;
 	margin: 8px 16px 0px 8px;
-	padding: 0px 0px 6px 0px;
+	padding: 0px 0px 8px 0px;
 	max-width: 100%;
 }
 
