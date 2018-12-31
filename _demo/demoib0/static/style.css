@@ -33,9 +33,10 @@ html {
 	height: 250px;
 	background-color: #EEFFDD;
 	margin: 2px 2px 2px 2px;
-	padding: 4px 1px 4px 1px;
+	padding: 4px 2px 4px 2px;
 	border: 1px solid #EE6666;
 	overflow: hidden;
+	word-wrap: break-word;
 }
 
 .opinfo, .rinfo {
