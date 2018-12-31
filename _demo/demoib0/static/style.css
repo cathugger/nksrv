@@ -48,7 +48,7 @@ html {
 .opimg, .rimg {
 	float: left;
 	/* background-color: #DDFFCC; */
-	margin: 2px 8px 0px 12px;
+	margin: 2px 8px 8px 12px;
 }
 
 .imginfo {
@@ -58,7 +58,7 @@ html {
 
 .body {
 	/* background-color: #FFFFCC; */
-	margin: 8px 12px 4px 16px;
+	margin: 8px 12px 12px 16px;
 	max-width: 100%;
 }
 
@@ -75,7 +75,7 @@ html {
 	background-color: #CCFFDD;
 	border: 1px solid #99EEBB;
 	margin: 8px 16px 0px 8px;
-	padding: 0px 0px 8px 0px;
+	padding: 0px 0px 0px 0px;
 	max-width: 100%;
 }
 
