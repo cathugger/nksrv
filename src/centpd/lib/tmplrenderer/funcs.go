@@ -100,7 +100,7 @@ var funcs = map[string]interface{}{
 	"truncate": tu.TruncateText,
 	"shortid": func(s string) string {
 		// TODO configurable?
-		const maxidlen = 16
+		const maxidlen = 20
 		if len(s) > maxidlen {
 			// we expect input to be US-ASCII
 			return s[:maxidlen]
