@@ -41,6 +41,11 @@ video/3gpp                      3gpp 3gp
 video/x-msvideo                 avi
 video/x-flv                     flv
 
+font/woff                       woff
+font/woff2                      woff2
+font/ttf                        ttf
+font/otf                        otf
+
 application/wasm                        wasm
 application/atom+xml                    atom
 application/rss+xml                     rss
@@ -54,3 +59,5 @@ application/pdf                         pdf
 application/rtf                         rtf
 application/msword                      doc dot
 application/x-shockwave-flash           swf
+
+text/plain                              !eml
