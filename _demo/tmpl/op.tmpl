@@ -37,7 +37,7 @@ arguments list:
 
   <a
    href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
-  >No.</a> <span>{{$P.ID}}</span>
+  >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
 
   {{- if $fullURLs}} <span>[<a href="thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 

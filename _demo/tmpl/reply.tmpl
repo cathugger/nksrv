@@ -40,7 +40,7 @@ arguments list:
 
    <a
     href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#p{{$P.ID}}"
-   >No.</a> <span>{{$P.ID}}</span>
+   >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
    {{- range .BackReferences}}
     <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>
    {{- end -}}

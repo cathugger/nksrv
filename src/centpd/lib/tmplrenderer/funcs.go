@@ -90,11 +90,22 @@ var funcs = map[string]interface{}{
 			Y, M, D, h, m, s)
 	},
 	"anonname": func(s string) string {
-		// TODO configurable?
+		// TODO configurable? per-board?
 		if s == "" {
 			return "Anonymous"
 		}
 		return s
+	},
+	"truncate": tu.TruncateText,
+	"shortid": func(s string) string {
+		// TODO configurable?
+		const maxidlen = 16
+		if len(s) > maxidlen {
+			// we expect input to be US-ASCII
+			return s[:maxidlen]
+		} else {
+			return s
+		}
 	},
 	"fmtmsg":    fmtmsg,
 	"fmtmsgcat": fmtmsgcat,
