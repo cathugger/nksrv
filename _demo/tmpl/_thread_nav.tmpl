@@ -12,9 +12,9 @@ arguments list:
 {{$B := index $ 1 -}}
 
 <nav class="nav">
- <div class="nav">
-  [<a href="../">Return</a>]
-  [<a href="../catalog">Catalog</a>]
+ <div class="nav"> {{- /**/ -}}
+  [<a href="../">Return</a>] {{- /**/ -}}
+  [<a href="../catalog">Catalog</a>] {{- /**/ -}}
   {{if eq $B 1}}[<a href="">Update</a>]{{end}}
   <div class="thread_stats">
    {{- with $X.D.ThreadStats -}}
