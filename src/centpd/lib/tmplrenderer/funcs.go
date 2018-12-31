@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"centpd/lib/date"
+	tu "centpd/lib/textutils"
 	"centpd/lib/webib0"
 )
 
