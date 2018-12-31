@@ -72,7 +72,7 @@ html {
 .reply {
 	display: inline-block;
 	background-color: #CCFFDD;
-	border: 1px solid blue;
+	border: 1px solid #99EEBB;
 	margin: 8px 16px 0px 8px;
 	padding: 0px 0px 6px 0px;
 	max-width: 100%;
