@@ -59,7 +59,7 @@ html {
 .body {
 	/* background-color: #FFFFCC; */
 	margin: 8px 12px 4px 16px;
-	width: 100%;
+	max-width: 100%;
 }
 
 .quote {
