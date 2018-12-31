@@ -21,9 +21,9 @@ arguments list:
 
 {{with $P -}}
  <div class="reply-outer">
- <div class="reply">
+ <div class="reply" id="p{{$P.ID}}">
 
-  <p class="rinfo" id="p{{$P.ID}}">
+  <p class="rinfo">
    {{- if $P.Subject -}}
     <span class="subject">{{html $P.Subject}}</span>
    {{- end}}
