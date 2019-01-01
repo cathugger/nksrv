@@ -270,7 +270,8 @@ func (sp *PSQLIB) commonNewPost(
 	xfmessage := f.Values[fnmessage][0]
 
 	sp.log.LogPrintf(DEBUG,
-		"form fields: xftitle(%q) xfmessage(%q)", xftitle, xfmessage)
+		"post: board %q thread %q xftitle %q xfmessage %q",
+		board, thread, xftitle, xfmessage)
 
 	if !validFormText(xftitle) ||
 		!validFormText(xfname) ||
@@ -410,8 +411,16 @@ ON
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
+
 	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xfname))
+	if i := strings.IndexByte(pInfo.MI.Author, '#'); i >= 0 {
+		// TODO tripcode processing
+		// for now it's better to just strip stuff to not leak secrets
+		pInfo.MI.Author = strings.TrimSpace(pInfo.MI.Author[:i])
+	}
+
 	pInfo.MI.Message = tu.NormalizeTextMessage(xfmessage)
+
 	sp.log.LogPrintf(DEBUG,
 		"form fields after processing: Title(%q) Message(%q)",
 		pInfo.MI.Title, pInfo.MI.Message)
