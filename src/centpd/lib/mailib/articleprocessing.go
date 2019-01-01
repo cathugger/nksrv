@@ -30,11 +30,13 @@ type MailProcessorConfig struct {
 	MaxTextLen   uint   // maximum size of text message
 }
 
+const DefaultMaxTextLen = (64 << 10) - 1
+
 var DefaultMailProcessorConfig = MailProcessorConfig{
 	TryUTF8:      true,
 	AllowBinary:  false,
 	EmptyCharset: "ISO-8859-1",
-	MaxTextLen:   (32 << 10) - 1,
+	MaxTextLen:   DefaultMaxTextLen,
 }
 
 func (cfg *MailProcessorConfig) processMessagePrepareReader(

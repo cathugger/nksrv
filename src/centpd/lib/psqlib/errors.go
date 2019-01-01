@@ -13,5 +13,6 @@ var (
 	errTooBigFileAll         = errors.New("files are too large")
 	errFileTypeNotAllowed    = errors.New("file type not allowed")
 	errTooLongTitle          = errors.New("too long title")
+	errTooLongName           = errors.New("too long name")
 	errTooLongMessage        = errors.New("too long message")
 )

@@ -113,7 +113,7 @@ func checkSubmissionLimits(slimits *submissionLimits, reply bool,
 		return errTooLongTitle, 0
 	}
 	if len(mInfo.Author) > int(slimits.MaxNameLength) {
-		return errTooLongTitle, 0
+		return errTooLongName, 0
 	}
 	if len(mInfo.Message) > int(slimits.MaxMessageLength) {
 		return errTooLongMessage, 0
@@ -137,7 +137,7 @@ func (sp *PSQLIB) applyInstanceSubmissionLimits(
 		slimits.MaxNameLength = maxNameLen
 	}
 
-	const maxMessageLength = 32 * 1024
+	const maxMessageLength = mailib.DefaultMaxTextLen
 	if slimits.MaxMessageLength == 0 ||
 		slimits.MaxMessageLength > maxMessageLength {
 
