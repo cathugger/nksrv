@@ -25,6 +25,8 @@ import (
 	ib0 "centpd/lib/webib0"
 )
 
+// TODO make this file less messy
+
 var FileFields = ib0.IBWebFormFileFields
 
 type formFileOpener struct {
@@ -110,6 +112,9 @@ func checkSubmissionLimits(slimits *submissionLimits, reply bool,
 	if len(mInfo.Title) > int(slimits.MaxTitleLength) {
 		return errTooLongTitle, 0
 	}
+	if len(mInfo.Author) > int(slimits.MaxNameLength) {
+		return errTooLongTitle, 0
+	}
 	if len(mInfo.Message) > int(slimits.MaxMessageLength) {
 		return errTooLongMessage, 0
 	}
@@ -123,9 +128,13 @@ func (sp *PSQLIB) applyInstanceSubmissionLimits(
 	// TODO
 
 	// hardcoded instance limits, TODO make configurable
-	const maxTitleLength = 256
-	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxTitleLength {
-		slimits.MaxTitleLength = maxTitleLength
+
+	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxSubjectLen {
+		slimits.MaxTitleLength = maxSubjectLen
+	}
+
+	if slimits.MaxNameLength == 0 || slimits.MaxNameLength > maxNameLen {
+		slimits.MaxNameLength = maxNameLen
 	}
 
 	const maxMessageLength = 32 * 1024
@@ -245,22 +254,26 @@ func (sp *PSQLIB) commonNewPost(
 	}()
 
 	fntitle := ib0.IBWebFormTextTitle
+	fnname := ib0.IBWebFormTextName
 	fnmessage := ib0.IBWebFormTextMessage
 
 	// XXX more fields
 	if len(f.Values[fntitle]) != 1 ||
+		len(f.Values[fnname]) != 1 ||
 		len(f.Values[fnmessage]) != 1 {
 
 		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
 
 	xftitle := f.Values[fntitle][0]
+	xfname := f.Values[fnname][0]
 	xfmessage := f.Values[fnmessage][0]
 
 	sp.log.LogPrintf(DEBUG,
 		"form fields: xftitle(%q) xfmessage(%q)", xftitle, xfmessage)
 
 	if !validFormText(xftitle) ||
+		!validFormText(xfname) ||
 		!validFormText(xfmessage) {
 
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
@@ -397,6 +410,7 @@ ON
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
+	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xfname))
 	pInfo.MI.Message = tu.NormalizeTextMessage(xfmessage)
 	sp.log.LogPrintf(DEBUG,
 		"form fields after processing: Title(%q) Message(%q)",

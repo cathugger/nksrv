@@ -11,6 +11,7 @@ type postID = uint64
 type submissionLimits struct {
 	// message stuff
 	MaxTitleLength   uint32 `json:"max_len_title,omitempty"`
+	MaxNameLength    uint32 `json:"max_len_name,omitempty"`
 	MaxMessageLength uint32 `json:"max_len_msg,omitempty"`
 
 	// files count and sizes
@@ -26,7 +27,8 @@ type submissionLimits struct {
 }
 
 var defaultReplySubmissionLimits = submissionLimits{
-	MaxTitleLength:   48,
+	MaxTitleLength:   64,
+	MaxNameLength:    64,
 	MaxMessageLength: 2000,
 
 	FileMaxNum:     5,

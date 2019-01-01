@@ -24,15 +24,17 @@ import (
 const DefaultHeaderSizeLimit = 2 << 20
 
 type MailProcessorConfig struct {
-	TryUTF8      bool   // whether we should try decoding not specified charset as UTF8
+	TryUTF8      bool   // whether we should try decoding unspecified charset as UTF8
 	AllowBinary  bool   // whether we should allow "binary" Content-Transfer-Encoding
 	EmptyCharset string // what encoding should we try if charset is unspecified
+	MaxTextLen   uint   // maximum size of text message
 }
 
 var DefaultMailProcessorConfig = MailProcessorConfig{
 	TryUTF8:      true,
 	AllowBinary:  false,
 	EmptyCharset: "ISO-8859-1",
+	MaxTextLen:   (32 << 10) - 1,
 }
 
 func (cfg *MailProcessorConfig) processMessagePrepareReader(
@@ -71,9 +73,8 @@ func (cfg *MailProcessorConfig) processMessageText(
 	r io.Reader, binary bool, ct_t string, ct_par map[string]string) (
 	_ io.Reader, rstr string, finished bool, msgattachment bool, err error) {
 
-	// TODO make configurable
+	// TODO maybe make configurable?
 	const defaultTextBuf = 512
-	const maxTextBuf = (32 << 10) - 1
 
 	b := &strings.Builder{}
 	b.Grow(defaultTextBuf)
@@ -81,14 +82,14 @@ func (cfg *MailProcessorConfig) processMessageText(
 	if !binary {
 		r = au.NewUnixTextReader(r)
 	}
-	n, err := io.CopyN(b, r, maxTextBuf+1)
+	n, err := io.CopyN(b, r, int64(cfg.MaxTextLen+1))
 	if err != nil && err != io.EOF {
 		err = fmt.Errorf("error reading body: %v", err)
 		return
 	}
 
 	str := b.String()
-	if n <= maxTextBuf {
+	if n <= int64(cfg.MaxTextLen) {
 		// it fit
 		cset := ""
 		if ct_t != "" && ct_par != nil {

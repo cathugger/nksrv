@@ -25,6 +25,7 @@ type Cfg struct {
 
 var textFields = []string{
 	ib0.IBWebFormTextTitle,
+	ib0.IBWebFormTextName,
 	ib0.IBWebFormTextMessage,
 }
 

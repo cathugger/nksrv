@@ -142,6 +142,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			fparam, fopener := cfg.WebPostProvider.IBGetPostParams()
 			textFields := []string{
 				ib0.IBWebFormTextTitle,
+				ib0.IBWebFormTextName,
 				ib0.IBWebFormTextMessage,
 				"board",
 				"thread",
