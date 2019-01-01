@@ -74,7 +74,7 @@ arguments list:
 
   {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
 
-  {{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL}}
+  {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL -}}{{- end -}}
  </div>
  </div>
 {{end -}}
