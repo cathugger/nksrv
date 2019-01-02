@@ -15,7 +15,7 @@ import (
 var re_ref = regexp.MustCompile(
 	`>> ?([0-9a-fA-F]{8,40})\b`)
 var re_cref = regexp.MustCompile(
-	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40}))?\b`)
+	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
 var re_msgid = regexp.MustCompile(
 	`<[\x21-\x2E\x30-\x3D\x3F-\x7E]+@[\x21-\x2E\x30-\x3D\x3F-\x7E]+>`)
 
