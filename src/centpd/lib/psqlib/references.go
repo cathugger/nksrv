@@ -40,7 +40,7 @@ func parseReferences(msg string) (srefs []sliceReference) {
 			end:   sm[i][1],
 			board: msg[sm[i][2]:sm[i][3]],
 		}
-		if len(sm[i]) >= 6 {
+		if sm[i][4] >= 0 {
 			x.post = msg[sm[i][4]:sm[i][5]]
 		}
 		srefs = append(srefs, x)
