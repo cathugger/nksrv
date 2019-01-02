@@ -168,7 +168,7 @@ LIMIT
 	var rows *sql.Rows
 
 	if b.Len() != 0 {
-		fmt.Fprintf(b, "\n) AS meow%d", i) // finish it up
+		fmt.Fprintf(b, "\n) AS meow%d", i+1) // finish it up
 
 		q := b.String()
 
