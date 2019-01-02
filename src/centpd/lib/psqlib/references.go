@@ -76,17 +76,22 @@ func (sp *PSQLIB) processReferencesOnPost(
 	// build query
 	b := &strings.Builder{}
 
-	var i int
+	first := true
 
 	next := func() {
 		if b.Len() == 0 {
 			b.WriteString("SELECT * FROM\n(\n")
 		} else {
-			fmt.Fprintf(b, "\n) AS meow%d\nUNION ALL\n(\n", i)
+			if first {
+				b.WriteString("\n) AS meow\nUNION ALL\n(\n")
+				first = false
+			} else {
+				b.WriteString("\n)\nUNION ALL\n(\n")
+			}
 		}
 	}
 
-	for i = range srefs {
+	for i := range srefs {
 
 		if len(srefs[i].post) != 0 {
 
@@ -168,7 +173,12 @@ LIMIT
 	var rows *sql.Rows
 
 	if b.Len() != 0 {
-		fmt.Fprintf(b, "\n) AS meow%d", i+1) // finish it up
+		// finish it up
+		if first {
+			b.WriteString("\n) AS meow")
+		} else {
+			b.WriteString("\n)")
+		}
 
 		q := b.String()
 
