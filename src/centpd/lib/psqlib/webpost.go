@@ -438,9 +438,7 @@ ON
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}
-	// TODO
-	_ = refs
-	_ = inreplyto
+	pInfo.A.References = refs
 
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
@@ -483,12 +481,18 @@ ON
 	// fill in info about post
 	tu := date.NowTimeUnix()
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
-	pInfo = sp.fillWebPostDetails(pInfo, board, CoreMsgIDStr(ref.String))
-	// lets think of post ID there
+
+	pInfo = sp.fillWebPostDetails(pInfo, board,
+		CoreMsgIDStr(ref.String), inreplyto)
+
+	// lets think of Message-ID there
 	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
 	pInfo.MessageID = cutMsgID(fmsgids)
+
+	// Post ID
 	pInfo.ID = mailib.HashPostID_SHA1(fmsgids)
 
+	// number of attachments
 	pInfo.FC = countRealFiles(pInfo.FI)
 
 	// perform insert

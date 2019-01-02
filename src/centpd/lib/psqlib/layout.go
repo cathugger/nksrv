@@ -3,6 +3,7 @@ package psqlib
 import (
 	"fmt"
 	"mime"
+	"strings"
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/mail"
@@ -34,7 +35,8 @@ const (
 )
 
 func (sp *PSQLIB) fillWebPostDetails(
-	i mailib.PostInfo, board string, ref CoreMsgIDStr) mailib.PostInfo {
+	i mailib.PostInfo, board string,
+	ref CoreMsgIDStr, inreplyto []string) mailib.PostInfo {
 
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
@@ -63,6 +65,16 @@ func (sp *PSQLIB) fillWebPostDetails(
 	// References
 	if ref != "" {
 		i.H["References"] = mail.OneHeaderVal(fmt.Sprintf("<%s>", ref))
+	}
+
+	// In-Reply-To
+	if len(inreplyto) != 0 {
+		if ref == "" && len(inreplyto) == 1 {
+			// add dummy to prevent misinterpretation by
+			// standards compliant clients
+			inreplyto = append(inreplyto, "<0>")
+		}
+		i.H["In-Reply-To"] = mail.OneHeaderVal(strings.Join(inreplyto, " "))
 	}
 
 	// X-Sage
