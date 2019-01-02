@@ -23,7 +23,7 @@ html {
 	font-family: 'Inter UI', Arial, Helvetica, sans-serif;
 	font-size: 13px;
 	font-feature-settings: "zero";
-	background-color: #CCFFBB;
+	background-color: #E5FFD5;
 	word-wrap: break-word;
 }
 
@@ -77,7 +77,7 @@ html {
 
 .reply {
 	display: inline-block;
-	background-color: #CCFFDD;
+	background-color: #DDFFDD;
 	border: 1px solid #99EEBB;
 	padding: 0px 0px 0px 0px;
 	max-width: 100%;

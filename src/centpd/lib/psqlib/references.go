@@ -13,9 +13,9 @@ import (
 )
 
 var re_ref = regexp.MustCompile(
-	`>> ?([0-9a-fA-F]{8,40})`)
+	`>> ?([0-9a-fA-F]{8,40})\b`)
 var re_cref = regexp.MustCompile(
-	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40}))?`)
+	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40}))?\b`)
 
 type sliceReference struct {
 	start, end int
