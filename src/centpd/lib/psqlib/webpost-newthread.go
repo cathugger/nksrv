@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mailib"
 )
 
-const postTQMsgArgCount = 11
+const postTQMsgArgCount = 12
 const postTQFileArgCount = 5
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -47,7 +47,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				trip,          -- 6
 				message,       -- 7
 				headers,       -- 8
-				layout         -- 9
+				attrib,        -- 9
+				layout         -- 10
 			)
 		VALUES
 			(
@@ -60,7 +61,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				$6,        -- trip
 				$7,        -- message
 				$8,        -- headers
-				$9         -- layout
+				$9,        -- attrib
+				$10        -- layout
 			)
 		RETURNING
 			g_p_id,pdate,padded
@@ -73,7 +75,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			t_count = t_count + 1,
 			p_count = p_count + 1
 		WHERE
-			b_id = $10
+			b_id = $11
 		RETURNING
 			last_id
 	),
@@ -88,9 +90,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				f_count
 			)
 		SELECT
-			$10,     -- b_id
+			$11,     -- b_id
 			last_id, -- t_id
-			$11,     -- t_name
+			$12,     -- t_name
 			$1,      -- pdate
 			1,       -- p_count
 			$2       -- f_count
@@ -110,10 +112,10 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				sage
 			)
 		SELECT
-			$10,
-			ub.last_id,
-			ub.last_id,
 			$11,
+			ub.last_id,
+			ub.last_id,
+			$12,
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
@@ -196,6 +198,10 @@ func (sp *PSQLIB) insertNewThread(
 	if err != nil {
 		panic(err)
 	}
+	Ajson, err := json.Marshal(pInfo.A)
+	if err != nil {
+		panic(err)
+	}
 	Ljson, err := json.Marshal(&pInfo.L)
 	if err != nil {
 		panic(err)
@@ -212,6 +218,7 @@ func (sp *PSQLIB) insertNewThread(
 			pInfo.MI.Trip,
 			pInfo.MI.Message,
 			Hjson,
+			Ajson,
 			Ljson,
 
 			bid,
@@ -229,10 +236,11 @@ func (sp *PSQLIB) insertNewThread(
 		args[5] = pInfo.MI.Trip
 		args[6] = pInfo.MI.Message
 		args[7] = Hjson
-		args[8] = Ljson
+		args[8] = Ajson
+		args[9] = Ljson
 
-		args[9] = bid
-		args[10] = pInfo.ID
+		args[10] = bid
+		args[11] = pInfo.ID
 
 		for i := range pInfo.FI {
 			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]

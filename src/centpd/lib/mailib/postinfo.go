@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"centpd/lib/mail"
+	ib0 "centpd/lib/webib0"
 )
 
 type PostInfo struct {
@@ -18,6 +19,7 @@ type PostInfo struct {
 	FC int // file count -- may be less than len(FI)
 
 	H mail.Headers
+	A PostAttributes
 	L PartInfo
 }
 
@@ -27,6 +29,10 @@ type MessageInfo struct {
 	Trip    string
 	Sage    bool
 	Message string
+}
+
+type PostAttributes struct {
+	References []ib0.IBMessageReference `json:"refs,omitempty"`
 }
 
 type FTypeT int

@@ -15,7 +15,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 14
+const postRQMsgArgCount = 15
 const postRQFileArgCount = 5
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -54,7 +54,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				trip,          -- 7
 				message,       -- 8
 				headers,       -- 9
-				layout         -- 10
+				attrib,        -- 10
+				layout         -- 11
 			)
 		VALUES
 			(
@@ -67,7 +68,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				$7,        -- trip
 				$8,        -- message
 				$9,        -- headers
-				$10        -- layout
+				$10,       -- attrib
+				$11        -- layout
 			)
 		RETURNING
 			g_p_id,pdate,padded,sage
@@ -80,7 +82,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1
 		WHERE
 			-- TODO insert into multiple boards
-			b_id = $11
+			b_id = $12
 		RETURNING
 			last_id
 	),`
@@ -112,7 +114,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					WHERE
 						-- count sages against bump limit.
 						-- because others do it like that :<
-						b_id = $11 AND t_id = $12
+						b_id = $12 AND t_id = $13
 					UNION ALL
 					SELECT
 						$1,
@@ -124,7 +126,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 						pdate ASC,
 						b_p_id ASC
 					LIMIT
-						$13
+						$14
 					-- take bump posts, sorted by original date,
 					-- only upto bump limit
 				) AS tt
@@ -137,7 +139,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				-- and pick latest one
 			) as xbump
 		WHERE
-			b_id = $11 AND t_id = $12
+			b_id = $12 AND t_id = $13
 	),`
 		b.WriteString(st_bump)
 	} else {
@@ -149,13 +151,13 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1,
 			f_count = f_count + $3
 		WHERE
-			b_id = $11 AND t_id = $12
+			b_id = $12 AND t_id = $13
 	),
 	utx AS (
 		SELECT
 			1
 		LIMIT
-			$13
+			$14
 	),`
 		b.WriteString(st_nobump)
 	}
@@ -174,10 +176,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				sage
 			)
 		SELECT
-			$11,        -- b_id
-			$12,        -- t_id
+			$12,        -- b_id
+			$13,        -- t_id
 			ub.last_id,
-			$14,        -- p_name
+			$15,        -- p_name
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
@@ -265,6 +267,10 @@ func (sp *PSQLIB) insertNewReply(
 	if err != nil {
 		panic(err)
 	}
+	Ajson, err := json.Marshal(pInfo.A)
+	if err != nil {
+		panic(err)
+	}
 	Ljson, err := json.Marshal(&pInfo.L)
 	if err != nil {
 		panic(err)
@@ -282,6 +288,7 @@ func (sp *PSQLIB) insertNewReply(
 			pInfo.MI.Trip,
 			pInfo.MI.Message,
 			Hjson,
+			Ajson,
 			Ljson,
 
 			rti.bid,
@@ -303,13 +310,14 @@ func (sp *PSQLIB) insertNewReply(
 		args[6] = pInfo.MI.Trip
 		args[7] = pInfo.MI.Message
 		args[8] = Hjson
-		args[9] = Ljson
+		args[9] = Ajson
+		args[10] = Ljson
 
-		args[10] = rti.bid
-		args[11] = rti.tid
-		args[12] = rti.bumpLimit
+		args[11] = rti.bid
+		args[12] = rti.tid
+		args[13] = rti.bumpLimit
 
-		args[13] = pInfo.ID
+		args[14] = pInfo.ID
 
 		for i := range pInfo.FI {
 
