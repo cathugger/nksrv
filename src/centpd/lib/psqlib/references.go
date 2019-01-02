@@ -12,10 +12,10 @@ import (
 	ib0 "centpd/lib/webib0"
 )
 
-var re_ref = regexp.MustCompilePOSIX(
-	`>>[ \\t]?([0-9a-fA-F]{8,40})`)
-var re_cref = regexp.MustCompilePOSIX(
-	`>>>[ \\t]?/([0-9a-zA-Z+_.-]{1,255})/(?:[ \\t]?([0-9a-fA-F]{8,40}))?`)
+var re_ref = regexp.MustCompile(
+	`>> ?([0-9a-fA-F]{8,40})`)
+var re_cref = regexp.MustCompile(
+	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40}))?`)
 
 type sliceReference struct {
 	start, end int
