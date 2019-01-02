@@ -219,6 +219,7 @@ LIMIT
 					}
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
+					sp.log.LogPrintf(DEBUG, "ref: %#v %q", r, r_msgid)
 				}
 			} else {
 				if r_id == i+1 {
@@ -232,6 +233,7 @@ LIMIT
 
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
+					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
 				}
 			}
 		} else {
@@ -242,6 +244,7 @@ LIMIT
 
 			r.Board = string(srefs[i].board)
 			refs = append(refs, r)
+			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
 		}
 	}
 	if rows != nil {
