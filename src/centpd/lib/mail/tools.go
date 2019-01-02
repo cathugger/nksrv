@@ -4,7 +4,7 @@ import (
 	mm "centpd/lib/minimail"
 )
 
-func ExtractFirstValidReference(s string) mm.FullMsgIDStr {
+func NextValidReference(s string) (mm.FullMsgIDStr, string) {
 	i := 0
 	for i < len(s) {
 		c := s[i]
@@ -41,8 +41,29 @@ func ExtractFirstValidReference(s string) mm.FullMsgIDStr {
 
 		x := mm.FullMsgIDStr(s[p:i])
 		if mm.ValidMessageIDStr(x) {
-			return x
+			return x, s[i:]
 		}
 	}
-	return ""
+	return "", ""
+}
+
+func ExtractFirstValidReference(s string) (ref mm.FullMsgIDStr) {
+	ref, _ = NextValidReference(s)
+	return
+}
+
+func ExtractAllValidReferences(
+	refs []mm.FullMsgIDStr, s string) []mm.FullMsgIDStr {
+
+	for {
+		var x mm.FullMsgIDStr
+		x, s = NextValidReference(s)
+		if x != "" {
+			refs = append(refs, x)
+		}
+		if s == "" {
+			break
+		}
+	}
+	return refs
 }

@@ -432,6 +432,16 @@ ON
 		return rInfo, err, http.StatusBadRequest
 	}
 
+	// process references
+	refs, inreplyto, err := sp.processReferencesOnPost(
+		pInfo.MI.Message, bid, postID(tid.Int64))
+	if err != nil {
+		return
+	}
+	// TODO
+	_ = refs
+	_ = inreplyto
+
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
 	// at this point message should be checked
