@@ -436,7 +436,7 @@ ON
 	refs, inreplyto, err := sp.processReferencesOnPost(
 		pInfo.MI.Message, bid, postID(tid.Int64))
 	if err != nil {
-		return
+		return rInfo, err, http.StatusInternalServerError
 	}
 	// TODO
 	_ = refs
