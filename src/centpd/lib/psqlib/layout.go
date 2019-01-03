@@ -30,7 +30,7 @@ func attachmentConentType(ctype string, oname string) string {
 }
 
 const (
-	plainTextType = "text/plain"
+	plainTextType = "text/plain; charset=US-ASCII"
 	plainUTF8Type = "text/plain; charset=UTF-8"
 )
 
@@ -94,7 +94,9 @@ func (sp *PSQLIB) fillWebPostDetails(
 			i.L.Body.Data = nil
 		} else {
 			i.L.Body.Data = mailib.PostObjectIndex(0)
-			if text8bit {
+			if !text8bit {
+				i.H["Content-Type"] = mail.OneHeaderVal(plainTextType)
+			} else {
 				i.L.Has8Bit = true
 				i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
 				i.H["Content-Type"] = mail.OneHeaderVal(plainUTF8Type)
