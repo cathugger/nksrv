@@ -125,14 +125,19 @@ func escapeSQLString(s string) string {
 func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
 	var b strings.Builder
 
-	b.WriteString("ARRAY['")
+	b.WriteString("ARRAY[")
 	for i := range prefs {
 		if i != 0 {
 			b.WriteString("','")
+		} else {
+			b.WriteByte('\'')
 		}
 		b.WriteString(escapeSQLString(string(prefs[i])))
 	}
-	b.WriteString("']")
+	if len(prefs) != 0 {
+		b.WriteByte('\'')
+	}
+	b.WriteByte(']')
 
 	return b.String()
 }

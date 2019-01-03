@@ -295,6 +295,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
 	}
+	defer func() {
+		if err != nil {
+			// cleanup
+			for _, fn := range tfns {
+				os.Remove(fn)
+			}
+		}
+	}()
 
 	if len(pi.FI) != len(tfns) {
 		panic("len(pi.FI) != len(tfns)")
@@ -352,8 +360,16 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}
 
-	if len(H["X-Sage"]) != 0 {
+	if info.isReply && len(H["X-Sage"]) != 0 {
 		pi.MI.Sage = true
+	}
+
+	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
+	pi.A.References, err =
+		sp.processReferencesOnIncoming(pi.MI.Message, prefs, info.bid, info.tid)
+	if err != nil {
+		unexpected = true
+		return
 	}
 
 	// perform insert
@@ -368,12 +384,6 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	if err != nil {
 		err = fmt.Errorf("post insertion failed: %v", err)
 		unexpected = true
-
-		// cleanup
-		for _, fn := range tfns {
-			os.Remove(fn)
-		}
-
 		return
 	}
 
