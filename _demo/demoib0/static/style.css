@@ -75,6 +75,11 @@ html {
 	color: red;
 }
 
+.bref {
+	color: red;
+	font-size: 11px;
+}
+
 .reply {
 	display: inline-block;
 	background-color: #DDFFDD;
