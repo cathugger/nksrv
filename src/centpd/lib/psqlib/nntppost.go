@@ -286,7 +286,7 @@ func (sp *PSQLIB) HandlePost(
 
 	w.ResSendArticleToBePosted()
 	r := ro.OpenReader()
-	err, unexpected := sp.netnewsHandleSubmissionDirectly(r)
+	err, unexpected := sp.netnewsHandleSubmissionDirectly(r, false)
 	if err != nil {
 		if !unexpected {
 			w.ResPostingFailed(err)
@@ -301,7 +301,8 @@ func (sp *PSQLIB) HandlePost(
 }
 
 func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
-	r io.Reader) (err error, unexpected bool) {
+	r io.Reader, notrace bool) (
+	err error, unexpected bool) {
 
 	lr := &io.LimitedReader{R: r, N: int64(math.MaxInt64)}
 
@@ -316,7 +317,8 @@ func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
 	limit := sp.maxArticleBodySize
 	lr.N = limit + 1 - int64(len(mh.B.Buffered()))
 
-	info, err, unexpected, _ := sp.nntpDigestTransferHead(mh.H, "", "", true)
+	info, err, unexpected, _ :=
+		sp.nntpDigestTransferHead(mh.H, "", "", true, notrace)
 	if lr.N <= 0 {
 		// limit exceeded
 		err = fmt.Errorf("article body too large, up to %d allowed", limit)
@@ -360,7 +362,7 @@ func (sp *PSQLIB) HandleIHave(
 	r := ro.OpenReader()
 
 	info, newname, H, err, unexpected, _ :=
-		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir)
+		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir, false)
 	if err != nil {
 		if !unexpected {
 			w.ResTransferRejected(err)
@@ -420,7 +422,7 @@ func (sp *PSQLIB) HandleTakeThis(
 	}
 
 	info, newname, H, err, unexpected, _ :=
-		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir)
+		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir, false)
 	if err != nil {
 		if !unexpected {
 			w.ResArticleRejected(msgid, err)
@@ -439,12 +441,13 @@ func (sp *PSQLIB) HandleTakeThis(
 }
 
 func (sp *PSQLIB) handleIncoming(
-	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, incdir string) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, incdir string,
+	notrace bool) (
 	info nntpParsedInfo, newname string, H mail.Headers,
 	err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	info, f, H, err, unexpected, wantroot :=
-		sp.handleIncomingIntoFile(r, unsafe_sid, expectgroup)
+		sp.handleIncomingIntoFile(r, unsafe_sid, expectgroup, notrace)
 	if err != nil {
 		return
 	}
@@ -470,7 +473,7 @@ func (sp *PSQLIB) handleIncoming(
 }
 
 func (sp *PSQLIB) handleIncomingIntoFile(
-	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string) (
+	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, notrace bool) (
 	info nntpParsedInfo, f *os.File, H mail.Headers,
 	err error, unexpected bool, wantroot FullMsgIDStr) {
 
@@ -483,7 +486,7 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 	defer mh.Close()
 
 	info, err, unexpected, wantroot =
-		sp.nntpDigestTransferHead(mh.H, unsafe_sid, expectgroup, false)
+		sp.nntpDigestTransferHead(mh.H, unsafe_sid, expectgroup, false, notrace)
 	if err != nil {
 		return
 	}

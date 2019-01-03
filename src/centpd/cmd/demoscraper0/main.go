@@ -28,6 +28,7 @@ func main() {
 	nntpconn := flag.String("nntpconn", "", "nntp server connect string")
 	socks := flag.String("socks", "", "socks proxy address")
 	scrapekey := flag.String("scrapekey", "test", "scraper identifier used to store state")
+	notrace := flag.Bool("notrace", false, "disable NNTP Path trace")
 
 	flag.Parse()
 
@@ -78,7 +79,7 @@ func main() {
 		return
 	}
 
-	dbscraper, err := dbib.NewScraperDB(*scrapekey, true)
+	dbscraper, err := dbib.NewScraperDB(*scrapekey, true, *notrace)
 	if err != nil {
 		mlg.LogPrintln(CRITICAL, "dbib.NewScraperDB failed:", err)
 		return

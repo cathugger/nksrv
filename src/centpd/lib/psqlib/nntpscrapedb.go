@@ -15,6 +15,7 @@ type ScraperDB struct {
 	nonce int64
 
 	autoadd bool
+	notrace bool
 
 	temp_rows *sql.Rows
 }
@@ -294,7 +295,7 @@ func (s *ScraperDB) ReadArticle(
 	err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	info, newname, H, err, unexpected, wantroot :=
-		s.sp.handleIncoming(r, msgid, expectgroup, nntpScraperDir)
+		s.sp.handleIncoming(r, msgid, expectgroup, nntpScraperDir, s.notrace)
 	if err != nil {
 		return
 	}
@@ -314,7 +315,7 @@ func (sp *PSQLIB) getScraperNonce() int64 {
 	return sp.scraper_nonce
 }
 
-func (sp *PSQLIB) NewScraperDB(name string, autoadd bool) (*ScraperDB, error) {
+func (sp *PSQLIB) NewScraperDB(name string, autoadd, notrace bool) (*ScraperDB, error) {
 	q := `INSERT INTO ib0.scraper_list AS sl (sname,last_use)
 VALUES ($1,$2)
 ON CONFLICT (sname)
@@ -323,7 +324,7 @@ DO
 	WHERE sl.sname = $1
 RETURNING sid`
 	nonce := sp.getScraperNonce()
-	db := &ScraperDB{sp: sp, autoadd: autoadd}
+	db := &ScraperDB{sp: sp, autoadd: autoadd, notrace: notrace}
 	e := sp.db.DB.
 		QueryRow(q, name, nonce).
 		Scan(&db.id)

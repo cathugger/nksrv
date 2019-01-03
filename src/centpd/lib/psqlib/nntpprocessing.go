@@ -85,7 +85,8 @@ type nntpParsedInfo struct {
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
-	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string, post bool) (
+	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string, post bool,
+	notrace bool) (
 	info nntpParsedInfo, err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	var restrictions []headerRestriction
@@ -211,7 +212,9 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	}
 
 	if len(H["Path"]) != 0 && au.TrimWSString(H["Path"][0].V) != "" {
-		H["Path"][0].V = sp.instance + "!" + H["Path"][0].V
+		if !notrace {
+			H["Path"][0].V = sp.instance + "!" + H["Path"][0].V
+		}
 	} else {
 		H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 	}
