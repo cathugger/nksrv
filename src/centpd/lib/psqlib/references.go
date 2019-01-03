@@ -394,7 +394,7 @@ func (sp *PSQLIB) processReferencesOnIncoming(
 WHERE
 	xbp.p_name LIKE '%s%%'
 ORDER BY
-	('<' || xp.msgid || '>' = ANY(%s)) DESC,
+	('<' || xp.msgid || '>' = ANY(%s::text[])) DESC,
 	(xbp.b_id = %d) DESC,
 	xbp.g_p_id ASC
 LIMIT
@@ -407,7 +407,7 @@ LIMIT
 WHERE
 	xbp.p_name LIKE '%s%%' AND xb.b_name = '%s'
 ORDER BY
-	('<' || xp.msgid || '>' = ANY(%s)) DESC,
+	('<' || xp.msgid || '>' = ANY(%s::text[])) DESC,
 	xbp.g_p_id ASC
 LIMIT
 	1`
