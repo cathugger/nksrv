@@ -334,12 +334,14 @@ endmsg:
 func fmtmsg(
 	tr *TmplRenderer, n *NodeInfo,
 	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
-	p *webib0.IBPostInfo, fullURLs bool, linelimit, charsperline int) (
+	p *webib0.IBPostInfo, fullURLs interface{}, linelimit, charsperline int) (
 	_ string, err error) {
+
+	f, _ := t.IsTrue(fullURLs)
 
 	b := &strings.Builder{}
 	err = formatmsg(b, tr, n, boardInfo, threadInfo, p,
-		fullURLs, linelimit, charsperline)
+		f, linelimit, charsperline)
 	return b.String(), err
 }
 
