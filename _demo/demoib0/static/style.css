@@ -80,6 +80,10 @@ html {
 	font-size: 11px;
 }
 
+.pdate {
+	font-size: 12px;
+}
+
 .reply {
 	display: inline-block;
 	background-color: #DDFFDD;
