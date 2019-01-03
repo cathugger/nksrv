@@ -17,6 +17,7 @@ func main() {
 
 	thumbdir := flag.String("thumbdir", "_demothm", "thumbnail directory")
 	thumbcolor := flag.String("color", "", "background color")
+	thumbgray := flag.Bool("grayscale", false, "grayscale")
 
 	flag.Parse()
 
@@ -39,9 +40,10 @@ func main() {
 	}
 
 	tcfg := thumbnailer.ThumbConfig{
-		Width:  200,
-		Height: 200,
-		Color:  *thumbcolor,
+		Width:     200,
+		Height:    200,
+		Color:     *thumbcolor,
+		Grayscale: *thumbgray,
 	}
 
 	args := flag.Args()

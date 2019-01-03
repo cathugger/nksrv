@@ -10,6 +10,7 @@ import (
 type ThumbConfig struct {
 	Width, Height int    // thumbnail box
 	Color         string // background color if needs to be hardcoded
+	Grayscale     bool
 }
 
 type ThumbResult struct {

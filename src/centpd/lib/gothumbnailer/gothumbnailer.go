@@ -23,7 +23,6 @@ type Config struct {
 	MaxWidth, MaxHeight int
 	MaxPixels           int
 	MaxFileSize         int64
-	Grayscale           bool
 	Filter              imaging.ResampleFilter
 	JpegOpts            *jpeg.Options
 }
@@ -150,7 +149,7 @@ func (t *GoThumbnailer) ThumbProcess(
 	tsz := timg.Bounds().Size()
 
 	// grayscale
-	if t.cfg.Grayscale {
+	if cfg.Grayscale {
 		timg = imaging.Grayscale(timg)
 	}
 	// flatten
