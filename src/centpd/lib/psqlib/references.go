@@ -180,7 +180,8 @@ WHERE
 ORDER BY
 	(xbp.b_id = %d AND xbp.t_id = %d) DESC,
 	(xbp.b_id = %d) DESC,
-	xbp.g_p_id DESC
+	xbp.g_p_id DESC,
+	xb.b_name ASC
 LIMIT
 	1`
 				fmt.Fprintf(b, q, i+1, srefs[i].post, bid, tid, bid)
@@ -210,7 +211,7 @@ WHERE
 	xp.msgid = '%s'
 ORDER BY
 	(xbp.b_id = %d) DESC,
-	xbp.b_id ASC
+	xb.b_name ASC
 LIMIT
 	1`
 			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
@@ -396,7 +397,8 @@ WHERE
 ORDER BY
 	('<' || xp.msgid || '>' = ANY(%s::text[])) DESC,
 	(xbp.b_id = %d) DESC,
-	xbp.g_p_id ASC
+	xbp.g_p_id ASC,
+	xb.b_name ASC
 LIMIT
 	1`
 				fmt.Fprintf(b, q, i+1, srefs[i].post, qprefs, bid)
@@ -427,7 +429,7 @@ WHERE
 	xp.msgid = '%s'
 ORDER BY
 	(xbp.b_id = %d) DESC,
-	xbp.b_id ASC
+	xb.b_name ASC
 LIMIT
 	1`
 			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
