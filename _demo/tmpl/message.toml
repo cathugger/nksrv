@@ -19,7 +19,7 @@ pre_reference    = """
  {{- end -}}
  {{if .R.Thread -}}
   {{if (not .R.Board) -}}
-   {{.N.Root}}/{{escboard .B.Board}}/
+   {{.N.Root}}/{{escboard .B.Name}}/
   {{- end -}}
   thread/{{.R.Thread}}
  {{- end -}}
