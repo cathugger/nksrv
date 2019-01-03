@@ -107,5 +107,5 @@ arguments list:
 
  {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
 
- {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $X.D.Board $T $P $fullURLs $maxLines $maxCPL -}}{{- end -}}
+ {{- fmtmsg $X.R $X.N $X.D.Board $T $P $fullURLs $maxLines $maxCPL -}}
 {{end -}}
