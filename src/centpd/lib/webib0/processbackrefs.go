@@ -19,8 +19,16 @@ func ProcessBackReferences(t *IBCommonThread) {
 		if rr.Board == "" && rr.Thread == "" && rr.Post != "" {
 			// self-references are skipped
 			if p := m[rr.Post]; p != nil && p != ii {
-				p.BackReferences = append(p.BackReferences,
-					IBBackReference{IBReference{Post: ii.ID}})
+
+				br := IBBackReference{IBReference{Post: ii.ID}}
+				// doubles are skipped too
+				if len(p.BackReferences) != 0 &&
+					p.BackReferences[len(p.BackReferences)-1] == br {
+
+					continue
+				}
+
+				p.BackReferences = append(p.BackReferences, br)
 			}
 		}
 	}
@@ -30,8 +38,16 @@ func ProcessBackReferences(t *IBCommonThread) {
 			rr = &ii.References[r]
 			if rr.Board == "" && rr.Thread == "" && rr.Post != "" {
 				if p := m[rr.Post]; p != nil && p != ii {
-					p.BackReferences = append(p.BackReferences,
-						IBBackReference{IBReference{Post: ii.ID}})
+
+					br := IBBackReference{IBReference{Post: ii.ID}}
+					// doubles are skipped too
+					if len(p.BackReferences) != 0 &&
+						p.BackReferences[len(p.BackReferences)-1] == br {
+
+						continue
+					}
+
+					p.BackReferences = append(p.BackReferences, br)
 				}
 			}
 		}
