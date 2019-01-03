@@ -197,6 +197,9 @@ LIMIT
 			// nothing, we don't need to look it up
 		} else if len(srefs[i].msgid) != 0 {
 			// message-id
+
+			next()
+
 			q := selhead + `
 WHERE
 	xp.msgid = '%s'
@@ -411,6 +414,9 @@ LIMIT
 			// nothing, we don't need to look it up
 		} else if len(srefs[i].msgid) != 0 {
 			// msgid
+
+			next()
+
 			q := selhead2 + `
 WHERE
 	xp.msgid = '%s'
