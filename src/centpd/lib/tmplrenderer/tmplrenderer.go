@@ -389,7 +389,7 @@ func (tr *TmplRenderer) ServeThreadListPage(
 	}
 	if !l.D.HasBackRefs {
 		for i := range l.D.Threads {
-			ib0.ProcessBackReferences(&l.D.Threads[i].IBCommonThread)
+			ib0.ProcessBackReferences(l.D.Board.Name, &l.D.Threads[i].IBCommonThread)
 		}
 		l.D.HasBackRefs = true
 	}
@@ -424,7 +424,7 @@ func (tr *TmplRenderer) ServeThread(
 		return
 	}
 	if !l.D.HasBackRefs {
-		ib0.ProcessBackReferences(&l.D.IBCommonThread)
+		ib0.ProcessBackReferences(l.D.Board.Name, &l.D.IBCommonThread)
 		l.D.HasBackRefs = true
 	}
 	outTmpl(w, tr, tmplThread, 200, l)
