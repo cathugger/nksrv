@@ -10,7 +10,7 @@ import (
 type ThumbConfig struct {
 	Width, Height int    // thumbnail box
 	Color         string // background color if needs to be hardcoded
-	Grayscale     bool
+	Grayscale     bool   // makes images gray
 }
 
 type ThumbResult struct {
@@ -31,6 +31,7 @@ type ThumbnailerBuilder interface {
 }
 
 type Thumbnailer interface {
+	// ThumbProcess tries to thumbnail f. Closes f after it's done.
 	ThumbProcess(
 		f *os.File, ext, mimeType string, cfg ThumbConfig) (
 		res ThumbResult, fi FileInfo, err error)

@@ -23,13 +23,17 @@ type IBBoardList struct {
 	Boards []IBBoardListBoard `json:"boards"` // boards
 }
 
+type IBThumbAttributes struct {
+	Width  uint32 `json:"w,omitempty"` // width
+	Height uint32 `json:"h,omitempty"` // height
+}
+
 // thumbnail info
 // consistent across pages
 type IBThumbInfo struct {
-	ID     string `json:"id,omitempty"`  // identifier. filename
-	Alt    string `json:"alt,omitempty"` // alternative. for stuff like spoilers
-	Width  uint32 `json:"w,omitempty"`   // width
-	Height uint32 `json:"h,omitempty"`   // height
+	ID  string `json:"id,omitempty"`  // identifier. filename
+	Alt string `json:"alt,omitempty"` // alternative. for stuff like spoilers
+	IBThumbAttributes
 }
 
 // file info

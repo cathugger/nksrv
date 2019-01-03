@@ -12,7 +12,7 @@ import (
 )
 
 const postTQMsgArgCount = 12
-const postTQFileArgCount = 5
+const postTQFileArgCount = 7
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	sp.ntMutex.RLock()
@@ -144,7 +144,9 @@ SELECT g_p_id FROM ugp`
 				fsize,
 				fname,
 				thumb,
-				oname
+				oname,
+				filecfg,
+				thumbcfg
 			)
 		SELECT *
 		FROM (
@@ -160,7 +162,8 @@ SELECT g_p_id FROM ugp`
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
+			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d,$%d)",
+				x+0, x+1, x+2, x+3, x+4, x+5, x+6)
 			x += postTQFileArgCount
 		}
 
@@ -244,11 +247,24 @@ func (sp *PSQLIB) insertNewThread(
 		args[11] = pInfo.ID
 
 		for i := range pInfo.FI {
+
+			Fjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
+			if err != nil {
+				panic(err)
+			}
+			Tjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			if err != nil {
+				panic(err)
+			}
+
 			args[x+0] = ftypes.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
 			args[x+4] = pInfo.FI[i].Original
+			args[x+5] = Fjson
+			args[x+6] = Tjson
+
 			x += xf
 		}
 		r = stmt.QueryRow(args...)

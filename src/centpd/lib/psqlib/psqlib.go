@@ -12,7 +12,9 @@ import (
 	"centpd/lib/fstore"
 	. "centpd/lib/logx"
 	"centpd/lib/mail/form"
+	"centpd/lib/nilthumbnailer"
 	"centpd/lib/psql"
+	"centpd/lib/thumbnailer"
 )
 
 type PSQLIB struct {
@@ -22,6 +24,10 @@ type PSQLIB struct {
 	thm                  fstore.FStore
 	nntpfs               fstore.FStore
 	nntpmgr              nntpCacheMgr
+	thumbnailer          thumbnailer.Thumbnailer
+	tcfg_thread          thumbnailer.ThumbConfig
+	tcfg_reply           thumbnailer.ThumbConfig
+	tcfg_sage            thumbnailer.ThumbConfig
 	altthumb             altthumber.AltThumber
 	ffo                  formFileOpener
 	fpp                  form.ParserParams
@@ -48,6 +54,10 @@ type Config struct {
 	SrcCfg             *fstore.Config
 	ThmCfg             *fstore.Config
 	NNTPFSCfg          *fstore.Config
+	TBuilder           thumbnailer.ThumbnailerBuilder
+	TCfgThread         *thumbnailer.ThumbConfig
+	TCfgReply          *thumbnailer.ThumbConfig
+	TCfgSage           *thumbnailer.ThumbConfig
 	AltThumber         *altthumber.AltThumber
 	AddBoardOnNNTPPost bool
 }
@@ -85,6 +95,25 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	//p.nntpfs.RemoveDir(nntpIncomingTempDir)
 	p.nntpfs.MakeDir(nntpIncomingDir)
 	p.nntpfs.MakeDir(nntpScraperDir)
+
+	if cfg.TBuilder != nil {
+
+		p.thumbnailer, err = cfg.TBuilder.BuildThumbnailer(&p.thm)
+		if err != nil {
+			return nil, err
+		}
+
+		p.tcfg_thread = *cfg.TCfgThread
+		p.tcfg_reply = *cfg.TCfgReply
+		if cfg.TCfgSage != nil {
+			p.tcfg_sage = *cfg.TCfgSage
+		} else {
+			p.tcfg_sage = p.tcfg_reply
+		}
+
+	} else {
+		p.thumbnailer = nilthumbnailer.NilThumbnailer{}
+	}
 
 	p.nntpmgr = newNNTPCacheMgr()
 

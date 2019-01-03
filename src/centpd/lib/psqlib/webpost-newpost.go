@@ -17,7 +17,7 @@ type npTuple struct {
 }
 
 const postRQMsgArgCount = 15
-const postRQFileArgCount = 5
+const postRQFileArgCount = 7
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	sp.ntMutex.RLock()
@@ -202,7 +202,9 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				fsize,
 				fname,
 				thumb,
-				oname
+				oname,
+				filecfg,
+				thumbcfg
 			)
 		SELECT *
 		FROM (
@@ -218,7 +220,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d)", x+0, x+1, x+2, x+3, x+4)
+			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d,$%d)",
+				x+0, x+1, x+2, x+3, x+4, x+5, x+6)
 			x += postRQFileArgCount
 		}
 
@@ -322,11 +325,22 @@ func (sp *PSQLIB) insertNewReply(
 
 		for i := range pInfo.FI {
 
+			Fjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
+			if err != nil {
+				panic(err)
+			}
+			Tjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			if err != nil {
+				panic(err)
+			}
+
 			args[x+0] = ftypes.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
 			args[x+4] = pInfo.FI[i].Original
+			args[x+5] = Fjson
+			args[x+6] = Tjson
 
 			x += xf
 		}

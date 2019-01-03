@@ -24,6 +24,11 @@ type PostInfo struct {
 	L PartInfo
 }
 
+type IBThumbAttributes struct {
+	Width  uint32 `json:"w,omitempty"` // width
+	Height uint32 `json:"h,omitempty"` // height
+}
+
 type MessageInfo struct {
 	Title   string
 	Author  string
@@ -40,9 +45,11 @@ type FileInfo struct {
 	Type        ftypes.FTypeT // kind
 	ContentType string        // MIME type (without parameters)
 	Size        int64
-	ID          string // storename
-	Thumb       string // thumbnail
-	Original    string // original file name
+	ID          string                 // storename
+	Thumb       string                 // thumbnail
+	Original    string                 // original file name
+	FileAttrib  map[string]interface{} // file attributes
+	ThumbAttrib IBThumbAttributes      // thumbnail attributes
 }
 
 //// layout should be:

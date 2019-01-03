@@ -49,9 +49,11 @@ var testBoardInfo = webib0.IBBoardInfo{
 }
 var (
 	testThumb1 = webib0.IBThumbInfo{
-		ID:     "1.png.jpg",
-		Width:  128,
-		Height: 128,
+		ID: "1.png.jpg",
+		IBThumbAttributes: webib0.IBThumbAttributes{
+			Width:  128,
+			Height: 128,
+		},
 	}
 	testFile1 = webib0.IBFileInfo{
 		ID:       "1.png",
@@ -65,9 +67,10 @@ var (
 		},
 	}
 	testThumb2 = webib0.IBThumbInfo{
-		ID:     "2.jpg.jpg",
-		Width:  128,
-		Height: 96,
+		ID: "2.jpg.jpg",
+		IBThumbAttributes: webib0.IBThumbAttributes{Width: 128,
+			Height: 96,
+		},
 	}
 	testFile2 = webib0.IBFileInfo{
 		ID:       "2.jpg",
@@ -81,9 +84,11 @@ var (
 		},
 	}
 	testThumb3 = webib0.IBThumbInfo{
-		ID:     "3.png.jpg",
-		Width:  128,
-		Height: 128,
+		ID: "3.png.jpg",
+		IBThumbAttributes: webib0.IBThumbAttributes{
+			Width:  128,
+			Height: 128,
+		},
 	}
 	testFile3 = webib0.IBFileInfo{
 		ID:       "3.png",
@@ -97,9 +102,11 @@ var (
 		},
 	}
 	testThumb4 = webib0.IBThumbInfo{
-		ID:     "4.opus.jpg",
-		Width:  128,
-		Height: 128,
+		ID: "4.opus.jpg",
+		IBThumbAttributes: webib0.IBThumbAttributes{
+			Width:  128,
+			Height: 128,
+		},
 	}
 	testFile4 = webib0.IBFileInfo{
 		ID:       "4.opus",

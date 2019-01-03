@@ -23,6 +23,7 @@ import (
 	"centpd/lib/mail/form"
 	"centpd/lib/mailib"
 	tu "centpd/lib/textutils"
+	"centpd/lib/thumbnailer"
 	ib0 "centpd/lib/webib0"
 )
 
@@ -154,7 +155,8 @@ func (sp *PSQLIB) applyInstanceThreadOptions(
 
 // expects file to be seeked at 0
 func generateFileConfig(
-	f *os.File, ct string, fi mailib.FileInfo) (_ mailib.FileInfo, err error) {
+	f *os.File, ct string, fi mailib.FileInfo) (
+	_ mailib.FileInfo, ext string, err error) {
 
 	hash, hashtype, err := ht.MakeFileHash(f)
 	if err != nil {
@@ -168,7 +170,6 @@ func generateFileConfig(
 
 	// append extension, if any
 	oname := fi.Original
-	ext := ""
 	if i := strings.LastIndexByte(oname, '.'); i >= 0 && i+1 < len(oname) {
 		ext = oname[i+1:]
 	}
@@ -193,7 +194,8 @@ func generateFileConfig(
 	}
 
 	if len(ext) != 0 {
-		s += "." + emime.MIMEPreferedExtension(ext)
+		ext = emime.MIMEPreferedExtension(ext)
+		s += "." + ext
 	}
 
 	fi.ID = s
@@ -203,7 +205,7 @@ func generateFileConfig(
 		fi.Original = s
 	}
 
-	return fi, err
+	return fi, ext, err
 }
 
 type postedInfo = ib0.IBPostedInfo
@@ -451,6 +453,21 @@ ON
 	// decision: first write to database, then to file system. on crash, scan files table and check if files are in place (by fid).
 	// there still can be the case where there are left untracked files in file system. they could be manually scanned, and damage is low.
 
+	type thumbMove struct{ from, to string }
+	var thumbMoves []thumbMove
+
+	srcdir := sp.src.Main()
+	thumbdir := sp.thm.Main()
+
+	var tcfg thumbnailer.ThumbConfig
+	if !isReply {
+		tcfg = sp.tcfg_thread
+	} else if !pInfo.MI.Sage {
+		tcfg = sp.tcfg_reply
+	} else {
+		tcfg = sp.tcfg_sage
+	}
+
 	// process files
 	pInfo.FI = make([]mailib.FileInfo, filecount)
 	x := 0
@@ -461,19 +478,35 @@ ON
 			pInfo.FI[x].Original = files[i].FileName
 			pInfo.FI[x].Size = files[i].Size
 
-			pInfo.FI[x], err = generateFileConfig(
+			var ext string
+			pInfo.FI[x], ext, err = generateFileConfig(
 				files[i].F, files[i].ContentType, pInfo.FI[x])
 			if err != nil {
 				return rInfo, err, http.StatusInternalServerError
 			}
 
-			// close file, as we won't read from it directly anymore
-			err = files[i].F.Close()
+			// thumbnail and close file
+			var res thumbnailer.ThumbResult
+			var fi thumbnailer.FileInfo
+			res, fi, err = sp.thumbnailer.ThumbProcess(
+				files[i].F, ext, files[i].ContentType, tcfg)
 			if err != nil {
-				return rInfo, fmt.Errorf("error closing file: %v", err), http.StatusInternalServerError
+				return rInfo, fmt.Errorf("error thumbnailing file: %v", err),
+					http.StatusInternalServerError
 			}
 
-			// TODO extract metadata, make thumbnails here
+			if res.FileName != "" {
+				tfile := pInfo.FI[x].ID + "." + res.FileExt
+				pInfo.FI[x].Thumb = tfile
+				pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
+				pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)
+				pInfo.FI[x].Type = fi.Kind
+				thumbMoves = append(thumbMoves,
+					thumbMove{from: res.FileName, to: thumbdir + tfile})
+			}
+			if len(fi.Attrib) != 0 {
+				pInfo.FI[x].FileAttrib = fi.Attrib
+			}
 
 			x++
 		}
@@ -516,7 +549,7 @@ ON
 		files := f.Files[fieldname]
 		for i := range files {
 			from := files[i].F.Name()
-			to := sp.src.Main() + pInfo.FI[x].ID
+			to := srcdir + pInfo.FI[x].ID
 			sp.log.LogPrintf(DEBUG, "renaming %q -> %q", from, to)
 			xe := fu.RenameNoClobber(from, to)
 			if xe != nil {
@@ -534,6 +567,23 @@ ON
 		panic(fmt.Errorf(
 			"file number mismatch: have %d should have %d",
 			x, len(pInfo.FI)))
+	}
+
+	// move thumbnails
+	for x := range thumbMoves {
+		from := thumbMoves[x].from
+		to := thumbMoves[x].to
+
+		sp.log.LogPrintf(DEBUG, "thm renaming %q -> %q", from, to)
+		xe := fu.RenameNoClobber(from, to)
+		if xe != nil {
+			if os.IsExist(xe) {
+				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+			} else {
+				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+			}
+			os.Remove(from)
+		}
 	}
 
 	if !isReply {
