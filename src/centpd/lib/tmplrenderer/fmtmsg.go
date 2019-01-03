@@ -267,10 +267,16 @@ func formatmsg(
 		}
 
 		d := struct {
-			D *webib0.IBReference
+			B *webib0.IBBoardInfo
+			T *webib0.IBCommonThread
+			P *webib0.IBPostInfo
+			R *webib0.IBReference
 			N *NodeInfo
 		}{
-			D: &rr.IBReference,
+			B: boardInfo,
+			T: threadInfo,
+			P: p,
+			R: &rr.IBReference,
 			N: ni,
 		}
 		err = tr.m.PreRefTmpl.Execute(w, d)

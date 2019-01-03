@@ -42,7 +42,26 @@ arguments list:
   {{- if $fullURLs}} <span>[<a href="thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 
   {{- range $P.BackReferences}}
-   <a class="opref" href="#p{{.}}">&gt;&gt;{{.}}</a>
+   <a
+    class="bref"
+    href="
+    {{- if .Board -}}
+     {{$X.N.Root}}/{{escboard .Board}}/
+    {{- end -}}
+    {{if .Thread -}}
+     {{if (not .Board) -}}
+      {{$X.N.Root}}/{{escboard $X.Board}}/
+     {{- end -}}
+     thread/{{.Thread}}
+    {{- end -}}
+    {{- if .Post -}}
+     {{- if (and (not .Thread) $fullURLs) -}}
+      thread/{{$T.ID}}
+     {{- end -}}
+     #p{{.Post}}
+    {{- end -}}
+    "
+   >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{.Post}}</a>
   {{- end -}}
  </p>
 
