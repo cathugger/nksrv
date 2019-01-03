@@ -26,8 +26,11 @@ type PSQLIB struct {
 	nntpmgr              nntpCacheMgr
 	thumbnailer          thumbnailer.Thumbnailer
 	tcfg_thread          thumbnailer.ThumbConfig
+	tsfx_thread          string
 	tcfg_reply           thumbnailer.ThumbConfig
+	tsfx_reply           string
 	tcfg_sage            thumbnailer.ThumbConfig
+	tsfx_sage            string
 	altthumb             altthumber.AltThumber
 	ffo                  formFileOpener
 	fpp                  form.ParserParams
@@ -104,11 +107,15 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		}
 
 		p.tcfg_thread = *cfg.TCfgThread
+		p.tsfx_thread = ".t"
 		p.tcfg_reply = *cfg.TCfgReply
+		p.tsfx_reply = ".r"
 		if cfg.TCfgSage != nil {
 			p.tcfg_sage = *cfg.TCfgSage
+			p.tsfx_sage = ".s"
 		} else {
 			p.tcfg_sage = p.tcfg_reply
+			p.tsfx_sage = p.tsfx_reply
 		}
 
 	} else {

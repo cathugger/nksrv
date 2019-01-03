@@ -460,12 +460,16 @@ ON
 	thumbdir := sp.thm.Main()
 
 	var tcfg thumbnailer.ThumbConfig
+	var tsfx string
 	if !isReply {
 		tcfg = sp.tcfg_thread
+		tsfx = sp.tsfx_thread
 	} else if !pInfo.MI.Sage {
 		tcfg = sp.tcfg_reply
+		tsfx = sp.tsfx_reply
 	} else {
 		tcfg = sp.tcfg_sage
+		tsfx = sp.tsfx_sage
 	}
 
 	// process files
@@ -496,7 +500,7 @@ ON
 			}
 
 			if res.FileName != "" {
-				tfile := pInfo.FI[x].ID + "." + res.FileExt
+				tfile := pInfo.FI[x].ID + tsfx + "." + res.FileExt
 				pInfo.FI[x].Thumb = tfile
 				pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
 				pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)
