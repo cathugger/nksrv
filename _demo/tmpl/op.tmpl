@@ -45,7 +45,7 @@ arguments list:
    <a
     class="bref"
     {{if .Post -}}
-    title="{{.Post}}"
+    title="{{if .Board}}/{{html .Board}}/{{end}}{{.Post}}"
     {{end -}}
     href="
     {{- if .Board -}}
@@ -107,5 +107,5 @@ arguments list:
 
  {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
 
- {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $X.D.Board $T $P $maxLines $maxCPL -}}{{- end -}}
+ {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $X.D.Board $T $P $fullURLs $maxLines $maxCPL -}}{{- end -}}
 {{end -}}

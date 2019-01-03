@@ -47,7 +47,8 @@ type msgLineFmtCfg struct {
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
 	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
-	p *webib0.IBPostInfo, linelimit, charsperline int) (err error) {
+	p *webib0.IBPostInfo, fullURLs bool, linelimit, charsperline int) (
+	err error) {
 
 	_, err = w.Write(tr.m.PreMsg)
 	if err != nil {
@@ -271,12 +272,14 @@ func formatmsg(
 			T *webib0.IBCommonThread
 			P *webib0.IBPostInfo
 			R *webib0.IBReference
+			F bool
 			N *NodeInfo
 		}{
 			B: boardInfo,
 			T: threadInfo,
 			P: p,
 			R: &rr.IBReference,
+			F: fullURLs,
 			N: ni,
 		}
 		err = tr.m.PreRefTmpl.Execute(w, d)
@@ -331,11 +334,12 @@ endmsg:
 func fmtmsg(
 	tr *TmplRenderer, n *NodeInfo,
 	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
-	p *webib0.IBPostInfo, linelimit, charsperline int) (
+	p *webib0.IBPostInfo, fullURLs bool, linelimit, charsperline int) (
 	_ string, err error) {
 
 	b := &strings.Builder{}
-	err = formatmsg(b, tr, n, boardInfo, threadInfo, p, linelimit, charsperline)
+	err = formatmsg(b, tr, n, boardInfo, threadInfo, p,
+		fullURLs, linelimit, charsperline)
 	return b.String(), err
 }
 

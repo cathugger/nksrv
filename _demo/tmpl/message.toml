@@ -7,7 +7,30 @@ final_newline    = ""
 nonfinal_newline = "<br />"
 pre_quote        = "<span class=\"quote\">"
 post_quote       = "</span>"
-pre_reference    = "<a class=\"ref\" href=\"#test\">"
+pre_reference    = """
+<a
+ class="ref"
+ {{if .R.Post -}}
+ title="{{if .R.Board}}/{{html .R.Board}}/{{end}}{{.R.Post}}"
+ {{end -}}
+ href="
+ {{- if .R.Board -}}
+ {{.N.Root}}/{{escboard .R.Board}}/
+ {{- end -}}
+ {{if .R.Thread -}}
+  {{if (not .R.Board) -}}
+   {{.N.Root}}/{{escboard .B.Board}}/
+  {{- end -}}
+  thread/{{.R.Thread}}
+ {{- end -}}
+ {{- if .R.Post -}}
+  {{- if (and (not .R.Thread) .F) -}}
+   thread/{{.T.ID}}
+  {{- end -}}
+  #p{{.R.Post}}
+ {{- end -}}
+ "
+>"""
 post_reference   = "</a>"
 truncation_line  = """
 <div><strong class=\"trunc\">\
