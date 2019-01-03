@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"centpd/lib/ftypes"
 	. "centpd/lib/logx"
 	"centpd/lib/mailib"
 )
@@ -243,7 +244,7 @@ func (sp *PSQLIB) insertNewThread(
 		args[11] = pInfo.ID
 
 		for i := range pInfo.FI {
-			args[x+0] = mailib.FTypeS[pInfo.FI[i].Type]
+			args[x+0] = ftypes.FTypeS[pInfo.FI[i].Type]
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb

@@ -405,7 +405,7 @@ func (c *NNTPScraper) eatArticle(
 
 func (c *NNTPScraper) handleArticleResponse(
 	msgid FullMsgIDStr, group string) (
-	ok bool, err error, fatal bool, wantroot FullMsgIDStr) {
+	normalok bool, err error, fatal bool, wantroot FullMsgIDStr) {
 
 	var code uint
 	var rest []byte
@@ -434,7 +434,7 @@ func (c *NNTPScraper) handleArticleResponse(
 		c.log.LogPrintf(WARN,
 			"processTODOList: negative ARTICLE response %d %q",
 			code, au.TrimWSBytes(rest))
-		ok = true
+		normalok = true
 		return
 	} else {
 		c.log.LogPrintf(WARN,
@@ -451,10 +451,10 @@ func (c *NNTPScraper) handleArticleResponse(
 			c.log.LogPrintf(WARN,
 				"processTODOList: eatArticle(%s) fail: %v", msgid, err)
 			err = nil
-			ok = true
+			normalok = true
 		}
 	} else {
-		ok = true
+		normalok = true
 	}
 	return
 }
@@ -481,12 +481,12 @@ func (c *NNTPScraper) processTODOList(
 	responseHandler := func(
 		id int64, msgid FullMsgIDStr) (err error, fatal bool) {
 
-		ok, err, fatal, _ := c.handleArticleResponse(msgid, group)
+		normalok, err, fatal, _ := c.handleArticleResponse(msgid, group)
 		if err != nil {
 			return
 		}
 
-		if ok {
+		if normalok {
 			maxidMu.Lock()
 			// we ate it successfuly
 			if id > new_maxid {

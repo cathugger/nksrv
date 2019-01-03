@@ -36,7 +36,7 @@ type IBThumbInfo struct {
 // consistent across pages
 type IBFileInfo struct {
 	ID       string                 `json:"id"`             // identifier. filename
-	Type     string                 `json:"type"`           // short type of file
+	Type     string                 `json:"type"`           // short type of file, kind
 	Thumb    IBThumbInfo            `json:"thumb"`          // thumbnail
 	Original string                 `json:"orig"`           // original filename
 	Size     int64                  `json:"size"`           // all files have size

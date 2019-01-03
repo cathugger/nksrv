@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"centpd/lib/ftypes"
 	"centpd/lib/mail"
 	ib0 "centpd/lib/webib0"
 )
@@ -35,25 +36,9 @@ type PostAttributes struct {
 	References []ib0.IBMessageReference `json:"refs,omitempty"`
 }
 
-type FTypeT int
-
-const (
-	FTypeFile FTypeT = iota
-	FTypeMsg
-	FTypeText
-	FTypeImage
-)
-
-var FTypeS = map[FTypeT]string{
-	FTypeFile:  "file",
-	FTypeMsg:   "msg",
-	FTypeText:  "text",
-	FTypeImage: "image",
-}
-
 type FileInfo struct {
-	Type        FTypeT
-	ContentType string // MIME type (without parameters)
+	Type        ftypes.FTypeT // kind
+	ContentType string        // MIME type (without parameters)
 	Size        int64
 	ID          string // storename
 	Thumb       string // thumbnail

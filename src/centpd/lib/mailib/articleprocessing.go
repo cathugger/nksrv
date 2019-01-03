@@ -16,6 +16,7 @@ import (
 	au "centpd/lib/asciiutils"
 	"centpd/lib/emime"
 	"centpd/lib/fstore"
+	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
 	"centpd/lib/mail"
 	tu "centpd/lib/textutils"
@@ -398,7 +399,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		if msgattachment {
 			// if translated message was already stored in msg field
-			fi.Type = FTypeMsg
+			fi.Type = ftypes.FTypeMsg
 		}
 		pi.FI = append(pi.FI, fi)
 
