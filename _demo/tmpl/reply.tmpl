@@ -44,6 +44,9 @@ arguments list:
    {{- range $P.BackReferences}}
     <a
      class="bref"
+     {{if .Post -}}
+     title="{{.Post}}"
+     {{end -}}
      href="
      {{- if .Board -}}
       {{$X.N.Root}}/{{escboard .Board}}/
@@ -61,7 +64,7 @@ arguments list:
       #p{{.Post}}
      {{- end -}}
      "
-    >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{.Post}}</a>
+    >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{shortid .Post}}</a>
    {{- end -}}
 
   </p>
