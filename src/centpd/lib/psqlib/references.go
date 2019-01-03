@@ -16,13 +16,21 @@ var re_ref = regexp.MustCompile(
 	`>> ?([0-9a-fA-F]{8,40})\b`)
 var re_cref = regexp.MustCompile(
 	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
+
+// syntax of RFC 5536 seems restrictive enough to not allow much false positives
+const re_atom = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
+const re_datom = re_atom + "(?:\\." + re_atom + ")*"
+const re_mdtext = "[\x21-\x3D\x3F-\x5A\x5E-\x7E]"
+const re_nofoldlit = "\\[" + re_mdtext + "*\\]"
+
 var re_msgid = regexp.MustCompile(
-	`<[\x21-\x2E\x30-\x3D\x3F-\x7E]+@[\x21-\x2E\x30-\x3D\x3F-\x7E]+>`)
+	"<" + re_datom + "@(?:" + re_datom + "|" + re_nofoldlit + ")>")
 
 type sliceReference struct {
 	start, end int
 	board      string
 	post       string
+	msgid      string
 }
 
 func parseReferences(msg string) (srefs []sliceReference) {
@@ -47,6 +55,18 @@ func parseReferences(msg string) (srefs []sliceReference) {
 		}
 		srefs = append(srefs, x)
 	}
+	sm = re_msgid.FindAllStringIndex(msg, -1)
+	for i := range sm {
+		if sm[i][1]-sm[i][0] > 250 || sm[i][1]-sm[i][0] < 3 {
+			continue
+		}
+		x := sliceReference{
+			start: sm[i][0],
+			end:   sm[i][1],
+			msgid: msg[sm[i][0]+1 : sm[i][1]-1],
+		}
+		srefs = append(srefs, x)
+	}
 	// sort by position
 	sort.Slice(srefs, func(i, j int) bool {
 		return srefs[i].start < srefs[j].start
@@ -68,6 +88,54 @@ func parseReferences(msg string) (srefs []sliceReference) {
 // PostgreSQL doesn't wanna optimize LIKE operations at all when used
 // with arrays or left joins...
 // So generate our own queries.
+
+const selhead_a = `SELECT
+	%d,
+	xb.b_id,
+	xb.b_name,
+	xt.t_id,
+	xt.t_name,
+	xbp.p_name`
+
+const selhead_b = `
+FROM
+	ib0.bposts AS xbp
+JOIN
+	ib0.threads xt
+ON
+	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
+JOIN
+	ib0.boards xb
+ON
+	xbp.b_id = xb.b_id
+JOIN
+	ib0.posts AS xp
+ON
+	xbp.g_p_id = xp.g_p_id`
+
+const selhead = selhead_a + `,
+	'<' || xp.msgid || '>'` + selhead_b
+
+const selhead2 = selhead_a + selhead_b
+
+func escapeSQLString(s string) string {
+	return strings.Replace(s, "'", "''", -1)
+}
+
+func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
+	var b strings.Builder
+
+	b.WriteString("ARRAY['")
+	for i := range prefs {
+		if i != 0 {
+			b.WriteString("','")
+		}
+		b.WriteString(escapeSQLString(string(prefs[i])))
+	}
+	b.WriteString("']")
+
+	return b.String()
+}
 
 func (sp *PSQLIB) processReferencesOnPost(
 	msg string, bid boardID, tid postID) (
@@ -101,28 +169,7 @@ func (sp *PSQLIB) processReferencesOnPost(
 
 			if len(srefs[i].board) == 0 {
 				// only postID
-				q := `SELECT
-	%d,
-	xb.b_id,
-	xb.b_name,
-	xt.t_id,
-	xt.t_name,
-	xbp.p_name,
-	'<' || xp.msgid || '>'
-FROM
-	ib0.bposts AS xbp
-JOIN
-	ib0.threads xt
-ON
-	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
-JOIN
-	ib0.boards xb
-ON
-	xbp.b_id = xb.b_id
-JOIN
-	ib0.posts AS xp
-ON
-	xbp.g_p_id = xp.g_p_id
+				q := selhead + `
 WHERE
 	xbp.p_name LIKE '%s%%'
 ORDER BY
@@ -135,28 +182,7 @@ LIMIT
 
 			} else {
 				// board+postID
-				q := `SELECT
-	%d,
-	xb.b_id,
-	xb.b_name,
-	xt.t_id,
-	xt.t_name,
-	xbp.p_name,
-	'<' || xp.msgid || '>'
-FROM
-	ib0.bposts AS xbp
-JOIN
-	ib0.threads AS xt
-ON
-	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
-JOIN
-	ib0.boards AS xb
-ON
-	xbp.b_id = xb.b_id
-JOIN
-	ib0.posts AS xp
-ON
-	xbp.g_p_id = xp.g_p_id
+				q := selhead + `
 WHERE
 	xbp.p_name LIKE '%s%%' AND xb.b_name = '%s'
 ORDER BY
@@ -169,6 +195,20 @@ LIMIT
 		} else if len(srefs[i].board) != 0 {
 			// board
 			// nothing, we don't need to look it up
+		} else if len(srefs[i].msgid) != 0 {
+			// message-id
+			q := selhead + `
+WHERE
+	xp.msgid = '%s'
+ORDER BY
+	(xbp.b_id = %d) DESC,
+	xbp.b_id ASC
+LIMIT
+	1`
+			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
+
+		} else {
+			panic("wtf")
 		}
 	}
 
@@ -203,8 +243,8 @@ LIMIT
 	var r_msgid string
 
 	for i := range srefs {
-		if len(srefs[i].post) != 0 {
 
+		fetchrow := func() (err error) {
 			if r_id <= i && rows.Next() {
 				err = rows.Scan(
 					&r_id,
@@ -215,6 +255,14 @@ LIMIT
 					err = sp.sqlError("references query scan", err)
 					return
 				}
+			}
+			return
+		}
+
+		if len(srefs[i].post) != 0 {
+			err = fetchrow()
+			if err != nil {
+				return
 			}
 
 			if len(srefs[i].board) == 0 {
@@ -250,7 +298,8 @@ LIMIT
 					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
 				}
 			}
-		} else {
+		} else if len(srefs[i].board) != 0 {
+
 			r := ib0.IBMessageReference{
 				Start: uint(srefs[i].start),
 				End:   uint(srefs[i].end),
@@ -259,6 +308,29 @@ LIMIT
 			r.Board = string(srefs[i].board)
 			refs = append(refs, r)
 			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
+
+		} else if len(srefs[i].msgid) != 0 {
+
+			err = fetchrow()
+			if err != nil {
+				return
+			}
+
+			if r_id == i+1 {
+				r := ib0.IBMessageReference{
+					Start: uint(srefs[i].start),
+					End:   uint(srefs[i].end),
+				}
+				r.Board = r_bname
+				r.Thread = r_tname
+				r.Post = r_pname
+
+				refs = append(refs, r)
+				inreplyto = append(inreplyto, r_msgid)
+				sp.log.LogPrintf(DEBUG, "mref: %#v %q", r, r_msgid)
+			}
+		} else {
+			panic("wtf")
 		}
 	}
 	if rows != nil {
@@ -270,21 +342,6 @@ LIMIT
 	}
 
 	return
-}
-
-func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
-	var b strings.Builder
-
-	b.WriteString("ARRAY[")
-	for i := range prefs {
-		if i != 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strings.Replace(string(prefs[i]), "'", "''", -1))
-	}
-	b.WriteByte(']')
-
-	return b.String()
 }
 
 func (sp *PSQLIB) processReferencesOnIncoming(
@@ -302,11 +359,18 @@ func (sp *PSQLIB) processReferencesOnIncoming(
 	// build query
 	b := &strings.Builder{}
 
+	first := true
+
 	next := func() {
 		if b.Len() == 0 {
 			b.WriteString("SELECT * FROM\n(\n")
 		} else {
-			b.WriteString("\n)\nUNION ALL\n(\n")
+			if first {
+				b.WriteString("\n) AS meow\nUNION ALL\n(\n")
+				first = false
+			} else {
+				b.WriteString("\n)\nUNION ALL\n(\n")
+			}
 		}
 	}
 
@@ -318,27 +382,7 @@ func (sp *PSQLIB) processReferencesOnIncoming(
 
 			if len(srefs[i].board) == 0 {
 				// only postID
-				q := `SELECT
-	%d,
-	xb.b_id,
-	xb.b_name,
-	xt.t_id,
-	xt.t_name,
-	xbp.p_name
-FROM
-	ib0.bposts AS xbp
-JOIN
-	ib0.threads xt
-ON
-	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
-JOIN
-	ib0.boards xb
-ON
-	xbp.b_id = xb.b_id
-JOIN
-	ib0.posts AS xp
-ON
-	xbp.g_p_id = xp.g_p_id
+				q := selhead2 + `
 WHERE
 	xbp.p_name LIKE '%s%%'
 ORDER BY
@@ -351,27 +395,7 @@ LIMIT
 
 			} else {
 				// board+postID
-				q := `SELECT
-	%d,
-	xb.b_id,
-	xb.b_name,
-	xt.t_id,
-	xt.t_name,
-	xbp.p_name
-FROM
-	ib0.bposts AS xbp
-JOIN
-	ib0.threads AS xt
-ON
-	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
-JOIN
-	ib0.boards AS xb
-ON
-	xbp.b_id = xb.b_id
-JOIN
-	ib0.posts AS xp
-ON
-	xbp.g_p_id = xp.g_p_id
+				q := selhead2 + `
 WHERE
 	xbp.p_name LIKE '%s%%' AND xb.b_name = '%s'
 ORDER BY
@@ -385,13 +409,32 @@ LIMIT
 		} else if len(srefs[i].board) != 0 {
 			// board
 			// nothing, we don't need to look it up
+		} else if len(srefs[i].msgid) != 0 {
+			// msgid
+			q := selhead2 + `
+WHERE
+	xp.msgid = '%s'
+ORDER BY
+	(xbp.b_id = %d) DESC,
+	xbp.b_id ASC
+LIMIT
+	1`
+			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
+
+		} else {
+			panic("wtf")
 		}
 	}
 
 	var rows *sql.Rows
 
 	if b.Len() != 0 {
-		b.WriteString("\n)") // finish it up
+		// finish it up
+		if first {
+			b.WriteString("\n) AS meow")
+		} else {
+			b.WriteString("\n)")
+		}
 
 		rows, err = sp.db.DB.Query(b.String())
 		if err != nil {
@@ -409,8 +452,8 @@ LIMIT
 	var r_pname string
 
 	for i := range srefs {
-		if len(srefs[i].post) != 0 {
 
+		fetchrow := func() (err error) {
 			if r_id <= i && rows.Next() {
 				err = rows.Scan(
 					&r_id,
@@ -421,6 +464,15 @@ LIMIT
 					err = sp.sqlError("references query scan", err)
 					return
 				}
+			}
+			return
+		}
+
+		if len(srefs[i].post) != 0 {
+
+			err = fetchrow()
+			if err != nil {
+				return
 			}
 
 			if len(srefs[i].board) == 0 {
@@ -437,6 +489,7 @@ LIMIT
 					} else if r_tid != tid {
 						r.Thread = r_tname
 					}
+
 					refs = append(refs, r)
 				}
 			} else {
@@ -452,14 +505,33 @@ LIMIT
 					refs = append(refs, r)
 				}
 			}
-		} else {
+		} else if len(srefs[i].board) != 0 {
 			r := ib0.IBMessageReference{
 				Start: uint(srefs[i].start),
 				End:   uint(srefs[i].end),
 			}
-
 			r.Board = string(srefs[i].board)
+
 			refs = append(refs, r)
+
+		} else if len(srefs[i].msgid) != 0 {
+
+			err = fetchrow()
+			if err != nil {
+				return
+			}
+
+			if r_id == i+1 {
+				r := ib0.IBMessageReference{
+					Start: uint(srefs[i].start),
+					End:   uint(srefs[i].end),
+				}
+				r.Board = r_bname
+				r.Thread = r_tname
+				r.Post = r_pname
+
+				refs = append(refs, r)
+			}
 		}
 	}
 	if rows != nil {
