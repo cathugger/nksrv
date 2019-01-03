@@ -32,9 +32,29 @@
    <div class="cat_div">
     <a href="thread/{{urlpath .ID}}">
      {{- if .Thumb.ID -}}
-      <img src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.ID}}" />
+      <img
+       class="cat_img"
+       src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"
+       {{- if .Thumb.Width}}
+       width="{{.Thumb.Width}}"
+       {{- end}}
+       {{- if .Thumb.Height}}
+       height="{{.Thumb.Height}}"
+       {{- end}}
+       alt="{{html .Thumb.ID}}"
+      />
      {{- else -}}
-      <img src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"{{if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}{{if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}} alt="{{html .Thumb.Alt}}" />
+      <img
+       class="cat_img"
+       src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"
+       {{- if .Thumb.Width}}
+       width="{{.Thumb.Width}}"
+       {{- end}}
+       {{- if .Thumb.Height}}
+       height="{{.Thumb.Height}}"
+       {{- end}}
+       alt="{{html .Thumb.Alt}}"
+      />
      {{- end -}}
     </a>
     <br />

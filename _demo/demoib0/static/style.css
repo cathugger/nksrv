@@ -40,6 +40,13 @@ html {
 	word-wrap: break-word;
 }
 
+.cat_img {
+	max-width: 170px;
+	max-height: 170px;
+	width: auto;
+	height: auto;
+}
+
 .opinfo, .rinfo {
 	margin: 2px 4px 0px 4px;
 	/* background-color: #FFCCCC; */
