@@ -9,11 +9,9 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"centpd/lib/altthumber"
-	di "centpd/lib/demoib"
+	"centpd/lib/democonfigs"
 	"centpd/lib/emime"
 	fl "centpd/lib/filelogger"
-	"centpd/lib/fstore"
 	"centpd/lib/logx"
 	. "centpd/lib/logx"
 	"centpd/lib/nntp"
@@ -64,16 +62,11 @@ func main() {
 	}
 	defer db.Close()
 
-	altthm := altthumber.AltThumber(di.DemoAltThumber{})
+	psqlibcfg := democonfigs.CfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
 
-	dbib, err := psqlib.NewInitAndPrepare(psqlib.Config{
-		DB:         &db,
-		Logger:     &lgr,
-		SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
-		ThmCfg:     &fstore.Config{"_demo/demoib0/thm"},
-		NNTPFSCfg:  &fstore.Config{"_demo/demoib0/nntp"},
-		AltThumber: &altthm,
-	})
+	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {
 		mlg.LogPrintln(CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return

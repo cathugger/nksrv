@@ -9,19 +9,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"centpd/lib/altthumber"
 	ar "centpd/lib/apirouter"
+	"centpd/lib/democonfigs"
 	di "centpd/lib/demoib"
 	"centpd/lib/emime"
 	fl "centpd/lib/filelogger"
-	"centpd/lib/fstore"
-	"centpd/lib/gothumbnailer"
 	ir "centpd/lib/ibrouter"
 	rj "centpd/lib/jsonrenderer"
 	"centpd/lib/logx"
 	"centpd/lib/psql"
 	"centpd/lib/psqlib"
-	"centpd/lib/thumbnailer"
 	rt "centpd/lib/tmplrenderer"
 )
 
@@ -65,27 +62,11 @@ func main() {
 	}
 	defer db.Close()
 
-	altthm := altthumber.AltThumber(di.DemoAltThumber{})
+	psqlibcfg := democonfigs.CfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
 
-	dbib, err := psqlib.NewInitAndPrepare(psqlib.Config{
-		DB:        &db,
-		Logger:    &lgr,
-		SrcCfg:    &fstore.Config{"_demo/demoib0/src"},
-		ThmCfg:    &fstore.Config{"_demo/demoib0/thm"},
-		NNTPFSCfg: &fstore.Config{"_demo/demoib0/nntp"},
-		TBuilder:  gothumbnailer.DefaultConfig,
-		TCfgThread: &thumbnailer.ThumbConfig{
-			Width:  250,
-			Height: 250,
-			Color:  "#C5EFCF",
-		},
-		TCfgReply: &thumbnailer.ThumbConfig{
-			Width:  200,
-			Height: 200,
-			Color:  "#DDFFDD",
-		},
-		AltThumber: &altthm,
-	})
+	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return
