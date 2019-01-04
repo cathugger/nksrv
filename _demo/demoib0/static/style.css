@@ -32,10 +32,10 @@ html {
 	text-align: center;
 	width: 180px;
 	height: 250px;
-	background-color: #EEFFDD;
-	margin: 1px 1px 1px 1px;
+	/* background-color: #EEFFDD; */
+	margin: 2px 2px 2px 2px;
 	padding: 4px 2px 4px 2px;
-	border: 1px solid #EE6666;
+	/* border: 1px solid #EE6666; */
 	overflow: hidden;
 	word-wrap: break-word;
 }
