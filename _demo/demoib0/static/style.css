@@ -41,8 +41,10 @@ html {
 }
 
 .cat_div:hover {
-	margin: 1px 1px 1px 1px;
-	border: 1px solid #EE6666;
+	/*
+	margin: 0px 0px 0px 0px;
+	border: 2px solid #77CC99;
+	*/
 }
 
 .cat_img {
