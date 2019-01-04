@@ -244,15 +244,31 @@ func countRealFiles(FI []mailib.FileInfo) (FC int) {
 	return
 }
 
+func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
+	if !isReply {
+		return sp.tplan_thread
+	} else if !isSage {
+		return sp.tplan_reply
+	} else {
+		return sp.tplan_sage
+	}
+}
+
 func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
 
 	var pInfo mailib.PostInfo
 
+	type thumbMove struct{ from, to string }
+	var thumbMoves []thumbMove
+
 	defer func() {
 		if err != nil {
 			f.RemoveAll()
+			for _, mov := range thumbMoves {
+				os.Remove(mov.from)
+			}
 		}
 	}()
 
@@ -453,24 +469,10 @@ ON
 	// decision: first write to database, then to file system. on crash, scan files table and check if files are in place (by fid).
 	// there still can be the case where there are left untracked files in file system. they could be manually scanned, and damage is low.
 
-	type thumbMove struct{ from, to string }
-	var thumbMoves []thumbMove
-
 	srcdir := sp.src.Main()
 	thumbdir := sp.thm.Main()
 
-	var tcfg thumbnailer.ThumbConfig
-	var tsfx string
-	if !isReply {
-		tcfg = sp.tcfg_thread
-		tsfx = sp.tsfx_thread
-	} else if !pInfo.MI.Sage {
-		tcfg = sp.tcfg_reply
-		tsfx = sp.tsfx_reply
-	} else {
-		tcfg = sp.tcfg_sage
-		tsfx = sp.tsfx_sage
-	}
+	tplan := sp.pickThumbPlan(isReply, pInfo.MI.Sage)
 
 	// process files
 	pInfo.FI = make([]mailib.FileInfo, filecount)
@@ -493,14 +495,14 @@ ON
 			var res thumbnailer.ThumbResult
 			var fi thumbnailer.FileInfo
 			res, fi, err = sp.thumbnailer.ThumbProcess(
-				files[i].F, ext, files[i].ContentType, tcfg)
+				files[i].F, ext, files[i].ContentType, tplan.ThumbConfig)
 			if err != nil {
 				return rInfo, fmt.Errorf("error thumbnailing file: %v", err),
 					http.StatusInternalServerError
 			}
 
 			if res.FileName != "" {
-				tfile := pInfo.FI[x].ID + tsfx + "." + res.FileExt
+				tfile := pInfo.FI[x].ID + "." + tplan.Name + "." + res.FileExt
 				pInfo.FI[x].Thumb = tfile
 				pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
 				pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)

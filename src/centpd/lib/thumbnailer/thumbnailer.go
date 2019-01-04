@@ -7,10 +7,23 @@ import (
 	"centpd/lib/ftypes"
 )
 
+// config
 type ThumbConfig struct {
 	Width, Height int    // thumbnail box
 	Color         string // background color if needs to be hardcoded
 	Grayscale     bool   // makes images gray
+}
+
+// plan: name + config
+type ThumbPlan struct {
+	Name string
+	ThumbConfig
+}
+
+// execution: thumbnailer + name + config
+type ThumbExec struct {
+	Thumbnailer
+	ThumbPlan
 }
 
 type ThumbResult struct {

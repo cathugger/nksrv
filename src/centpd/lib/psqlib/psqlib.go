@@ -25,12 +25,9 @@ type PSQLIB struct {
 	nntpfs               fstore.FStore
 	nntpmgr              nntpCacheMgr
 	thumbnailer          thumbnailer.Thumbnailer
-	tcfg_thread          thumbnailer.ThumbConfig
-	tsfx_thread          string
-	tcfg_reply           thumbnailer.ThumbConfig
-	tsfx_reply           string
-	tcfg_sage            thumbnailer.ThumbConfig
-	tsfx_sage            string
+	tplan_thread         thumbnailer.ThumbPlan
+	tplan_reply          thumbnailer.ThumbPlan
+	tplan_sage           thumbnailer.ThumbPlan
 	altthumb             altthumber.AltThumber
 	ffo                  formFileOpener
 	fpp                  form.ParserParams
@@ -106,16 +103,21 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 			return nil, err
 		}
 
-		p.tcfg_thread = *cfg.TCfgThread
-		p.tsfx_thread = ".t"
-		p.tcfg_reply = *cfg.TCfgReply
-		p.tsfx_reply = ".r"
+		p.tplan_thread = thumbnailer.ThumbPlan{
+			Name:        "t",
+			ThumbConfig: *cfg.TCfgThread,
+		}
+		p.tplan_reply = thumbnailer.ThumbPlan{
+			Name:        "r",
+			ThumbConfig: *cfg.TCfgReply,
+		}
 		if cfg.TCfgSage != nil {
-			p.tcfg_sage = *cfg.TCfgSage
-			p.tsfx_sage = ".s"
+			p.tplan_sage = thumbnailer.ThumbPlan{
+				Name:        "s",
+				ThumbConfig: *cfg.TCfgSage,
+			}
 		} else {
-			p.tcfg_sage = p.tcfg_reply
-			p.tsfx_sage = p.tsfx_reply
+			p.tplan_sage = p.tplan_reply
 		}
 
 	} else {

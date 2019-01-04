@@ -20,6 +20,7 @@ import (
 	ht "centpd/lib/hashtools"
 	"centpd/lib/mail"
 	tu "centpd/lib/textutils"
+	"centpd/lib/thumbnailer"
 )
 
 const DefaultHeaderSizeLimit = 2 << 20
@@ -166,8 +167,10 @@ func (cfg *MailProcessorConfig) processMessageText(
 }
 
 func takeInFile(
-	src *fstore.FStore, r io.Reader, binary bool) (
-	fn, hash, hashtype string, fsize int64, err error) {
+	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool,
+	ext, ctype string, r io.Reader, binary bool) (
+	fn, hash, hashtype string, fsize int64,
+	tres thumbnailer.ThumbResult, tfi thumbnailer.FileInfo, err error) {
 
 	// new
 	f, err := src.TempFile("mail-", "")
@@ -204,10 +207,13 @@ func takeInFile(
 		return
 	}
 
-	// XXX do something more before closing file?
-
-	// close
-	err = f.Close()
+	if !nothumb {
+		// thumbnail (and also close)
+		tres, tfi, err = thm.ThumbProcess(f, ext, ctype, thm.ThumbConfig)
+	} else {
+		// just close
+		err = f.Close()
+	}
 	if err != nil {
 		return
 	}
@@ -215,18 +221,11 @@ func takeInFile(
 	return
 }
 
-func processMessageAttachment(
-	src *fstore.FStore, H mail.Headers, r io.Reader,
-	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
-	fi FileInfo, fn string, err error) {
+func attachmentInfo(
+	ct_t string, ct_par, cdis_par map[string]string) (
+	ext, oname, _ string) {
 
-	fn, hash, hashtype, fsize, err := takeInFile(src, r, binary)
-	if err != nil {
-		return
-	}
-
-	// determine with what filename should we store it
-	oname := ""
+	// content-disposition filename param
 	if cdis_par != nil && cdis_par["filename"] != "" {
 		oname = cdis_par["filename"]
 		// undo RFC 2047 MIME Word hackery, if any
@@ -235,6 +234,7 @@ func processMessageAttachment(
 			oname = tr_oname
 		}
 	}
+	// content-type name param
 	if oname == "" && ct_par != nil && ct_par["name"] != "" {
 		oname = ct_par["name"]
 		// undo RFC 2047 MIME Word hackery, if any
@@ -249,7 +249,8 @@ func processMessageAttachment(
 	if i := strings.LastIndexByte(oname, '/'); i >= 0 {
 		oname = oname[i+1:]
 	}
-	ext := ""
+
+	// ext
 	if oname != "" {
 		i := strings.LastIndexByte(oname, '.')
 		// do some additional checks to ensure that extension at least makes sense
@@ -289,11 +290,34 @@ func processMessageAttachment(
 			ext = "eml"
 		}
 	}
+	// correction
+	if ext != "" {
+		ext = emime.MIMEPreferedExtension(ext)
+	}
+
+	return ext, oname, ct_t
+}
+
+func processMessageAttachment(
+	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool, r io.Reader,
+	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
+	fi FileInfo, fn, thmfn string, err error) {
+
+	// file extension, original name, corrected type
+	ext, oname, ct_t := attachmentInfo(ct_t, ct_par, cdis_par)
+
+	// processing of file itself
+	fn, hash, hashtype, fsize, tres, tfi, err :=
+		takeInFile(src, thm, nothumb, ext, ct_t, r, binary)
+	if err != nil {
+		return
+	}
+
 	// ohwell, at this point we should probably have something
 	// even if we don't, that's okay
 	var iname string
 	if ext != "" {
-		iname = hash + "-" + hashtype + "." + emime.MIMEPreferedExtension(ext)
+		iname = hash + "-" + hashtype + "." + ext
 	} else {
 		iname = hash + "-" + hashtype
 	}
@@ -308,6 +332,19 @@ func processMessageAttachment(
 		ID:          iname,
 		Original:    oname,
 	}
+
+	if tres.FileName != "" {
+		tfile := iname + "." + thm.Name + "." + tres.FileExt
+		fi.Thumb = tfile
+		fi.ThumbAttrib.Width = uint32(tres.Width)
+		fi.ThumbAttrib.Height = uint32(tres.Height)
+		fi.Type = tfi.Kind
+		thmfn = tres.FileName
+	}
+	if len(tfi.Attrib) != 0 {
+		fi.FileAttrib = tfi.Attrib
+	}
+
 	return
 }
 
@@ -318,8 +355,9 @@ func processMessageAttachment(
 // info.ContentParams must be non-nil only if info.ContentType requires
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
-	src *fstore.FStore, XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
-	pi PostInfo, tmpfilenames []string, err error) {
+	src *fstore.FStore, thm thumbnailer.ThumbExec,
+	XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string, err error) {
 
 	defer func() {
 		if err != nil {
@@ -390,12 +428,13 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		// if this point is reached, we'll need to add this as attachment
 
-		fi, fn, err :=
-			processMessageAttachment(src, H, r, binary, ct_t, ct_par, cdis_par)
-		tmpfilenames = append(tmpfilenames, fn)
+		fi, fn, thmfn, err := processMessageAttachment(
+			src, thm, msgattachment, r, binary, ct_t, ct_par, cdis_par)
 		if err != nil {
 			return
 		}
+		tmpfilenames = append(tmpfilenames, fn)
+		thumbfilenames = append(thumbfilenames, thmfn)
 
 		if msgattachment {
 			// if translated message was already stored in msg field
@@ -555,10 +594,11 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 }
 
 func DevourMessageBody(
-	src *fstore.FStore, XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
-	pi PostInfo, tmpfilenames []string, err error) {
+	src *fstore.FStore, thm thumbnailer.ThumbExec,
+	XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string, err error) {
 
-	return DefaultMailProcessorConfig.DevourMessageBody(src, XH, info, xr)
+	return DefaultMailProcessorConfig.DevourMessageBody(src, thm, XH, info, xr)
 }
 
 func CleanContentTypeAndTransferEncoding(H mail.Headers) {

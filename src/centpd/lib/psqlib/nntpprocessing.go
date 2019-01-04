@@ -16,6 +16,7 @@ import (
 	"centpd/lib/mailib"
 	"centpd/lib/nntp"
 	tu "centpd/lib/textutils"
+	"centpd/lib/thumbnailer"
 )
 
 type headerRestriction struct {
@@ -289,8 +290,19 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
 	err error, unexpected bool) {
 
-	pi, tfns, err := mailib.DevourMessageBody(
-		&sp.src, H, info.ParsedMessageInfo, br)
+	isSage := false
+	if info.isReply && len(H["X-Sage"]) != 0 {
+		isSage = true
+	}
+
+	tplan := sp.pickThumbPlan(info.isReply, isSage)
+	texec := thumbnailer.ThumbExec{
+		Thumbnailer: sp.thumbnailer,
+		ThumbPlan:   tplan,
+	}
+
+	pi, tmpfns, tmpthmfns, err := mailib.DevourMessageBody(
+		&sp.src, texec, H, info.ParsedMessageInfo, br)
 	if err != nil {
 		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
@@ -298,14 +310,17 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	defer func() {
 		if err != nil {
 			// cleanup
-			for _, fn := range tfns {
+			for _, fn := range tmpfns {
+				os.Remove(fn)
+			}
+			for _, fn := range tmpthmfns {
 				os.Remove(fn)
 			}
 		}
 	}()
 
-	if len(pi.FI) != len(tfns) {
-		panic("len(pi.FI) != len(tfns)")
+	if len(pi.FI) != len(tmpfns) || len(tmpfns) != len(tmpthmfns) {
+		panic("len(pi.FI) != len(tmpfns) || len(tmpfns) != len(tmpthmfns)")
 	}
 
 	// properly fill in fields
@@ -360,9 +375,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}
 
-	if info.isReply && len(H["X-Sage"]) != 0 {
-		pi.MI.Sage = true
-	}
+	pi.MI.Sage = isSage
 
 	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
 	pi.A.References, err =
@@ -389,10 +402,34 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	// move files
 	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
-	for x := range tfns {
-		from := tfns[x]
-		to := sp.src.Main() + pi.FI[x].ID
+
+	srcdir := sp.src.Main()
+	thmdir := sp.thm.Main()
+
+	for x := range tmpfns {
+		from := tmpfns[x]
+		to := srcdir + pi.FI[x].ID
 		sp.log.LogPrintf(DEBUG, "renaming %q -> %q", from, to)
+		xe := fu.RenameNoClobber(from, to)
+		if xe != nil {
+			if os.IsExist(xe) {
+				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
+			} else {
+				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+			}
+			os.Remove(from)
+		}
+	}
+
+	for x := range tmpthmfns {
+		from := tmpthmfns[x]
+		if from == "" {
+			continue
+		}
+		to := thmdir + pi.FI[x].Thumb
+
+		sp.log.LogPrintf(DEBUG, "thm renaming %q -> %q", from, to)
+
 		xe := fu.RenameNoClobber(from, to)
 		if xe != nil {
 			if os.IsExist(xe) {
