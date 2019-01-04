@@ -116,7 +116,6 @@ func (t *GoThumbnailer) ThumbProcess(
 		if err == image.ErrFormat {
 			// unknown format - just bail out
 			close_err()
-			return
 		}
 		return
 	}
@@ -136,6 +135,10 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	img, imgfmt, err := image.Decode(f)
 	if err != nil {
+		if err == image.ErrFormat {
+			// unknown format - just bail out
+			close_err()
+		}
 		return
 	}
 
@@ -195,7 +198,7 @@ func (t *GoThumbnailer) ThumbProcess(
 	res.Height = tsz.Y
 
 	fi.Kind = ftypes.FTypeImage
-	fi.DetectedType = "image/" + imgfmt // golang devs seems sane
+	fi.DetectedType = "image/" + imgfmt // golang devs seem sane so far
 
 	fi.Attrib = make(map[string]interface{})
 	fi.Attrib["width"] = img.Bounds().Dx()
