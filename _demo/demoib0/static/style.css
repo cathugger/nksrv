@@ -40,11 +40,18 @@ html {
 	word-wrap: break-word;
 }
 
+.cat_div:hover {
+	margin: 1px 1px 1px 1px;
+	border: 1px solid #EE6666;
+}
+
 .cat_img {
-	max-width: 170px;
-	max-height: 170px;
 	width: auto;
 	height: auto;
+	min-width: 40px;
+	min-height: 40px;
+	max-width: 170px;
+	max-height: 170px;
 }
 
 .opinfo, .rinfo {
