@@ -186,17 +186,19 @@ SELECT g_p_id FROM ugp`
 	return
 }
 
-func (sp *PSQLIB) insertNewThread(
+func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 	bid boardID, pInfo mailib.PostInfo) (tid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
 	}
 
-	stmt, err := sp.getNTStmt(len(pInfo.FI))
+	gstmt, err := sp.getNTStmt(len(pInfo.FI))
 	if err != nil {
 		return
 	}
+
+	stmt := tx.Stmt(gstmt)
 
 	Hjson, err := json.Marshal(pInfo.H)
 	if err != nil {

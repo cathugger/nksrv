@@ -535,14 +535,27 @@ ON
 	// number of attachments
 	pInfo.FC = countRealFiles(pInfo.FI)
 
+	// start transaction
+	tx, err := sp.db.DB.Begin()
+	if err != nil {
+		err = sp.sqlError("webpost tx begin", err)
+		return rInfo, err, http.StatusInternalServerError
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		_, err = sp.insertNewThread(bid, pInfo)
+		_, err = sp.insertNewThread(tx, bid, pInfo)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		_, err = sp.insertNewReply(replyTargetInfo{
-			bid, postID(tid.Int64), threadOpts.BumpLimit}, pInfo)
+		_, err = sp.insertNewReply(tx,
+			replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
+			pInfo)
 	}
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
@@ -562,7 +575,9 @@ ON
 				if os.IsExist(xe) {
 					//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 				} else {
-					sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+					err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
+					sp.log.LogPrint(ERROR, err.Error())
+					return rInfo, err, http.StatusInternalServerError
 				}
 				files[i].Remove()
 			}
@@ -586,10 +601,19 @@ ON
 			if os.IsExist(xe) {
 				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 			} else {
-				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+				err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
+				sp.log.LogPrint(ERROR, err.Error())
+				return rInfo, err, http.StatusInternalServerError
 			}
 			os.Remove(from)
 		}
+	}
+
+	// commit
+	err = tx.Commit()
+	if err != nil {
+		err = sp.sqlError("webpost tx commit", err)
+		return rInfo, err, http.StatusInternalServerError
 	}
 
 	if !isReply {

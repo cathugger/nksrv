@@ -385,14 +385,28 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		return
 	}
 
+	// start transaction
+	tx, err := sp.db.DB.Begin()
+	if err != nil {
+		err = sp.sqlError("nntp tx begin", err)
+		unexpected = true
+		return
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		_, err = sp.insertNewThread(info.bid, pi)
+		_, err = sp.insertNewThread(tx, info.bid, pi)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		_, err = sp.insertNewReply(replyTargetInfo{
-			info.bid, info.tid, info.threadOpts.BumpLimit}, pi)
+		_, err = sp.insertNewReply(tx,
+			replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
+			pi)
 	}
 	if err != nil {
 		err = fmt.Errorf("post insertion failed: %v", err)
@@ -415,7 +429,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 			if os.IsExist(xe) {
 				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 			} else {
-				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+				err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
+				sp.log.LogPrint(ERROR, err.Error())
+				unexpected = true
+				return
 			}
 			os.Remove(from)
 		}
@@ -435,10 +452,21 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 			if os.IsExist(xe) {
 				//sp.log.LogPrintf(DEBUG, "failed to rename %q to %q: %v", from, to, xe)
 			} else {
-				sp.log.LogPrintf(ERROR, "failed to rename %q to %q: %v", from, to, xe)
+				err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
+				sp.log.LogPrint(ERROR, err.Error())
+				unexpected = true
+				return
 			}
 			os.Remove(from)
 		}
+	}
+
+	// commit
+	err = tx.Commit()
+	if err != nil {
+		err = sp.sqlError("nntp tx commit", err)
+		unexpected = true
+		return
 	}
 
 	return

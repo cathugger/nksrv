@@ -255,17 +255,19 @@ type replyTargetInfo struct {
 	bumpLimit uint32
 }
 
-func (sp *PSQLIB) insertNewReply(
+func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 	rti replyTargetInfo, pInfo mailib.PostInfo) (pid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
 	}
 
-	stmt, err := sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
+	gstmt, err := sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
 	if err != nil {
 		return
 	}
+
+	stmt := tx.Stmt(gstmt)
 
 	Hjson, err := json.Marshal(pInfo.H)
 	if err != nil {
