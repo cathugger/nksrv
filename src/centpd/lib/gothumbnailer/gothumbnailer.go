@@ -113,10 +113,8 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	imgcfg, _, err := image.DecodeConfig(f)
 	if err != nil {
-		if err == image.ErrFormat {
-			// unknown format - just bail out
-			close_err()
-		}
+		// bail out on any decoder failure
+		close_err()
 		return
 	}
 
@@ -135,10 +133,8 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	img, imgfmt, err := image.Decode(f)
 	if err != nil {
-		if err == image.ErrFormat {
-			// unknown format - just bail out
-			close_err()
-		}
+		// bail out on any decoder failure
+		close_err()
 		return
 	}
 
