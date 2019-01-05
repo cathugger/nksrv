@@ -149,6 +149,31 @@ CREATE INDEX ON ib0.files (g_p_id)
 CREATE INDEX ON ib0.files (fname)
 
 
+-- :next
+-- index of failed references, so that we can pick them up and correct
+CREATE TABLE ib0.failrefs (
+	g_p_id BIGINT NOT NULL,
+
+	msgid  TEXT  COLLATE ucs_basic, -- Message-ID
+	p_name TEXT  COLLATE ucs_basic, -- external post identifier
+	b_name TEXT                   ,
+
+	FOREIGN KEY (g_p_id)
+		REFERENCES ib0.posts
+		ON DELETE CASCADE
+)
+-- :next
+CREATE INDEX ON ib0.failrefs (g_p_id)
+-- :next
+CREATE INDEX
+	ON ib0.failrefs(msgid)
+	WHERE msgid IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.failrefs(p_name text_pattern_ops,b_name NULLS FIRST)
+	WHERE p_name IS NOT NULL
+
+
 
 -- :next
 CREATE TABLE ib0.scraper_list (
@@ -169,7 +194,9 @@ CREATE TABLE ib0.scraper_last_newnews (
 	last_newnews BIGINT NOT NULL,
 
 	PRIMARY KEY (sid),
-	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
+	FOREIGN KEY (sid)
+		REFERENCES ib0.scraper_list
+		ON DELETE CASCADE
 )
 
 
@@ -179,7 +206,9 @@ CREATE TABLE ib0.scraper_last_newgroups (
 	last_newgroups BIGINT NOT NULL,
 
 	PRIMARY KEY (sid),
-	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE
+	FOREIGN KEY (sid)
+		REFERENCES ib0.scraper_list
+		ON DELETE CASCADE
 )
 
 
@@ -192,8 +221,12 @@ CREATE TABLE ib0.scraper_group_track (
 	next_max BIGINT  NOT NULL, -- new max id
 
 	PRIMARY KEY (sid,bid),
-	FOREIGN KEY (sid) REFERENCES ib0.scraper_list ON DELETE CASCADE,
-	FOREIGN KEY (bid) REFERENCES ib0.boards ON DELETE CASCADE
+	FOREIGN KEY (sid)
+		REFERENCES ib0.scraper_list
+		ON DELETE CASCADE,
+	FOREIGN KEY (bid)
+		REFERENCES ib0.boards
+		ON DELETE CASCADE
 )
 -- :next
 CREATE INDEX ON ib0.scraper_group_track (sid,last_use)
