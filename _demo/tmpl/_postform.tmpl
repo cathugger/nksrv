@@ -53,18 +53,7 @@ args map:
    <th class="pf_label"><label for="file">File(s)</label></th>
    <td class="pf_input">
     {{- range $i, $v := emptylist 5 -}}
-     {{if ne $i 0 -}}
-     <div class="morefiles">
-     {{end -}}
-     <input
-      type="file"
-      name="file{{if ne $i 0}}{{add_i $i 1}}{{end}}"
-      {{if eq $i 0 -}}
-      id="file"
-      {{end -}}
-      multiple="1"
-     />
-     {{if eq $i 0 -}}
+     {{- if eq $i 0 -}}
       <input
        type="checkbox"
        id="showmorefiles"
@@ -73,9 +62,20 @@ args map:
        for="showmorefiles"
        class="showmorefiles"
       >More</label>
-     {{else}}
-     </div>
-     {{end -}}
+     {{- else -}}
+      <div class="morefiles">
+     {{- end -}}
+     <input
+      type="file"
+      name="file{{if ne $i 0}}{{add_i $i 1}}{{end}}"
+      {{if eq $i 0 -}}
+      id="file"
+      {{end -}}
+      multiple="1"
+     />
+     {{- if ne $i 0 -}}
+      </div>
+     {{- end -}}
     {{- end -}}
    </td>
   </tr>
