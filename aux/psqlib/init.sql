@@ -156,9 +156,9 @@ CREATE TABLE ib0.failrefs (
 
 	g_p_id BIGINT NOT NULL,
 
-	msgid  TEXT  COLLATE ucs_basic, -- Message-ID
 	p_name TEXT  COLLATE ucs_basic, -- external post identifier
 	b_name TEXT                   ,
+	msgid  TEXT  COLLATE ucs_basic, -- Message-ID
 
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.posts
@@ -169,12 +169,12 @@ CREATE INDEX
 	ON ib0.failrefs (g_p_id)
 -- :next
 CREATE INDEX
-	ON ib0.failrefs(msgid)
-	WHERE msgid IS NOT NULL
--- :next
-CREATE INDEX
 	ON ib0.failrefs(p_name text_pattern_ops,b_name NULLS FIRST)
 	WHERE p_name IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.failrefs(msgid)
+	WHERE msgid IS NOT NULL
 
 
 

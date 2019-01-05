@@ -305,3 +305,91 @@ ORDER BY
 	xbp.pdate ASC,
 	xbp.b_p_id ASC,
 	xf.f_id ASC
+
+
+
+-- TODO common bucket
+
+-- :name web_failref_write
+WITH
+	delold AS (
+		DELETE FROM
+			ib0.failrefs
+		WHERE
+			g_p_id = $1
+	)
+INSERT INTO
+	ib0.failrefs (
+		g_p_id,
+		p_name,
+		b_name,
+		msgid
+	)
+SELECT
+	$1,
+	unnest($2),
+	unnest($3),
+	unnest($4)
+
+-- :name web_failref_find
+-- args: p_name,board,msgid
+WITH
+	msgs AS (
+		SELECT
+			g_p_id
+		FROM
+			ib0.failrefs
+		WHERE
+			(p_name LIKE substring($1 for 8) || '%') AND
+				($1 LIKE p_name || '%') AND
+				(b_name IS NULL OR bname = $2)
+		UNION
+		SELECT
+			g_p_id
+		FROM
+			ib0.failrefs
+		WHERE
+			(msgid = $3) AND (msgid IS NOT NULL)
+	)
+SELECT
+	msgs.g_p_id,
+	xp.message,
+	xp.headers -> 'In-Reply-To' ->> 0,
+	xp.attrib,
+	xbp.b_id,
+	xbp.t_id
+FROM
+	msgs
+JOIN
+	ib0.posts AS xp
+ON
+	xp.g_p_id = msgs.g_p_id
+JOIN
+	LATERAL (
+		SELECT
+			zbp.b_id,
+			zbp.t_id
+		FROM
+			ib0.bposts AS zbp
+		JOIN
+			ib0.boards AS zb
+		ON
+			zbp.b_id = zb.b_id
+		WHERE
+			zbp.g_p_id = xp.g_p_id
+		ORDER BY
+			zb.b_name
+		LIMIT
+			1
+	) AS xbp
+ON
+	TRUE
+
+-- :name web_failref_update
+UPDATE
+	ib0.posts
+SET
+	attrib = $2
+WHERE
+	g_p_id = $1
+

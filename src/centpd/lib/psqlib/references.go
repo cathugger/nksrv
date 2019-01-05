@@ -2,11 +2,17 @@ package psqlib
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/lib/pq"
+
+	xtypes "github.com/jmoiron/sqlx/types"
+
 	"centpd/lib/ibref_nntp"
 	. "centpd/lib/logx"
+	"centpd/lib/mail"
 	mm "centpd/lib/minimail"
 	ib0 "centpd/lib/webib0"
 )
@@ -68,8 +74,12 @@ func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
 	return b.String()
 }
 
+type queryable interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
 func (sp *PSQLIB) processReferencesOnPost(
-	msg string, bid boardID, tid postID) (
+	qq queryable, msg string, bid boardID, tid postID) (
 	refs []ib0.IBMessageReference, inreplyto []string,
 	failrefs []ibref_nntp.Reference, err error) {
 
@@ -162,7 +172,7 @@ LIMIT
 
 		sp.log.LogPrintf(DEBUG, "SQL for post references:\n%s", q)
 
-		rows, err = sp.db.DB.Query(q)
+		rows, err = qq.Query(q)
 		if err != nil {
 			err = sp.sqlError("references query", err)
 			return
@@ -287,7 +297,8 @@ LIMIT
 }
 
 func (sp *PSQLIB) processReferencesOnIncoming(
-	msg string, prefs []mm.FullMsgIDStr, bid boardID, tid postID) (
+	qq queryable, msg string, prefs []mm.FullMsgIDStr,
+	bid boardID, tid postID) (
 	refs []ib0.IBMessageReference, failrefs []ibref_nntp.Reference,
 	err error) {
 
@@ -383,7 +394,7 @@ LIMIT
 			b.WriteString("\n)")
 		}
 
-		rows, err = sp.db.DB.Query(b.String())
+		rows, err = qq.Query(b.String())
 		if err != nil {
 			err = sp.sqlError("references query", err)
 			return
@@ -499,4 +510,122 @@ LIMIT
 	}
 
 	return
+}
+
+func (sp *PSQLIB) writeFailedReferences(
+	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
+
+	postids := make([]sql.NullString, len(failref))
+	boards := make([]sql.NullString, len(failref))
+	msgids := make([]sql.NullString, len(failref))
+
+	for i := range failref {
+		if failref[i].Post != "" {
+			postids[i].Valid = true
+			postids[i].String = failref[i].Post
+
+			if failref[i].Board != "" {
+				boards[i].Valid = true
+				boards[i].String = failref[i].Board
+			}
+		} else if failref[i].MsgID != "" {
+			msgids[i].Valid = true
+			msgids[i].String = failref[i].MsgID
+		}
+	}
+
+	_, err = st.Exec(gpid,
+		pq.Array(postids), pq.Array(boards), pq.Array(msgids))
+	if err != nil {
+		err = sp.sqlError("failrefs insert exec", err)
+		return
+	}
+
+	return
+}
+
+type failedRefData struct {
+	gpid      postID
+	message   string
+	inreplyto []FullMsgIDStr
+	pattrib   postAttributes
+	bid       boardID
+	tid       postID
+}
+
+func (sp *PSQLIB) findFailedReferences(
+	st *sql.Stmt, pname string, pboard string, msgid CoreMsgIDStr) (
+	frefs []failedRefData, err error) {
+
+	rows, err := st.Query(pname, pboard, string(msgid))
+	if err != nil {
+		err = sp.sqlError("find_failrefs query", err)
+		return
+	}
+
+	for rows.Next() {
+		var gpid postID
+		var msg string
+		var inreplyto sql.NullString
+		var j_attrib xtypes.JSONText
+		var bid boardID
+		var tid postID
+
+		err = rows.Scan(&gpid, &msg, &inreplyto, &j_attrib, &bid, &tid)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("find_failrefs query rows scan", err)
+			return
+		}
+
+		p_attrib := defaultPostAttributes
+		err = j_attrib.Unmarshal(&p_attrib)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("find_failrefs json unmarshal", err)
+			return
+		}
+
+		frefs = append(frefs, failedRefData{
+			gpid:      gpid,
+			message:   msg,
+			inreplyto: mail.ExtractAllValidReferences(nil, inreplyto.String),
+			pattrib:   p_attrib,
+			bid:       bid,
+			tid:       tid,
+		})
+	}
+	if err = rows.Err(); err != nil {
+		err = sp.sqlError("find_failrefs query rows", err)
+		return
+	}
+
+	return
+}
+
+func (sp *PSQLIB) updatePostReferences(
+	st *sql.Stmt, gpid postID, pattrib postAttributes) (err error) {
+
+	Ajson, err := json.Marshal(pattrib)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = st.Exec(gpid, Ajson)
+	if err != nil {
+		return sp.sqlError("update_post_refs exec", err)
+	}
+
+	return
+}
+
+func (sp *PSQLIB) writeFailRefsAfterPost(
+	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
+
+	if len(failref) == 0 {
+		// after post, we don't have anything to delete
+		return
+	}
+
+	return sp.writeFailedReferences(st, gpid, failref)
 }

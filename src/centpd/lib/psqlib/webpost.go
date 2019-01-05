@@ -19,6 +19,7 @@ import (
 	"centpd/lib/fstore"
 	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
+	"centpd/lib/ibref_nntp"
 	. "centpd/lib/logx"
 	"centpd/lib/mail/form"
 	"centpd/lib/mailib"
@@ -451,14 +452,6 @@ ON
 		return rInfo, err, http.StatusBadRequest
 	}
 
-	// process references
-	refs, inreplyto, _, err := sp.processReferencesOnPost(
-		pInfo.MI.Message, bid, postID(tid.Int64))
-	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
-	}
-	pInfo.A.References = refs
-
 	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
 
 	// at this point message should be checked
@@ -518,6 +511,14 @@ ON
 		}
 	}
 
+	// process references
+	refs, inreplyto, failrefs, err := sp.processReferencesOnPost(
+		sp.db.DB, pInfo.MI.Message, bid, postID(tid.Int64))
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+	pInfo.A.References = refs
+
 	// fill in info about post
 	tu := date.NowTimeUnix()
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
@@ -547,18 +548,58 @@ ON
 		}
 	}()
 
+	var gpid postID
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		_, err = sp.insertNewThread(tx, bid, pInfo)
+		gpid, err = sp.insertNewThread(tx, bid, pInfo)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		_, err = sp.insertNewReply(tx,
+		gpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
 			pInfo)
 	}
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
+	}
+
+	// fixup references
+	failref_wr_st := tx.Stmt(sp.st_prep[st_Web_failref_write])
+	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_refs])
+	failref_fn_st := tx.Stmt(sp.st_prep[st_Web_failref_find])
+
+	err = sp.writeFailRefsAfterPost(failref_wr_st, gpid, failrefs)
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+
+	ffrefs, err := sp.findFailedReferences(
+		failref_fn_st, pInfo.ID, board, pInfo.MessageID)
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+
+	for i := range ffrefs {
+		var xfrefs []ibref_nntp.Reference
+
+		ffrefs[i].pattrib.References, xfrefs, err =
+			sp.processReferencesOnIncoming(
+				tx, ffrefs[i].message, ffrefs[i].inreplyto,
+				ffrefs[i].bid, ffrefs[i].tid)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
+
+		err = sp.updatePostReferences(
+			failref_up_st, ffrefs[i].gpid, ffrefs[i].pattrib)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
+
+		err = sp.writeFailedReferences(failref_wr_st, ffrefs[i].gpid, xfrefs)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
 	}
 
 	// move files
