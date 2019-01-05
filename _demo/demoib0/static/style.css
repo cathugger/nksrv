@@ -89,7 +89,7 @@ html {
 
 .t_skipped {
 	color: gray;
-	font-weight: bold;
+	padding: 0px 32px 4px 16px;
 }
 
 .quote {
