@@ -143,10 +143,18 @@ html {
 	float: right;
 }
 
+.pf_body {
+	margin: 0 auto;
+	width: 384px;
+}
+
 /* breakpoint at 600px */
 @media screen and (max-width: 600px) {
 	.thread_stats, .opimg, .rimg {
 		float: none;
+	}
+	.pf_body {
+		width: 100%;
 	}
 	.pf_row {
 	}
