@@ -145,7 +145,10 @@ html {
 
 .pf_body {
 	margin: 0 auto;
-	width: 384px;
+}
+
+.pf_input {
+	min-width: 300px;
 }
 
 /* breakpoint at 600px */
@@ -154,7 +157,6 @@ html {
 		float: none;
 	}
 	.pf_body {
-		width: 100%;
 	}
 	.pf_row {
 	}
@@ -166,6 +168,7 @@ html {
 	.pf_input {
 		display: block;
 		border: 0px;
+		min-width: auto;
 	}
 	.reply-outer {
 		padding-left: 0px;
