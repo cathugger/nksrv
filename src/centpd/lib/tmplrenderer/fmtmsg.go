@@ -44,6 +44,21 @@ type msgLineFmtCfg struct {
 	NonFinalNewline  []byte
 }
 
+/*
+ * TODO:
+ * currently whole body of message is big inline-block thing
+ * which means that very long OP will display as box and won't
+ * align left even if image gives it space.
+ * we aren't planning to use block layout for whole message because
+ * that has some weird issues with the way content expansions are handled.
+ * we could use inline-block divs for every line, but that still has issue
+ * of fucking up ASCII art.
+ * so my current plan is to use inline-block per-paragraph, which means
+ * that we'll need to detect 2 or more newlines and treat these as
+ * sign of paragraph separation.
+ * but for this to happen formatter needs rework.
+ */
+
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
 	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
