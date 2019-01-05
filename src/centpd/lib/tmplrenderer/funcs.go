@@ -92,7 +92,7 @@ var funcs = map[string]interface{}{
 	},
 	"anonname": func(s string) string {
 		// TODO configurable? per-board?
-		if s == "" {
+		if strings.TrimSpace(s) == "" {
 			return "Anonymous"
 		}
 		return s
