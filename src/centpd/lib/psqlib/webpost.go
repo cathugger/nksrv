@@ -452,7 +452,7 @@ ON
 	}
 
 	// process references
-	refs, inreplyto, err := sp.processReferencesOnPost(
+	refs, inreplyto, _, err := sp.processReferencesOnPost(
 		pInfo.MI.Message, bid, postID(tid.Int64))
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError

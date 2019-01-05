@@ -152,6 +152,8 @@ CREATE INDEX ON ib0.files (fname)
 -- :next
 -- index of failed references, so that we can pick them up and correct
 CREATE TABLE ib0.failrefs (
+	fr_id BIGSERIAL NOT NULL,
+
 	g_p_id BIGINT NOT NULL,
 
 	msgid  TEXT  COLLATE ucs_basic, -- Message-ID
@@ -163,7 +165,8 @@ CREATE TABLE ib0.failrefs (
 		ON DELETE CASCADE
 )
 -- :next
-CREATE INDEX ON ib0.failrefs (g_p_id)
+CREATE INDEX
+	ON ib0.failrefs (g_p_id)
 -- :next
 CREATE INDEX
 	ON ib0.failrefs(msgid)

@@ -233,7 +233,11 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	}
 
 	st3 := `
-SELECT g_p_id FROM ugp`
+SELECT
+	g_p_id
+FROM
+	ugp`
+
 	b.WriteString(st3)
 
 	st := b.String()
@@ -256,7 +260,7 @@ type replyTargetInfo struct {
 }
 
 func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
-	rti replyTargetInfo, pInfo mailib.PostInfo) (pid postID, err error) {
+	rti replyTargetInfo, pInfo mailib.PostInfo) (gpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -348,7 +352,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&pid)
+	err = r.Scan(&gpid)
 	if err != nil {
 		return 0, sp.sqlError("newreply insert query scan", err)
 	}

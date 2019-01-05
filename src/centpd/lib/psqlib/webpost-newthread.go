@@ -128,7 +128,11 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	)`
 	// footer
 	stf := `
-SELECT g_p_id FROM ugp`
+SELECT
+	g_p_id
+FROM
+	ugp`
+
 	if n == 0 {
 		st = sth + stf
 	} else {
@@ -187,7 +191,7 @@ SELECT g_p_id FROM ugp`
 }
 
 func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
-	bid boardID, pInfo mailib.PostInfo) (tid postID, err error) {
+	bid boardID, pInfo mailib.PostInfo) (gpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -271,7 +275,7 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&tid)
+	err = r.Scan(&gpid)
 	if err != nil {
 		return 0, sp.sqlError("newthread insert query scan", err)
 	}

@@ -378,7 +378,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	pi.MI.Sage = isSage
 
 	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
-	pi.A.References, err =
+	pi.A.References, _, err =
 		sp.processReferencesOnIncoming(pi.MI.Message, prefs, info.bid, info.tid)
 	if err != nil {
 		unexpected = true

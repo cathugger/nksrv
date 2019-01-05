@@ -3,87 +3,13 @@ package psqlib
 import (
 	"database/sql"
 	"fmt"
-	"regexp"
-	"sort"
 	"strings"
 
+	"centpd/lib/ibref_nntp"
 	. "centpd/lib/logx"
 	mm "centpd/lib/minimail"
 	ib0 "centpd/lib/webib0"
 )
-
-var re_ref = regexp.MustCompile(
-	`>> ?([0-9a-fA-F]{8,40})\b`)
-var re_cref = regexp.MustCompile(
-	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
-
-// syntax of RFC 5536 seems restrictive enough to not allow much false positives
-const re_atom = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
-const re_datom = re_atom + "(?:\\." + re_atom + ")*"
-const re_mdtext = "[\x21-\x3D\x3F-\x5A\x5E-\x7E]"
-const re_nofoldlit = "\\[" + re_mdtext + "*\\]"
-
-var re_msgid = regexp.MustCompile(
-	"<" + re_datom + "@(?:" + re_datom + "|" + re_nofoldlit + ")>")
-
-type sliceReference struct {
-	start, end int
-	board      string
-	post       string
-	msgid      string
-}
-
-func parseReferences(msg string) (srefs []sliceReference) {
-	var sm [][]int
-	sm = re_ref.FindAllStringSubmatchIndex(msg, -1)
-	for i := range sm {
-		srefs = append(srefs, sliceReference{
-			start: sm[i][0],
-			end:   sm[i][1],
-			post:  strings.ToLower(msg[sm[i][2]:sm[i][3]]),
-		})
-	}
-	sm = re_cref.FindAllStringSubmatchIndex(msg, -1)
-	for i := range sm {
-		x := sliceReference{
-			start: sm[i][0],
-			end:   sm[i][1],
-			board: msg[sm[i][2]:sm[i][3]],
-		}
-		if sm[i][4] >= 0 {
-			x.post = strings.ToLower(msg[sm[i][4]:sm[i][5]])
-		}
-		srefs = append(srefs, x)
-	}
-	sm = re_msgid.FindAllStringIndex(msg, -1)
-	for i := range sm {
-		if sm[i][1]-sm[i][0] > 250 || sm[i][1]-sm[i][0] < 3 {
-			continue
-		}
-		x := sliceReference{
-			start: sm[i][0],
-			end:   sm[i][1],
-			msgid: msg[sm[i][0]+1 : sm[i][1]-1],
-		}
-		srefs = append(srefs, x)
-	}
-	// sort by position
-	sort.Slice(srefs, func(i, j int) bool {
-		return srefs[i].start < srefs[j].start
-	})
-	// remove overlaps, if any
-	for i := 1; i < len(srefs); i++ {
-		if srefs[i-1].end > srefs[i].start {
-			srefs = append(srefs[:i], srefs[i+1:]...)
-			i--
-		}
-	}
-	// limit
-	if len(srefs) > 255 {
-		srefs = srefs[:255]
-	}
-	return
-}
 
 // PostgreSQL doesn't wanna optimize LIKE operations at all when used
 // with arrays or left joins...
@@ -144,9 +70,10 @@ func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
 
 func (sp *PSQLIB) processReferencesOnPost(
 	msg string, bid boardID, tid postID) (
-	refs []ib0.IBMessageReference, inreplyto []string, err error) {
+	refs []ib0.IBMessageReference, inreplyto []string,
+	failrefs []ibref_nntp.Reference, err error) {
 
-	srefs := parseReferences(msg)
+	srefs := ibref_nntp.ParseReferences(msg)
 
 	// build query
 	b := &strings.Builder{}
@@ -168,11 +95,11 @@ func (sp *PSQLIB) processReferencesOnPost(
 
 	for i := range srefs {
 
-		if len(srefs[i].post) != 0 {
+		if len(srefs[i].Post) != 0 {
 
 			next()
 
-			if len(srefs[i].board) == 0 {
+			if len(srefs[i].Board) == 0 {
 				// only postID
 				q := selhead + `
 WHERE
@@ -184,7 +111,7 @@ ORDER BY
 	xb.b_name ASC
 LIMIT
 	1`
-				fmt.Fprintf(b, q, i+1, srefs[i].post, bid, tid, bid)
+				fmt.Fprintf(b, q, i+1, srefs[i].Post, bid, tid, bid)
 
 			} else {
 				// board+postID
@@ -195,13 +122,13 @@ ORDER BY
 	xbp.g_p_id DESC
 LIMIT
 	1`
-				fmt.Fprintf(b, q, i+1, srefs[i].post, srefs[i].board)
+				fmt.Fprintf(b, q, i+1, srefs[i].Post, srefs[i].Board)
 
 			}
-		} else if len(srefs[i].board) != 0 {
+		} else if len(srefs[i].Board) != 0 {
 			// board
 			// nothing, we don't need to look it up
-		} else if len(srefs[i].msgid) != 0 {
+		} else if len(srefs[i].MsgID) != 0 {
 			// message-id
 
 			next()
@@ -214,7 +141,7 @@ ORDER BY
 	xb.b_name ASC
 LIMIT
 	1`
-			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
+			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].MsgID), bid)
 
 		} else {
 			panic("wtf")
@@ -268,17 +195,17 @@ LIMIT
 			return
 		}
 
-		if len(srefs[i].post) != 0 {
+		if len(srefs[i].Post) != 0 {
 			err = fetchrow()
 			if err != nil {
 				return
 			}
 
-			if len(srefs[i].board) == 0 {
+			if len(srefs[i].Board) == 0 {
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].start),
-						End:   uint(srefs[i].end),
+						Start: uint(srefs[i].Start),
+						End:   uint(srefs[i].End),
 					}
 					r.Post = r_pname
 
@@ -291,12 +218,14 @@ LIMIT
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "ref: %#v %q", r, r_msgid)
+				} else {
+					failrefs = append(failrefs, srefs[i].Reference)
 				}
 			} else {
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].start),
-						End:   uint(srefs[i].end),
+						Start: uint(srefs[i].Start),
+						End:   uint(srefs[i].End),
 					}
 					r.Board = r_bname
 					r.Thread = r_tname
@@ -305,20 +234,22 @@ LIMIT
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
+				} else {
+					failrefs = append(failrefs, srefs[i].Reference)
 				}
 			}
-		} else if len(srefs[i].board) != 0 {
+		} else if len(srefs[i].Board) != 0 {
 
 			r := ib0.IBMessageReference{
-				Start: uint(srefs[i].start),
-				End:   uint(srefs[i].end),
+				Start: uint(srefs[i].Start),
+				End:   uint(srefs[i].End),
 			}
 
-			r.Board = string(srefs[i].board)
+			r.Board = string(srefs[i].Board)
 			refs = append(refs, r)
 			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
 
-		} else if len(srefs[i].msgid) != 0 {
+		} else if len(srefs[i].MsgID) != 0 {
 
 			err = fetchrow()
 			if err != nil {
@@ -327,8 +258,8 @@ LIMIT
 
 			if r_id == i+1 {
 				r := ib0.IBMessageReference{
-					Start: uint(srefs[i].start),
-					End:   uint(srefs[i].end),
+					Start: uint(srefs[i].Start),
+					End:   uint(srefs[i].End),
 				}
 				r.Board = r_bname
 				r.Thread = r_tname
@@ -337,6 +268,8 @@ LIMIT
 				refs = append(refs, r)
 				inreplyto = append(inreplyto, r_msgid)
 				sp.log.LogPrintf(DEBUG, "mref: %#v %q", r, r_msgid)
+			} else {
+				failrefs = append(failrefs, srefs[i].Reference)
 			}
 		} else {
 			panic("wtf")
@@ -355,9 +288,10 @@ LIMIT
 
 func (sp *PSQLIB) processReferencesOnIncoming(
 	msg string, prefs []mm.FullMsgIDStr, bid boardID, tid postID) (
-	refs []ib0.IBMessageReference, err error) {
+	refs []ib0.IBMessageReference, failrefs []ibref_nntp.Reference,
+	err error) {
 
-	srefs := parseReferences(msg)
+	srefs := ibref_nntp.ParseReferences(msg)
 
 	if len(srefs) == 0 {
 		return
@@ -385,11 +319,11 @@ func (sp *PSQLIB) processReferencesOnIncoming(
 
 	for i := range srefs {
 
-		if len(srefs[i].post) != 0 {
+		if len(srefs[i].Post) != 0 {
 
 			next()
 
-			if len(srefs[i].board) == 0 {
+			if len(srefs[i].Board) == 0 {
 				// only postID
 				q := selhead2 + `
 WHERE
@@ -401,7 +335,7 @@ ORDER BY
 	xb.b_name ASC
 LIMIT
 	1`
-				fmt.Fprintf(b, q, i+1, srefs[i].post, qprefs, bid)
+				fmt.Fprintf(b, q, i+1, srefs[i].Post, qprefs, bid)
 
 			} else {
 				// board+postID
@@ -413,13 +347,13 @@ ORDER BY
 	xbp.g_p_id ASC
 LIMIT
 	1`
-				fmt.Fprintf(b, q, i+1, srefs[i].post, srefs[i].board, qprefs)
+				fmt.Fprintf(b, q, i+1, srefs[i].Post, srefs[i].Board, qprefs)
 
 			}
-		} else if len(srefs[i].board) != 0 {
+		} else if len(srefs[i].Board) != 0 {
 			// board
 			// nothing, we don't need to look it up
-		} else if len(srefs[i].msgid) != 0 {
+		} else if len(srefs[i].MsgID) != 0 {
 			// msgid
 
 			next()
@@ -432,7 +366,7 @@ ORDER BY
 	xb.b_name ASC
 LIMIT
 	1`
-			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].msgid), bid)
+			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].MsgID), bid)
 
 		} else {
 			panic("wtf")
@@ -481,18 +415,18 @@ LIMIT
 			return
 		}
 
-		if len(srefs[i].post) != 0 {
+		if len(srefs[i].Post) != 0 {
 
 			err = fetchrow()
 			if err != nil {
 				return
 			}
 
-			if len(srefs[i].board) == 0 {
+			if len(srefs[i].Board) == 0 {
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].start),
-						End:   uint(srefs[i].end),
+						Start: uint(srefs[i].Start),
+						End:   uint(srefs[i].End),
 					}
 					r.Post = r_pname
 
@@ -504,30 +438,37 @@ LIMIT
 					}
 
 					refs = append(refs, r)
+				} else {
+					failrefs = append(failrefs, srefs[i].Reference)
 				}
 			} else {
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].start),
-						End:   uint(srefs[i].end),
+						Start: uint(srefs[i].Start),
+						End:   uint(srefs[i].End),
 					}
 					r.Board = r_bname
 					r.Thread = r_tname
 					r.Post = r_pname
 
 					refs = append(refs, r)
+				} else {
+					failrefs = append(failrefs, srefs[i].Reference)
 				}
 			}
-		} else if len(srefs[i].board) != 0 {
+		} else if len(srefs[i].Board) != 0 {
+
+			// plain board - don't need SQL, just take in
+
 			r := ib0.IBMessageReference{
-				Start: uint(srefs[i].start),
-				End:   uint(srefs[i].end),
+				Start: uint(srefs[i].Start),
+				End:   uint(srefs[i].End),
 			}
-			r.Board = string(srefs[i].board)
+			r.Board = string(srefs[i].Board)
 
 			refs = append(refs, r)
 
-		} else if len(srefs[i].msgid) != 0 {
+		} else if len(srefs[i].MsgID) != 0 {
 
 			err = fetchrow()
 			if err != nil {
@@ -536,14 +477,16 @@ LIMIT
 
 			if r_id == i+1 {
 				r := ib0.IBMessageReference{
-					Start: uint(srefs[i].start),
-					End:   uint(srefs[i].end),
+					Start: uint(srefs[i].Start),
+					End:   uint(srefs[i].End),
 				}
 				r.Board = r_bname
 				r.Thread = r_tname
 				r.Post = r_pname
 
 				refs = append(refs, r)
+			} else {
+				failrefs = append(failrefs, srefs[i].Reference)
 			}
 		}
 	}
