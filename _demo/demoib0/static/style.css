@@ -147,8 +147,8 @@ html {
 	margin: 0 auto;
 }
 
-.pf_input {
-	min-width: 300px;
+.pf_message {
+	width: 300px;
 }
 
 /* breakpoint at 600px */
@@ -168,7 +168,9 @@ html {
 	.pf_input {
 		display: block;
 		border: 0px;
-		min-width: auto;
+	}
+	.pf_message {
+		width: auto;
 	}
 	.reply-outer {
 		padding-left: 0px;
