@@ -40,7 +40,7 @@ func parseReferences(msg string) (srefs []sliceReference) {
 		srefs = append(srefs, sliceReference{
 			start: sm[i][0],
 			end:   sm[i][1],
-			post:  msg[sm[i][2]:sm[i][3]],
+			post:  strings.ToLower(msg[sm[i][2]:sm[i][3]]),
 		})
 	}
 	sm = re_cref.FindAllStringSubmatchIndex(msg, -1)
@@ -51,7 +51,7 @@ func parseReferences(msg string) (srefs []sliceReference) {
 			board: msg[sm[i][2]:sm[i][3]],
 		}
 		if sm[i][4] >= 0 {
-			x.post = msg[sm[i][4]:sm[i][5]]
+			x.post = strings.ToLower(msg[sm[i][4]:sm[i][5]])
 		}
 		srefs = append(srefs, x)
 	}
