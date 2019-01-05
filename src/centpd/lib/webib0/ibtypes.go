@@ -67,7 +67,8 @@ type IBMessage []byte
 
 // post
 type IBPostInfo struct {
-	ID             string                 `json:"id"`              // ID of post. long, global one
+	ID             string                 `json:"id"`              // ID of post. untruncated, per board
+	MsgID          string                 `json:"msgid"`           // Message-ID of post, if available
 	Subject        string                 `json:"subject"`         // subject text
 	Name           string                 `json:"name"`            // name of poster
 	Trip           string                 `json:"trip,omitempty"`  // tripcode, usually not set

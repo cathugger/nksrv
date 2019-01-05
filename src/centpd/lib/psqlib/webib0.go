@@ -96,6 +96,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			b_p_id sql.NullInt64
 			p_name sql.NullString
 			// xp
+			msgid     sql.NullString
 			pdate     pq.NullTime
 			psage     sql.NullBool
 			p_f_count sql.NullInt64
@@ -122,7 +123,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 			&b_p_id, &p_name,
 
-			&pdate, &psage, &p_f_count, &author, &trip, &title,
+			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
 			&message, &pattrib_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
@@ -204,6 +205,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			}
 
 			pi.ID = p_name.String
+			pi.MsgID = msgid.String
 			pi.Subject = title.String
 			pi.Name = author.String
 			pi.Trip = trip.String
@@ -449,6 +451,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			b_p_id sql.NullInt64
 			p_name sql.NullString
 			// xp
+			msgid     sql.NullString
 			pdate     pq.NullTime
 			psage     sql.NullBool
 			p_f_count sql.NullInt64
@@ -477,7 +480,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 			&b_p_id, &p_name,
 
-			&pdate, &psage, &p_f_count, &author, &trip, &title,
+			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
 			&message, &pattrib_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
@@ -547,6 +550,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			}
 
 			pi.ID = p_name.String
+			pi.MsgID = msgid.String
 			pi.Subject = title.String
 			pi.Name = author.String
 			pi.Trip = trip.String
