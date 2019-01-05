@@ -22,10 +22,10 @@ arguments list:
 {{with $P -}}
  <p class="opinfo" id="p{{$P.ID}}">
   {{- if $P.Subject -}}
-   <span class="subject">{{html $P.Subject}}</span>
+   <span class="subject" dir="auto">{{html $P.Subject}}</span>&lrm;
   {{- end}}
 
-  <span class="name">{{html (anonname $P.Name)}}</span>
+  <span class="name" dir="auto">{{html (anonname $P.Name)}}</span>&lrm;
 
   {{- if $P.Trip}}<span class="trip">{{html $P.Trip}}</span>{{end}}
 

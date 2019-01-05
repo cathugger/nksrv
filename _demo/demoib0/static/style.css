@@ -47,6 +47,10 @@ html {
 	*/
 }
 
+.cat_subject {
+	unicode-bidi: embed;
+}
+
 .cat_img {
 	width: auto;
 	height: auto;
@@ -115,11 +119,13 @@ html {
 .subject {
 	color: #0F0C5D;
 	font-weight: bold;
+	unicode-bidi: embed;
 }
 
 .name {
 	color: #117743;
 	font-weight: bold;
+	unicode-bidi: embed;
 }
 
 .trunc {
