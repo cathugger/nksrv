@@ -147,18 +147,15 @@ html {
 	margin: 0 auto;
 }
 
-.pf_message {
-	width: 300px;
+#message {
+	width: 320px;
+	box-sizing: border-box;
 }
 
 /* breakpoint at 600px */
 @media screen and (max-width: 600px) {
 	.thread_stats, .opimg, .rimg {
 		float: none;
-	}
-	.pf_body {
-	}
-	.pf_row {
 	}
 	.pf_label {
 		display: block;
@@ -169,18 +166,13 @@ html {
 		display: block;
 		border: 0px;
 	}
-	.pf_message {
-		width: auto;
+	#message {
+		width: 100%;
 	}
 	.reply-outer {
 		padding-left: 0px;
 		padding-right: 0px;
 	}
-}
-
-#message {
-	width: 100%;
-	box-sizing: border-box;
 }
 
 /*
