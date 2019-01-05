@@ -87,6 +87,11 @@ html {
 	-moz-box-sizing: border-box;
 }
 
+.t_skipped {
+	color: gray;
+	font-weight: bold;
+}
+
 .quote {
 	color: #407F10;
 }

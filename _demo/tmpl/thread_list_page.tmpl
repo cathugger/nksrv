@@ -28,6 +28,9 @@
 
   {{range $T := $.D.Threads -}}
    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
+   {{if $T.SkippedReplies -}}
+    <div class="t_skipped">{{$T.SkippedReplies}} replies and {{$T.SkippedFiles}} attachments not shown.</div>
+   {{- end -}}
    {{range $i, $v := $T.Replies -}}
     {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
    {{end -}}
