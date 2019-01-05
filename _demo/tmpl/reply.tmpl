@@ -83,7 +83,12 @@ arguments list:
      (<span title="{{.Size}} bytes">{{filesize .Size}}</span>)
     </p>
 
-    <a class="imglink" href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}">
+    <a
+     class="imglink"
+     href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}"
+     target="_blank"
+     rel="noopener"
+    >
      {{- if .Thumb.ID -}}
       <img class="imgthumb" src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
      {{- else -}}
