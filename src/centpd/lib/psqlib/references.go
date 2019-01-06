@@ -639,8 +639,12 @@ func (sp *PSQLIB) fixupFailRefsInTx(
 	}
 
 	failref_wr_st := tx.Stmt(sp.st_prep[st_Web_failref_write])
-	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_refs])
+	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_attrs])
 	failref_fn_st := tx.Stmt(sp.st_prep[st_Web_failref_find])
+
+	if len(failrefs) != 0 {
+		sp.log.LogPrint(DEBUG, "writing %d failed refs", len(failrefs))
+	}
 
 	// put our failed references
 	err = sp.writeFailRefsAfterPost(failref_wr_st, gpid, failrefs)
@@ -655,6 +659,10 @@ func (sp *PSQLIB) fixupFailRefsInTx(
 		return
 	}
 
+	if len(frefpostsinfos) != 0 {
+		sp.log.LogPrint(DEBUG, "found %d failref posts", len(frefpostsinfos))
+	}
+
 	for i := range frefpostsinfos {
 		var newfailrefs []ibref_nntp.Reference
 
@@ -666,6 +674,9 @@ func (sp *PSQLIB) fixupFailRefsInTx(
 		if err != nil {
 			return
 		}
+
+		sp.log.LogPrint(DEBUG, "failrefpost %d: %d refs %d fails",
+			i, len(frefpostsinfos[i].pattrib.References), len(newfailrefs))
 
 		// store updated refs
 		err = sp.updatePostReferences(
