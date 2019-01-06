@@ -3,7 +3,7 @@ demo2
 
 
 -- :name init
-INSERT INTO capabilities(component,version) VALUES ('ib0','demo2')
+INSERT INTO capabilities(component,version) VALUES ('ib0','demo3')
 
 
 -- :next
