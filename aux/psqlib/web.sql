@@ -327,9 +327,9 @@ INSERT INTO
 	)
 SELECT
 	$1,
-	unnest($2),
-	unnest($3),
-	unnest($4)
+	unnest($2) AS p_name,
+	unnest($3) AS b_name,
+	unnest($4) AS msgid
 
 -- :name web_failref_find
 -- args: p_name,board,msgid
