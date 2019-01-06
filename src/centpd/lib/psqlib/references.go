@@ -512,7 +512,7 @@ LIMIT
 	return
 }
 
-func (sp *PSQLIB) writeFailedReferences(
+func (sp *PSQLIB) writeFailRefs(
 	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
 
 	postids := make([]sql.NullString, len(failref))
@@ -542,6 +542,17 @@ func (sp *PSQLIB) writeFailedReferences(
 	}
 
 	return
+}
+
+func (sp *PSQLIB) writeFailRefsAfterPost(
+	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
+
+	if len(failref) == 0 {
+		// after post, we don't have anything to delete
+		return
+	}
+
+	return sp.writeFailRefs(st, gpid, failref)
 }
 
 type failedRefData struct {
@@ -619,13 +630,57 @@ func (sp *PSQLIB) updatePostReferences(
 	return
 }
 
-func (sp *PSQLIB) writeFailRefsAfterPost(
-	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
+func (sp *PSQLIB) fixupFailRefsInTx(
+	tx *sql.Tx, gpid postID, failrefs []ibref_nntp.Reference,
+	p_name, b_name string, msgid CoreMsgIDStr) (err error) {
 
-	if len(failref) == 0 {
-		// after post, we don't have anything to delete
+	if p_name == "" || b_name == "" || msgid == "" {
+		panic("wtf")
+	}
+
+	failref_wr_st := tx.Stmt(sp.st_prep[st_Web_failref_write])
+	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_refs])
+	failref_fn_st := tx.Stmt(sp.st_prep[st_Web_failref_find])
+
+	// put our failed references
+	err = sp.writeFailRefsAfterPost(failref_wr_st, gpid, failrefs)
+	if err != nil {
 		return
 	}
 
-	return sp.writeFailedReferences(st, gpid, failref)
+	// obtain infos about posts with failed refs we can fix
+	frefpostsinfos, err := sp.findFailedReferences(
+		failref_fn_st, p_name, b_name, msgid)
+	if err != nil {
+		return
+	}
+
+	for i := range frefpostsinfos {
+		var newfailrefs []ibref_nntp.Reference
+
+		// update references and collect new failed references
+		frefpostsinfos[i].pattrib.References, newfailrefs, err =
+			sp.processReferencesOnIncoming(
+				tx, frefpostsinfos[i].message, frefpostsinfos[i].inreplyto,
+				frefpostsinfos[i].bid, frefpostsinfos[i].tid)
+		if err != nil {
+			return
+		}
+
+		// store updated refs
+		err = sp.updatePostReferences(
+			failref_up_st, frefpostsinfos[i].gpid, frefpostsinfos[i].pattrib)
+		if err != nil {
+			return
+		}
+
+		// unconditionally store new failed refs
+		err = sp.writeFailRefs(
+			failref_wr_st, frefpostsinfos[i].gpid, newfailrefs)
+		if err != nil {
+			return
+		}
+	}
+
+	return
 }

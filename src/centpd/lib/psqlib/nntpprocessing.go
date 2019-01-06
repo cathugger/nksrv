@@ -11,6 +11,7 @@ import (
 	au "centpd/lib/asciiutils"
 	"centpd/lib/date"
 	fu "centpd/lib/fileutil"
+	"centpd/lib/ibref_nntp"
 	. "centpd/lib/logx"
 	"centpd/lib/mail"
 	"centpd/lib/mailib"
@@ -377,8 +378,9 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	pi.MI.Sage = isSage
 
+	var failrefs []ibref_nntp.Reference
 	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
-	pi.A.References, _, err =
+	pi.A.References, failrefs, err =
 		sp.processReferencesOnIncoming(sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)
 	if err != nil {
 		unexpected = true
@@ -398,18 +400,28 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}()
 
+	var gpid postID
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		_, err = sp.insertNewThread(tx, info.bid, pi)
+		gpid, err = sp.insertNewThread(tx, info.bid, pi)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		_, err = sp.insertNewReply(tx,
+		gpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
 			pi)
 	}
 	if err != nil {
 		err = fmt.Errorf("post insertion failed: %v", err)
+		unexpected = true
+		return
+	}
+
+	// fixup references
+	err = sp.fixupFailRefsInTx(
+		tx, gpid, failrefs, pi.ID, info.Newsgroup, pi.MessageID)
+	if err != nil {
+		err = fmt.Errorf("failed refs fixup failed: %v", err)
 		unexpected = true
 		return
 	}

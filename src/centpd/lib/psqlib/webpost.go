@@ -19,7 +19,6 @@ import (
 	"centpd/lib/fstore"
 	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
-	"centpd/lib/ibref_nntp"
 	. "centpd/lib/logx"
 	"centpd/lib/mail/form"
 	"centpd/lib/mailib"
@@ -564,42 +563,10 @@ ON
 	}
 
 	// fixup references
-	failref_wr_st := tx.Stmt(sp.st_prep[st_Web_failref_write])
-	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_refs])
-	failref_fn_st := tx.Stmt(sp.st_prep[st_Web_failref_find])
-
-	err = sp.writeFailRefsAfterPost(failref_wr_st, gpid, failrefs)
+	err = sp.fixupFailRefsInTx(
+		tx, gpid, failrefs, pInfo.ID, board, pInfo.MessageID)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
-	}
-
-	ffrefs, err := sp.findFailedReferences(
-		failref_fn_st, pInfo.ID, board, pInfo.MessageID)
-	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
-	}
-
-	for i := range ffrefs {
-		var xfrefs []ibref_nntp.Reference
-
-		ffrefs[i].pattrib.References, xfrefs, err =
-			sp.processReferencesOnIncoming(
-				tx, ffrefs[i].message, ffrefs[i].inreplyto,
-				ffrefs[i].bid, ffrefs[i].tid)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
-
-		err = sp.updatePostReferences(
-			failref_up_st, ffrefs[i].gpid, ffrefs[i].pattrib)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
-
-		err = sp.writeFailedReferences(failref_wr_st, ffrefs[i].gpid, xfrefs)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
 	}
 
 	// move files

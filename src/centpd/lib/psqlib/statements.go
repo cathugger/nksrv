@@ -52,7 +52,7 @@ const (
 
 	st_Web_failref_write
 	st_Web_failref_find
-	st_Web_update_post_refs
+	st_Web_update_post_attrs
 
 	st_max
 )
@@ -110,7 +110,7 @@ var st_names = [st_max]st_reference{
 
 	st_reference{"web", "web_failref_write"},
 	st_reference{"web", "web_failref_find"},
-	st_reference{"web", "web_failref_update"},
+	st_reference{"web", "update_post_attrs"},
 }
 
 func loadStatements() {

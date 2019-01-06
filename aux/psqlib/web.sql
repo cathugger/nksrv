@@ -349,7 +349,9 @@ WITH
 		FROM
 			ib0.failrefs
 		WHERE
-			(msgid = $3) AND (msgid IS NOT NULL)
+			msgid = $3
+		LIMIT
+			8192
 	)
 SELECT
 	msgs.g_p_id,
@@ -385,7 +387,7 @@ JOIN
 ON
 	TRUE
 
--- :name web_failref_update
+-- :name update_post_attrs
 UPDATE
 	ib0.posts
 SET
