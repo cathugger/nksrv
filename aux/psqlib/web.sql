@@ -342,7 +342,7 @@ WITH
 		WHERE
 			(p_name LIKE substring($1 for 8) || '%') AND
 				($1 LIKE p_name || '%') AND
-				(b_name IS NULL OR bname = $2)
+				(b_name IS NULL OR b_name = $2)
 		UNION
 		SELECT
 			g_p_id
