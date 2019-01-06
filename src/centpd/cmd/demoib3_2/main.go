@@ -28,6 +28,7 @@ func main() {
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
+	readonly := flag.Bool("readonly", false, "read-only mode")
 
 	flag.Parse()
 
@@ -86,20 +87,23 @@ func main() {
 		mlg.LogPrintln(logx.CRITICAL, "rj.NewJSONRenderer error:", err)
 		return
 	}
-	ah := ar.NewAPIRouter(ar.Cfg{
-		Renderer:        jrend,
-		WebPostProvider: dbib,
-	})
-	rcfg := ir.Cfg{
-		HTMLRenderer:    rend,
-		StaticProvider:  di.IBProviderDemo{},
-		FileProvider:    di.IBProviderDemo{},
-		WebPostProvider: dbib,
-		APIHandler:      ah,
+	arcfg := ar.Cfg{
+		Renderer: jrend,
 	}
-	rh := ir.NewIBRouter(rcfg)
+	ircfg := ir.Cfg{
+		HTMLRenderer:   rend,
+		StaticProvider: di.IBProviderDemo{},
+		FileProvider:   di.IBProviderDemo{},
+	}
+	if !*readonly {
+		arcfg.WebPostProvider = dbib
+		ircfg.WebPostProvider = dbib
+	}
+	arh := ar.NewAPIRouter(arcfg)
+	ircfg.APIHandler = arh
+	irh := ir.NewIBRouter(ircfg)
 
-	server := &http.Server{Addr: *httpbind, Handler: rh}
+	server := &http.Server{Addr: *httpbind, Handler: irh}
 
 	// graceful shutdown by signal
 	killc := make(chan os.Signal, 2)
