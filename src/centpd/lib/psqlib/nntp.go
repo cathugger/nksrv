@@ -667,6 +667,11 @@ func (sp *PSQLIB) printOver(
 		We also add Xref header field
 	*/
 
+	// some newsreaders (looking at you Pan) misbehave without Subject
+	if hsubject == "" {
+		hsubject = "(No Subject)"
+	}
+
 	fmt.Fprintf(w,
 		"%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s", bpid,
 		safeHeader(hsubject), safeHeader(hfrom), safeHeader(hdate), msgid,

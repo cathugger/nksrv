@@ -49,7 +49,18 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 	// we don't really need to store Message-ID there
 
-	// we don't really need to store Subject there
+	// we usually don't need to store Subject there if MI.Title is valid
+	// Pan (that trash gnome newsreader) don't list articles with no Subject. this behavior is outright batshit insane if you ask me.
+	// Thunderbird lists such articles but with no replacement text and it looks kinda bad but pretty usable still.
+	// Sylpheed and Claws get it right, adding replacement text.
+	// standards for Usenet seems to require non-empty Subject value.
+	// seems it would be ok-ish idea to include None here for compatibility but I fucking hate pointless "None" in articles just for this
+	// I'll rather add such hack in OVER/XOVER (as that'll make existing articles work)
+	/*
+		if i.MI.Title == "" {
+			i.H["Subject"] = mail.OneHeaderVal("None")
+		}
+	*/
 
 	// From
 	// XXX should we hardcode "Anonymous" incase Author is empty?
