@@ -60,6 +60,12 @@ html {
 	max-height: 170px;
 }
 
+.imgthumb {
+	width: auto;
+	height: auto;
+	max-width: 100%;
+}
+
 .opinfo, .rinfo {
 	margin: 2px 4px 2px 4px;
 	/* background-color: #FFCCCC; */
