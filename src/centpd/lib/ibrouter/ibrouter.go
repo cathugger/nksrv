@@ -55,7 +55,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 	if cfg.StaticProvider != nil {
 		h_static := handler.NewMethod().Handle("GET", handler.NewRegexPath().
-			Handle("/{{id:[^_./][^/]*}}(?:/[^/]*)?", false, http.HandlerFunc(
+			Handle("/{{id:[^_./][^/]*(?:/[^_./][^/]*)*}}?", false, http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 					id := r.Context().Value("id").(string)
 					cfg.StaticProvider.ServeStatic(w, r, id)
