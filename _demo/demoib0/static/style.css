@@ -1,26 +1,26 @@
 
-/* try out random font I found while browsing lobste.rs */
-
+/* open-sans-regular - latin_latin-ext */
 @font-face {
-	font-family: 'Inter UI';
-	font-style: normal;
-	font-weight: normal; /* 400 */
-	src:
-		url("Inter-UI-Regular.woff2") format("woff2"),
-		url("Inter-UI-Regular.woff") format("woff");
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Open Sans Regular'), local('OpenSans-Regular'),
+       url('fonts/open-sans-v15-latin_latin-ext-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('fonts/open-sans-v15-latin_latin-ext-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
 
+/* open-sans-700 - latin_latin-ext */
 @font-face {
-	font-family: 'Inter UI';
-	font-style:  normal;
-	font-weight: bold; /* 700 */
-	src:
-		url("Inter-UI-Bold.woff2") format("woff2"),
-		url("Inter-UI-Bold.woff") format("woff");
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Open Sans Bold'), local('OpenSans-Bold'),
+       url('fonts/open-sans-v15-latin_latin-ext-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('fonts/open-sans-v15-latin_latin-ext-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
 
 html {
-	font-family: 'Inter UI', Arial, Helvetica, sans-serif;
+	font-family: 'Open Sans', Arial, Helvetica, sans-serif;
 	font-size: 13px;
 	font-feature-settings: "zero";
 	background-color: #C5EFCF;
