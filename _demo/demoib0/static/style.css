@@ -184,7 +184,7 @@ html {
 }
 
 .poi_activator:checked ~ .poi_area {
-	display: block;
+	display: inline;
 }
 
 /*

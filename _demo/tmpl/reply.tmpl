@@ -68,10 +68,9 @@ arguments list:
    {{- end -}}
 
    <input type="checkbox" class="poi_activator" />
-   <div
-    class="poi_area"
-   ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</div>
-
+   <span class="poi_area"><br />
+    <strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</span>
+   {{- /**/ -}}
   </p>
 
   {{- range .Files}}
