@@ -67,6 +67,11 @@ arguments list:
     >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{shortid .Post}}</a>
    {{- end -}}
 
+   <input type="checkbox" class="poi_activator" />
+   <div
+    class="poi_area"
+   ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</div>
+
   </p>
 
   {{- range .Files}}

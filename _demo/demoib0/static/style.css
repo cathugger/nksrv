@@ -179,6 +179,14 @@ html {
 	}
 }
 
+#poi_area {
+	display: none;
+}
+
+#poi_activator:checked ~ #poi_area {
+	display: block;
+}
+
 /*
  * by default don't display and activate only if browser supports
  * capability this button uses for its actions
