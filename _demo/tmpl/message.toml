@@ -27,7 +27,7 @@ pre_reference    = """
   {{- if (and (not .R.Thread) .F) -}}
    thread/{{.T.ID}}
   {{- end -}}
-  #p{{.R.Post}}
+  #{{.R.Post}}
  {{- end -}}
  "
 >"""
@@ -36,7 +36,7 @@ truncation_line  = """
 <div><strong class=\"trunc\">\
 message truncated. click
 <a
- href=\"{{$.N.Root}}/{{escboard .B.Name}}/thread/{{.T.ID}}#p{{.P.ID}}\"
+ href=\"{{$.N.Root}}/{{escboard .B.Name}}/thread/{{.T.ID}}#{{.P.ID}}\"
 >here</a>
 to see whole.\
 </strong></div>"""
