@@ -41,6 +41,7 @@ arguments list:
    <a
     href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#{{$P.ID}}"
    >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
+   <input type="checkbox" class="poi_activator" />
    {{- range $P.BackReferences}}
     <a
      class="bref"
@@ -67,7 +68,6 @@ arguments list:
     >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{shortid .Post}}</a>
    {{- end -}}
 
-   <input type="checkbox" class="poi_activator" />
    <div
     class="poi_area"
    ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</div>
