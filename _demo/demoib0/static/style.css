@@ -118,6 +118,10 @@ html {
 	max-width: 100%;
 }
 
+.reply:target {
+	border: 1px solid #FF5555;
+}
+
 .reply-outer {
 	padding: 8px 16px 0px 8px;
 }
