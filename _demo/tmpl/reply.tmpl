@@ -75,7 +75,7 @@ arguments list:
    ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;
    {{- range $h, $l := $P.Headers -}}
     {{- range $v := $l -}}
-     <strong>{{if $v.O}}{{html $v.O}}{{else}}{{html $h}}{{end}}:</strong> {{html $v.V -}}
+     <br /><strong>{{if $v.O}}{{html $v.O}}{{else}}{{html $h}}{{end}}:</strong> {{html $v.V -}}
     {{- end -}}
    {{- end -}}
    <hr class="poi_hr" /></div>
