@@ -20,7 +20,7 @@ arguments list:
 {{$maxCPL   := index $ 5 -}}
 
 {{with $P -}}
- <p class="opinfo" id="{{$P.ID}}">
+ <div class="opinfo" id="{{$P.ID}}">
   {{- if $P.Subject -}}
    <span class="subject" dir="auto">{{html $P.Subject}}</span>&lrm;
   {{- end}}
@@ -68,10 +68,11 @@ arguments list:
     "
    >&gt;&gt;{{if .Board}}/{{html .Board}}/{{end}}{{shortid .Post}}</a>
   {{- end -}}
-  <span class="poi_area"><br />
-   <strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</span>
+  <div
+   class="poi_area"
+  ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</div>
   {{- /**/ -}}
- </p>
+ </div>
 
  {{- range $P.Files}}
   <div class="opimg">

@@ -23,7 +23,7 @@ arguments list:
  <div class="reply-outer">
  <div class="reply" id="{{$P.ID}}">
 
-  <p class="rinfo">
+  <div class="rinfo">
    {{- if $P.Subject -}}
     <span class="subject" dir="auto">{{html $P.Subject}}</span>&lrm;
    {{- end}}
@@ -68,10 +68,11 @@ arguments list:
    {{- end -}}
 
    <input type="checkbox" class="poi_activator" />
-   <span class="poi_area"><br />
-    <strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</span>
+   <div
+    class="poi_area"
+   ><strong>Message-ID:</strong> &lt;{{html $P.MsgID}}&gt;</div>
    {{- /**/ -}}
-  </p>
+  </div>
 
   {{- range .Files}}
    <div class="rimg">
