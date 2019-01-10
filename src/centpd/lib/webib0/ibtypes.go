@@ -1,5 +1,7 @@
 package webib0
 
+import "centpd/lib/mail"
+
 // web IB API representation v0
 
 // references to other places than current thread will need to be hacked in
@@ -67,19 +69,20 @@ type IBMessage []byte
 
 // post
 type IBPostInfo struct {
-	ID             string                 `json:"id"`              // ID of post. untruncated, per board
-	MsgID          string                 `json:"msgid"`           // Message-ID of post, if available
-	Subject        string                 `json:"subject"`         // subject text
-	Name           string                 `json:"name"`            // name of poster
-	Trip           string                 `json:"trip,omitempty"`  // tripcode, usually not set
-	Email          string                 `json:"email,omitempty"` // email field, usually useless, used for sage too
-	Sage           bool                   `json:"sage,omitempty"`  // sage
-	Date           int64                  `json:"date"`            // seconds since unix epoch
-	Message        IBMessage              `json:"msg"`             // message itself. formatted
-	References     []IBMessageReference   `json:"refs,omitempty"`  // posts Message refers to
-	Files          []IBFileInfo           `json:"files,omitempty"` // attached files
-	BackReferences []IBBackReference      `json:"brefs,omitempty"` // post refering to this post
-	Options        map[string]interface{} `json:"opts,omitempty"`  // additional stuff
+	ID             string                 `json:"id"`                // ID of post. untruncated, per board
+	MsgID          string                 `json:"msgid"`             // Message-ID of post, if available
+	Subject        string                 `json:"subject"`           // subject text
+	Name           string                 `json:"name"`              // name of poster
+	Trip           string                 `json:"trip,omitempty"`    // tripcode, usually not set
+	Email          string                 `json:"email,omitempty"`   // email field, usually useless, used for sage too
+	Sage           bool                   `json:"sage,omitempty"`    // sage
+	Date           int64                  `json:"date"`              // seconds since unix epoch
+	Message        IBMessage              `json:"msg"`               // message itself. formatted
+	References     []IBMessageReference   `json:"refs,omitempty"`    // posts Message refers to
+	Files          []IBFileInfo           `json:"files,omitempty"`   // attached files
+	BackReferences []IBBackReference      `json:"brefs,omitempty"`   // post refering to this post
+	Headers        mail.Headers           `json:"headers,omitempty"` // headers
+	Options        map[string]interface{} `json:"opts,omitempty"`    // additional stuff
 }
 
 // common thread fields

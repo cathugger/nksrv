@@ -96,15 +96,16 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			b_p_id sql.NullInt64
 			p_name sql.NullString
 			// xp
-			msgid     sql.NullString
-			pdate     pq.NullTime
-			psage     sql.NullBool
-			p_f_count sql.NullInt64
-			author    sql.NullString
-			trip      sql.NullString
-			title     sql.NullString
-			message   []byte
-			pattrib_j xtypes.JSONText
+			msgid      sql.NullString
+			pdate      pq.NullTime
+			psage      sql.NullBool
+			p_f_count  sql.NullInt64
+			author     sql.NullString
+			trip       sql.NullString
+			title      sql.NullString
+			message    []byte
+			pattrib_j  xtypes.JSONText
+			pheaders_j xtypes.JSONText
 			// xf
 			f_id       sql.NullInt64
 			fname      sql.NullString
@@ -124,7 +125,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			&b_p_id, &p_name,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
-			&message, &pattrib_j,
+			&message, &pattrib_j, &pheaders_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
@@ -202,6 +203,17 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				return sp.sqlError(
 						"Web_thread_list_page post attr json unmarshal", err),
 					http.StatusInternalServerError
+			}
+
+			err = pheaders_j.Unmarshal(&pi.Headers)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError(
+						"Web_thread_list_page post headers json unmarshal", err),
+					http.StatusInternalServerError
+			}
+			if pi.Headers != nil {
+				delete(pi.Headers, "Message-ID")
 			}
 
 			pi.ID = p_name.String
@@ -451,15 +463,16 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			b_p_id sql.NullInt64
 			p_name sql.NullString
 			// xp
-			msgid     sql.NullString
-			pdate     pq.NullTime
-			psage     sql.NullBool
-			p_f_count sql.NullInt64
-			author    sql.NullString
-			trip      sql.NullString
-			title     sql.NullString
-			message   []byte
-			pattrib_j xtypes.JSONText
+			msgid      sql.NullString
+			pdate      pq.NullTime
+			psage      sql.NullBool
+			p_f_count  sql.NullInt64
+			author     sql.NullString
+			trip       sql.NullString
+			title      sql.NullString
+			message    []byte
+			pattrib_j  xtypes.JSONText
+			pheaders_j xtypes.JSONText
 			// xf
 			f_id       sql.NullInt64
 			fname      sql.NullString
@@ -481,7 +494,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			&b_p_id, &p_name,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
-			&message, &pattrib_j,
+			&message, &pattrib_j, &pheaders_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
@@ -547,6 +560,17 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				return sp.sqlError(
 						"Web_thread post attr json unmarshal", err),
 					http.StatusInternalServerError
+			}
+
+			err = pheaders_j.Unmarshal(&pi.Headers)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError(
+						"Web_thread post headers json unmarshal", err),
+					http.StatusInternalServerError
+			}
+			if pi.Headers != nil {
+				delete(pi.Headers, "Message-ID")
 			}
 
 			pi.ID = p_name.String
