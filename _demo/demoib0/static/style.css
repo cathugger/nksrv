@@ -179,11 +179,11 @@ html {
 	}
 }
 
-#poi_area {
+.poi_area {
 	display: none;
 }
 
-#poi_activator:checked ~ #poi_area {
+.poi_activator:checked ~ .poi_area {
 	display: block;
 }
 
