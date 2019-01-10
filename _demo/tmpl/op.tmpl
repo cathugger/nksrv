@@ -21,6 +21,8 @@ arguments list:
 
 {{with $P -}}
  <div class="opinfo" id="{{$P.ID}}">
+  {{- /**/ -}}
+  <input type="checkbox" class="poi_activator" />
   {{- if $P.Subject -}}
    <span class="subject" dir="auto">{{html $P.Subject}}</span>&lrm;
   {{- end}}
@@ -38,8 +40,6 @@ arguments list:
   <a
    href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#{{$P.ID}}"
   >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
-
-  <input type="checkbox" class="poi_activator" />
 
   {{- if $fullURLs}} <span>[<a href="thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 
