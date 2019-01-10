@@ -20,7 +20,7 @@ arguments list:
 {{$maxCPL   := index $ 5 -}}
 
 {{with $P -}}
- <p class="opinfo" id="p{{$P.ID}}">
+ <p class="opinfo" id="{{$P.ID}}">
   {{- if $P.Subject -}}
    <span class="subject" dir="auto">{{html $P.Subject}}</span>&lrm;
   {{- end}}
