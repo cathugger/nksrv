@@ -183,8 +183,20 @@ html {
 	display: none;
 }
 
+.poi_activator {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	margin-right: 0px;
+}
+
 .poi_activator:checked ~ .poi_area {
 	display: block;
+}
+
+.poi_hr {
+	color: green;
+	margin-top: 2px;
+	margin-bottom: 2px;
 }
 
 /*
