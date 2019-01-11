@@ -8,6 +8,7 @@ import (
 
 	//. "centpd/lib/logx"
 
+	"centpd/lib/mail"
 	ib0 "centpd/lib/webib0"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -60,6 +61,12 @@ func (sp *PSQLIB) ensureThumb(
 		t.Alt, t.Width, t.Height = sp.altthumb.GetAltThumb(fname, ftype)
 	}
 	return t
+}
+
+func webCleanHeaders(h mail.Headers) {
+	delete(h, "Message-ID")
+	delete(h, "MIME-Version")
+	delete(h, "Content-Type")
 }
 
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
@@ -213,7 +220,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 					http.StatusInternalServerError
 			}
 			if pi.Headers != nil {
-				delete(pi.Headers, "Message-ID")
+				webCleanHeaders(pi.Headers)
 			}
 
 			pi.ID = p_name.String
@@ -570,7 +577,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 					http.StatusInternalServerError
 			}
 			if pi.Headers != nil {
-				delete(pi.Headers, "Message-ID")
+				webCleanHeaders(pi.Headers)
 			}
 
 			pi.ID = p_name.String
