@@ -22,29 +22,45 @@ import (
 
 var _ renderer.Renderer = (*TmplRenderer)(nil)
 
+// pure
 const (
-	tmplOP = iota
-	tmplReply
-	tmplBoardList
-	tmplBoardListErr
-	tmplThreadListPage
-	tmplThreadListPageErr
-	tmplThreadCatalog
-	tmplThreadCatalogErr
-	tmplThread
-	tmplThreadErr
-	tmplCreatedBoard
-	tmplCreatedBoardErr
-	tmplCreatedThread
-	tmplCreatedThreadErr
-	tmplCreatedPost
-	tmplCreatedPostErr
-	tmplMax
+	xtmplOP = iota
+	xtmplReply
+
+	xtmplMax
 )
 
-var names = [tmplMax]string{
+// page
+const (
+	ptmplBoardList = iota
+	ptmplBoardListErr
+	ptmplThreadListPage
+	ptmplThreadListPageErr
+	ptmplThreadCatalog
+	ptmplThreadCatalogErr
+	ptmplThread
+	ptmplThreadErr
+
+	ptmplMax
+)
+
+// result
+const (
+	rtmplCreatedBoard = iota
+	rtmplCreatedBoardErr
+	rtmplCreatedThread
+	rtmplCreatedThreadErr
+	rtmplCreatedPost
+	rtmplCreatedPostErr
+
+	rtmplMax
+)
+
+var xnames = [xtmplMax]string{
 	"op",
 	"reply",
+}
+var pnames = [ptmplMax]string{
 	"board_list",
 	"board_list_err",
 	"thread_list_page",
@@ -53,6 +69,8 @@ var names = [tmplMax]string{
 	"thread_catalog_err",
 	"thread",
 	"thread_err",
+}
+var rnames = [rtmplMax]string{
 	"created_board",
 	"created_board_err",
 	"created_thread",
@@ -81,11 +99,13 @@ type msgFmtTOML struct {
 }
 
 type msgFmtCfg struct {
-	PreMsg  []byte
-	PostMsg []byte
+	PreMsg    []byte
+	PostMsg   []byte
+	PreQuote  []byte
+	PostQuote []byte
+
 	msgLineFmtCfg
-	PreQuote           []byte
-	PostQuote          []byte
+
 	PreRefTmpl         *template.Template
 	PostRefTmpl        *template.Template
 	TruncationLineTmpl *template.Template
