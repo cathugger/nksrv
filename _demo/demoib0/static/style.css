@@ -46,7 +46,7 @@ html {
 }
 
 .opinfo, .rinfo {
-	margin: 2px 4px 0px 4px;
+	margin: 2px 4px 2px 4px;
 	/* background-color: #FFCCCC; */
 }
 
@@ -63,14 +63,14 @@ html {
 
 .body {
 	/* background-color: #FFFFCC; */
-	padding: 8px 32px 8px 16px;
+	padding: 6px 32px 8px 16px;
 	max-width: 100%;
 	display: inline-block;
 	overflow: hidden;
 
-	box-sizing: border-box;
-	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 .t_skipped {
