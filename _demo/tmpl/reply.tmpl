@@ -103,9 +103,23 @@ arguments list:
      rel="noopener"
     >
      {{- if .Thumb.ID -}}
-      <img class="imgthumb" src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+      <img
+       class="imgthumb"
+       src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"
+       alt="{{html .ID}}"
+       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
+       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
+      />
+     {{- else if .Thumb.Alt -}}
+      <img
+       class="imgthumb"
+       src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}"
+       alt="{{html .ID}}"
+       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
+       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
+      />
      {{- else -}}
-      <img class="imgthumb" src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}" width="{{.Thumb.Width}}" height="{{.Thumb.Height}}" />
+      {{html .ID}}
      {{- end -}}
     </a>
 
