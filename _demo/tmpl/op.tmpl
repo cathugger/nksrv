@@ -105,6 +105,7 @@ arguments list:
      <img
       class="imgthumb"
       src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"
+      alt="{{html .ID}}"
       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
      />
@@ -112,6 +113,7 @@ arguments list:
      <img
       class="imgthumb"
       src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}"
+      alt="{{html .ID}}"
       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
      />
