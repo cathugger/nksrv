@@ -7,6 +7,8 @@ const (
 	FTypeMsg
 	FTypeText
 	FTypeImage
+	FTypeAudio
+	FTypeVideo
 )
 
 var FTypeS = map[FTypeT]string{
@@ -14,4 +16,6 @@ var FTypeS = map[FTypeT]string{
 	FTypeMsg:   "msg",
 	FTypeText:  "text",
 	FTypeImage: "image",
+	FTypeAudio: "audio",
+	FTypeVideo: "video",
 }
