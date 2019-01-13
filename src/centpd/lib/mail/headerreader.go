@@ -140,7 +140,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 			hcont := h.Bytes()
 			if !validHeaderContent(hcont) {
 				h.Reset()
-				return fmt.Errorf("invalid %q header content", currHeader)
+				return fmt.Errorf("invalid %q header content %#q", currHeader, hcont)
 			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
 				V: string(hcont),
@@ -203,13 +203,13 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 					break
 				}
 				// process it
-				n := bytes.IndexByte(wb, ':')
-				if n < 0 {
+				nn := bytes.IndexByte(wb, ':')
+				if nn < 0 {
 					// no ':' -- illegal
 					e = errMissingColon
 					break
 				}
-				hn := n
+				hn := nn
 				// strip possible whitespace before ':'
 				for hn != 0 && (wb[hn-1] == ' ' || wb[hn-1] == '\t') {
 					hn--
@@ -226,13 +226,13 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				currHeader, origHeader =
 					unsafeMapCanonicalOriginalHeaders(wb[:hn])
 
-				n++
+				nn++
 				// skip one space after ':'
 				// XXX should we do this for '\t'? probably not.
-				if n < len(wb) && wb[n] == ' ' {
-					n++
+				if nn < len(wb) && wb[nn] == ' ' {
+					nn++
 				}
-				h.Write(wb[n:])
+				h.Write(wb[nn:])
 			} else {
 				// a continuation
 				if len(currHeader) == 0 {
