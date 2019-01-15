@@ -11,7 +11,7 @@ type IBPostedInfo struct {
 	Board     string          `json:"board"`
 	ThreadID  string          `json:"thread_id"`
 	PostID    string          `json:"post_id"`
-	MessageID mm.CoreMsgIDStr `json:"message_id"` // XXX will we actually use this for anything??
+	MessageID mm.CoreMsgIDStr `json:"msgid"` // XXX will we actually use this for anything??
 }
 
 var IBWebFormFileFields = []string{

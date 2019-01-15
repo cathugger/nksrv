@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"io"
 
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 )
 
 // like normal base32 just lowercase and without padding
@@ -30,7 +30,7 @@ var SBase64Enc = base64.
 // MakeFileHash returns textural representation of file hash.
 // It expects file to be seeked at 0.
 func MakeFileHash(r io.Reader) (s string, hs string, e error) {
-	h, e := blake2s.New256([]byte(nil))
+	h, e := blake2b.New256(nil)
 	if e != nil {
 		return
 	}
@@ -43,7 +43,7 @@ func MakeFileHash(r io.Reader) (s string, hs string, e error) {
 	var b [32]byte
 	sum := h.Sum(b[:0])
 	s = LowerBase32Enc.EncodeToString(sum)
-	hs = "b2s"
+	hs = "b2b"
 
 	return
 }
