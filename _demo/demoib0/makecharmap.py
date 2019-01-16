@@ -11,7 +11,7 @@ str = "<table border=\"1\">\n"
 
 str += "<tr><th>dec</th><th>hex</th>"
 for i in range(0, step):
-	str += "<th>%02x</th>" % i
+	str += "<th>%02X</th>" % i
 str += "<tr>\n"
 
 def appendrange(start, length):
@@ -19,7 +19,7 @@ def appendrange(start, length):
 	x = 0
 	while x < length:
 		num = start + x
-		str += "<tr><th>%04d</th><th>%04x</th>" % (num, num)
+		str += "<tr><th>%04d</th><th>%04X</th>" % (num, num)
 		for i in range(0, step):
 			str += "<td>" + unichr(start + x) + "</td>"
 			x = x + 1
