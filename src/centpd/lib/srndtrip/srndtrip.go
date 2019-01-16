@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// this package implements unicode tripcode originally used in srnd (and srnd2)
+// this package implements unicode tripcode
 
 func MakeSRNdTrip(pubkey string, length int) string {
 	var b strings.Builder
@@ -19,16 +19,23 @@ func MakeSRNdTrip(pubkey string, length int) string {
 		length = len(data)
 	}
 
-	// logic:
+	// originally srnd (and srndv2) used 9600==0x2580
+	// however, range shifted by 0x10 looks better to me
+	// (instead of `▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏` it'll use `⚀⚁⚂⚃⚄⚅⚆⚇⚈⚉⚊⚋⚌⚍⚎⚏`)
+	// and display equaly good both in torbrowser+DejaVuSans and phone
+	// since jeff ack'd it, I'll just use it
+	const rstart = 0x2590
+
+	// logic (same as in srnd):
 	// it first writes length/2 chars of begining
 	// and then length/2 chars of ending
 	// if length==len(data), that essentially means just using whole
 	i := 0
 	for ; i < length/2; i++ {
-		b.WriteRune(9600 + rune(data[i]))
+		b.WriteRune(rstart + rune(data[i]))
 	}
 	for ; i < length; i++ {
-		b.WriteRune(9600 + rune(data[len(data)-length+i]))
+		b.WriteRune(rstart + rune(data[len(data)-length+i]))
 	}
 
 	return b.String()
