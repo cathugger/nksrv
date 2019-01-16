@@ -7,7 +7,7 @@ import (
 
 // this package implements unicode tripcode
 
-func MakeSRNdTrip(pubkey string, length int) string {
+func MakeUnicodeTrip(pubkey string, length int) string {
 	var b strings.Builder
 
 	data, err := hex.DecodeString(pubkey)
@@ -25,6 +25,7 @@ func MakeSRNdTrip(pubkey string, length int) string {
 	// and display equaly good both in torbrowser+DejaVuSans and phone
 	// since jeff ack'd it, I'll just use it
 	const rstart = 0x2590
+	// 0x2500 can display with TBB font whitelist, but looks too cryptic.
 
 	// logic (same as in srnd):
 	// it first writes length/2 chars of begining
