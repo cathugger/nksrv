@@ -15,20 +15,20 @@ func MakeSRNdTrip(pubkey string, length int) string {
 		panic(err)
 	}
 
-	if length <= 0 {
+	if length <= 0 || length > len(data) {
 		length = len(data)
 	}
 
-	appendch := func(ch byte) {
-		chnum := 9600 + rune(ch)
-		b.WriteRune(chnum)
-	}
+	// logic:
+	// it first writes length/2 chars of begining
+	// and then length/2 chars of ending
+	// if length==len(data), that essentially means just using whole
 	i := 0
 	for ; i < length/2; i++ {
-		appendch(data[i])
+		b.WriteRune(9600 + rune(data[i]))
 	}
 	for ; i < length; i++ {
-		appendch(data[len(data)-length+i])
+		b.WriteRune(9600 + rune(data[len(data)-length+i]))
 	}
 
 	return b.String()
