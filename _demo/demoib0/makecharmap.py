@@ -2,9 +2,7 @@
 
 from __future__ import print_function
 
-pfx = 9600
 str = ''
-count = 0x100
 step = 0x20
 
 str = "<table border=\"1\">\n"
@@ -25,7 +23,11 @@ def appendrange(start, length):
 			x = x + 1
 		str += "</tr>\n"
 
-appendrange(pfx, count)
+appendrange(0x2300, 0x100)
+appendrange(0x2400, 0x100)
+appendrange(0x2500, 0x100)
+appendrange(0x2600, 0x100)
+appendrange(0x2700, 0x100)
 
 str += "</table>\n"
 
