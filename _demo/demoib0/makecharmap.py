@@ -4,24 +4,28 @@ from __future__ import print_function
 
 pfx = 9600
 str = ''
-count = 256
-step = 16
+count = 0x100
+step = 0x20
 
 str = "<table border=\"1\">\n"
 
 str += "<tr><th>dec</th><th>hex</th>"
 for i in range(0, step):
-	str += "<th>%x</th>" % i
+	str += "<th>%02x</th>" % i
 str += "<tr>\n"
 
-x = 0
-while x < count:
-	num = pfx + x
-	str += "<tr><th>%d</th><th>%x</th>" % (num, num)
-	for i in range(0, step):
-		str += "<td>" + unichr(pfx + x) + "</td>"
-		x = x + 1
-	str += "</tr>\n"
+def appendrange(start, length):
+	global str
+	x = 0
+	while x < length:
+		num = start + x
+		str += "<tr><th>%04d</th><th>%04x</th>" % (num, num)
+		for i in range(0, step):
+			str += "<td>" + unichr(start + x) + "</td>"
+			x = x + 1
+		str += "</tr>\n"
+
+appendrange(pfx, count)
 
 str += "</table>\n"
 
