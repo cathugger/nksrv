@@ -140,6 +140,11 @@ html {
 	unicode-bidi: embed;
 }
 
+.unitrip {
+	color: #7F004F;
+	font-size: 15px;
+}
+
 .trunc {
 	/* background-color: #CCEEBB; */
 	color: gray;
