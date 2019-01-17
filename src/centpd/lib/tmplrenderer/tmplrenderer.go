@@ -22,14 +22,6 @@ import (
 
 var _ renderer.Renderer = (*TmplRenderer)(nil)
 
-// pure
-const (
-	xtmplOP = iota
-	xtmplReply
-
-	xtmplMax
-)
-
 // page
 const (
 	ptmplBoardList = iota
@@ -56,7 +48,7 @@ const (
 	rtmplMax
 )
 
-var xnames = [xtmplMax]string{
+var xnames = [...]string{
 	"op",
 	"reply",
 }
@@ -128,10 +120,11 @@ type tmplThing struct {
 }
 
 type TmplRenderer struct {
-	p ib0.IBProvider
-	t [tmplMax]tmplThing
-	m msgFmtCfg
-	l Logger
+	p  ib0.IBProvider
+	tp [ptmplMax]tmplThing
+	tr [rtmplMax]tmplThing
+	m  msgFmtCfg
+	l  Logger
 }
 
 type nopWCloser struct {
@@ -195,29 +188,50 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 
 		return
 	}
-
-	for i := 0; i < tmplMax; i++ {
-		t, ct, e := doTemplate(names[i])
+	for i := range xnames {
+		_, _, e := doTemplate(xnames[i])
 		if e != nil {
 			return e
 		}
+		delete(tt, xnames[i])
+	}
+	doFullTemplate := func(name string) (
+		t *template.Template, ft string, fe error) {
 
-		if ct == "" {
-			ct = "text/html"
+		t, ct, fe := doTemplate(name)
+		if fe != nil {
+			return
 		}
-		mt, par, e := mime.ParseMediaType(ct)
-		if e != nil {
-			return fmt.Errorf(
-				"couldn't parse Content-Type %q: %v", ct, e)
+		mt, par, fe := mime.ParseMediaType(ct)
+		if fe != nil {
+			fe = fmt.Errorf("couldn't parse Content-Type %q: %v", ct, fe)
+			return
 		}
 		if strings.HasPrefix(mt, "text/") {
 			par["charset"] = "UTF-8"
 		}
 
-		tr.t[i].t = t
-		tr.t[i].m = mime.FormatMediaType(mt, par)
-		tr.t[i].w = nopWCCreator
-		delete(tt, names[i])
+		return t, mime.FormatMediaType(mt, par), nil
+	}
+	for i := range pnames {
+		t, ct, e := doFullTemplate(pnames[i])
+		if e != nil {
+			return e
+		}
+		tr.tp[i].t = t
+		tr.tp[i].m = ct
+		tr.tp[i].w = nopWCCreator
+		delete(tt, pnames[i])
+	}
+	for i := range rnames {
+		t, ct, e := doFullTemplate(rnames[i])
+		if e != nil {
+			return e
+		}
+		tr.tr[i].t = t
+		tr.tr[i].m = ct
+		tr.tr[i].w = nopWCCreator
+		delete(tt, rnames[i])
 	}
 	for n := range tt {
 		_, _, e := doTemplate(n)
@@ -229,9 +243,8 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 }
 
 func tmplWC(
-	w http.ResponseWriter, tr *TmplRenderer, num int, code int) io.WriteCloser {
+	w http.ResponseWriter, tt *tmplThing, code int) io.WriteCloser {
 
-	tt := &tr.t[num]
 	w.Header().Set("Content-Type", tt.m)
 	w.WriteHeader(code)
 	return tt.w(w)
@@ -242,19 +255,33 @@ type TmplRendererCfg struct {
 	Logger      LoggerX
 }
 
-func (tr *TmplRenderer) execTmpl(t int, w io.WriteCloser, d interface{}) {
-	err := tr.t[t].t.Execute(w, d)
+func (tr *TmplRenderer) execTmpl(
+	tt *tmplThing, tname string, w io.WriteCloser, d interface{}) {
+
+	err := tt.t.Execute(w, d)
 	if err != nil {
-		tr.l.LogPrintf(ERROR, "%s execution failed: %v", names[t], err)
+		tr.l.LogPrintf(ERROR, "%s execution failed: %v", tname, err)
 	}
 	w.Close()
 }
 
-func outTmpl(
-	w http.ResponseWriter, tr *TmplRenderer, num int, code int, d interface{}) {
+func (tr *TmplRenderer) outTmplX(
+	w http.ResponseWriter, tt *tmplThing, tname string, code int, d interface{}) {
 
-	ww := tmplWC(w, tr, num, code)
-	tr.execTmpl(num, ww, d)
+	ww := tmplWC(w, tt, code)
+	tr.execTmpl(tt, tname, ww, d)
+}
+
+func (tr *TmplRenderer) outTmplP(
+	w http.ResponseWriter, tid, code int, d interface{}) {
+
+	tr.outTmplX(w, &tr.tp[tid], pnames[tid], code, d)
+}
+
+func (tr *TmplRenderer) outTmplR(
+	w http.ResponseWriter, tid, code int, d interface{}) {
+
+	tr.outTmplX(w, &tr.tr[tid], rnames[tid], code, d)
 }
 
 func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
@@ -374,10 +401,10 @@ func (tr *TmplRenderer) ServeBoardList(
 			code,
 			err,
 		}
-		outTmpl(w, tr, tmplBoardListErr, code, ctx)
+		tr.outTmplP(w, ptmplBoardListErr, code, ctx)
 		return
 	}
-	outTmpl(w, tr, tmplBoardList, 200, l)
+	tr.outTmplP(w, ptmplBoardList, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThreadListPage(
@@ -404,7 +431,7 @@ func (tr *TmplRenderer) ServeThreadListPage(
 			board,
 			page,
 		}
-		outTmpl(w, tr, tmplThreadListPageErr, code, ctx)
+		tr.outTmplP(w, ptmplThreadListPageErr, code, ctx)
 		return
 	}
 	if !l.D.HasBackRefs {
@@ -413,7 +440,7 @@ func (tr *TmplRenderer) ServeThreadListPage(
 		}
 		l.D.HasBackRefs = true
 	}
-	outTmpl(w, tr, tmplThreadListPage, 200, l)
+	tr.outTmplP(w, ptmplThreadListPage, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThread(
@@ -440,14 +467,14 @@ func (tr *TmplRenderer) ServeThread(
 			board,
 			thread,
 		}
-		outTmpl(w, tr, tmplThreadErr, code, ctx)
+		tr.outTmplP(w, ptmplThreadErr, code, ctx)
 		return
 	}
 	if !l.D.HasBackRefs {
 		ib0.ProcessBackReferences(l.D.Board.Name, &l.D.IBCommonThread)
 		l.D.HasBackRefs = true
 	}
-	outTmpl(w, tr, tmplThread, 200, l)
+	tr.outTmplP(w, ptmplThread, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThreadCatalog(
@@ -472,10 +499,10 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 			err,
 			board,
 		}
-		outTmpl(w, tr, tmplThreadCatalogErr, code, ctx)
+		tr.outTmplP(w, ptmplThreadCatalogErr, code, ctx)
 		return
 	}
-	outTmpl(w, tr, tmplThreadCatalog, 200, l)
+	tr.outTmplP(w, ptmplThreadCatalog, 200, l)
 }
 
 func (tr *TmplRenderer) DressNewBoardResult(
@@ -496,9 +523,9 @@ func (tr *TmplRenderer) DressNewBoardResult(
 		R: tr,
 	}
 	if err == nil {
-		outTmpl(w, tr, tmplCreatedBoard, 200, l)
+		tr.outTmplR(w, rtmplCreatedBoard, 200, l)
 	} else {
-		outTmpl(w, tr, tmplCreatedBoardErr, code, l)
+		tr.outTmplR(w, rtmplCreatedBoardErr, code, l)
 	}
 }
 
@@ -520,15 +547,15 @@ func (tr *TmplRenderer) DressPostResult(
 	}
 	if newthread {
 		if err == nil {
-			outTmpl(w, tr, tmplCreatedThread, 200, l)
+			tr.outTmplR(w, rtmplCreatedThread, 200, l)
 		} else {
-			outTmpl(w, tr, tmplCreatedThreadErr, code, l)
+			tr.outTmplR(w, rtmplCreatedThreadErr, code, l)
 		}
 	} else {
 		if err == nil {
-			outTmpl(w, tr, tmplCreatedPost, 200, l)
+			tr.outTmplR(w, rtmplCreatedPost, 200, l)
 		} else {
-			outTmpl(w, tr, tmplCreatedPostErr, code, l)
+			tr.outTmplR(w, rtmplCreatedPostErr, code, l)
 		}
 	}
 }
