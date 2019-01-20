@@ -202,6 +202,10 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		if fe != nil {
 			return
 		}
+		if ct == "" {
+			// TODO configurable
+			ct = "text/html"
+		}
 		mt, par, fe := mime.ParseMediaType(ct)
 		if fe != nil {
 			fe = fmt.Errorf("couldn't parse Content-Type %q: %v", ct, fe)
