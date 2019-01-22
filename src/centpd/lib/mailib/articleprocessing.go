@@ -377,7 +377,14 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 					os.Remove(fn)
 				}
 			}
-			tmpfilenames = []string(nil)
+			tmpfilenames = nil
+
+			for _, fn := range thumbfilenames {
+				if fn != "" {
+					os.Remove(fn)
+				}
+			}
+			thumbfilenames = nil
 		}
 	}()
 
