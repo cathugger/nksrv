@@ -164,29 +164,41 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 		return nil
 	}
 
+	nextCont := false
 	for {
 		b := br.Buffered()
 		for len(b) != 0 {
+			// continuation processing
+			currCont := nextCont
+
 			n := bytes.IndexByte(b, '\n')
-			if n < 0 {
-				if len(b) >= maxHeaderLen {
-					// uh oh
-					e = errTooLongHeader
-				}
-				break
-			}
-
 			var wb []byte
-			if n == 0 || b[n-1] != '\r' {
-				wb = b[:n]
+			if n >= 0 {
+				if n == 0 || b[n-1] != '\r' {
+					wb = b[:n]
+				} else {
+					wb = b[:n-1]
+				}
+
+				//fmt.Printf("!hdr full line %q\n", wb)
+
+				b = b[n+1:]
+				br.Discard(n + 1)
+				nextCont = false
 			} else {
-				wb = b[:n-1]
+				n := len(b)
+				if n == 0 || b[n-1] != '\r' {
+					wb = b[:n]
+				} else {
+					wb = b[:n-1]
+				}
+
+				//fmt.Printf("!hdr full unfinished line %q\n", wb)
+
+				br.Discard(n)
+				b = nil
+				nextCont = true
 			}
-
-			//fmt.Printf("!hdr full line %q\n", wb)
-
-			b = b[n+1:]
-			br.Discard(n + 1)
 
 			if len(wb) == 0 {
 				//fmt.Printf("!empty line - end of headers\n")
@@ -194,8 +206,10 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				goto endHeaders
 			}
 
+			//fmt.Printf("!currCont = %v\n", currCont)
+
 			// process header line
-			if wb[0] != ' ' && wb[0] != '\t' {
+			if wb[0] != ' ' && wb[0] != '\t' && !currCont {
 				// not a continuation
 				// finish current, if any
 				e = finishCurrent()

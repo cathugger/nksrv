@@ -394,10 +394,8 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		// is used when message is properly decoded
 		msgattachment := false
 
-		cdis := ""
-		if len(H["Content-Disposition"]) != 0 {
-			cdis = H["Content-Disposition"][0].V
-		}
+		cdis := H.GetFirst("Content-Disposition")
+
 		var cdis_t string
 		var cdis_par map[string]string
 		if cdis != "" {

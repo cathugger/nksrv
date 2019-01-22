@@ -176,7 +176,12 @@ func unsafeMapCanonicalOriginalHeaders(b []byte) (string, string) {
 		return h, ""
 	}
 	// ohwell nothing we can do, just copy
-	return string(b), orig
+	can := string(b)
+	if can == orig {
+		return can, ""
+	} else {
+		return can, orig
+	}
 }
 
 func UnsafeCanonicalHeader(b []byte) string {
