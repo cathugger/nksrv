@@ -348,19 +348,30 @@ func processMessageAttachment(
 	return
 }
 
+func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
+	if ct != "" {
+		var e error
+		ct_t, ct_par, e = mime.ParseMediaType(ct)
+		if e != nil && ct_t == "" {
+			ct_t = "invalid"
+		}
+	}
+	return
+}
+
 // DevourMessageBody processes message body, filling in PostInfo structure,
 // creating relevant files.
-// It removes "Content-Transfer-Encoding" header from XH,
+// It removes "Content-Transfer-Encoding" header from ZH,
 // also sometimes modifies "Content-Type" header.
 // info.ContentParams must be non-nil only if info.ContentType requires
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string, err error) {
+	ZH mail.Headers, info ParsedMessageInfo, zr io.Reader) (
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string, zerr error) {
 
 	defer func() {
-		if err != nil {
+		if zerr != nil {
 			for _, fn := range tmpfilenames {
 				if fn != "" {
 					os.Remove(fn)
@@ -373,6 +384,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	// TODO parse multiple levels of multipart
 	// TODO be picky about stuff from multipart/alternative, prefer txt, richtext
 
+	// whether we already filled in .Message
 	textprocessed := false
 
 	guttleBody := func(
@@ -446,150 +458,133 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		return
 	}
 
-	var xct_t string
-	var xct_par map[string]string
-	if len(XH["Content-Type"]) != 0 {
-		var e error
-		ct := XH["Content-Type"][0].V
-		xct_t, xct_par, e = mime.ParseMediaType(ct)
-		if e != nil && xct_t == "" {
-			xct_t = "invalid"
-		}
-	}
+	eatMain := func(
+		xct_t string, xct_par map[string]string, XH mail.Headers, xr io.Reader) (
+		rpinfo PartInfo, err error) {
 
-	xismultipart := strings.HasPrefix(xct_t, "multipart/")
+		xismultipart := strings.HasPrefix(xct_t, "multipart/")
 
-	var xcte string
-	if len(XH["Content-Transfer-Encoding"]) != 0 {
-		xcte = XH["Content-Transfer-Encoding"][0].V
-	}
-	// we won't need this anymore
-	delete(XH, "Content-Transfer-Encoding")
+		xcte := XH.GetFirst("Content-Transfer-Encoding")
+		// we won't need this anymore
+		delete(XH, "Content-Transfer-Encoding")
 
-	var xbinary bool
-	xr, xbinary, err =
-		cfg.processMessagePrepareReader(xcte, xismultipart, xr)
-	if err != nil {
-		return
-	}
-
-	if xismultipart && xct_par != nil && xct_par["boundary"] != "" &&
-		len(XH["Content-Disposition"]) == 0 {
-
-		has8bit := false
-
-		pr := mail.NewPartReader(xr, xct_par["boundary"])
-		var pis []PartInfo
-		for {
-			err = pr.NextPart()
-			if err != nil {
-				break
-			}
-
-			var PH mail.Headers
-			PH, err = pr.ReadHeaders(8 << 10)
-			if err != nil {
-				err = fmt.Errorf("pr.ReadHeaders: %v", err)
-				break
-			}
-
-			var pct string
-			if len(PH["Content-Type"]) != 0 {
-				pct = PH["Content-Type"][0].V
-			}
-			delete(PH, "Content-Type")
-
-			var pct_t string
-			var pct_par map[string]string
-			if pct != "" {
-				var e error
-				pct_t, pct_par, e = mime.ParseMediaType(pct)
-				if e != nil && pct_t == "" {
-					pct_t = "invalid"
-				}
-			}
-
-			var pcte string
-			if len(PH["Content-Transfer-Encoding"]) != 0 {
-				pcte = PH["Content-Transfer-Encoding"][0].V
-			}
-			delete(PH, "Content-Transfer-Encoding")
-
-			pismultipart := strings.HasPrefix(pct, "multipart/")
-
-			var pxr io.Reader
-			var pbinary bool
-			pxr, pbinary, err =
-				cfg.processMessagePrepareReader(pcte, pismultipart, pr)
-
-			var prt *readTracker
-			if !pbinary {
-				prt = &readTracker{R: pxr}
-				pxr = prt
-			}
-
-			var partI PartInfo
-			partI.ContentType = pct
-			partI.Binary = pbinary
-			partI.Headers = PH
-
-			partI.Body, err =
-				guttleBody(pxr, PH, pct_t, pct_par, pbinary)
-			if err != nil {
-				err = fmt.Errorf("guttleBody: %v", err)
-				break
-			}
-
-			if prt != nil {
-				partI.HasNull = prt.HasNull
-				partI.Has8Bit = prt.Has8Bit && !prt.HasNull
-				if partI.Has8Bit {
-					has8bit = true
-				}
-			}
-
-			pis = append(pis, partI)
-		}
-		pr.Close()
-		if err != io.EOF {
-			err = fmt.Errorf("failed to parse multipart: %v", err)
+		var xbinary bool
+		xr, xbinary, err =
+			cfg.processMessagePrepareReader(xcte, xismultipart, xr)
+		if err != nil {
 			return
 		}
 
-		// no more parts
-		err = nil
-		// we're not going to save parameters of this
-		XH["Content-Type"][0].V =
-			au.TrimWSString(au.UntilString(XH["Content-Type"][0].V, ';'))
-		// fill in
-		pi.H = XH
-		pi.L.Binary = xbinary
-		pi.L.Body.Data = pis
-		pi.L.Has8Bit = has8bit
+		if xismultipart && xct_par != nil && xct_par["boundary"] != "" &&
+			len(XH["Content-Disposition"]) == 0 {
 
-		return // done there
+			has8bit := false
+
+			pr := mail.NewPartReader(xr, xct_par["boundary"])
+			var pis []PartInfo
+			for {
+				err = pr.NextPart()
+				if err != nil {
+					break
+				}
+
+				var PH mail.Headers
+				PH, err = pr.ReadHeaders(8 << 10)
+				if err != nil {
+					err = fmt.Errorf("pr.ReadHeaders: %v", err)
+					break
+				}
+
+				pct := PH.GetFirst("Content-Type")
+				// this will go elsewhere
+				delete(PH, "Content-Type")
+				pct_t, pct_par := ProcessContentType(pct)
+
+				pcte := PH.GetFirst("Content-Transfer-Encoding")
+				// we won't need this anymore
+				delete(PH, "Content-Transfer-Encoding")
+
+				pismultipart := strings.HasPrefix(pct_t, "multipart/")
+
+				var pxr io.Reader
+				var pbinary bool
+				pxr, pbinary, err =
+					cfg.processMessagePrepareReader(pcte, pismultipart, pr)
+
+				var prt *readTracker
+				if !pbinary {
+					prt = &readTracker{R: pxr}
+					pxr = prt
+				}
+
+				var partI PartInfo
+				partI.ContentType = pct
+				partI.Binary = pbinary
+				partI.Headers = PH
+
+				partI.Body, err =
+					guttleBody(pxr, PH, pct_t, pct_par, pbinary)
+				if err != nil {
+					err = fmt.Errorf("guttleBody: %v", err)
+					break
+				}
+
+				if prt != nil {
+					partI.HasNull = prt.HasNull
+					partI.Has8Bit = prt.Has8Bit && !prt.HasNull
+					if partI.Has8Bit {
+						has8bit = true
+					}
+				}
+
+				pis = append(pis, partI)
+			}
+			pr.Close()
+			if err != io.EOF {
+				err = fmt.Errorf("failed to parse multipart: %v", err)
+				return
+			}
+
+			// no more parts
+			err = nil
+			// we're not going to save parameters of this
+			XH["Content-Type"][0].V =
+				au.TrimWSString(au.UntilString(XH["Content-Type"][0].V, ';'))
+			// fill in
+			rpinfo.Body.Data = pis
+			rpinfo.Binary = xbinary
+			rpinfo.Has8Bit = has8bit
+
+			return // done there
+		}
+
+		// if we reached this point we're not doing multipart
+
+		// since this is toplvl dont set ContentType or other headers
+		rpinfo.Binary = xbinary
+
+		var xrt *readTracker
+		if !xbinary {
+			xrt = &readTracker{R: xr}
+			xr = xrt
+		}
+
+		rpinfo.Body, err =
+			guttleBody(xr, XH, xct_t, xct_par, xbinary)
+
+		if xrt != nil {
+			rpinfo.HasNull = xrt.HasNull
+			rpinfo.Has8Bit = xrt.Has8Bit && !xrt.HasNull
+		}
+
+		return
 	}
 
-	// if we reached this point we're not doing multipart
-
-	pi.H = XH
-	// since this is toplvl dont set ContentType or other headers
-	pi.L.Binary = xbinary
-
-	var xrt *readTracker
-	if !xbinary {
-		xrt = &readTracker{R: xr}
-		xr = xrt
-	}
-
-	pi.L.Body, err =
-		guttleBody(xr, XH, xct_t, xct_par, xbinary)
-
-	if xrt != nil {
-		pi.L.HasNull = xrt.HasNull
-		pi.L.Has8Bit = xrt.Has8Bit && !xrt.HasNull
-	}
-
+	zct_t, zct_par := ProcessContentType(ZH.GetFirst("Content-Type"))
+	// eat body
+	pi.L, zerr = eatMain(zct_t, zct_par, ZH, zr)
+	// map type is just pointer
+	pi.H = ZH
 	return
 }
 
