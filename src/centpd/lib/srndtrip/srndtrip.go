@@ -23,9 +23,10 @@ func MakeUnicodeTrip(pubkey string, length int) string {
 	// however, range shifted by 0x10 looks better to me
 	// (instead of `▀▁▂▃▄▅▆▇█▉▊▋▌▍▎▏` it'll use `⚀⚁⚂⚃⚄⚅⚆⚇⚈⚉⚊⚋⚌⚍⚎⚏`)
 	// and display equaly good both in torbrowser+DejaVuSans and phone
-	// since jeff ack'd it, I'll just use it
+	// since jeff ack'd it (he doesn't care probably), I'll just use it
 	const rstart = 0x2590
 	// 0x2500 can display with TBB font whitelist, but looks too cryptic.
+	// startin from 0x2600 needs more than DejaVuSans so I'll avoid it
 
 	// logic (same as in srnd):
 	// it first writes length/2 chars of begining
@@ -34,9 +35,11 @@ func MakeUnicodeTrip(pubkey string, length int) string {
 	i := 0
 	for ; i < length/2; i++ {
 		b.WriteRune(rstart + rune(data[i]))
+		b.WriteRune(0xFE0E) // text style variant
 	}
 	for ; i < length; i++ {
 		b.WriteRune(rstart + rune(data[len(data)-length+i]))
+		b.WriteRune(0xFE0E) // text style variant
 	}
 
 	return b.String()
