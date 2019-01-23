@@ -199,30 +199,7 @@ func (pr *PartReader) checkPartEndEOF(line []byte) bool {
 }
 
 func (pr *PartReader) ReadHeaders(headlimit int) (H Headers, e error) {
-	cr := pr.BufReader
-
-	var r io.Reader
-	var lr *io.LimitedReader
-
-	if headlimit > 0 {
-		// change underlying reader to limit its consumption
-		// rough way to do this but should work probably
-		r = cr.GetReader()
-		lr = &io.LimitedReader{R: r, N: int64(headlimit)}
-		cr.SetReader(lr)
-	}
-
-	H, e = readHeaders(cr)
-
-	if headlimit > 0 {
-		// restore original reader
-		cr.SetReader(r)
-		if lr.N == 0 && cr.QueuedErr() == io.EOF {
-			cr.ResetErr()
-		}
-	}
-
-	return
+	return limitedReadHeadersFromExisting(pr.BufReader, headlimit)
 }
 
 func (pr *PartReader) read(b []byte) (n int, e error) {

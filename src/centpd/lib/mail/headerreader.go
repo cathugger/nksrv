@@ -45,12 +45,12 @@ func (r *limitedHeadReader) Read(b []byte) (n int, err error) {
 // ReadHeaders reads headers, also returning buffered reader.
 // Users should call mh.Close after they used mh.B. If err is returned,
 // closing isn't required.
-func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
+func ReadHeaders(r io.Reader, headlimit int) (mh MessageHead, err error) {
 	var lr *limitedHeadReader
 	var br *bufreader.BufReader
+
 	if headlimit > 0 {
-		// TODO replace LimitedReader with something which returns something other than io.EOF
-		lr = &limitedHeadReader{R: r, N: headlimit}
+		lr = &limitedHeadReader{R: r, N: int64(headlimit)}
 		br = obtainBufReader(lr)
 	} else {
 		br = obtainBufReader(r)
@@ -72,6 +72,43 @@ func ReadHeaders(r io.Reader, headlimit int64) (mh MessageHead, err error) {
 	}
 
 	return
+}
+
+func limitedReadHeadersFromExisting(
+	cr *bufreader.BufReader, headlimit int) (H Headers, e error) {
+
+	var orig_r io.Reader
+	var lr *limitedHeadReader
+
+	if headlimit > 0 {
+		// change underlying reader to limit its consumption
+		// rough way to do this but should work probably
+		queued := len(cr.Buffered()) // take into account already queued data
+		if headlimit > queued {
+			headlimit -= queued
+		} else {
+			headlimit = 0
+		}
+		orig_r = cr.GetReader()
+		lr = &limitedHeadReader{R: orig_r, N: int64(headlimit)}
+		cr.SetReader(lr)
+	}
+
+	H, e = readHeaders(cr)
+
+	if lr != nil {
+		// restore original reader
+		cr.SetReader(orig_r)
+		if lr.N == 0 && cr.QueuedErr() == errHeadLimitReached {
+			cr.ResetErr()
+		}
+	}
+
+	return
+}
+
+func (mh *MessageHead) ReadHeaders(headlimit int) (H Headers, e error) {
+	return limitedReadHeadersFromExisting(mh.B, headlimit)
 }
 
 func SkipHeaders(r io.Reader) (mh MessageHead, err error) {

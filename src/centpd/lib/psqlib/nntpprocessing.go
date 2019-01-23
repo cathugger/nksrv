@@ -333,6 +333,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		info.FullMsgIDStr = fmsgids
 	}
 
+	pi.H = H
 	pi.MessageID = cutMsgID(info.FullMsgIDStr)
 	pi.ID = mailib.HashPostID_SHA1(info.FullMsgIDStr)
 	pi.Date = date.UnixTimeUTC(info.PostedDate)

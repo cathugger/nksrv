@@ -463,15 +463,31 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		return
 	}
 
+	trackedGuttleBody := func(
+		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
+		binary bool) (obj BodyObject, hasNull, has8Bit bool, err error) {
+
+		var rt *readTracker
+		if !binary {
+			rt = &readTracker{R: r}
+			r = rt
+		}
+
+		obj, err = guttleBody(r, H, ct_t, ct_par, binary)
+
+		if prt != nil {
+			hasNull = rt.HasNull
+			has8Bit = rt.Has8Bit && !rt.HasNull
+		}
+
+		return
+	}
+
 	eatMain := func(
-		xct_t string, xct_par map[string]string, XH mail.Headers, xr io.Reader) (
+		xct_t string, xct_par map[string]string, xcte string, XH mail.Headers, xr io.Reader) (
 		rpinfo PartInfo, err error) {
 
 		xismultipart := strings.HasPrefix(xct_t, "multipart/")
-
-		xcte := XH.GetFirst("Content-Transfer-Encoding")
-		// we won't need this anymore
-		delete(XH, "Content-Transfer-Encoding")
 
 		var xbinary bool
 		xr, xbinary, err =
@@ -516,30 +532,20 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 				pxr, pbinary, err =
 					cfg.processMessagePrepareReader(pcte, pismultipart, pr)
 
-				var prt *readTracker
-				if !pbinary {
-					prt = &readTracker{R: pxr}
-					pxr = prt
-				}
-
 				var partI PartInfo
 				partI.ContentType = pct
 				partI.Binary = pbinary
 				partI.Headers = PH
 
-				partI.Body, err =
-					guttleBody(pxr, PH, pct_t, pct_par, pbinary)
+				partI.Body, partI.HasNull, partI.Has8Bit, err =
+					trackedGuttleBody(pxr, PH, pct_t, pct_par, pbinary)
 				if err != nil {
 					err = fmt.Errorf("guttleBody: %v", err)
 					break
 				}
 
-				if prt != nil {
-					partI.HasNull = prt.HasNull
-					partI.Has8Bit = prt.Has8Bit && !prt.HasNull
-					if partI.Has8Bit {
-						has8bit = true
-					}
+				if partI.Has8Bit {
+					has8bit = true
 				}
 
 				pis = append(pis, partI)
@@ -568,28 +574,39 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		// since this is toplvl dont set ContentType or other headers
 		rpinfo.Binary = xbinary
 
-		var xrt *readTracker
-		if !xbinary {
-			xrt = &readTracker{R: xr}
-			xr = xrt
-		}
-
-		rpinfo.Body, err =
-			guttleBody(xr, XH, xct_t, xct_par, xbinary)
-
-		if xrt != nil {
-			rpinfo.HasNull = xrt.HasNull
-			rpinfo.Has8Bit = xrt.Has8Bit && !xrt.HasNull
-		}
+		rpinfo.Body, rpinfo.HasNull, rpinfo.Has8Bit, err =
+			trackedGuttleBody(xr, XH, xct_t, xct_par, xbinary)
 
 		return
 	}
 
 	zct_t, zct_par := ProcessContentType(ZH.GetFirst("Content-Type"))
-	// eat body
-	pi.L, zerr = eatMain(zct_t, zct_par, ZH, zr)
-	// map type is just pointer
-	pi.H = ZH
+
+	zcte := ZH.GetFirst("Content-Transfer-Encoding")
+	// we won't need this anymore
+	delete(ZH, "Content-Transfer-Encoding")
+
+	if !strings.HasPrefix(zct_t, "message/") ||
+		len(ZH["Content-Disposition"]) != 0 {
+
+		// eat body
+		pi.L, zerr = eatMain(zct_t, zct_par, zcte, ZH, zr)
+
+	} else {
+		// special handling for message/* bodies
+
+		var IH mail.Headers
+		IH, err = pr.ReadHeaders(8 << 10)
+		if err != nil {
+			err = fmt.Errorf("pr.ReadHeaders: %v", err)
+			break
+		}
+
+		ict := IH.GetFirst("Content-Type")
+		ict_t, pct_par := ProcessContentType(pct)
+		// TODO
+	}
+
 	return
 }
 
