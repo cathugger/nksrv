@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime"
 	qp "mime/quotedprintable"
 	"os"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"golang.org/x/text/encoding/ianaindex"
@@ -43,7 +45,7 @@ var DefaultMailProcessorConfig = MailProcessorConfig{
 
 func (cfg *MailProcessorConfig) processMessagePrepareReader(
 	cte string, ismultipart bool, r io.Reader) (
-	_ io.Reader, binary bool, err error) {
+	_ io.Reader, translated, binary bool, err error) {
 
 	if cte == "" ||
 		au.EqualFoldString(cte, "7bit") ||
@@ -57,6 +59,7 @@ func (cfg *MailProcessorConfig) processMessagePrepareReader(
 		}
 		r = base64.NewDecoder(base64.StdEncoding, r)
 		binary = true
+		translated = true
 	} else if au.EqualFoldString(cte, "quoted-printable") {
 		if ismultipart {
 			err = errors.New("multipart x quoted-printable not allowed")
@@ -64,13 +67,14 @@ func (cfg *MailProcessorConfig) processMessagePrepareReader(
 		}
 		r = qp.NewReader(r)
 		binary = false
+		translated = true
 	} else if au.EqualFoldString(cte, "binary") && cfg.AllowBinary {
 		binary = true
 	} else {
 		err = fmt.Errorf("unknown Content-Transfer-Encoding: %s", cte)
 		return
 	}
-	return r, binary, err
+	return r, translated, binary, err
 }
 
 func (cfg *MailProcessorConfig) processMessageText(
@@ -168,7 +172,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 
 func takeInFile(
 	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool,
-	ext, ctype string, r io.Reader, binary bool) (
+	ext, ctype string, r io.Reader, binary bool, ow io.Writer) (
 	fn, hash, hashtype string, fsize int64,
 	tres thumbnailer.ThumbResult, tfi thumbnailer.FileInfo, err error) {
 
@@ -182,6 +186,7 @@ func takeInFile(
 	// cleanup on err
 	defer func() {
 		if err != nil {
+			f.Close() // double close isn't much harm
 			os.Remove(fn)
 		}
 	}()
@@ -191,20 +196,30 @@ func takeInFile(
 	}
 	fsize, err = io.Copy(f, r)
 	if err != nil {
-		f.Close()
 		return
 	}
 	// seek to 0
 	_, err = f.Seek(0, 0)
 	if err != nil {
-		f.Close()
 		return
 	}
+	// TODO? io.MultiWriter?
 	// hash it
 	hash, hashtype, err = ht.MakeFileHash(f)
 	if err != nil {
-		f.Close()
 		return
+	}
+	if ow != nil {
+		// seek to 0
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			return
+		}
+		// copy
+		_, err = io.Copy(ow, f)
+		if err != nil {
+			return
+		}
 	}
 
 	if !nothumb {
@@ -300,7 +315,7 @@ func attachmentInfo(
 
 func processMessageAttachment(
 	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool, r io.Reader,
-	binary bool, ct_t string, ct_par, cdis_par map[string]string) (
+	binary bool, ct_t string, ct_par, cdis_par map[string]string, ow io.Writer) (
 	fi FileInfo, fn, thmfn string, err error) {
 
 	// file extension, original name, corrected type
@@ -308,7 +323,7 @@ func processMessageAttachment(
 
 	// processing of file itself
 	fn, hash, hashtype, fsize, tres, tfi, err :=
-		takeInFile(src, thm, nothumb, ext, ct_t, r, binary)
+		takeInFile(src, thm, nothumb, ext, ct_t, r, binary, ow)
 	if err != nil {
 		return
 	}
@@ -402,7 +417,6 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		msgattachment := false
 
 		cdis := H.GetFirst("Content-Disposition")
-
 		var cdis_t string
 		var cdis_par map[string]string
 		if cdis != "" {
@@ -446,7 +460,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		// if this point is reached, we'll need to add this as attachment
 
 		fi, fn, thmfn, err := processMessageAttachment(
-			src, thm, msgattachment, r, binary, ct_t, ct_par, cdis_par)
+			src, thm, msgattachment, r, binary, ct_t, ct_par, cdis_par, nil)
 		if err != nil {
 			return
 		}
@@ -475,7 +489,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		obj, err = guttleBody(r, H, ct_t, ct_par, binary)
 
-		if prt != nil {
+		if rt != nil {
 			hasNull = rt.HasNull
 			has8Bit = rt.Has8Bit && !rt.HasNull
 		}
@@ -490,7 +504,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		xismultipart := strings.HasPrefix(xct_t, "multipart/")
 
 		var xbinary bool
-		xr, xbinary, err =
+		xr, _, xbinary, err =
 			cfg.processMessagePrepareReader(xcte, xismultipart, xr)
 		if err != nil {
 			return
@@ -529,7 +543,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 				var pxr io.Reader
 				var pbinary bool
-				pxr, pbinary, err =
+				pxr, _, pbinary, err =
 					cfg.processMessagePrepareReader(pcte, pismultipart, pr)
 
 				var partI PartInfo
@@ -595,16 +609,116 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	} else {
 		// special handling for message/* bodies
 
+		var ir io.Reader
 		var IH mail.Headers
-		IH, err = pr.ReadHeaders(8 << 10)
-		if err != nil {
-			err = fmt.Errorf("pr.ReadHeaders: %v", err)
-			break
+		var ibinary bool
+		ir, _, ibinary, zerr = cfg.processMessagePrepareReader(zcte, false, zr)
+		if zerr != nil {
+			return
 		}
 
-		ict := IH.GetFirst("Content-Type")
-		ict_t, pct_par := ProcessContentType(pct)
-		// TODO
+		// additional worker which processes message without interpretation
+		pir, piw := io.Pipe()
+		ir = io.TeeReader(ir, piw)
+		var wfi FileInfo
+		var wfn, wthmfn string
+		var werr error
+		var wHasNull bool
+		var wHas8Bit bool
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			var r io.Reader = pir
+			var rt *readTracker
+			if !ibinary {
+				rt = &readTracker{R: r}
+				r = rt
+			}
+
+			// this deals with body itself
+			wfi, wfn, wthmfn, werr = processMessageAttachment(
+				src, thm, true, r, ibinary, zct_t, zct_par, nil, nil)
+
+			if rt != nil {
+				wHasNull = rt.HasNull
+				wHas8Bit = rt.Has8Bit && !rt.HasNull
+			}
+
+			// keep on consuming to avoid deadlock incase worker is one who failed
+			if werr != nil {
+				io.Copy(ioutil.Discard, pir)
+			}
+
+			wg.Done()
+		}()
+		cancelWorker := func(e error) {
+			piw.CloseWithError(e)
+
+			wg.Wait()
+
+			if wfn != "" {
+				os.Remove(wfn)
+			}
+			if wthmfn != "" {
+				os.Remove(wthmfn)
+			}
+		}
+
+		// interpret message
+		// TODO configurable header size limit?
+		var IMH mail.MessageHead
+		IMH, zerr = mail.ReadHeaders(ir, 8<<10)
+		if zerr != nil {
+			zerr = fmt.Errorf("err readin inner message headers: %v", zerr)
+			cancelWorker(zerr)
+			return
+		}
+		defer IMH.Close()
+
+		ir = IMH.B
+		IH = IMH.H
+
+		ict_t, ict_par := ProcessContentType(IH.GetFirst("Content-Type"))
+
+		icte := au.TrimWSString(IH.GetFirst("Content-Transfer-Encoding"))
+		delete(IH, "Content-Transfer-Encoding") // we won't need this anymore
+
+		// eat body
+		// yeh we discard its layout lol
+		_, zerr = eatMain(ict_t, ict_par, icte, IH, ir)
+		if zerr != nil {
+			zerr = fmt.Errorf("err eatin inner body: %v", zerr)
+			cancelWorker(zerr)
+			return
+		}
+
+		// wait for worker
+		wg.Wait()
+
+		if werr != nil {
+			zerr = fmt.Errorf("worker err eatin inner msg: %v", werr)
+			return
+		}
+
+		wfi.Type = ftypes.FTypeMsg
+		// insert into tmp filenames
+		tmpfilenames = append(tmpfilenames, "")
+		copy(tmpfilenames[1:], tmpfilenames)
+		tmpfilenames[0] = wfn
+		// into tmp thm filenames
+		thumbfilenames = append(thumbfilenames, "")
+		copy(thumbfilenames[1:], thumbfilenames)
+		thumbfilenames[0] = wthmfn
+		// into fileinfos
+		pi.FI = append(pi.FI, FileInfo{})
+		copy(pi.FI[1:], pi.FI)
+		pi.FI[0] = wfi
+		// set up proper body layout info
+		pi.L.Body.Data = PostObjectIndex(0)
+		pi.L.HasNull = wHasNull
+		pi.L.Has8Bit = wHas8Bit
+		// phew all done
+		// (hopefuly I did everything right)
 	}
 
 	return

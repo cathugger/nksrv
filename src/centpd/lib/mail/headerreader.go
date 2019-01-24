@@ -107,6 +107,12 @@ func limitedReadHeadersFromExisting(
 	return
 }
 
+func ReadHeadersFromExisting(
+	cr *bufreader.BufReader, headlimit int) (H Headers, e error) {
+
+	return limitedReadHeadersFromExisting(cr, headlimit)
+}
+
 func (mh *MessageHead) ReadHeaders(headlimit int) (H Headers, e error) {
 	return limitedReadHeadersFromExisting(mh.B, headlimit)
 }
