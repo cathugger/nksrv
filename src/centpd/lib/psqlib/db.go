@@ -10,7 +10,7 @@ import (
 	"centpd/lib/sqlbucket"
 )
 
-const currIb0Version = "demo3"
+const currIb0Version = "demo4"
 
 func (sp *PSQLIB) doDbIbit() (err error) {
 	stmts, err := sqlbucket.LoadFromFile("aux/psqlib/init.sql")
