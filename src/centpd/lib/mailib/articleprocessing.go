@@ -382,8 +382,10 @@ func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	ZH mail.Headers, zct_t string, zct_par map[string]string, zr io.Reader) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string, zerr error) {
+	ZH mail.Headers, zct_t string, zct_par map[string]string,
+	zr io.Reader, oiw io.Writer) (
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	IH mail.Headers, zerr error) {
 
 	defer func() {
 		if zerr != nil {
@@ -608,7 +610,6 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		// special handling for message/* bodies
 
 		var ir io.Reader
-		var IH mail.Headers
 		var ibinary bool
 		ir, _, ibinary, zerr = cfg.processMessagePrepareReader(zcte, false, zr)
 		if zerr != nil {
@@ -724,10 +725,13 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	XH mail.Headers, xct_t string, xct_par map[string]string, xr io.Reader) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string, err error) {
+	XH mail.Headers, xct_t string, xct_par map[string]string,
+	xr io.Reader, oiw io.Writer) (
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	IH mail.Headers, err error) {
 
-	return DefaultMailProcessorConfig.DevourMessageBody(src, thm, XH, xct_t, xct_par, xr)
+	return DefaultMailProcessorConfig.DevourMessageBody(
+		src, thm, XH, xct_t, xct_par, xr, oiw)
 }
 
 func CleanContentTypeAndTransferEncoding(H mail.Headers) {
