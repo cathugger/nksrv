@@ -636,7 +636,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 			// this deals with body itself
 			wfi, wfn, wthmfn, werr = processMessageAttachment(
-				src, thm, true, r, ibinary, zct_t, zct_par, nil, nil)
+				src, thm, true, r, ibinary, zct_t, zct_par, nil, oiw)
 
 			if rt != nil {
 				wHasNull = rt.HasNull
