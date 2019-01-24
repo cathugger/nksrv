@@ -691,6 +691,15 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			return
 		}
 
+		// ensure we read everything
+		_, zerr = io.Copy(ioutil.Discard, ir)
+		if zerr != nil {
+			zerr = fmt.Errorf("err eatin remains of inner body: %v", zerr)
+			cancelWorker(zerr)
+			return
+		}
+		// signal worker that we're done
+		piw.Close()
 		// wait for worker
 		wg.Wait()
 
