@@ -382,7 +382,7 @@ func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	ZH mail.Headers, info ParsedMessageInfo, zr io.Reader) (
+	ZH mail.Headers, zct_t string, zct_par map[string]string, zr io.Reader) (
 	pi PostInfo, tmpfilenames []string, thumbfilenames []string, zerr error) {
 
 	defer func() {
@@ -594,8 +594,6 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		return
 	}
 
-	zct_t, zct_par := ProcessContentType(ZH.GetFirst("Content-Type"))
-
 	zcte := ZH.GetFirst("Content-Transfer-Encoding")
 	// we won't need this anymore
 	delete(ZH, "Content-Transfer-Encoding")
@@ -726,10 +724,10 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	XH mail.Headers, info ParsedMessageInfo, xr io.Reader) (
+	XH mail.Headers, xct_t string, xct_par map[string]string, xr io.Reader) (
 	pi PostInfo, tmpfilenames []string, thumbfilenames []string, err error) {
 
-	return DefaultMailProcessorConfig.DevourMessageBody(src, thm, XH, info, xr)
+	return DefaultMailProcessorConfig.DevourMessageBody(src, thm, XH, xct_t, xct_par, xr)
 }
 
 func CleanContentTypeAndTransferEncoding(H mail.Headers) {

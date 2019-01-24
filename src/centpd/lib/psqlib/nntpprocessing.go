@@ -302,8 +302,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		ThumbPlan:   tplan,
 	}
 
+	act_t, act_par := mailib.ProcessContentType(H.GetFirst("Content-Type"))
+
 	pi, tmpfns, tmpthmfns, err := mailib.DevourMessageBody(
-		&sp.src, texec, H, info.ParsedMessageInfo, br)
+		&sp.src, texec, H, act_t, act_par, br)
 	if err != nil {
 		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
