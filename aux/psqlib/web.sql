@@ -155,7 +155,7 @@ LEFT JOIN
 ON
 	xp.g_p_id = xf.g_p_id
 WHERE
-	xf.ftype != 'msg'
+	(xf.ftype IS NULL OR xf.ftype != 'msg')
 ORDER BY
 	xt.bump DESC,
 	xt.t_id ASC,
@@ -304,7 +304,7 @@ LEFT JOIN
 ON
 	xp.g_p_id = xf.g_p_id
 WHERE
-	xb.b_name=$1 AND xt.t_name = $2 AND xf.ftype != 'msg'
+	xb.b_name=$1 AND xt.t_name = $2 AND (xf.ftype IS NULL OR xf.ftype != 'msg')
 ORDER BY
 	xbp.pdate ASC,
 	xbp.b_p_id ASC,
