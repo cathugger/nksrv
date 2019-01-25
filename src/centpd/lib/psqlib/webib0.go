@@ -256,7 +256,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			x_fid = 0
 		}
 
-		if x_fid != f_id.Int64 {
+		if x_fid != f_id.Int64 && ftype.String != "msg" {
 			var fi ib0.IBFileInfo
 			ta := defaultThumbAttributes
 
@@ -605,7 +605,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			x_fid = 0
 		}
 
-		if x_fid != f_id.Int64 {
+		if x_fid != f_id.Int64 && ftype.String != "msg" {
 			var fi ib0.IBFileInfo
 			ta := defaultThumbAttributes
 

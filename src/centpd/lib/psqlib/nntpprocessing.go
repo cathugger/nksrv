@@ -226,7 +226,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	return
 }
 
-func isSubjectEmpty(s string, isReply bool, refs string) bool {
+func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 	isVoid := func(x string) bool {
 		// content-less subjects some shitty nodes like spamming
 		return x == "" || au.EqualFoldString(x, "None") ||
@@ -237,7 +237,11 @@ func isSubjectEmpty(s string, isReply bool, refs string) bool {
 	}
 	if isReply {
 		// content-less copy of parent subject
-		if au.EqualFoldString(s, refs) {
+		if au.EqualFoldString(s, ref_subject) {
+			return true
+		}
+		// sage subject of x-sage message
+		if isSage && au.EqualFoldString(s, "sage") {
 			return true
 		}
 		// if after above checks it doesn't start with Re: it's legit
@@ -249,12 +253,12 @@ func isSubjectEmpty(s string, isReply bool, refs string) bool {
 		} else {
 			s = s[3:]
 		}
-		if refs == "" {
+		if ref_subject == "" {
 			// parent probably was void, so check for that
 			return isVoid(s)
 		} else {
 			// Re: parent
-			return au.EqualFoldString(s, refs)
+			return au.EqualFoldString(s, ref_subject)
 		}
 	} else {
 		return false
@@ -360,7 +364,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		// ensure safety and sanity
 		ssub = au.TrimWSString(safeHeader(tu.TruncateText(ssub, maxSubjectLen)))
 
-		if !isSubjectEmpty(ssub, info.isReply, info.refSubject) {
+		if !isSubjectEmpty(ssub, info.isReply, isSage, info.refSubject) {
 			pi.MI.Title = ssub
 			if pi.MI.Title == sh && len(H["Subject"]) == 1 {
 				// no need to duplicate
