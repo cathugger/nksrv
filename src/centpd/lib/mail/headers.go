@@ -81,6 +81,8 @@ func (h Headers) GetFirst(x string) string {
 }
 
 // case-insensitive lookup
+// NOTE: assumes that Headers map was created by current version
+// this is NOT the case with stuff pulled out of database
 func (h Headers) Lookup(x string) []HeaderVal {
 	if y, ok := commonHeaders[x]; ok {
 		return h[y]

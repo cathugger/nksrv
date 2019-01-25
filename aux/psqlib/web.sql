@@ -154,6 +154,8 @@ LEFT JOIN
 	ib0.files AS xf
 ON
 	xp.g_p_id = xf.g_p_id
+WHERE
+	xf.ftype != 'msg'
 ORDER BY
 	xt.bump DESC,
 	xt.t_id ASC,
@@ -209,7 +211,7 @@ LEFT JOIN
 		FROM
 			ib0.files AS zf
 		WHERE
-			xp.g_p_id = zf.g_p_id
+			xp.g_p_id = zf.g_p_id AND zf.ftype != 'msg'
 		ORDER BY
 			zf.f_id
 		LIMIT
@@ -302,7 +304,7 @@ LEFT JOIN
 ON
 	xp.g_p_id = xf.g_p_id
 WHERE
-	xb.b_name=$1 AND xt.t_name = $2
+	xb.b_name=$1 AND xt.t_name = $2 AND xf.ftype != 'msg'
 ORDER BY
 	xbp.pdate ASC,
 	xbp.b_p_id ASC,

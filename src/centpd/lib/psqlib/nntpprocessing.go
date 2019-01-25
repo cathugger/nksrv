@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -303,9 +304,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	act_t, act_par := mailib.ProcessContentType(H.GetFirst("Content-Type"))
+	eatinner := strings.HasPrefix(act_t, "message/") && len(H["Content-Disposition"]) == 0
 
 	pi, tmpfns, tmpthmfns, _, err := mailib.DevourMessageBody(
-		&sp.src, texec, H, act_t, act_par, br, nil)
+		&sp.src, texec, H, act_t, act_par, eatinner, br, nil)
 	if err != nil {
 		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
