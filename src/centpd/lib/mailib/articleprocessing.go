@@ -721,7 +721,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		copy(pi.FI[1:], pi.FI)
 		pi.FI[0] = wfi
 		// set up proper body layout info
-		pi.L.Body.Data = PostObjectIndex(0)
+		pi.L.Body.Data = PostObjectIndex(1)
 		pi.L.HasNull = wHasNull
 		pi.L.Has8Bit = wHas8Bit
 		// phew all done
