@@ -2,6 +2,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/text/unicode/norm"
 
 	au "centpd/lib/asciiutils"
@@ -437,10 +439,19 @@ ON
 	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
 
 	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xfname))
+
+	var signkeyseed []byte
 	if i := strings.IndexByte(pInfo.MI.Author, '#'); i >= 0 {
-		// TODO tripcode processing
-		// for now it's better to just strip stuff to not leak secrets
+		tripstr := pInfo.MI.Author[i+1:]
+		// strip stuff to not leak secrets
 		pInfo.MI.Author = strings.TrimSpace(pInfo.MI.Author[:i])
+
+		// we currently only support ed25519 seed syntax
+		tripseed, e := hex.DecodeString(tripstr)
+		if e != nil || len(tripseed) != ed25519.SeedSize {
+			return rInfo, errors.New("invalid tripcode syntax; we expected 64 hex chars"), http.StatusBadRequest
+		}
+		signkeyseed = tripseed
 	}
 
 	pInfo.MI.Message = tu.NormalizeTextMessage(xfmessage)
@@ -529,7 +540,7 @@ ON
 
 	// fill in layout/sign
 	pInfo, msgfn, err = sp.fillWebPostDetails(
-		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, nil)
+		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, signkeyseed)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}
@@ -596,6 +607,8 @@ ON
 					sp.log.LogPrint(ERROR, err.Error())
 					return rInfo, err, http.StatusInternalServerError
 				}
+				// if failed to move, remove
+				files[i].Remove()
 			}
 			x++
 		}
@@ -610,6 +623,8 @@ ON
 				sp.log.LogPrint(ERROR, err.Error())
 				return rInfo, err, http.StatusInternalServerError
 			}
+			// if failed to move, remove
+			os.Remove(msgfn)
 		}
 		x++
 	}

@@ -189,7 +189,8 @@ func (sp *PSQLIB) fillWebPostDetails(
 		if e != nil {
 			panic(e)
 		}
-		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(tohex(pubkey))
+		i.MI.Trip = tohex(pubkey) // write tripcode
+		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(i.MI.Trip)
 		i.H["X-Signature-Ed25519-SHA512"] = mail.OneHeaderVal(tohex(sig))
 	}
 
