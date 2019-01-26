@@ -158,19 +158,20 @@ ON sg.b_id = st.bid`
 func (s *ScraperDB) UpdateGroupID(group string, id uint64) error {
 	var q string
 	var es string
+	var e error
 	if id != 0 {
 		q = `UPDATE ib0.scraper_group_track AS st
 SET last_max = $3
 FROM ib0.boards AS xb
 WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
 		es = "scraper_group_track update query execution"
-		_, e := s.sp.db.DB.Exec(q, s.id, group, id)
+		_, e = s.sp.db.DB.Exec(q, s.id, group, id)
 	} else {
 		q = `DELETE FROM ib0.scraper_group_track AS st
 USING ib0.boards xb
 WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
 		es = "scraper_group_track clear query execution"
-		_, e := s.sp.db.DB.Exec(q, s.id, group)
+		_, e = s.sp.db.DB.Exec(q, s.id, group)
 	}
 	if e != nil {
 		return s.sp.sqlError(es, e)
