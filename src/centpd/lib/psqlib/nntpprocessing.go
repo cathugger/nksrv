@@ -316,7 +316,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	pi, tmpfns, tmpthmfns, IH, err := mailib.DevourMessageBody(
 		&sp.src, texec, H, act_t, act_par, eatinner, br, iow)
 	if err != nil {
-		err = fmt.Errorf("devourTransferArticle failed: %v", err)
+		err = fmt.Errorf("%q devourTransferArticle failed: %v",
+			info.FullMsgIDStr, err)
 		return
 	}
 	defer func() {
