@@ -181,11 +181,11 @@ var (
 var (
 	testBoardList = webib0.IBBoardList{
 		Boards: []webib0.IBBoardListBoard{
-			{"test", "board for testing", []string{"test"}},
-			{"testname2", "test description 2", []string{"test", "test2"}},
-			{"testname3", "test description 3", []string{"test3", "test4", "test5"}},
-			{"testname4", "test description 4", []string{}},
-			{"testname5", "test description 5", []string{"test"}},
+			{"test", "board for testing", []string{"test"}, 0, 0},
+			{"testname2", "test description 2", []string{"test", "test2"}, 0, 0},
+			{"testname3", "test description 3", []string{"test3", "test4", "test5"}, 0, 0},
+			{"testname4", "test description 4", []string{}, 0, 0},
+			{"testname5", "test description 5", []string{"test"}, 0, 0},
 		},
 	}
 	testThreadListPage = webib0.IBThreadListPage{
