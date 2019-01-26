@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"centpd/lib/date"
+	"centpd/lib/srndtrip"
 	tu "centpd/lib/textutils"
 	"centpd/lib/webib0"
 )
@@ -108,6 +109,7 @@ var funcs = map[string]interface{}{
 			return s
 		}
 	},
+	"unitrip":   srndtrip.MakeUnicodeTrip,
 	"fmtmsg":    fmtmsg,
 	"fmtmsgcat": fmtmsgcat,
 }

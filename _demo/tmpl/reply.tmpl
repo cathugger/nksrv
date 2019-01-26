@@ -32,7 +32,7 @@ arguments list:
 
    <span class="name" dir="auto">{{html (anonname $P.Name)}}</span>&lrm;
 
-   {{- if $P.Trip}}<span class="trip">{{html $P.Trip}}</span>{{end}}
+   {{- if $P.PubKey}} <span class="unitrip">{{unitrip $P.Trip 12}}</span>{{end}}
 
    <time
     class="pdate"
