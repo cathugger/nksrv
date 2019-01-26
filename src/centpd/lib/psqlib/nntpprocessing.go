@@ -15,6 +15,7 @@ import (
 	. "centpd/lib/logx"
 	"centpd/lib/mail"
 	"centpd/lib/mailib"
+	"centpd/lib/mailibsign"
 	"centpd/lib/nntp"
 	tu "centpd/lib/textutils"
 	"centpd/lib/thumbnailer"
@@ -310,8 +311,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	eatinner := (act_t == "message/rfc822" || act_t == "message/global") &&
 		len(H["Content-Disposition"]) == 0
 
-	pi, tmpfns, tmpthmfns, _, err := mailib.DevourMessageBody(
-		&sp.src, texec, H, act_t, act_par, eatinner, br, nil)
+	ver, iow := mailibsign.PrepareVerifier(H, act_t, act_par, eatinner)
+
+	pi, tmpfns, tmpthmfns, IH, err := mailib.DevourMessageBody(
+		&sp.src, texec, H, act_t, act_par, eatinner, br, iow)
 	if err != nil {
 		err = fmt.Errorf("devourTransferArticle failed: %v", err)
 		return
@@ -332,6 +335,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		panic("len(pi.FI) != len(tmpfns) || len(tmpfns) != len(tmpthmfns)")
 	}
 
+	verifiedinner := false
+
+	if ver != nil {
+		res := ver.Verify(iow)
+		pi.MI.Trip = res.PubKey
+		verifiedinner = res.PubKey != ""
+	}
+
 	// properly fill in fields
 
 	if info.FullMsgIDStr == "" {
@@ -347,6 +358,11 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	pi.Date = date.UnixTimeUTC(info.PostedDate)
 
 	pi.FC = countRealFiles(pi.FI)
+
+	if IH != nil && verifiedinner {
+		// validated inner msg, should take Subject and other hdrs from it
+		H = IH
+	}
 
 	if len(H["Subject"]) != 0 {
 		sh := H["Subject"][0].V

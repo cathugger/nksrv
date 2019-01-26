@@ -32,9 +32,9 @@ type IBThumbAttributes struct {
 type MessageInfo struct {
 	Title   string
 	Author  string
-	Trip    string
-	Sage    bool
 	Message string
+	Sage    bool
+	Trip    string
 }
 
 type PostAttributes struct {

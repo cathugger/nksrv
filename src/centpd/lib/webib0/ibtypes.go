@@ -85,6 +85,13 @@ type IBPostInfo struct {
 	Options        map[string]interface{} `json:"opts,omitempty"`    // additional stuff
 }
 
+func (pi *IBPostInfo) PubKey() string {
+	if len(pi.Trip) != 0 && pi.Trip[0] != '!' {
+		return pi.Trip
+	}
+	return ""
+}
+
 // common thread fields
 type IBCommonThread struct {
 	ID      string                 `json:"id"`                // thread ID
