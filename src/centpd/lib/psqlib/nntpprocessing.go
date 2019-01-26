@@ -359,6 +359,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	pi.FC = countRealFiles(pi.FI)
 
+	if ver != nil {
+		if verifiedinner {
+			sp.log.LogPrint(DEBUG, "sigver: %s successfuly verified as %s", info.FullMsgIDStr, pi.MI.Trip)
+		} else {
+			sp.log.LogPrint(DEBUG, "sigver: %s failed verification", info.FullMsgIDStr)
+		}
+	}
+
 	if IH != nil && verifiedinner {
 		// validated inner msg, should take Subject and other hdrs from it
 		H = IH
