@@ -362,9 +362,9 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	if ver != nil {
 		if verifiedinner {
-			sp.log.LogPrint(DEBUG, "sigver: %s successfuly verified as %s", info.FullMsgIDStr, pi.MI.Trip)
+			sp.log.LogPrintf(DEBUG, "sigver: %s successfuly verified as %s", info.FullMsgIDStr, pi.MI.Trip)
 		} else {
-			sp.log.LogPrint(DEBUG, "sigver: %s failed verification", info.FullMsgIDStr)
+			sp.log.LogPrintf(DEBUG, "sigver: %s failed verification", info.FullMsgIDStr)
 		}
 	}
 
