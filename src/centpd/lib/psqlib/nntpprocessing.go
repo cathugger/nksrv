@@ -296,10 +296,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
 	err error, unexpected bool) {
 
-	isSage := false
-	if info.isReply && len(H["X-Sage"]) != 0 {
-		isSage = true
-	}
+	isSage := info.isReply && len(H["X-Sage"]) != 0
 
 	tplan := sp.pickThumbPlan(info.isReply, isSage)
 	texec := thumbnailer.ThumbExec{

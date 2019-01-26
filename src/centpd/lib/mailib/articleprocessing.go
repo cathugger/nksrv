@@ -483,9 +483,9 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
 		binary bool) (obj BodyObject, hasNull, has8Bit bool, err error) {
 
-		var rt *readTracker
+		var rt *ReadTracker
 		if !binary {
-			rt = &readTracker{R: r}
+			rt = &ReadTracker{R: r}
 			r = rt
 		}
 
@@ -627,9 +627,9 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		wg.Add(1)
 		go func() {
 			var r io.Reader = pir
-			var rt *readTracker
+			var rt *ReadTracker
 			if !ibinary {
-				rt = &readTracker{R: r}
+				rt = &ReadTracker{R: r}
 				r = rt
 			}
 
@@ -708,20 +708,14 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		}
 
 		wfi.Type = ftypes.FTypeMsg
-		// insert into tmp filenames
-		tmpfilenames = append(tmpfilenames, "")
-		copy(tmpfilenames[1:], tmpfilenames)
-		tmpfilenames[0] = wfn
-		// into tmp thm filenames
-		thumbfilenames = append(thumbfilenames, "")
-		copy(thumbfilenames[1:], thumbfilenames)
-		thumbfilenames[0] = wthmfn
-		// into fileinfos
-		pi.FI = append(pi.FI, FileInfo{})
-		copy(pi.FI[1:], pi.FI)
-		pi.FI[0] = wfi
+		// add to tmp filenames
+		tmpfilenames = append(tmpfilenames, wfn)
+		// to tmp thm filenames
+		thumbfilenames = append(thumbfilenames, wthmfn)
+		// to fileinfos
+		pi.FI = append(pi.FI, wfi)
 		// set up proper body layout info
-		pi.L.Body.Data = PostObjectIndex(1)
+		pi.L.Body.Data = PostObjectIndex(len(pi.FI))
 		pi.L.HasNull = wHasNull
 		pi.L.Has8Bit = wHas8Bit
 		// phew all done

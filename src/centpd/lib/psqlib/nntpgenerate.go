@@ -4,13 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"os"
 
 	//. "centpd/lib/logx"
+	"centpd/lib/fstore"
 	"centpd/lib/mail"
 	"centpd/lib/mailib"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 )
+
+type NormalFileList struct {
+	FI  []mailib.FileInfo
+	src *fstore.FStore
+}
+
+func (fl NormalFileList) OpenFileAt(i int) (io.ReadCloser, error) {
+	return os.Open(fl.src.Main() + fl.FI[i].ID)
+}
 
 func (sp *PSQLIB) nntpGenerate(
 	w io.Writer, bpid postID, msgid CoreMsgIDStr, gpid postID) (err error) {
@@ -88,5 +99,5 @@ func (sp *PSQLIB) nntpGenerate(
 		pi.H["Subject"] = mail.OneHeaderVal(pi.MI.Title)
 	}
 
-	return mailib.GenerateMessage(&sp.src, w, pi)
+	return mailib.GenerateMessage(w, pi, NormalFileList{FI: pi.FI, src: &sp.src})
 }

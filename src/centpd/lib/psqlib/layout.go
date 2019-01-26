@@ -1,12 +1,21 @@
 package psqlib
 
 import (
+	"crypto"
+	"crypto/sha512"
 	"fmt"
+	"io"
 	"mime"
+	"os"
 	"strings"
 
+	"golang.org/x/crypto/ed25519"
+
 	au "centpd/lib/asciiutils"
+	"centpd/lib/ftypes"
+	ht "centpd/lib/hashtools"
 	"centpd/lib/mail"
+	"centpd/lib/mail/form"
 	"centpd/lib/mailib"
 )
 
@@ -32,9 +41,165 @@ func attachmentConentType(ctype string, oname string) string {
 const (
 	plainTextType = "text/plain; charset=US-ASCII"
 	plainUTF8Type = "text/plain; charset=UTF-8"
+	messageType   = "message/rfc822"
 )
 
+type FormFileList struct {
+	files map[string][]form.File
+}
+
+func (ffl FormFileList) OpenFileAt(i int) (io.ReadCloser, error) {
+	n := 0
+	// yeah this is stupid
+	for _, fieldname := range FileFields {
+		files := ffl.files[fieldname]
+		for i := range files {
+			fn := files[i].F.Name()
+			if i == n {
+				return os.Open(fn)
+			}
+
+			n++
+		}
+	}
+	panic("out of bounds")
+}
+
+func tohex(b []byte) string {
+	return fmt.Sprintf("%X", b)
+}
+
 func (sp *PSQLIB) fillWebPostDetails(
+	i mailib.PostInfo, frm form.Form, board string,
+	ref CoreMsgIDStr, inreplyto []string, signkeyseed []byte) (_ mailib.PostInfo, mfn string, err error) {
+
+	i = sp.fillWebPostInner(i, board, ref, inreplyto)
+
+	if len(signkeyseed) != 0 {
+
+		// signing (this is painful to do :<)
+
+		seckey := ed25519.NewKeyFromSeed(signkeyseed)
+		pubkey := seckey[32:64]
+
+		// we need to first generate inner message then sign it
+
+		// need to include subject now
+		if i.MI.Title != "" {
+			i.H["Subject"] = mail.OneHeaderVal(i.MI.Title)
+		}
+
+		// new file for message
+		f, e := sp.ffo.OpenFile()
+		if e != nil {
+			err = fmt.Errorf("err opening message file: %v", e)
+			return
+		}
+		mfn = f.Name()
+		defer func() {
+			// cleanup if err
+			if err != nil {
+				f.Close()
+				os.Remove(mfn)
+				mfn = ""
+			}
+		}()
+
+		// do generation itself
+		e = mailib.GenerateMessage(f, i, FormFileList{files: frm.Files})
+		if e != nil {
+			err = fmt.Errorf("err generating inner message: %v", e)
+			return
+		}
+
+		// seek to start
+		_, e = f.Seek(0, 0)
+		if e != nil {
+			err = fmt.Errorf("err seeking message file: %v", e)
+			return
+		}
+
+		// perform sign hashing and examination of generated message
+		signhasher := sha512.New()
+		trdr := &mailib.ReadTracker{R: au.NewUnixTextReader(f)}
+		_, e = io.Copy(signhasher, trdr)
+		if e != nil {
+			err = fmt.Errorf("err hashing message: %v", e)
+			return
+		}
+		var signhashbuf [64]byte
+		signhash := signhasher.Sum(signhashbuf[:0])
+
+		// we need to know file size
+		n, e := f.Seek(0, 2)
+		if e != nil {
+			err = fmt.Errorf("err seeking2 message file: %v", e)
+			return
+		}
+
+		// seek to begin again for filename hashing
+		_, e = f.Seek(0, 0)
+		if e != nil {
+			err = fmt.Errorf("err seeking3 message file: %v", e)
+			return
+		}
+
+		// hash content, produce filename
+		hash, hashtype, e := ht.MakeFileHash(f)
+		if err != nil {
+			err = fmt.Errorf("err making message filehash: %v", e)
+			return
+		}
+
+		// we're done with this file so close
+		e = f.Close()
+		if e != nil {
+			err = fmt.Errorf("err closing message file: %v", e)
+			return
+		}
+
+		// specify minimal file info
+		mfi := mailib.FileInfo{
+			Type:        ftypes.FTypeMsg,
+			ContentType: messageType,
+			Size:        n,
+			ID:          hash + "-" + hashtype + ".eml",
+		}
+		// add it
+		i.FI = append(i.FI, mfi)
+
+		// generate new layout
+		i.L = mailib.PartInfo{}
+		i.L.Body.Data = mailib.PostObjectIndex(len(i.FI))
+		i.L.HasNull = trdr.HasNull
+		i.L.Has8Bit = trdr.Has8Bit && !trdr.HasNull
+
+		// cleanup headers
+		for k := range i.H {
+			if strings.HasPrefix(k, "Content-") {
+				delete(i.H, k)
+			}
+		}
+
+		// add new headers we need
+		i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
+		i.H["Content-Type"] = mail.OneHeaderVal(messageType)
+		// sign
+		sig, e := seckey.Sign(nil, signhash, crypto.Hash(0))
+		if e != nil {
+			panic(e)
+		}
+		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(tohex(pubkey))
+		i.H["X-Signature-Ed25519-SHA512"] = mail.OneHeaderVal(tohex(sig))
+	}
+
+	// Path
+	i.H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
+
+	return i, mfn, nil
+}
+
+func (sp *PSQLIB) fillWebPostInner(
 	i mailib.PostInfo, board string,
 	ref CoreMsgIDStr, inreplyto []string) mailib.PostInfo {
 
@@ -93,9 +258,6 @@ func (sp *PSQLIB) fillWebPostDetails(
 		// NOTE: some impls specifically check for "1"
 		i.H["X-Sage"] = mail.OneHeaderVal("1")
 	}
-
-	// Path
-	i.H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 
 	// now deal with layout
 

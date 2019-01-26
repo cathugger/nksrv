@@ -28,10 +28,10 @@ arguments list:
   {{- end}}
 
   {{if $P.Sage -}}
-    <a class="name" dir="auto" href="mailto:sage">{{html (anonname $P.Name)}}</a>&lrm;
-   {{- else -}}
-    <span class="name" dir="auto">{{html (anonname $P.Name)}}</span>&lrm;
-   {{- end -}}
+   <a class="name" dir="auto" href="mailto:sage">{{html (anonname $P.Name)}}</a>&lrm;
+  {{- else -}}
+   <span class="name" dir="auto">{{html (anonname $P.Name)}}</span>&lrm;
+  {{- end -}}
 
   {{- if $P.PubKey}} <span class="unitrip" title="{{$P.Trip}}">{{unitrip $P.Trip 12}}</span>{{end}}
 

@@ -263,11 +263,16 @@ func (sp *PSQLIB) commonNewPost(
 	type thumbMove struct{ from, to string }
 	var thumbMoves []thumbMove
 
+	var msgfn string
+
 	defer func() {
 		if err != nil {
 			f.RemoveAll()
 			for _, mov := range thumbMoves {
 				os.Remove(mov.from)
+			}
+			if msgfn != "" {
+				os.Remove(msgfn)
 			}
 		}
 	}()
@@ -522,8 +527,12 @@ ON
 	tu := date.NowTimeUnix()
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 
-	pInfo = sp.fillWebPostDetails(pInfo, board,
-		CoreMsgIDStr(ref.String), inreplyto)
+	// fill in layout/sign
+	pInfo, msgfn, err = sp.fillWebPostDetails(
+		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, nil)
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
 
 	// lets think of Message-ID there
 	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
@@ -587,10 +596,22 @@ ON
 					sp.log.LogPrint(ERROR, err.Error())
 					return rInfo, err, http.StatusInternalServerError
 				}
-				files[i].Remove()
 			}
 			x++
 		}
+	}
+	if msgfn != "" {
+		to := srcdir + pInfo.FI[x].ID
+		sp.log.LogPrintf(DEBUG, "renaming msg %q -> %q", msgfn, to)
+		xe := fu.RenameNoClobber(msgfn, to)
+		if xe != nil {
+			if !os.IsExist(xe) {
+				err = fmt.Errorf("failed to rename %q to %q: %v", msgfn, to, xe)
+				sp.log.LogPrint(ERROR, err.Error())
+				return rInfo, err, http.StatusInternalServerError
+			}
+		}
+		x++
 	}
 	if x != len(pInfo.FI) {
 		panic(fmt.Errorf(

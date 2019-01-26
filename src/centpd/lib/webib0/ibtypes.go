@@ -18,6 +18,8 @@ type IBBoardListBoard struct {
 	Name        string   `json:"name"`           // short name
 	Description string   `json:"desc"`           // description
 	Tags        []string `json:"tags,omitempty"` // tags
+	NumThreads  int64    `json:"num_threads"`
+	NumPosts    int64    `json:"num_posts"`
 }
 
 // board list page

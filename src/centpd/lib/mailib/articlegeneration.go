@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"io"
 	"mime/quotedprintable"
-	"os"
 	"strings"
 
 	au "centpd/lib/asciiutils"
-	"centpd/lib/fstore"
 	ht "centpd/lib/hashtools"
 	"centpd/lib/mail"
 )
@@ -70,8 +68,12 @@ func setCTE(
 	return H, cw, cc
 }
 
+type InputFileList interface {
+	OpenFileAt(i int) (io.ReadCloser, error)
+}
+
 func GenerateMessage(
-	src *fstore.FStore, xw io.Writer, pi PostInfo) (err error) {
+	xw io.Writer, pi PostInfo, ifl InputFileList) (err error) {
 
 	var xcw io.Writer
 	var xcc io.Closer
@@ -113,8 +115,8 @@ func GenerateMessage(
 				panic("bad poi")
 			}
 
-			var f *os.File
-			f, err = os.Open(src.Main() + pi.FI[poi-1].ID)
+			var f io.ReadCloser
+			f, err = ifl.OpenFileAt(int(poi - 1))
 			if err != nil {
 				err = fmt.Errorf("failed to open file %d %q: %v",
 					poi, pi.FI[poi-1].ID, err)

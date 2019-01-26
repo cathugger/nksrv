@@ -32,7 +32,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 		var b ib0.IBBoardListBoard
 		cfg := defaultBoardAttributes
 
-		err = rows.Scan(&b.Name, &b.Description, &jcfg)
+		err = rows.Scan(&b.Name, &b.Description, &jcfg, &b.NumThreads, &b.NumPosts)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("boards query rows scan", err), http.StatusInternalServerError
