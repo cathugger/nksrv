@@ -539,14 +539,17 @@ ON
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 
 	// fill in layout/sign
-	pInfo, msgfn, err = sp.fillWebPostDetails(
-		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, signkeyseed)
+	var fmsgids FullMsgIDStr
+	pInfo, fmsgids, msgfn, err = sp.fillWebPostDetails(
+		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, true, tu, signkeyseed)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}
 
-	// lets think of Message-ID there
-	fmsgids := mailib.NewRandomMessageID(tu, sp.instance)
+	if fmsgids == "" {
+		// lets think of Message-ID there
+		fmsgids = mailib.NewRandomMessageID(tu, sp.instance)
+	}
 	pInfo.MessageID = cutMsgID(fmsgids)
 
 	// Post ID

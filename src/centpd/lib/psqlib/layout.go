@@ -72,7 +72,8 @@ func tohex(b []byte) string {
 
 func (sp *PSQLIB) fillWebPostDetails(
 	i mailib.PostInfo, frm form.Form, board string,
-	ref CoreMsgIDStr, inreplyto []string, signkeyseed []byte) (_ mailib.PostInfo, mfn string, err error) {
+	ref CoreMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
+	_ mailib.PostInfo, fmsgids FullMsgIDStr, mfn string, err error) {
 
 	i = sp.fillWebPostInner(i, board, ref, inreplyto)
 
@@ -88,6 +89,12 @@ func (sp *PSQLIB) fillWebPostDetails(
 		// need to include subject now
 		if i.MI.Title != "" {
 			i.H["Subject"] = mail.OneHeaderVal(i.MI.Title)
+		}
+
+		// to work around broken srndv2 software, generate and include Message-ID if we're allowed to
+		if innermsgid {
+			fmsgids = mailib.NewRandomMessageID(tu, sp.instance)
+			i.H["Message-ID"] = mail.OneHeaderVal(string(fmsgids))
 		}
 
 		// new file for message
@@ -176,6 +183,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		i.L.Has8Bit = trdr.Has8Bit && !trdr.HasNull
 
 		// cleanup headers
+		delete(i.H, "Message-ID")
 		delete(i.H, "Subject")
 		for k := range i.H {
 			if strings.HasPrefix(k, "Content-") {
@@ -201,7 +209,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 	// Path
 	i.H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 
-	return i, mfn, nil
+	return i, fmsgids, mfn, nil
 }
 
 func (sp *PSQLIB) fillWebPostInner(
