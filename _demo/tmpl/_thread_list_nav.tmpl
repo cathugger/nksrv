@@ -17,9 +17,9 @@ arguments list:
    {{- $ui := add_i $i 1 -}}
    {{- if eq $i $X.D.Number -}}
     <strong class="nav">[<a class="nav" href="">{{$ui}}</a>]</strong>
-   {{- else -}}
+   {{else -}}
     [<a class="nav" href="./{{if ne $i 0}}{{$ui}}{{end}}">{{$ui}}</a>]
-   {{- end -}}
+   {{end -}}
   {{- end -}}
   [<a href="./catalog">Catalog</a>]
   {{- /**/ -}}
