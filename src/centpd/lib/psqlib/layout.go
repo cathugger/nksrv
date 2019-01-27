@@ -1,7 +1,6 @@
 package psqlib
 
 import (
-	"crypto"
 	"crypto/sha512"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	au "centpd/lib/asciiutils"
 	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
+	. "centpd/lib/logx"
 	"centpd/lib/mail"
 	"centpd/lib/mail/form"
 	"centpd/lib/mailib"
@@ -66,7 +66,7 @@ func (ffl FormFileList) OpenFileAt(i int) (io.ReadCloser, error) {
 }
 
 func tohex(b []byte) string {
-	return fmt.Sprintf("%X", b)
+	return hex.EncodeToString(b)
 }
 
 func (sp *PSQLIB) fillWebPostDetails(
@@ -130,7 +130,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		var signhashbuf [64]byte
 		signhash := signhasher.Sum(signhashbuf[:0])
 
-		// we need to know file size
+		// we need to know precise file size (unixtextreader may obscure it)
 		n, e := f.Seek(0, 2)
 		if e != nil {
 			err = fmt.Errorf("err seeking2 message file: %v", e)
@@ -146,7 +146,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 		// hash content, produce filename
 		hash, hashtype, e := ht.MakeFileHash(f)
-		if err != nil {
+		if e != nil {
 			err = fmt.Errorf("err making message filehash: %v", e)
 			return
 		}
@@ -175,6 +175,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		i.L.Has8Bit = trdr.Has8Bit && !trdr.HasNull
 
 		// cleanup headers
+		delete(i.H, "Subject")
 		for k := range i.H {
 			if strings.HasPrefix(k, "Content-") {
 				delete(i.H, k)
@@ -184,14 +185,16 @@ func (sp *PSQLIB) fillWebPostDetails(
 		// add new headers we need
 		i.H["MIME-Version"] = mail.OneHeaderVal("1.0")
 		i.H["Content-Type"] = mail.OneHeaderVal(messageType)
+
 		// sign
-		sig, e := seckey.Sign(nil, signhash, crypto.Hash(0))
-		if e != nil {
-			panic(e)
-		}
-		i.MI.Trip = tohex(pubkey) // write tripcode
-		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(i.MI.Trip)
-		i.H["X-Signature-Ed25519-SHA512"] = mail.OneHeaderVal(tohex(sig))
+		sig := ed25519.Sign(seckey, signhash)
+		pubkeystr := tohex(pubkey)
+		sigstr := tohex(sig)
+		sp.log.LogPrint(DEBUG, "msgsig: hash %X pubkey %s signature %s", signhash, pubkeystr, sigstr)
+
+		i.MI.Trip = pubkeystr // write tripcode
+		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(pubkeystr)
+		i.H["X-Signature-Ed25519-SHA512"] = mail.OneHeaderVal(sigstr)
 	}
 
 	// Path
