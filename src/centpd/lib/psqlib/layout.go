@@ -191,7 +191,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		sig := ed25519.Sign(seckey, signhash)
 		pubkeystr := tohex(pubkey)
 		sigstr := tohex(sig)
-		sp.log.LogPrint(DEBUG, "msgsig: hash %X pubkey %s signature %s", signhash, pubkeystr, sigstr)
+		sp.log.LogPrintf(DEBUG, "msgsig: hash %X pubkey %s signature %s", signhash, pubkeystr, sigstr)
 
 		i.MI.Trip = pubkeystr // write tripcode
 		i.H["X-PubKey-Ed25519"] = mail.OneHeaderVal(pubkeystr)
