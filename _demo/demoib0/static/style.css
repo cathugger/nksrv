@@ -137,9 +137,16 @@ html {
 }
 
 .name {
-	color: #117743;
 	font-weight: bold;
 	unicode-bidi: embed;
+}
+
+span.name {
+	color: #117743;
+}
+
+a.name {
+	color: gray;
 }
 
 .unitrip {
