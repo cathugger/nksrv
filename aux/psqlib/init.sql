@@ -1,9 +1,9 @@
 -- :name version
-demo4
+demo5
 
 
 -- :name init
-INSERT INTO capabilities(component,version) VALUES ('ib0','demo4')
+INSERT INTO capabilities(component,version) VALUES ('ib0','demo5')
 
 
 -- :next
@@ -43,7 +43,8 @@ CREATE INDEX
 -- :next
 CREATE TABLE ib0.threads (
 	b_id   INTEGER               NOT NULL, -- internal board ID this thread belongs to
-	t_id   BIGINT                NOT NULL, -- internal thread ID
+	t_id   BIGINT                NOT NULL, -- internal board-local thread ID (ID of board-local OP post)
+	g_t_id BIGINT                NOT NULL, -- internal global thread OP post ID
 	t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
 
 	bump    TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
@@ -72,8 +73,8 @@ CREATE INDEX
 CREATE INDEX
 	ON ib0.threads (
 		bump DESC,
-		b_id ASC,
-		t_id ASC
+		g_t_id ASC,
+		b_id ASC
 	)
 
 

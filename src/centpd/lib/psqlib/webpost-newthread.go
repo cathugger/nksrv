@@ -85,20 +85,24 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			ib0.threads (
 				b_id,
 				t_id,
+				g_t_id,
 				t_name,
 				bump,
 				p_count,
 				f_count
 			)
 		SELECT
-			$11,     -- b_id
-			last_id, -- t_id
-			$12,     -- t_name
-			$1,      -- pdate
-			1,       -- p_count
-			$2       -- f_count
+			$11,        -- b_id
+			ub.last_id, -- t_id
+			ugp.g_p_id, -- g_t_id
+			$12,        -- t_name
+			$1,         -- pdate
+			1,          -- p_count
+			$2          -- f_count
 		FROM
 			ub
+		CROSS JOIN
+			ugp
 	),
 	ubp AS (
 		INSERT INTO
