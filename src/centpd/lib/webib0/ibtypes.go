@@ -125,6 +125,17 @@ type IBThreadListPage struct {
 	HasBackRefs bool                     `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
 
+type IBOverboardPageThread struct {
+	BoardName string `json:"bname"`
+
+	IBThreadListPageThread
+}
+
+type IBOverboardPage struct {
+	Threads     []IBOverboardPageThread `json:"threads"`
+	HasBackRefs bool                    `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
+}
+
 type IBThreadStats struct {
 	NumReplies int64  `json:"reply_count"` // not counting OP
 	NumFiles   int64  `json:"file_count"`  // including OP

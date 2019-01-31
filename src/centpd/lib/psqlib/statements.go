@@ -46,6 +46,8 @@ const (
 
 	st_Web_thread_list_page
 
+	st_Web_overboard_page
+
 	st_Web_thread_catalog
 
 	st_Web_thread
@@ -103,6 +105,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "web_listboards"},
 
 	st_reference{"web", "web_thread_list_page"},
+
+	st_reference{"web", "web_overboard_page"},
 
 	st_reference{"web", "web_thread_catalog"},
 

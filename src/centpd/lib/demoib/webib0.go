@@ -206,6 +206,25 @@ var (
 		}},
 		Available: 2,
 	}
+	testOverboardPage = webib0.IBOverboardPage{
+		Threads: []webib0.IBOverboardPageThread{{
+			BoardName: "test",
+			IBThreadListPageThread: webib0.IBThreadListPageThread{
+				IBCommonThread: webib0.IBCommonThread{
+					ID: "0123456789ABCDEF0123456789ABCDEF",
+					OP: testPost1,
+					Replies: []webib0.IBPostInfo{
+						testPost2,
+						testPost3,
+						testPost4,
+						testPost5,
+					},
+				},
+				SkippedFiles:   0,
+				SkippedReplies: 0,
+			},
+		}},
+	}
 	testThread = webib0.IBThreadPage{
 		Board: testBoardInfo,
 		IBCommonThread: webib0.IBCommonThread{
@@ -264,6 +283,14 @@ func (IBProviderDemo) IBGetThreadListPage(page *webib0.IBThreadListPage, board s
 	}
 	*page = testThreadListPage
 	page.Number = num
+	return nil, 0
+}
+
+func (IBProviderDemo) IBGetOverboardPage(page *webib0.IBOverboardPage, num uint32) (error, int) {
+	if num > 1 {
+		return errors.New("page does not exist"), http.StatusNotFound
+	}
+	*page = testOverboardPage
 	return nil, 0
 }
 

@@ -165,10 +165,7 @@ ORDER BY
 -- input: {page num} {threads_per_page}
 SELECT
 	xb.b_id,
-	xb.bdesc,
-	xb.attrib,
-	xb.threads_per_page,
-	xb.t_count,
+	xb.b_name,
 	xt.t_id,
 	xt.t_name,
 	xt.p_count,
@@ -233,6 +230,10 @@ FROM
 				END
 			)
 	) AS xt
+JOIN
+	ib0.boards AS xb
+ON
+	xt.b_id = xb.b_id
 LEFT JOIN
 	LATERAL (
 		SELECT
