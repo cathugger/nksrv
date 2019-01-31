@@ -88,9 +88,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				sn := r.Context().Value("n").(string)
 				n, e := strconv.ParseUint(sn, 10, 32)
 				if e != nil {
-					// not found because invalid
-					// TODO custom 404 pages
-					http.NotFound(w, r)
+					httpErrorBadRequest(w, r)
 					return
 				}
 				cfg.Renderer.ServeThreadListPage(w, r, b, uint32(n))
@@ -238,6 +236,25 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h.Handle("/boards", true, h_boards)
+
+	/*
+		h_overboard := handler.NewRegexPath()
+		h_overboard.Fallback(http.HandlerFunc(httpErrorBadRequest))
+
+		h_overboard.Handle("/pages/{{n:[0-9]+}}", false,
+			handler.NewMethod().Handle("GET", http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					sn := r.Context().Value("n").(string)
+					n, e := strconv.ParseUint(sn, 10, 32)
+					if e != nil {
+						httpErrorBadRequest(w, r)
+						return
+					}
+					cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
+				})))
+
+		h.Handle("/overboard", true, h_overboard)
+	*/
 
 	if cfg.Auth != nil {
 		h.Handle("/auth/login", false, http.HandlerFunc(
