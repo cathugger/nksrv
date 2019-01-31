@@ -297,7 +297,10 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			http.StatusInternalServerError
 	}
 
-	if (x_bid == 0 || x_tid == 0) && num > 0 {
+	if x_bid == 0 {
+		return errNoSuchBoard, http.StatusNotFound
+	}
+	if x_tid == 0 && num > 0 {
 		return errNoSuchPage, http.StatusNotFound
 	}
 
@@ -493,10 +496,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			http.StatusInternalServerError
 	}
 
-	if x_bid == 0 {
-		return errNoSuchBoard, http.StatusNotFound
-	}
-	if x_tid == 0 && num > 0 {
+	if (x_bid == 0 || x_tid == 0) && num > 0 {
 		return errNoSuchPage, http.StatusNotFound
 	}
 
