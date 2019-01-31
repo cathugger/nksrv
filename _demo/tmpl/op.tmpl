@@ -45,7 +45,7 @@ arguments list:
    href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#{{$P.ID}}"
   >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
 
-  {{- if $fullURLs}} <span>[<a href="thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
+  {{- if $fullURLs}} <span class="replylink">[<a class="replylink" href="thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 
   {{- range $P.BackReferences}}
    <a
