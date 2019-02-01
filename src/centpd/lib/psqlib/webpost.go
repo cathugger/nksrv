@@ -172,9 +172,9 @@ func generateFileConfig(
 
 	// append extension, if any
 	oname := fi.Original
-	if i := strings.LastIndexByte(oname, '.'); i >= 0 && i+1 < len(oname) {
-		ext = oname[i+1:]
-	}
+
+	ext = fu.SafeExt(oname)
+
 	ctype := emime.MIMECanonicalTypeByExtension(ext)
 	if ctype == "" && ct != "" {
 		mexts, e := emime.MIMEExtensionsByType(ct)

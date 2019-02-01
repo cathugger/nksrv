@@ -17,6 +17,7 @@ import (
 
 	au "centpd/lib/asciiutils"
 	"centpd/lib/emime"
+	fu "centpd/lib/fileutil"
 	"centpd/lib/fstore"
 	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
@@ -266,17 +267,8 @@ func attachmentInfo(
 	}
 
 	// ext
-	if oname != "" {
-		i := strings.LastIndexByte(oname, '.')
-		// do some additional checks to ensure that extension at least makes sense
-		// since we will be storing that in filesystem
-		if i >= 0 && i+1 < len(oname) &&
-			strings.IndexAny(oname[i+1:], "\\:*\"?<>|") < 0 &&
-			!au.ContainsControlString(oname[i+1:]) {
+	ext = fu.SafeExt(oname)
 
-			ext = oname[i+1:]
-		}
-	}
 	if ct_t == "" {
 		// default
 		ct_t = "text/plain"
