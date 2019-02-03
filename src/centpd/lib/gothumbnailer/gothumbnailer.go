@@ -118,6 +118,14 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
+	// seek to start
+	//_, err = f.Seek(0, 0)
+	//if err != nil {
+	//	return
+	//}
+
+	// TODO use goexif here
+
 	if (t.cfg.MaxWidth > 0 && imgcfg.Width > t.cfg.MaxWidth) ||
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||
 		(t.cfg.MaxPixels > 0 && imgcfg.Width*imgcfg.Height > t.cfg.MaxPixels) {
@@ -126,6 +134,7 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
+	// seek to start
 	_, err = f.Seek(0, 0)
 	if err != nil {
 		return
