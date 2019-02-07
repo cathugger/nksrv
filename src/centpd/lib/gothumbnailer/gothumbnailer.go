@@ -7,10 +7,12 @@ import (
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
+	"io"
 	"os"
 	"strconv"
 
 	"github.com/disintegration/imaging"
+	"github.com/rwcarlsen/goexif/exif"
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/webp"
 
@@ -77,6 +79,29 @@ func decodeColor(c string) (color.NRGBA, error) {
 	}
 }
 
+func exifOrient(r io.Reader) int {
+	x, err := exif.Decode(r)
+	if err == nil && x != nil {
+		orient, err := x.Get(exif.Orientation)
+		if err == nil && orient != nil {
+			if i, err := orient.Int(0); err == nil {
+				return i
+			}
+		}
+	}
+	return 1
+}
+
+func rotwh(orient int, w, h int) (int, int) {
+	switch orient {
+	case 1, 2, 3, 4:
+		// nothing
+	case 5, 6, 7, 8:
+		w, h = h, w
+	}
+	return w, h
+}
+
 func (t *GoThumbnailer) ThumbProcess(
 	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
@@ -119,12 +144,16 @@ func (t *GoThumbnailer) ThumbProcess(
 	}
 
 	// seek to start
-	//_, err = f.Seek(0, 0)
-	//if err != nil {
-	//	return
-	//}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return
+	}
 
-	// TODO use goexif here
+	// get orientation
+	orient := exifOrient(f)
+
+	// rotate limits
+	imgcfg.Width, imgcfg.Height = rotwh(orient, imgcfg.Width, imgcfg.Height)
 
 	if (t.cfg.MaxWidth > 0 && imgcfg.Width > t.cfg.MaxWidth) ||
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||
@@ -140,7 +169,10 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
-	img, imgfmt, err := image.Decode(f)
+	// XXX golang doesn't care about color profiles at all
+	// this means anything non-sRGB is fucked
+	// which is sorta unfortunate but oh well
+	oimg, imgfmt, err := image.Decode(f)
 	if err != nil {
 		// bail out on any decoder failure
 		close_err()
@@ -152,8 +184,36 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
-	// thumbnailing
-	timg := imaging.Fit(img, cfg.Width, cfg.Height, t.cfg.Filter)
+	// width/height
+	ow := oimg.Bounds().Dx()
+	oh := oimg.Bounds().Dy()
+	ow, oh = rotwh(orient, ow, oh)
+
+	cw, ch := rotwh(orient, cfg.Width, cfg.Height)
+
+	// thumbnail
+	timg := imaging.Fit(oimg, cw, ch, t.cfg.Filter)
+
+	// after thumbnailing rotate if needed (it costs less there)
+	switch orient {
+	case 1:
+		// nothing
+	case 2:
+		timg = imaging.FlipV(timg)
+	case 3:
+		timg = imaging.Rotate180(timg)
+	case 4:
+		timg = imaging.Rotate180(imaging.FlipV(timg))
+	case 5:
+		timg = imaging.Rotate270(imaging.FlipV(timg))
+	case 6:
+		timg = imaging.Rotate270(timg)
+	case 7:
+		timg = imaging.Rotate90(imaging.FlipV(timg))
+	case 8:
+		timg = imaging.Rotate90(timg)
+	}
+
 	tsz := timg.Bounds().Size()
 
 	// grayscale
@@ -206,8 +266,8 @@ func (t *GoThumbnailer) ThumbProcess(
 	fi.DetectedType = "image/" + imgfmt // golang devs seem sane so far
 
 	fi.Attrib = make(map[string]interface{})
-	fi.Attrib["width"] = img.Bounds().Dx()
-	fi.Attrib["height"] = img.Bounds().Dy()
+	fi.Attrib["width"] = ow
+	fi.Attrib["height"] = oh
 
 	return
 }
