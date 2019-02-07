@@ -83,7 +83,7 @@ func exifOrient(r io.Reader) int {
 	x, err := exif.Decode(r)
 	if err == nil && x != nil {
 		orient, err := x.Get(exif.Orientation)
-		if err == nil && orient != nil {
+		if err == nil && orient != nil && orient.Count != 0 {
 			if i, err := orient.Int(0); err == nil {
 				return i
 			}
