@@ -102,6 +102,28 @@ func rotwh(orient int, w, h int) (int, int) {
 	return w, h
 }
 
+func rotimg(orient int, img *image.NRGBA) *image.NRGBA {
+	switch orient {
+	case 1:
+		// nothing
+	case 2:
+		img = imaging.FlipV(img)
+	case 3:
+		img = imaging.Rotate180(img)
+	case 4:
+		img = imaging.Rotate180(imaging.FlipV(img))
+	case 5:
+		img = imaging.Rotate270(imaging.FlipV(img))
+	case 6:
+		img = imaging.Rotate270(img)
+	case 7:
+		img = imaging.Rotate90(imaging.FlipV(img))
+	case 8:
+		img = imaging.Rotate90(img)
+	}
+	return img
+}
+
 func (t *GoThumbnailer) ThumbProcess(
 	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
@@ -195,24 +217,7 @@ func (t *GoThumbnailer) ThumbProcess(
 	timg := imaging.Fit(oimg, cw, ch, t.cfg.Filter)
 
 	// after thumbnailing rotate if needed (it costs less there)
-	switch orient {
-	case 1:
-		// nothing
-	case 2:
-		timg = imaging.FlipV(timg)
-	case 3:
-		timg = imaging.Rotate180(timg)
-	case 4:
-		timg = imaging.Rotate180(imaging.FlipV(timg))
-	case 5:
-		timg = imaging.Rotate270(imaging.FlipV(timg))
-	case 6:
-		timg = imaging.Rotate270(timg)
-	case 7:
-		timg = imaging.Rotate90(imaging.FlipV(timg))
-	case 8:
-		timg = imaging.Rotate90(timg)
-	}
+	timg = rotimg(orient, timg)
 
 	tsz := timg.Bounds().Size()
 
