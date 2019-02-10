@@ -151,7 +151,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 			if e == nil {
 				dec := cod.NewDecoder()
 				dstr, e := dec.String(str)
-				// should not result in null characters
+				// don't care about nil chars - normalization will rid of them
 				if e == nil {
 					// we don't care about binary mode
 					// because this is just converted copy
