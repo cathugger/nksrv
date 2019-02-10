@@ -23,7 +23,9 @@ func pop_integer(b *big.Int, prs []probRange) uint32 {
 
 	// find relevant range
 	i := uint32(0)
-	for r < prs[i].p_offset || r >= prs[i].p_range+prs[i].p_offset {
+	for r < prs[i].p_offset ||
+		uint32(r) >= uint32(prs[i].p_range)+uint32(prs[i].p_offset) {
+
 		i++
 	}
 	b.Mul(b, big.NewInt(int64(prs[i].p_range)))
