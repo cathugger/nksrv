@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	au "centpd/lib/asciiutils"
 	"centpd/lib/bufreader"
 )
 
@@ -186,7 +187,7 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				return fmt.Errorf("invalid %q header content %#q", currHeader, hcont)
 			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
-				V: string(hcont),
+				V: string(au.TrimWSBytes(hcont)),
 				O: origHeader,
 				S: splits,
 			}}
@@ -286,9 +287,10 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 				nn++
 				// skip one space after ':'
 				// XXX should we do this for '\t'? probably not.
-				if nn < len(wb) && wb[nn] == ' ' {
-					nn++
-				}
+				/// content is trimmed anyway
+				//if nn < len(wb) && wb[nn] == ' ' {
+				//	nn++
+				//}
 				h.Write(wb[nn:])
 			} else {
 				// a continuation

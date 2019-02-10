@@ -108,8 +108,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 		UorA := au.EqualFoldString(cset, "UTF-8") ||
 			au.EqualFoldString(cset, "US-ASCII")
 
-		if strings.IndexByte(str, 0) < 0 {
-
+		{
 			EorUorA := UorA || (cset == "" && cfg.TryUTF8)
 			// expect UTF-8 in most cases
 			if (EorUorA && utf8.ValidString(str)) ||
@@ -124,27 +123,36 @@ func (cfg *MailProcessorConfig) processMessageText(
 					// they're effectively US-ASCII
 					au.Is7BitString(str)) {
 
-				// normal processing - no need to have copy
-				if !binary {
-					// trim unneeded trailing newline without violating format
-					str = au.TrimUnixNL(str)
-				}
-				return r, str, true, false, nil
+				// at this point message is readily edible
 
+				// does it have nil chars?
+				if strings.IndexByte(str, 0) < 0 {
+					// normal processing - no need to have copy
+					if !binary {
+						// trim unneeded trailing newline without violating format
+						str = au.TrimUnixNL(str)
+					}
+					return r, str, true, false, nil
+				} else {
+					// if contains nil characters, we need to modify it..
+					rstr = tu.NormalizeTextMessage(strings.TrimRight(str, "\000"))
+					msgattachment = true
+					// keep going, we need to preserve content
+				}
 			} else if cset == "" {
 				// fallback
 				cset = cfg.EmptyCharset
 			}
 		}
 
-		// attempt to decode
-		if cset != "" && !UorA {
+		// attempt to decode, if still haven't
+		if !msgattachment && cset != "" && !UorA {
 			cod, e := ianaindex.MIME.Encoding(cset)
 			if e == nil {
 				dec := cod.NewDecoder()
 				dstr, e := dec.String(str)
 				// should not result in null characters
-				if e == nil && strings.IndexByte(dstr, 0) < 0 {
+				if e == nil {
 					// we don't care about binary mode
 					// because this is just converted copy
 					// so might aswell normalize and optimize it further

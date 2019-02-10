@@ -1,13 +1,27 @@
+--- core stuff
 -- :name version
 demo5
-
-
 -- :name init
 INSERT INTO capabilities(component,version) VALUES ('ib0','demo5')
-
-
 -- :next
 CREATE SCHEMA ib0
+
+
+--- base stuff
+-- :next
+CREATE TYPE modpriv_t AS ENUM ('none', 'mod')
+-- :next
+-- design will probably change in the future
+CREATE TABLE ib0.modlist (
+	mod_id     BIGSERIAL               NOT NULL,
+	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
+	automanage BOOLEAN                 NOT NULL,
+	mod_priv   modpriv_t               NOT NULL DEFAULT 'none',
+	mod_name   TEXT,
+
+	PRIMARY KEY (mod_id),
+	UNIQUE      (mod_pubkey)
+)
 
 
 -- :next
@@ -117,6 +131,8 @@ CREATE TABLE ib0.bposts (
 	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
 
+	mod_id BIGINT,
+
 	PRIMARY KEY (b_id,b_p_id),
 	UNIQUE      (g_p_id,b_id),
 	FOREIGN KEY (b_id)
@@ -124,26 +140,44 @@ CREATE TABLE ib0.bposts (
 	FOREIGN KEY (b_id,t_id)
 		REFERENCES ib0.threads,
 	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.posts
+		REFERENCES ib0.posts,
+	FOREIGN KEY (mod_id)
+		REFERENCES ib0.modlist
+		ON DELETE RESTRICT
 )
 -- :next
+-- in thread, for bump
 CREATE INDEX
 	ON ib0.bposts (
 		b_id,
 		t_id,
 		pdate ASC,
 		b_p_id ASC
-	) -- in thread, for bump
+	)
 -- :next
+-- for NEWNEWS (yeh, not in ib0.posts)
 CREATE INDEX
-	ON ib0.bposts (padded,g_p_id,b_id) -- for NEWNEWS
+	ON ib0.bposts (padded,g_p_id,b_id)
 -- :next
+-- for post num lookup
 CREATE UNIQUE INDEX
-	ON ib0.bposts (p_name text_pattern_ops,b_id) -- for post num lookup
+	ON ib0.bposts (p_name text_pattern_ops,b_id)
+-- :next
+-- FK
+CREATE INDEX
+	ON ib0.bposts (mod_id)
+	WHERE mod_id IS NOT NULL
 
 
 -- :next
-CREATE TYPE ftype_t AS ENUM ('file', 'msg', 'text', 'image', 'audio', 'video')
+CREATE TYPE ftype_t AS ENUM (
+	'file',
+	'msg',
+	'text',
+	'image',
+	'audio',
+	'video'
+)
 -- :next
 CREATE TABLE ib0.files (
 	f_id   BIGSERIAL NOT NULL, -- internal file ID of this file
@@ -196,7 +230,7 @@ CREATE INDEX
 	WHERE msgid IS NOT NULL
 
 
-
+--- scraper stuff
 -- :next
 CREATE TABLE ib0.scraper_list (
 	sid      BIGSERIAL               NOT NULL,
@@ -251,4 +285,50 @@ CREATE TABLE ib0.scraper_group_track (
 		ON DELETE CASCADE
 )
 -- :next
-CREATE INDEX ON ib0.scraper_group_track (sid,last_use)
+CREATE INDEX
+	ON ib0.scraper_group_track (sid,last_use)
+-- :next
+CREATE INDEX
+	ON ib0.scraper_group_track (bid)
+
+
+--- moderation stuff
+-- :next
+CREATE TABLE ib0.banlist (
+	ban_id   BIGSERIAL NOT NULL,
+	ban_info TEXT      NOT NULL,
+
+	g_p_id   BIGSERIAL, -- post responsible for this ban (if any)
+
+	msgid      TEXT     COLLATE "C", -- msgid being banned (if any)
+	b_id       INTEGER,              -- if it's only limited to specific board
+	scraper_id BIGINT,               -- maybe it's only limited to specific scraper
+
+	PRIMARY KEY (ban_id),
+
+	FOREIGN KEY (g_p_id)
+		REFERENCES ib0.posts
+		ON DELETE CASCADE,
+	FOREIGN KEY (b_id)
+		REFERENCES ib0.boards
+		ON DELETE CASCADE,
+	FOREIGN KEY (scraper_id)
+		REFERENCES ib0.scraper_list
+		ON DELETE CASCADE
+)
+-- :next
+CREATE INDEX
+	ON ib0.banlist (g_p_id)
+	WHERE g_p_id IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.banlist (b_id)
+	WHERE b_id IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.banlist (scraper_id)
+	WHERE scraper_id IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.banlist (msgid)
+	WHERE msgid IS NOT NULL
