@@ -8,9 +8,14 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// stuff we don't wanna
 var replacer = strings.NewReplacer(
 	"\r", "",
-	"\000", "")
+	"\000", string(unicode.ReplacementChar))
+
+func isNilOrSpace(r rune) bool {
+	return unicode.IsSpace(r) || r == 0
+}
 
 func NormalizeTextMessage(msg string) (s string) {
 	// normalise using form C
@@ -18,7 +23,7 @@ func NormalizeTextMessage(msg string) (s string) {
 	// trim line endings, and empty lines at the end
 	lines := strings.Split(s, "\n")
 	for i, v := range lines {
-		lines[i] = strings.TrimRightFunc(v, unicode.IsSpace)
+		lines[i] = replacer.Replace(strings.TrimRightFunc(v, isNilOrSpace))
 	}
 	for i := len(lines) - 1; i >= 0; i-- {
 		if lines[i] != "" {
@@ -27,8 +32,6 @@ func NormalizeTextMessage(msg string) (s string) {
 		lines = lines[:i]
 	}
 	s = strings.Join(lines, "\n")
-	// ensure we don't have any silly stuff left
-	s = replacer.Replace(s)
 	return
 }
 
