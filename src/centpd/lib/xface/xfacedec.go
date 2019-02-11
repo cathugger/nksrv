@@ -28,8 +28,9 @@ func pop_integer(b *big.Int, prs []probRange) uint32 {
 
 		i++
 	}
-	b.Mul(b, big.NewInt(int64(prs[i].p_range)))
-	b.Add(b, big.NewInt(int64(r-prs[i].p_offset)))
+	var x big.Int
+	b.Mul(b, x.SetUint64(uint64(prs[i].p_range)))
+	b.Add(b, x.SetUint64(uint64(r-prs[i].p_offset)))
 
 	return i
 }
@@ -44,6 +45,7 @@ func pop_greys(b *big.Int, w, h uint32, bitmap []byte) {
 		pop_greys(b, w, h, bitmap[xface_width*h+w:])
 	} else {
 		w = pop_integer(b, xface_probranges_2x2[:])
+		// XXX could we avoid ifs there?
 		if w&1 != 0 {
 			bitmap[0] = 1
 		}
@@ -76,19 +78,24 @@ func decode_block(b *big.Int, level, w, h uint32, bitmap []byte) {
 	}
 }
 
-var xface_prints_big = big.NewInt(xface_prints)
+var xface_prints_big = new(big.Int).SetUint64(xface_prints)
 
 func xface_read(in string) (b *big.Int) {
 	var x big.Int
 	for i := 0; i < len(in); i++ {
 		c := in[i]
-		/* ignore invalid digits */
 		if c < xface_first_print || c > xface_last_print {
-			continue
+			// invalid digit
+			if c == ' ' || c == '\t' || c == '\r' || c == '\n' {
+				// allow common whitespace chars
+				continue
+			}
+			// but not anything else
+			return nil
 		}
 		if b != nil {
 			b.Mul(b, xface_prints_big)
-			b.Add(b, x.SetUint64(uint64(c-xface_first_print)))
+			b.Add(b, x.SetUint64(uint64(c - xface_first_print)))
 		} else {
 			b = new(big.Int).SetUint64(uint64(c - xface_first_print))
 		}
