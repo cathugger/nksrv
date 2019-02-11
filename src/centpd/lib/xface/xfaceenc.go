@@ -135,7 +135,7 @@ func xface_write(b *big.Int) string {
 	bb := buf.Bytes()
 	// invert
 	for i := 0; i < len(bb)/2; i++ {
-		bb[i], bb[len(bb)-i] = bb[len(bb)-i], bb[i]
+		bb[i], bb[len(bb)-i-1] = bb[len(bb)-i-1], bb[i]
 	}
 	return string(bb)
 }
