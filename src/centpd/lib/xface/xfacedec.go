@@ -2,7 +2,6 @@ package xface
 
 import (
 	"errors"
-	"image"
 	"image/color"
 	"math/big"
 )
@@ -39,10 +38,10 @@ func pop_greys(b *big.Int, w, h uint32, bitmap []byte) {
 	if w > 3 {
 		w /= 2
 		h /= 2
-		pop_greys(b, w, h, bitmap[:])
-		pop_greys(b, w, h, bitmap[w:])
-		pop_greys(b, w, h, bitmap[xface_width*h:])
-		pop_greys(b, w, h, bitmap[xface_width*h+w:])
+		pop_greys(b, w, h, bitmap[               :])
+		pop_greys(b, w, h, bitmap[              w:])
+		pop_greys(b, w, h, bitmap[h*xface_width  :])
+		pop_greys(b, w, h, bitmap[h*xface_width+w:])
 	} else {
 		w = pop_integer(b, xface_probranges_2x2[:])
 		// XXX could we avoid ifs there?
@@ -71,14 +70,12 @@ func decode_block(b *big.Int, level, w, h uint32, bitmap []byte) {
 		w /= 2
 		h /= 2
 		level++
-		decode_block(b, level, w, h, bitmap[:])
-		decode_block(b, level, w, h, bitmap[w:])
-		decode_block(b, level, w, h, bitmap[h*xface_width:])
+		decode_block(b, level, w, h, bitmap[               :])
+		decode_block(b, level, w, h, bitmap[              w:])
+		decode_block(b, level, w, h, bitmap[h*xface_width  :])
 		decode_block(b, level, w, h, bitmap[h*xface_width+w:])
 	}
 }
-
-var xface_prints_big = new(big.Int).SetUint64(xface_prints)
 
 func xface_read(in string) (b *big.Int) {
 	var x big.Int
@@ -111,19 +108,19 @@ var palWB = [2]color.Color{
 func xface_decode(bitmap *[xface_pixels]byte, b *big.Int) {
 	decb := func(buf []byte) { decode_block(b, 0, 16, 16, buf) }
 
-	decb(bitmap[:])
+	decb(bitmap[  :])
 	decb(bitmap[16:])
 	decb(bitmap[32:])
 
-	decb(bitmap[xface_width*16:])
+	decb(bitmap[xface_width*16   :])
 	decb(bitmap[xface_width*16+16:])
 	decb(bitmap[xface_width*16+32:])
 
-	decb(bitmap[xface_width*32:])
+	decb(bitmap[xface_width*32   :])
 	decb(bitmap[xface_width*32+16:])
 	decb(bitmap[xface_width*32+32:])
 
-	xface_generate_face(bitmap[:], bitmap[:])
+	xface_generate_face(bitmap, bitmap)
 }
 
 func xface_decode_string(
@@ -137,24 +134,5 @@ func xface_decode_string(
 
 	// do decoding
 	xface_decode(bitmap, b)
-	return
-}
-
-func XFaceStringToImg(in string) (img image.Image, err error) {
-	var bitmap [xface_pixels]byte
-
-	err = xface_decode_string(&bitmap, in)
-	if err != nil {
-		return
-	}
-
-	// make actual image out of it
-	// 0=white 1=black
-	img = &image.Paletted{
-		Pix:     bitmap[:],
-		Stride:  xface_width,
-		Rect:    image.Rect(0, 0, xface_width, xface_height),
-		Palette: palWB[:],
-	}
 	return
 }
