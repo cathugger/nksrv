@@ -178,7 +178,7 @@ var g_42 = [...]uint8{
 	0x10,
 }
 
-func xface_generate_face(dst, src *[xface_pixels]uint8) {
+func xface_generate_face(dst, src []uint8) {
 	var h, i, j, l, m int32
 	var k uint32
 

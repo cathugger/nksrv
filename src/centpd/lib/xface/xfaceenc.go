@@ -92,9 +92,10 @@ func push_integer(b *big.Int, prange probRange) {
 	b.Add(b, x.SetUint64(uint64(firstword(m.Bits())+big.Word(prange.p_offset))))
 }
 
-func xface_encode(b *big.Int, bitmap *[xface_pixels]byte) {
-	srcbmp := *bitmap
-	xface_generate_face(bitmap, &srcbmp)
+func xface_encode(b *big.Int, bitmap []byte) {
+	var srcbmp [xface_pixels]byte
+	copy(srcbmp[:], bitmap)
+	xface_generate_face(bitmap, srcbmp[:])
 
 	var pq []probRange
 
@@ -117,7 +118,7 @@ func xface_encode(b *big.Int, bitmap *[xface_pixels]byte) {
 	}
 }
 
-func xface_encode_string(b *big.Int) string {
+func xface_write(b *big.Int) string {
 	var buf bytes.Buffer
 	/* write the inverted big integer in b to intbuf */
 	var m big.Int
@@ -137,4 +138,10 @@ func xface_encode_string(b *big.Int) string {
 		bb[i], bb[len(bb)-i] = bb[len(bb)-i], bb[i]
 	}
 	return string(bb)
+}
+
+func xface_encode_string(bitmap []byte) string {
+	var b big.Int
+	xface_encode(&b, bitmap)
+	return xface_write(&b)
 }

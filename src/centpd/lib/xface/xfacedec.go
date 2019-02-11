@@ -2,7 +2,6 @@ package xface
 
 import (
 	"errors"
-	"image/color"
 	"math/big"
 )
 
@@ -100,11 +99,6 @@ func xface_read(in string) (b *big.Int) {
 	return
 }
 
-var palWB = [2]color.Color{
-	color.RGBA{0xff, 0xff, 0xff, 0xff},
-	color.RGBA{0x00, 0x00, 0x00, 0xff},
-}
-
 func xface_decode(bitmap *[xface_pixels]byte, b *big.Int) {
 	decb := func(buf []byte) { decode_block(b, 0, 16, 16, buf) }
 
@@ -120,7 +114,7 @@ func xface_decode(bitmap *[xface_pixels]byte, b *big.Int) {
 	decb(bitmap[xface_width*32+16:])
 	decb(bitmap[xface_width*32+32:])
 
-	xface_generate_face(bitmap, bitmap)
+	xface_generate_face(bitmap[:], bitmap[:])
 }
 
 func xface_decode_string(
