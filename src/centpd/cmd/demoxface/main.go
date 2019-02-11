@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/gif"
+	"io/ioutil"
 	"os"
 
 	"centpd/lib/xface"
@@ -14,9 +15,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	img, err := xface.XFaceStringToImg(os.Args[1])
+	var in string
+	if os.Args[1] != "" {
+		in = os.Args[1]
+	} else {
+		inb, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading stdin: %v\n", err)
+			os.Exit(1)
+		}
+		in = string(inb)
+	}
+
+	img, err := xface.XFaceStringToImg(in)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading x-face: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error decoding x-face: %v\n", err)
 		os.Exit(1)
 	}
 
