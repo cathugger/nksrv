@@ -48,9 +48,9 @@ func push_greys(pq []probRange, w, h uint32, bitmap []byte) []probRange {
 	if w > 3 {
 		w /= 2
 		h /= 2
-		pq = push_greys(pq, w, h, bitmap[:])
-		pq = push_greys(pq, w, h, bitmap[w:])
-		pq = push_greys(pq, w, h, bitmap[h*xface_width:])
+		pq = push_greys(pq, w, h, bitmap[               :])
+		pq = push_greys(pq, w, h, bitmap[              w:])
+		pq = push_greys(pq, w, h, bitmap[h*xface_width  :])
 		pq = push_greys(pq, w, h, bitmap[h*xface_width+w:])
 	} else {
 		p := xface_probranges_2x2[

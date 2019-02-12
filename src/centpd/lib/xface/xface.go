@@ -182,6 +182,13 @@ func xface_generate_face(dst, src []uint8) {
 	var h, i, j, l, m int32
 	var k uint32
 
+	// NOTE:
+	// this filter loop actually doesn't match up with technique described in comments,
+	// and is off-by-one both horizontally and vertically;
+	// g_3* aren't even reached, while border pixels fall into more common tables.
+	// too late to change that now (it'd essentially break format),
+	// just describing it there to help anyone else trying to read into this.
+
 	for j = 0; j < xface_height; j++ {
 		for i = 0; i < xface_width; i++ {
 			h = i + j*xface_width
