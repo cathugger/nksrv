@@ -48,5 +48,7 @@ func extractMessageFace(
 		}
 	}
 
+	// TODO Face header
+
 	return
 }
