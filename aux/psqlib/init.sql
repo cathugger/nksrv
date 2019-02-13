@@ -173,6 +173,7 @@ CREATE INDEX
 CREATE TYPE ftype_t AS ENUM (
 	'file',
 	'msg',
+	'face',
 	'text',
 	'image',
 	'audio',

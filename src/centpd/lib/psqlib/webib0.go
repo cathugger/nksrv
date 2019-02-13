@@ -8,6 +8,7 @@ import (
 
 	//. "centpd/lib/logx"
 
+	"centpd/lib/ftypes"
 	"centpd/lib/mail"
 	ib0 "centpd/lib/webib0"
 
@@ -256,39 +257,41 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			x_fid = 0
 		}
 
-		if x_fid != f_id.Int64 && ftype.String != "msg" {
-			var fi ib0.IBFileInfo
-			ta := defaultThumbAttributes
+		if x_fid != f_id.Int64 {
+			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+				var fi ib0.IBFileInfo
+				ta := defaultThumbAttributes
 
-			err = thumbcfg_j.Unmarshal(&ta)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_thread_list_page thumbcfg json unmarshal", err),
-					http.StatusInternalServerError
+				err = thumbcfg_j.Unmarshal(&ta)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_thread_list_page thumbcfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				err = filecfg_j.Unmarshal(&fi.Options)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_thread_list_page filecfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				fi.ID = fname.String
+				fi.Type = ftype.String
+				fi.Thumb.ID = thumb.String
+				fi.Thumb.Width = ta.Width
+				fi.Thumb.Height = ta.Height
+				fi.Original = oname.String
+				fi.Size = fsize.Int64
+
+				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+
+				l_post.Files = append(l_post.Files, fi)
+
+				x_fid = f_id.Int64
 			}
-
-			err = filecfg_j.Unmarshal(&fi.Options)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_thread_list_page filecfg json unmarshal", err),
-					http.StatusInternalServerError
-			}
-
-			fi.ID = fname.String
-			fi.Type = ftype.String
-			fi.Thumb.ID = thumb.String
-			fi.Thumb.Width = ta.Width
-			fi.Thumb.Height = ta.Height
-			fi.Original = oname.String
-			fi.Size = fsize.Int64
-
-			fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
-
-			l_post.Files = append(l_post.Files, fi)
-
-			x_fid = f_id.Int64
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -455,39 +458,41 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			x_fid = 0
 		}
 
-		if x_fid != f_id.Int64 && ftype.String != "msg" {
-			var fi ib0.IBFileInfo
-			ta := defaultThumbAttributes
+		if x_fid != f_id.Int64 {
+			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+				var fi ib0.IBFileInfo
+				ta := defaultThumbAttributes
 
-			err = thumbcfg_j.Unmarshal(&ta)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_overboard_page thumbcfg json unmarshal", err),
-					http.StatusInternalServerError
+				err = thumbcfg_j.Unmarshal(&ta)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_overboard_page thumbcfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				err = filecfg_j.Unmarshal(&fi.Options)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_overboard_page filecfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				fi.ID = fname.String
+				fi.Type = ftype.String
+				fi.Thumb.ID = thumb.String
+				fi.Thumb.Width = ta.Width
+				fi.Thumb.Height = ta.Height
+				fi.Original = oname.String
+				fi.Size = fsize.Int64
+
+				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+
+				l_post.Files = append(l_post.Files, fi)
+
+				x_fid = f_id.Int64
 			}
-
-			err = filecfg_j.Unmarshal(&fi.Options)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_overboard_page filecfg json unmarshal", err),
-					http.StatusInternalServerError
-			}
-
-			fi.ID = fname.String
-			fi.Type = ftype.String
-			fi.Thumb.ID = thumb.String
-			fi.Thumb.Width = ta.Width
-			fi.Thumb.Height = ta.Height
-			fi.Original = oname.String
-			fi.Size = fsize.Int64
-
-			fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
-
-			l_post.Files = append(l_post.Files, fi)
-
-			x_fid = f_id.Int64
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -801,39 +806,41 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			x_fid = 0
 		}
 
-		if x_fid != f_id.Int64 && ftype.String != "msg" {
-			var fi ib0.IBFileInfo
-			ta := defaultThumbAttributes
+		if x_fid != f_id.Int64 {
+			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+				var fi ib0.IBFileInfo
+				ta := defaultThumbAttributes
 
-			err = thumbcfg_j.Unmarshal(&ta)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_thread thumbcfg json unmarshal", err),
-					http.StatusInternalServerError
+				err = thumbcfg_j.Unmarshal(&ta)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_thread thumbcfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				err = filecfg_j.Unmarshal(&fi.Options)
+				if err != nil {
+					rows.Close()
+					return sp.sqlError(
+							"Web_thread filecfg json unmarshal", err),
+						http.StatusInternalServerError
+				}
+
+				fi.ID = fname.String
+				fi.Type = ftype.String
+				fi.Thumb.ID = thumb.String
+				fi.Thumb.Width = ta.Width
+				fi.Thumb.Height = ta.Height
+				fi.Original = oname.String
+				fi.Size = fsize.Int64
+
+				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+
+				l_post.Files = append(l_post.Files, fi)
+
+				x_fid = f_id.Int64
 			}
-
-			err = filecfg_j.Unmarshal(&fi.Options)
-			if err != nil {
-				rows.Close()
-				return sp.sqlError(
-						"Web_thread filecfg json unmarshal", err),
-					http.StatusInternalServerError
-			}
-
-			fi.ID = fname.String
-			fi.Type = ftype.String
-			fi.Thumb.ID = thumb.String
-			fi.Thumb.Width = ta.Width
-			fi.Thumb.Height = ta.Height
-			fi.Original = oname.String
-			fi.Size = fsize.Int64
-
-			fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
-
-			l_post.Files = append(l_post.Files, fi)
-
-			x_fid = f_id.Int64
 		}
 	}
 	if err = rows.Err(); err != nil {

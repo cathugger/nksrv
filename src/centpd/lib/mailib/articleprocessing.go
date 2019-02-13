@@ -593,6 +593,18 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		rpinfo.Body, rpinfo.HasNull, rpinfo.Has8Bit, err =
 			trackedGuttleBody(xr, XH, xct_t, xct_par, xbinary)
 
+		// process face-like headers if any
+		ffn, ffi, err := extractMessageFace(XH, src)
+		if err != nil {
+			err = fmt.Errorf("extractMessageFace: %v", err)
+			return
+		}
+		if ffn != "" {
+			tmpfilenames = append(tmpfilenames, ffn)
+			thumbfilenames = append(thumbfilenames, "")
+			pi.FI = append(pi.FI, ffi)
+		}
+
 		return
 	}
 

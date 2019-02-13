@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"centpd/lib/ftypes"
 	. "centpd/lib/logx"
 	"centpd/lib/mailib"
 )
@@ -340,7 +339,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 				panic(err)
 			}
 
-			args[x+0] = ftypes.FTypeS[pInfo.FI[i].Type]
+			args[x+0] = pInfo.FI[i].Type.String()
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb

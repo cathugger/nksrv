@@ -19,7 +19,6 @@ import (
 	"centpd/lib/emime"
 	fu "centpd/lib/fileutil"
 	"centpd/lib/fstore"
-	"centpd/lib/ftypes"
 	ht "centpd/lib/hashtools"
 	. "centpd/lib/logx"
 	"centpd/lib/mail/form"
@@ -239,7 +238,7 @@ func optimiseFormLine(line string) (s string) {
 
 func countRealFiles(FI []mailib.FileInfo) (FC int) {
 	for i := range FI {
-		if FI[i].Type != ftypes.FTypeMsg {
+		if FI[i].Type.Normal() {
 			FC++
 		}
 	}
