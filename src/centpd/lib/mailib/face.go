@@ -15,6 +15,8 @@ import (
 func extractMessageFace(
 	H mail.Headers, src *fstore.FStore) (fn string, fi FileInfo, err error) {
 
+	// TODO Face header
+
 	xf := H.GetFirst("X-Face")
 	if xf != "" {
 		var fimg image.Image
@@ -47,8 +49,6 @@ func extractMessageFace(
 			return
 		}
 	}
-
-	// TODO Face header
 
 	return
 }
