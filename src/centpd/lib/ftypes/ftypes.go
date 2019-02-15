@@ -10,10 +10,10 @@ const (
 	FTypeImage
 	FTypeAudio
 	FTypeVideo
-	FType__MAX
+	_FTypeMax
 )
 
-var FTypeS = [FType__MAX]string{
+var FTypeS = [_FTypeMax]string{
 	FTypeFile:  "file",
 	FTypeMsg:   "msg",
 	FTypeFace:  "face",
