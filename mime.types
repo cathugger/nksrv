@@ -51,10 +51,16 @@ application/atom+xml                    atom
 application/rss+xml                     rss
 application/json                        json
 application/xhtml+xml                   xhtml
-application/zip                         zip
+application/zip                         zip zipx
 application/x-rar-compressed            rar
 application/x-7z-compressed             7z
+application/x-tar                       tar
+application/x-cpio                      cpio
 application/gzip                        gz
+application/x-bzip2                     bz2
+application/x-xz                        xz
+application/zstd                        zst
+application/x-par2                      par2 par
 application/pdf                         pdf
 application/rtf                         rtf
 application/msword                      doc dot
