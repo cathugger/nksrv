@@ -65,5 +65,6 @@ application/pdf                         pdf
 application/rtf                         rtf
 application/msword                      doc dot
 application/x-shockwave-flash           swf
+application/java-archive                jar
 
 text/plain                              !eml
