@@ -62,6 +62,7 @@ application/x-xz                        xz
 application/zstd                        zst
 application/x-par2                      par2 par
 application/pdf                         pdf
+application/postscript                  ps
 application/rtf                         rtf
 application/msword                      doc dot
 application/x-shockwave-flash           swf
