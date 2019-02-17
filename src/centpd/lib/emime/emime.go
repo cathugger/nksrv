@@ -71,7 +71,7 @@ skipMIMEAdd:
 
 func mimeTypesByExtensionLocked(ext string) []string {
 	// case-sensitive lookup
-	if v, ok := mimeTypes[ext]; ok && len(v) != 0 {
+	if v, ok := mimeTypes[ext]; ok {
 		return v
 	}
 	// case-insensitive lookup
@@ -84,7 +84,7 @@ func mimeTypesByExtensionLocked(ext string) []string {
 		c := ext[i]
 		if c >= utf8RuneSelf {
 			// Slow path.
-			if v, ok := mimeTypes[strings.ToLower(ext)]; ok && len(v) != 0 {
+			if v, ok := mimeTypes[strings.ToLower(ext)]; ok {
 				return v
 			}
 			goto notFound
@@ -95,11 +95,11 @@ func mimeTypesByExtensionLocked(ext string) []string {
 			lower = append(lower, c)
 		}
 	}
-	if v, ok := mimeTypes[string(lower)]; ok && len(v) != 0 {
+	if v, ok := mimeTypes[string(lower)]; ok {
 		return v
 	}
 notFound:
-	if v, ok := mimeTypes["*"]; ok && len(v) != 0 {
+	if v, ok := mimeTypes["*"]; ok {
 		return v
 	}
 	return nil
