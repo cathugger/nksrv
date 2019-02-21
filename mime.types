@@ -56,6 +56,7 @@ application/xhtml+xml                   xhtml
 application/zip                         zip zipx
 application/x-rar-compressed            rar
 application/x-7z-compressed             7z
+application/x-lzh-compressed            lzh lha
 application/x-tar                       tar
 application/x-cpio                      cpio
 application/gzip                        gz
