@@ -17,11 +17,7 @@ func NewMethod() *Method {
 
 func (m *Method) Initialize() *Method {
 	m.methods = append(m.methods, "OPTIONS")
-	m.handlers = append(m.handlers, http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "405 method not allowed",
-				http.StatusMethodNotAllowed)
-		}))
+	m.handlers = append(m.handlers, http.HandlerFunc(methodNotAllowed))
 	return m
 }
 

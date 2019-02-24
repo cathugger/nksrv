@@ -20,11 +20,7 @@ func NewHost() *Host {
 }
 
 func (h *Host) Initialize() *Host {
-	h.fallback = http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "500 internal server error",
-				http.StatusInternalServerError)
-		})
+	h.fallback = http.HandlerFunc(internalServerError)
 	return h
 }
 

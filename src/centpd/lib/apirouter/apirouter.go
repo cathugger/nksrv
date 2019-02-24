@@ -71,7 +71,6 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	h_root := handler.NewCleanPath()
 
 	h := handler.NewSimplePath()
-	h.Fallback(http.HandlerFunc(httpErrorBadRequest))
 	h_root.Handle(h)
 
 	if cfg.Renderer == nil {
@@ -79,7 +78,6 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h_bcontent := handler.NewRegexPath()
-	h_bcontent.Fallback(http.HandlerFunc(httpErrorBadRequest))
 
 	h_bcontent.Handle("/pages/{{n:[0-9]+}}", false,
 		handler.NewMethod().Handle("GET", http.HandlerFunc(
@@ -145,7 +143,6 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	}
 
 	h_boards := handler.NewRegexPath()
-	h_boards.Fallback(http.HandlerFunc(httpErrorBadRequest))
 
 	h_boardsroot := handler.NewMethod().
 		Handle("GET", http.HandlerFunc(cfg.Renderer.ServeBoardList))
@@ -237,24 +234,21 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 
 	h.Handle("/boards", true, h_boards)
 
-	/*
-		h_overboard := handler.NewRegexPath()
-		h_overboard.Fallback(http.HandlerFunc(httpErrorBadRequest))
+	h_overboard := handler.NewRegexPath()
 
-		h_overboard.Handle("/pages/{{n:[0-9]+}}", false,
-			handler.NewMethod().Handle("GET", http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					sn := r.Context().Value("n").(string)
-					n, e := strconv.ParseUint(sn, 10, 32)
-					if e != nil {
-						httpErrorBadRequest(w, r)
-						return
-					}
-					cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
-				})))
+	h_overboard.Handle("/pages/{{n:[0-9]+}}", false,
+		handler.NewMethod().Handle("GET", http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				sn := r.Context().Value("n").(string)
+				n, e := strconv.ParseUint(sn, 10, 32)
+				if e != nil {
+					httpErrorBadRequest(w, r)
+					return
+				}
+				cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
+			})))
 
-		h.Handle("/overboard", true, h_overboard)
-	*/
+	h.Handle("/overboard", true, h_overboard)
 
 	if cfg.Auth != nil {
 		h.Handle("/auth/login", false, http.HandlerFunc(

@@ -43,7 +43,7 @@ func NewRegexPath() *RegexPath {
 }
 
 func (p *RegexPath) Initialize() *RegexPath {
-	p.fallback = http.HandlerFunc(http.NotFound)
+	p.fallback = http.HandlerFunc(badRequest)
 	return p
 }
 

@@ -20,7 +20,7 @@ func NewSimplePath() *SimplePath {
 }
 
 func (p *SimplePath) Initialize() *SimplePath {
-	p.fallback = http.HandlerFunc(http.NotFound)
+	p.fallback = http.HandlerFunc(badRequest)
 	return p
 }
 
