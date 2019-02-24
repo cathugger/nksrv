@@ -84,6 +84,19 @@ func (j *JSONRenderer) ServeThreadListPage(
 	e.Encode(&pag)
 }
 
+func (j *JSONRenderer) ServeOverboardPage(
+	w http.ResponseWriter, r *http.Request, page uint32) {
+
+	e := j.prepareEncoder(w, 0)
+	var pag ib0.IBOverboardPage
+	err, code := j.p.IBGetOverboardPage(&pag, page)
+	if err != nil {
+		returnError(w, e, err, code)
+		return
+	}
+	e.Encode(&pag)
+}
+
 func (j *JSONRenderer) ServeThreadCatalog(
 	w http.ResponseWriter, r *http.Request, board string) {
 

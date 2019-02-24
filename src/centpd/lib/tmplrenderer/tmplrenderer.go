@@ -28,6 +28,8 @@ const (
 	ptmplBoardListErr
 	ptmplThreadListPage
 	ptmplThreadListPageErr
+	ptmplOverboardPage
+	ptmplOverboardPageErr
 	ptmplThreadCatalog
 	ptmplThreadCatalogErr
 	ptmplThread
@@ -57,6 +59,8 @@ var pnames = [ptmplMax]string{
 	"board_list_err",
 	"thread_list_page",
 	"thread_list_page_err",
+	"overboard_page",
+	"overboard_page_err",
 	"thread_catalog",
 	"thread_catalog_err",
 	"thread",
@@ -445,6 +449,41 @@ func (tr *TmplRenderer) ServeThreadListPage(
 		l.D.HasBackRefs = true
 	}
 	tr.outTmplP(w, ptmplThreadListPage, 200, l)
+}
+
+func (tr *TmplRenderer) ServeOverboardPage(
+	w http.ResponseWriter, r *http.Request, page uint32) {
+
+	l := &struct {
+		D ib0.IBOverboardPage
+		N NodeInfo
+		R *TmplRenderer
+	}{
+		R: tr,
+	}
+
+	err, code := tr.p.IBGetOverboardPage(&l.D, page)
+	if err != nil {
+		ctx := struct {
+			Code int
+			Err  error
+			Page uint32
+		}{
+			code,
+			err,
+			page,
+		}
+		tr.outTmplP(w, ptmplOverboardPageErr, code, ctx)
+		return
+	}
+	if !l.D.HasBackRefs {
+		for i := range l.D.Threads {
+			ib0.ProcessBackReferences(
+				l.D.Threads[i].BoardName, &l.D.Threads[i].IBCommonThread)
+		}
+		l.D.HasBackRefs = true
+	}
+	tr.outTmplP(w, ptmplOverboardPage, 200, l)
 }
 
 func (tr *TmplRenderer) ServeThread(
