@@ -193,7 +193,11 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	// XXX golang doesn't care about color profiles at all
 	// this means anything non-sRGB is fucked
-	// which is sorta unfortunate but oh well
+	// which is sorta unfortunate but oh well.
+	// I've failed to find any lib which would help for that
+	// and linking to lcms wouldn't be pure go
+	// and I aint going to make my own lib for that
+	// so I can't really fix this atm.
 	oimg, imgfmt, err := image.Decode(f)
 	if err != nil {
 		// bail out on any decoder failure
