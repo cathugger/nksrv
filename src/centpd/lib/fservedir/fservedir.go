@@ -12,23 +12,65 @@ import (
 
 var _ fserve.FServe = FServeDir{}
 
-type FServeDir struct {
-	dir string
+type MIMETypeSetter interface {
+	SetMIMETypeByName(w http.ResponseWriter, name string)
 }
 
-func NewFServeDir(dir string) FServeDir {
-	i := len(dir)
-	if i > 0 && !os.IsPathSeparator(dir[i-1]) {
+type FServeDir struct {
+	dir         string
+	cachectlstr string
+	mts         MIMETypeSetter
+}
+
+type DefaultMIMETypeSetter struct{}
+
+func (DefaultMIMETypeSetter) SetMIMETypeByName(w http.ResponseWriter, name string) {
+	var mimeType string
+	if i := strings.LastIndexByte(name, '.'); i >= 0 {
+		mimeType = emime.MIMETypeByExtension(name[i+1:])
+	} else {
+		mimeType = emime.MIMETypeByExtension("")
+	}
+	if mimeType != "" {
+		w.Header().Set("Content-Type", mimeType)
+	}
+}
+
+type Config struct {
+	MIMETypeSetter MIMETypeSetter
+	CacheControl   string
+}
+
+// "no-cache, must-revalidate"
+
+func NewFServeDir(dir string, cfg Config) FServeDir {
+	if i := len(dir); i > 0 && !os.IsPathSeparator(dir[i-1]) {
 		dir = dir + string(os.PathSeparator)
 	}
-	return FServeDir{dir: dir}
+
+	if cfg.MIMETypeSetter == nil {
+		cfg.MIMETypeSetter = DefaultMIMETypeSetter{}
+	}
+
+	return FServeDir{
+		dir:         dir,
+		mts:         cfg.MIMETypeSetter,
+		cachectlstr: cfg.CacheControl,
+	}
 }
 
 func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
+
 	fname := d.dir + id
 
-	// TODO make configurable
-	w.Header().Set("Cache-Control", "no-cache, must-revalidate")
+	sl := strings.LastIndexByte(id, '/')
+	if sl >= 0 {
+		id = id[sl+1:]
+	}
+	if id == "" {
+		http.NotFound(w, r)
+		return
+	}
 
 	f, err := os.Open(fname)
 	if err != nil {
@@ -37,14 +79,11 @@ func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	defer f.Close()
 
-	var mimeType string
-	if i := strings.LastIndexByte(id, '.'); i >= 0 {
-		mimeType = emime.MIMETypeByExtension(id[i+1:])
-	} else {
-		mimeType = emime.MIMETypeByExtension("")
-	}
-	if mimeType != "" {
-		w.Header().Set("Content-Type", mimeType)
+	// set Content-Type and whatever else
+	d.mts.SetMIMETypeByName(w, id)
+
+	if d.cachectlstr != "" {
+		w.Header().Set("Cache-Control", d.cachectlstr)
 	}
 
 	fi, err := f.Stat()
