@@ -13,17 +13,17 @@ var _ sp.StaticProvider = (*IBProviderDemo)(nil)
 
 /*
  * TODO:
- * src and thm should have infinite caching
  * static should ALSO have infinite caching BUT we should do something like this:
  * /_static/style.css?timestamp
  * this however will need templating engine awareness
  */
-var fsdcfg = fsd.Config{CacheControl: "no-cache, must-revalidate"}
+var maxcfg = fsd.Config{CacheControl: "public, max-age=31536000"}
+var nopcfg = fsd.Config{CacheControl: "no-cache, must-revalidate"}
 
 var (
-	srcServe    = fsd.NewFServeDir("_demo/demoib0/src", fsdcfg)
-	thmServe    = fsd.NewFServeDir("_demo/demoib0/thm", fsdcfg)
-	staticServe = fsd.NewFServeDir("_demo/demoib0/static", fsdcfg)
+	srcServe    = fsd.NewFServeDir("_demo/demoib0/src", maxcfg)
+	thmServe    = fsd.NewFServeDir("_demo/demoib0/thm", maxcfg)
+	staticServe = fsd.NewFServeDir("_demo/demoib0/static", nopcfg)
 )
 
 func (IBProviderDemo) ServeSrc(w http.ResponseWriter, r *http.Request, id string) {
