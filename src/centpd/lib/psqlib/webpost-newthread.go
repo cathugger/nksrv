@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mailib"
 )
 
-const postTQMsgArgCount = 12
+const postTQMsgArgCount = 13
 const postTQFileArgCount = 7
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -38,7 +38,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	ugp AS (
 		INSERT INTO
 			ib0.posts (
-				pdate, padded, -- 1
+				pdate, padded, -- 1, NOW()
 				sage,          -- _
 				f_count,       -- 2
 				msgid,         -- 3
@@ -88,7 +88,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				t_name,
 				bump,
 				p_count,
-				f_count
+				f_count,
+				skip_over
 			)
 		SELECT
 			$11,        -- b_id
@@ -97,7 +98,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			$12,        -- t_name
 			$1,         -- pdate
 			1,          -- p_count
-			$2          -- f_count
+			$2,         -- f_count
+			$13         -- skip_over
 		FROM
 			ub
 		CROSS JOIN
@@ -194,7 +196,8 @@ FROM
 }
 
 func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
-	bid boardID, pInfo mailib.PostInfo) (gpid postID, err error) {
+	bid boardID, pInfo mailib.PostInfo, skipover bool) (
+	gpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -235,7 +238,8 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 			Ljson,
 
 			bid,
-			pInfo.ID)
+			pInfo.ID,
+			skipover)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
@@ -254,6 +258,7 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 
 		args[10] = bid
 		args[11] = pInfo.ID
+		args[12] = skipover
 
 		for i := range pInfo.FI {
 

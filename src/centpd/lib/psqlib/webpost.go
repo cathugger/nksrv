@@ -569,11 +569,13 @@ ON
 		}
 	}()
 
+	isctlgrp := board == "ctl"
+
 	var gpid postID
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, bid, pInfo)
+		gpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, err = sp.insertNewReply(tx,

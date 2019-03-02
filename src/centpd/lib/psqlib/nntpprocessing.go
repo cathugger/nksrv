@@ -431,11 +431,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}()
 
+	isctlgrp := info.Newsgroup == "ctl"
+
 	var gpid postID
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, info.bid, pi)
+		gpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, err = sp.insertNewReply(tx,

@@ -61,9 +61,10 @@ CREATE TABLE ib0.threads (
 	g_t_id BIGINT                NOT NULL, -- internal global thread OP post ID
 	t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
 
-	bump    TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
-	p_count BIGINT                        NOT NULL, -- post count
-	f_count BIGINT                        NOT NULL, -- sum of posts' f_count
+	bump      TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
+	skip_over BOOLEAN                       NOT NULL, -- if true, do not include in overboard
+	p_count   BIGINT                        NOT NULL, -- post count
+	f_count   BIGINT                        NOT NULL, -- sum of posts' f_count
 
 	reply_limits JSONB, -- inherits from reply_limits of ib0.boards
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
@@ -90,6 +91,8 @@ CREATE INDEX
 		g_t_id ASC,
 		b_id ASC
 	)
+	WHERE
+		skipover IS NOT TRUE
 
 
 -- :next
@@ -110,7 +113,7 @@ CREATE TABLE ib0.posts (
 	message TEXT                 NOT NULL, -- post message, in UTF-8
 	headers JSONB,                         -- map of lists of strings
 	attrib  JSONB,                         -- extra attributes which are optional
-	layout  JSONB,                         -- multipart msg and attachment layout
+	layout  JSON,                          -- multipart msg and attachment layout
 	extras  JSONB,                         -- dunno if really need this field
 
 	PRIMARY KEY (g_p_id),
