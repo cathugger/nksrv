@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mailib"
 )
 
-const postTQMsgArgCount = 13
+const postTQMsgArgCount = 14
 const postTQFileArgCount = 7
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -196,7 +196,7 @@ FROM
 }
 
 func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
-	bid boardID, pInfo mailib.PostInfo, skipover bool) (
+	bid boardID, pInfo mailib.PostInfo, skipover bool, modid int64) (
 	gpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
@@ -223,6 +223,8 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 		panic(err)
 	}
 
+	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
+
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
@@ -239,7 +241,8 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 
 			bid,
 			pInfo.ID,
-			skipover)
+			skipover,
+			smodid)
 	} else {
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
@@ -259,6 +262,7 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 		args[10] = bid
 		args[11] = pInfo.ID
 		args[12] = skipover
+		args[13] = smodid
 
 		for i := range pInfo.FI {
 

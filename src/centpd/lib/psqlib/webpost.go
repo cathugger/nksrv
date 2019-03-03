@@ -245,16 +245,6 @@ func countRealFiles(FI []mailib.FileInfo) (FC int) {
 	return
 }
 
-func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
-	if !isReply {
-		return sp.tplan_thread
-	} else if !isSage {
-		return sp.tplan_reply
-	} else {
-		return sp.tplan_sage
-	}
-}
-
 func (sp *PSQLIB) commonNewPost(
 	r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
@@ -525,6 +515,9 @@ ON
 		}
 	}
 
+	// is control message?
+	isctlgrp := board == "ctl"
+
 	// process references
 	refs, inreplyto, failrefs, err := sp.processReferencesOnPost(
 		sp.db.DB, pInfo.MI.Message, bid, postID(tid.Int64))
@@ -533,13 +526,19 @@ ON
 	}
 	pInfo.A.References = refs
 
+	if isctlgrp {
+		// do not add In-Reply-To for moderation messages
+		inreplyto = nil
+	}
+
 	// fill in info about post
 	tu := date.NowTimeUnix()
 	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 
 	// fill in layout/sign
 	var fmsgids FullMsgIDStr
-	pInfo, fmsgids, msgfn, err = sp.fillWebPostDetails(
+	var pubkeystr string
+	pInfo, fmsgids, msgfn, pubkeystr, err = sp.fillWebPostDetails(
 		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, true, tu, signkeyseed)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
@@ -569,18 +568,27 @@ ON
 		}
 	}()
 
-	isctlgrp := board == "ctl"
+	var modid int64
+	var priv ModPriv
+	if isctlgrp && pubkeystr != "" {
+		modid, priv, err = sp.registeredMod(pubkeystr)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
+	}
+	// TODO use
+	_ = priv
 
 	var gpid postID
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp)
+		gpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
-			pInfo)
+			pInfo, modid)
 	}
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError

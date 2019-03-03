@@ -15,7 +15,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 15
+const postRQMsgArgCount = 16
 const postRQFileArgCount = 7
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -259,7 +259,7 @@ type replyTargetInfo struct {
 }
 
 func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
-	rti replyTargetInfo, pInfo mailib.PostInfo) (gpid postID, err error) {
+	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (gpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -285,6 +285,8 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		panic(err)
 	}
 
+	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
+
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
@@ -304,7 +306,8 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 			rti.tid,
 			rti.bumpLimit,
 
-			pInfo.ID)
+			pInfo.ID,
+			smodid)
 	} else {
 		x := postRQMsgArgCount
 		xf := postRQFileArgCount
@@ -327,6 +330,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		args[13] = rti.bumpLimit
 
 		args[14] = pInfo.ID
+		args[15] = smodid
 
 		for i := range pInfo.FI {
 

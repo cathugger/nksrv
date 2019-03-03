@@ -73,7 +73,7 @@ func tohex(b []byte) string {
 func (sp *PSQLIB) fillWebPostDetails(
 	i mailib.PostInfo, frm form.Form, board string,
 	ref CoreMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
-	_ mailib.PostInfo, fmsgids FullMsgIDStr, mfn string, err error) {
+	_ mailib.PostInfo, fmsgids FullMsgIDStr, mfn, pubkeystr string, err error) {
 
 	i = sp.fillWebPostInner(i, board, ref, inreplyto)
 
@@ -197,7 +197,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 		// sign
 		sig := ed25519.Sign(seckey, signhash)
-		pubkeystr := tohex(pubkey)
+		pubkeystr = tohex(pubkey)
 		sigstr := tohex(sig)
 		sp.log.LogPrintf(DEBUG, "msgsig: hash %X pubkey %s signature %s", signhash, pubkeystr, sigstr)
 
@@ -209,7 +209,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 	// Path
 	i.H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
 
-	return i, fmsgids, mfn, nil
+	return i, fmsgids, mfn, pubkeystr, nil
 }
 
 func (sp *PSQLIB) fillWebPostInner(

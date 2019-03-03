@@ -537,3 +537,19 @@ SET
 WHERE
 	g_p_id = $1
 
+
+-- :name autoregister_mod
+INSERT INTO
+	ib0.modlist AS ml (
+		mod_pubkey,
+		automanage
+	)
+VALUES (
+	$1,
+	TRUE
+)
+ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update something irrelevant as hack
+	SET automanage = ml.automanage
+RETURNING
+	mod_id, mod_priv
+

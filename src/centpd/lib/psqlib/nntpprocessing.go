@@ -292,11 +292,6 @@ const (
 	maxSubjectLen = 255
 )
 
-func (sp *PSQLIB) registeredMod(pubkey string) (modid int64, priv int) {
-	// TODO
-	return 0, 0
-}
-
 func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
 	err error, unexpected bool) {
@@ -338,13 +333,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		panic("len(pi.FI) != len(tmpfns) || len(tmpfns) != len(tmpthmfns)")
 	}
 
-	pubkey := ""
+	pubkeystr := ""
 	if ver != nil {
 		res := ver.Verify(iow)
-		pubkey = res.PubKey
+		pubkeystr = res.PubKey
 		pi.MI.Trip = res.PubKey
 	}
-	verifiedinner := pubkey != ""
+	verifiedinner := pubkeystr != ""
 
 	// properly fill in fields
 
@@ -438,25 +433,28 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	isctlgrp := info.Newsgroup == "ctl"
 
-	var priv int // TODO
 	var modid int64
-	if isctlgrp && pubkey != "" {
-		modid, priv = sp.registeredMod(pubkey)
+	var priv ModPriv
+	if isctlgrp && pubkeystr != "" {
+		modid, priv, err = sp.registeredMod(pubkeystr)
+		if err != nil {
+			unexpected = true
+			return
+		}
 	}
-	// TODO pass to insertion func
+	// TODO use
 	_ = priv
-	_ = modid
 
 	var gpid postID
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp)
+		gpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
-			pi)
+			pi, modid)
 	}
 	if err != nil {
 		err = fmt.Errorf("post insertion failed: %v", err)
