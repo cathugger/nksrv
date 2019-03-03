@@ -30,7 +30,7 @@ func setExtensionTypeLocked(
 	}
 	// treat text files as UTF-8 by default
 	if strings.HasPrefix(justType, "text/") && param["charset"] == "" {
-		param["charset"] = "utf-8"
+		param["charset"] = "UTF-8"
 	}
 	// ensure proper formatting
 	mimeType = mm.FormatMediaType(justType, param)
