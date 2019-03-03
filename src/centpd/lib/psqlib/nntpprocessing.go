@@ -292,6 +292,11 @@ const (
 	maxSubjectLen = 255
 )
 
+func (sp *PSQLIB) registeredMod(pubkey string) (modid int64, priv int) {
+	// TODO
+	return 0, 0
+}
+
 func (sp *PSQLIB) netnewsSubmitArticle(
 	br io.Reader, H mail.Headers, info nntpParsedInfo) (
 	err error, unexpected bool) {
@@ -333,13 +338,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		panic("len(pi.FI) != len(tmpfns) || len(tmpfns) != len(tmpthmfns)")
 	}
 
-	verifiedinner := false
-
+	pubkey := ""
 	if ver != nil {
 		res := ver.Verify(iow)
+		pubkey = res.PubKey
 		pi.MI.Trip = res.PubKey
-		verifiedinner = res.PubKey != ""
 	}
+	verifiedinner := pubkey != ""
 
 	// properly fill in fields
 
@@ -432,6 +437,15 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}()
 
 	isctlgrp := info.Newsgroup == "ctl"
+
+	var priv int // TODO
+	var modid int64
+	if isctlgrp && pubkey != "" {
+		modid, priv = sp.registeredMod(pubkey)
+	}
+	// TODO pass to insertion func
+	_ = priv
+	_ = modid
 
 	var gpid postID
 	// perform insert

@@ -11,7 +11,7 @@ CREATE SCHEMA ib0
 -- :next
 CREATE TYPE modpriv_t AS ENUM ('none', 'mod')
 -- :next
--- design will probably change in the future
+-- design will (very) probably change in the future
 CREATE TABLE ib0.modlist (
 	mod_id     BIGSERIAL               NOT NULL,
 	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
@@ -92,7 +92,7 @@ CREATE INDEX
 		b_id ASC
 	)
 	WHERE
-		skipover IS NOT TRUE
+		skip_over IS NOT TRUE
 
 
 -- :next

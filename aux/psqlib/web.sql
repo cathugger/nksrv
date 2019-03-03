@@ -201,6 +201,8 @@ FROM
 			zt.f_count
 		FROM
 			ib0.threads AS zt
+		WHERE
+			zt.skip_over IS NOT TRUE
 		ORDER BY
 			zt.bump DESC,
 			zt.b_id ASC,
