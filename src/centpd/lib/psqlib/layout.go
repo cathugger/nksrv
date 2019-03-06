@@ -261,7 +261,7 @@ func (sp *PSQLIB) fillWebPostInner(
 		if ref == "" && len(inreplyto) == 1 {
 			// add dummy to prevent misinterpretation by
 			// standards compliant clients
-			inreplyto = append(inreplyto, "<0>")
+			inreplyto = append([]string{"<0>"}, inreplyto...)
 		}
 		i.H["In-Reply-To"] = mail.OneHeaderVal(strings.Join(inreplyto, " "))
 	}
