@@ -134,7 +134,7 @@ CREATE TABLE ib0.bposts (
 	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
 
-	mod_id BIGINT,
+	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
 
 	PRIMARY KEY (b_id,b_p_id),
 	UNIQUE      (g_p_id,b_id),

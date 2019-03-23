@@ -573,7 +573,7 @@ WITH
 		WHERE
 			xbp.g_p_id = delgp.g_p_id
 		RETURNING
-			xbp.b_id,xbp.t_id,xbp.b_p_id,delgp.f_count
+			xbp.b_id,xbp.t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
 	),
 	delbt AS (
 		-- delete incase we nuked OP(s)
@@ -588,7 +588,7 @@ WITH
 	),
 	updbt AS (
 		-- update incase we haven't deleted thread earlier
-		-- TODO un-bump
+		-- un-bump is done adhoc
 		UPDATE
 			ib0.threads xt
 		SET
@@ -608,7 +608,7 @@ WITH
 		WHERE
 			xbp.b_id = delbt.b_id AND xbp.t_id = delbt.t_id
 		RETURNING
-			xbp.b_id,xbp.b_p_id,xbp.g_p_id
+			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
 	),
 	delgcp AS (
 		-- delete global child posts
@@ -632,6 +632,33 @@ WITH
 			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
 		RETURNING
 			xp.g_p_id
+	),
+	deleted_modids AS (
+		SELECT mod_id FROM delbp
+		UNION ALL
+		SELECT mod_id FROM delbcp
+	),
+	clean_mods AS (
+		-- garbage collect moderator list
+		DELETE FROM
+			ib0.ib0.modlist mods
+		USING
+			(
+				SELECT
+					delmod.mod_id,COUNT(xbp.mod_id) <> 0 AS hasrefs
+				FROM
+					ib0.bposts xbp
+				RIGHT JOIN
+					deleted_modids delmod
+				ON
+					delmod.mod_id = xbp.mod_id
+				WHERE
+					delmod.mod_id IS NOT NULL
+				GROUP BY
+					delmod.mod_id
+			) AS rcnts
+		WHERE
+			rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id AND mods.automanage = TRUE
 	),
 	updb AS (
 		-- update boards (yeh I'm being lazy there)
