@@ -50,6 +50,7 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 		}
 		// delet
 		if fname != "" && fnum == 0 {
+			sp.log.LogPrintf(DEBUG, "DELET file %q", fname)
 			err = os.Remove(sp.src.Main() + fname)
 			if err != nil && os.IsNotExist(err) {
 				err = nil
@@ -60,6 +61,7 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 			}
 		}
 		if tname != "" && tnum == 0 {
+			sp.log.LogPrintf(DEBUG, "DELET thumb %q", tname)
 			err = os.Remove(sp.thm.Main() + tname)
 			if err != nil && os.IsNotExist(err) {
 				err = nil
@@ -82,7 +84,9 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 	}
 
 	// now de-bump affected threads
-	for i := range thr_aff {
+	for _, ta := range thr_aff {
+		sp.log.LogPrintf(DEBUG, "DEBUMP board %d thread %d", ta.b, ta.t)
+
 		q := `
 SELECT
 	xb.b_name,xb.thread_opts,xt.thread_opts
@@ -101,10 +105,11 @@ WHERE
 		threadOpts := defaultThreadOptions
 
 		err = tx.
-			QueryRow(q, thr_aff[i].b, thr_aff[i].t).
+			QueryRow(q, ta.b, ta.t).
 			Scan(&bname, &jbTO, &jtTO)
 		if err != nil {
 			if err == sql.ErrNoRows {
+				sp.log.LogPrintf(DEBUG, "DEBUMP boardthread missing wtf")
 				// just skip it
 				continue
 			}
@@ -157,7 +162,7 @@ FROM
 WHERE
 	b_id = $1 AND t_id = $2
 `
-		_, err = tx.Exec(q2, thr_aff[i].b, thr_aff[i].t, threadOpts.BumpLimit)
+		_, err = tx.Exec(q2, ta.b, ta.t, threadOpts.BumpLimit)
 		if err != nil {
 			err = sp.sqlError("thread debump exec", err)
 			return
