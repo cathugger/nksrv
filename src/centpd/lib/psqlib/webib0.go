@@ -313,6 +313,12 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 	error, int) {
 
+	page.Number = num
+	page.Available = 10
+	if page.Number >= page.Available {
+		return errNoSuchPage, http.StatusNotFound
+	}
+
 	rows, err := sp.st_prep[st_Web_overboard_page].Query(num, 10)
 	if err != nil {
 		return sp.sqlError("Web_overboard_page query", err),

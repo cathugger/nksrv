@@ -6,7 +6,7 @@
    content="width=device-width, initial-scale=1.0"
   />
 
-  <title>/{{html $.D.Board.Name}}/{{if $.D.Board.Description}} - {{html $.D.Board.Description}}{{end}} - Page {{add_i $.D.Number 1}}</title>
+  <title>Overboard - Page {{$.D.Number}}</title>
 
   <link
    rel="stylesheet"
@@ -18,15 +18,11 @@
   <!-- xxx: node name? board list? -->
 
   <hr />
-  {{- template "_boardinfo" $ -}}
-
-  <p><h1>New thread</h1></p>
-  {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
-  <hr />
   {{template "_thread_list_nav" list $ 0}}
   <hr />
 
   {{range $T := $.D.Threads -}}
+   <div><a href="{{$.N.Root}}/{{escboard $.T.BoardName}}/">/{{html $.T.BoardName}}/</a></div>
    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
    {{if $T.SkippedReplies -}}
     <div><strong class="t_skipped">{{$T.SkippedReplies}}

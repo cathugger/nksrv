@@ -132,6 +132,8 @@ type IBOverboardPageThread struct {
 }
 
 type IBOverboardPage struct {
+	Number      uint32                  `json:"pnum"`   // this page num (starting from 0)
+	Available   uint32                  `json:"pavail"` // num of pages
 	Threads     []IBOverboardPageThread `json:"threads"`
 	HasBackRefs bool                    `json:"hasbrefs,omitempty"` // whether backreferences are already calculated
 }
