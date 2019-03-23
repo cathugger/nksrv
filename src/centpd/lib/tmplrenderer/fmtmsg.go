@@ -61,7 +61,7 @@ type msgLineFmtCfg struct {
 
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
-	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
+	boardName string, threadInfo *webib0.IBCommonThread,
 	p *webib0.IBPostInfo, fullURLs bool, linelimit, charsperline int) (
 	err error) {
 
@@ -127,12 +127,12 @@ func formatmsg(
 				}
 				if lines > linelimit {
 					d := struct {
-						B *webib0.IBBoardInfo
+						B string
 						T *webib0.IBCommonThread
 						P *webib0.IBPostInfo
 						N *NodeInfo
 					}{
-						B: boardInfo,
+						B: boardName,
 						T: threadInfo,
 						P: p,
 						N: ni,
@@ -283,14 +283,14 @@ func formatmsg(
 		}
 
 		d := struct {
-			B *webib0.IBBoardInfo
+			B string
 			T *webib0.IBCommonThread
 			P *webib0.IBPostInfo
 			R *webib0.IBReference
 			F bool
 			N *NodeInfo
 		}{
-			B: boardInfo,
+			B: boardName,
 			T: threadInfo,
 			P: p,
 			R: &rr.IBReference,
@@ -348,14 +348,14 @@ endmsg:
 
 func fmtmsg(
 	tr *TmplRenderer, n *NodeInfo,
-	boardInfo *webib0.IBBoardInfo, threadInfo *webib0.IBCommonThread,
+	boardName string, threadInfo *webib0.IBCommonThread,
 	p *webib0.IBPostInfo, fullURLs interface{}, linelimit, charsperline int) (
 	_ string, err error) {
 
 	f, _ := t.IsTrue(fullURLs)
 
 	b := &strings.Builder{}
-	err = formatmsg(b, tr, n, boardInfo, threadInfo, p,
+	err = formatmsg(b, tr, n, boardName, threadInfo, p,
 		f, linelimit, charsperline)
 	return b.String(), err
 }

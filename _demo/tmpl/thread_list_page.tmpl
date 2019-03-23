@@ -27,7 +27,7 @@
   <hr />
 
   {{range $T := $.D.Threads -}}
-   {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
+   {{template "op" list $ $.D.Board.Name (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
    {{if $T.SkippedReplies -}}
     <div><strong class="t_skipped">{{$T.SkippedReplies}}
     {{if ne $T.SkippedReplies 1}}replies{{else}}reply{{end}}
@@ -37,7 +37,7 @@
     not shown.</strong></div>
    {{- end -}}
    {{range $i, $v := $T.Replies -}}
-    {{template "reply" list $ (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
+    {{template "reply" list $ $.D.Board.Name (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
    {{end -}}
    <div style="clear:both"></div>
    <hr />

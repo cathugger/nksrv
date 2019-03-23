@@ -22,10 +22,10 @@
   {{template "_thread_nav" list $ 0}}
   <hr />
 
-  {{- template "op" list $ (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
+  {{- template "op" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
 
   {{- range $i, $v := $.D.Replies}}
-   {{- template "reply" list $ (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
+   {{- template "reply" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
   {{- end}}
   <div style="clear:both"></div>
 

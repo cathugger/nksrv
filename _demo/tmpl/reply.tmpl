@@ -4,6 +4,7 @@ single reply to thread
 
 arguments list:
 	*root_data
+	boardname
 	*IBCommonThread
 	*IBPostInfo
 	FullURLs
@@ -13,11 +14,12 @@ arguments list:
 */ -}}
 
 {{$X := index $ 0 -}}
-{{$T := index $ 1 -}}
-{{$P := index $ 2 -}}
-{{$fullURLs := index $ 3 -}}
-{{$maxLines := index $ 4 -}}
-{{$maxCPL   := index $ 5 -}}
+{{$B := index $ 1 -}}
+{{$T := index $ 2 -}}
+{{$P := index $ 3 -}}
+{{$fullURLs := index $ 4 -}}
+{{$maxLines := index $ 5 -}}
+{{$maxCPL   := index $ 6 -}}
 
 {{with $P -}}
  <div class="reply-outer">
@@ -60,7 +62,7 @@ arguments list:
      {{- end -}}
      {{if .Thread -}}
       {{if (not .Board) -}}
-       {{$X.N.Root}}/{{escboard $X.Board}}/
+       {{$X.N.Root}}/{{escboard $B}}/
       {{- end -}}
       thread/{{.Thread}}
      {{- end -}}
@@ -134,7 +136,7 @@ arguments list:
 
   {{- if gt (len $P.Files) 1}}<div style="clear:both"></div>{{end}}
 
-  {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $X.D.Board $T $P $fullURLs $maxLines $maxCPL -}}{{- end -}}
+  {{- if $P.Message -}}{{- fmtmsg $X.R $X.N $B $T $P $fullURLs $maxLines $maxCPL -}}{{- end -}}
  </div>
  </div>
 {{end -}}
