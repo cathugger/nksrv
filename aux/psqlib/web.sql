@@ -553,3 +553,145 @@ ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update so
 RETURNING
 	mod_id, mod_priv
 
+-- :name delete_by_msgid
+WITH
+	delgp AS (
+		-- delete global post
+		DELETE FROM
+			ib0.posts
+		WHERE
+			msgid = $1
+		RETURNING
+			g_p_id,f_count
+	),
+	delbp AS (
+		-- delete all board posts of that
+		DELETE FROM
+			ib0.bposts xbp
+		USING
+			delgp
+		WHERE
+			xbp.g_p_id = delgp.g_p_id
+		RETURNING
+			xbp.b_id,xbp.t_id,xbp.b_p_id,delgp.f_count
+	),
+	delbt AS (
+		-- delete incase we nuked OP(s)
+		DELETE FROM
+			ib0.threads xt
+		USING
+			delbp
+		WHERE
+			xt.b_id = delbp.b_id AND xt.t_id = delbp.b_p_id
+		RETURNING
+			b_id,t_id
+	),
+	updbt AS (
+		-- update incase we haven't deleted thread earlier
+		UPDATE
+			ib0.threads xt
+		SET
+			p_count = p_count - 1,
+			f_count = f_count - delbp.f_count
+		FROM
+			delbp
+		WHERE
+			delbp.b_id = xt.b_id AND delbp.t_id = xt.t_id
+	),
+	delbcp AS (
+		-- delete board child posts
+		DELETE FROM
+			ib0.bposts xbp
+		USING
+			delbt
+		WHERE
+			xbp.b_id = delbt.b_id AND xbp.t_id = delbt.t_id
+		RETURNING
+			xbp.b_id,xbp.b_p_id,g_p_id
+	),
+	delgcp AS (
+		-- delete global child posts
+		DELETE FROM
+			ib0.posts xp
+		USING
+			(
+				-- XXX is it even possible to have this false?
+				SELECT
+					delbcp.g_p_id,COUNT(xbp.g_p_id) <> 0 AS hasrefs
+				FROM
+					ib0.bposts xbp
+				RIGHT JOIN
+					delbcp
+				ON
+					delbcp.g_p_id = xbp.g_p_id
+				GROUP BY
+					delbcp.g_p_id
+			) AS rcnts
+		WHERE
+			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
+		RETURNING
+			g_p_id
+	),
+	updb AS (
+		-- update boards (yeh I'm being lazy there)
+		UPDATE
+			ib0.boards xb
+		SET
+			t_count = (SELECT COUNT(*) FROM ib0.threads zt WHERE xb.b_id = zt.b_id),
+			p_count = (SELECT COUNT(*) FROM ib0.bposts zbp WHERE xb.b_id = zbp.b_id)
+		WHERE
+			xb.b_id IN (
+				SELECT b_id FROM delbp
+				UNION
+				SELECT b_id FROM delbcp
+			)
+	),
+	delf AS (
+		-- delete relevant files
+		DELETE FROM
+			ib0.files xf
+		USING
+			(
+				SELECT g_p_id FROM delgp
+				UNION ALL
+				SELECT g_p_id FROM delgcp
+			) AS xgpids
+		WHERE
+			xgpids.g_p_id = xf.g_p_id
+		RETURNING
+			f_id,fname,thumb
+	),
+	leftf AS (
+		SELECT
+			delf.fname,COUNT(xf.fname) AS fnum
+		FROM
+			ib0.files xf
+		RIGHT JOIN
+			delf
+		ON
+			delf.fname = xf.fname
+		GROUP BY
+			delf.fname
+	),
+	leftt AS (
+		SELECT
+			delf.fname,delf.thumb,COUNT(xf.thumb) AS tnum
+		FROM
+			ib0.files xf
+		RIGHT JOIN
+			delf
+		ON
+			delf.fname = xf.fname AND delf.thumb = xf.thumb
+		GROUP BY
+			delf.fname,delf.thumb
+	)
+SELECT
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum
+FROM
+	leftf
+JOIN
+	leftt
+ON
+	leftf.fname = leftt.fname
+
+

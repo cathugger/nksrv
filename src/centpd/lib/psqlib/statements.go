@@ -57,6 +57,7 @@ const (
 	st_Web_update_post_attrs
 
 	st_Web_autoregister_mod
+	st_Web_delete_by_msgid
 
 	st_max
 )
@@ -119,6 +120,7 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "update_post_attrs"},
 
 	st_reference{"web", "autoregister_mod"},
+	st_reference{"web", "delete_by_msgid"},
 }
 
 func loadStatements() {

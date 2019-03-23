@@ -6,10 +6,10 @@ import (
 	mm "centpd/lib/minimail"
 )
 
-type modCtlCmdFunc func(tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr, cmd string, args []string) (err error)
+type modCtlCmdFunc func(sp *PSQLIB, tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr, cmd string, args []string) (err error)
 
 var modCtlCmds = map[string]modCtlCmdFunc{
-	"delete": func(tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr, cmd string, args []string) (err error) {
+	"delete": func(sp *PSQLIB, tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr, cmd string, args []string) (err error) {
 		if len(args) < 1 {
 			return
 		}
@@ -20,7 +20,7 @@ var modCtlCmds = map[string]modCtlCmdFunc{
 
 		// TODO add ban
 
-		err = deleteByMsgID(tx, cutMsgID(fmsgids))
+		err = sp.deleteByMsgID(tx, cutMsgID(fmsgids))
 		if err != nil {
 			return
 		}
