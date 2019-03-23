@@ -25,6 +25,7 @@ var (
 	IBWebFormTextTitle   = "title"
 	IBWebFormTextName    = "name"
 	IBWebFormTextMessage = "message"
+	IBWebFormTextOptions = "options"
 )
 
 type IBNewBoardInfo struct {

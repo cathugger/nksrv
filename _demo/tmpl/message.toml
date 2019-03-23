@@ -25,10 +25,10 @@ pre_reference    = """
  {{- end -}}
  {{- if .R.Post -}}
   {{- if .F -}}
-   {{- if (not .R.Board) -}}
-    {{.N.Root}}/{{escboard .B}}/
-   {{- end -}}
    {{- if (not .R.Thread) -}}
+    {{- if (not .R.Board) -}}
+     {{.N.Root}}/{{escboard .B}}/
+    {{- end -}}
     thread/{{.T.ID}}
    {{- end -}}
   {{- end -}}

@@ -68,10 +68,10 @@ arguments list:
      {{- end -}}
      {{- if .Post -}}
       {{- if $fullURLs -}}
-       {{- if (not .Board) -}}
-        {{$X.N.Root}}/{{escboard $B}}/
-       {{- end -}}
        {{- if (not .Thread) -}}
+        {{- if (not .Board) -}}
+         {{$X.N.Root}}/{{escboard $B}}/
+        {{- end -}}
         thread/{{$T.ID}}
        {{- end -}}
       {{- end -}}
