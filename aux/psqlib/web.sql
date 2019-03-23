@@ -584,7 +584,7 @@ WITH
 		WHERE
 			xt.b_id = delbp.b_id AND xt.t_id = delbp.b_p_id
 		RETURNING
-			b_id,t_id
+			xt.b_id,xt.t_id
 	),
 	updbt AS (
 		-- update incase we haven't deleted thread earlier
@@ -630,7 +630,7 @@ WITH
 		WHERE
 			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
 		RETURNING
-			g_p_id
+			xp.g_p_id
 	),
 	updb AS (
 		-- update boards (yeh I'm being lazy there)
@@ -659,7 +659,7 @@ WITH
 		WHERE
 			xgpids.g_p_id = xf.g_p_id
 		RETURNING
-			f_id,fname,thumb
+			xf.f_id,xf.fname,xf.thumb
 	),
 	leftf AS (
 		SELECT
@@ -693,5 +693,4 @@ JOIN
 	leftt
 ON
 	leftf.fname = leftt.fname
-
 
