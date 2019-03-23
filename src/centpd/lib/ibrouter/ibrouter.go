@@ -25,6 +25,33 @@ type Cfg struct {
 	// fallback?
 }
 
+func handlePageNum(
+	w http.ResponseWriter, r *http.Request, pn string) (ok bool, pni uint32) {
+
+	if pn != "" {
+		pnu, e := strconv.ParseUint(pn, 10, 32)
+		if e != nil {
+			// not found because invalid
+			// TODO custom 404 pages
+			// XXX maybe redirect to "./" there too?
+			http.NotFound(w, r)
+			return
+		}
+		if pnu <= 1 {
+			// redirect to have uniform url
+			// need to re-parse URL, because at this point it's modified
+			ru, _ := url.ParseRequestURI(r.RequestURI)
+			r.URL = ru
+			http.Redirect(w, r, "./", http.StatusTemporaryRedirect)
+			return
+		}
+		// UI-visible stuff starts from 1, but internally from 0
+		pni = uint32(pnu - 1)
+	}
+	ok = true
+	return
+}
+
 func NewIBRouter(cfg Cfg) http.Handler {
 	h_root := handler.NewCleanPath()
 
@@ -72,6 +99,17 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 		h_get.Handle("/", false, http.HandlerFunc(cfg.HTMLRenderer.ServeBoardList))
 
+		h_get.Handle("/_o", true,
+			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					pn := r.Context().Value("pn").(string)
+					ok, pni := handlePageNum(w, r, pn)
+					if !ok {
+						return
+					}
+					cfg.HTMLRenderer.ServeOverboardPage(w, r, pni)
+				})))
+
 		h_getr := handler.NewRegexPath()
 		h_get.Fallback(h_getr)
 
@@ -84,26 +122,9 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				pn := r.Context().Value("pn").(string)
-				pni := uint32(0)
-				if pn != "" {
-					pnu, e := strconv.ParseUint(pn, 10, 32)
-					if e != nil {
-						// not found because invalid
-						// TODO custom 404 pages
-						// XXX maybe redirect to "./" there too?
-						http.NotFound(w, r)
-						return
-					}
-					if pnu <= 1 {
-						// redirect to have uniform url
-						// need to re-parse URL, because at this point it's modified
-						ru, _ := url.ParseRequestURI(r.RequestURI)
-						r.URL = ru
-						http.Redirect(w, r, "./", http.StatusTemporaryRedirect)
-						return
-					}
-					// UI-visible stuff starts from 1, but internally from 0
-					pni = uint32(pnu - 1)
+				ok, pni := handlePageNum(w, r, pn)
+				if !ok {
+					return
 				}
 				cfg.HTMLRenderer.ServeThreadListPage(w, r, b, pni)
 			}))
