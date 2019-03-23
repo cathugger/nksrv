@@ -641,7 +641,7 @@ WITH
 	clean_mods AS (
 		-- garbage collect moderator list
 		DELETE FROM
-			ib0.ib0.modlist mods
+			ib0.modlist mods
 		USING
 			(
 				SELECT
