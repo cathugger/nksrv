@@ -15,17 +15,22 @@ pre_reference    = """
  {{end -}}
  href="
  {{- if .R.Board -}}
- {{.N.Root}}/{{escboard .R.Board}}/
+  {{.N.Root}}/{{escboard .R.Board}}/
  {{- end -}}
- {{if .R.Thread -}}
-  {{if (not .R.Board) -}}
+ {{- if .R.Thread -}}
+  {{- if (not .R.Board) -}}
    {{.N.Root}}/{{escboard .B}}/
   {{- end -}}
   thread/{{.R.Thread}}
  {{- end -}}
  {{- if .R.Post -}}
-  {{- if (and (not .R.Thread) .F) -}}
-   thread/{{.T.ID}}
+  {{- if .F -}}
+   {{- if (not .R.Board) -}}
+    {{.N.Root}}/{{escboard .B}}/
+   {{- end -}}
+   {{- if (not .R.Thread) -}}
+    thread/{{.T.ID}}
+   {{- end -}}
   {{- end -}}
   #{{.R.Post}}
  {{- end -}}

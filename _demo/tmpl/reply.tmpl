@@ -47,7 +47,7 @@ arguments list:
    >{{date $P.Date}}</time>
 
    <a
-    href="{{if $fullURLs}}thread/{{$T.ID}}{{end}}#{{$P.ID}}"
+    href="{{if $fullURLs}}{{$X.N.Root}}/{{escboard $B}}/thread/{{$T.ID}}{{end}}#{{$P.ID}}"
    >No.</a> <span title="{{$P.ID}}">{{shortid $P.ID}}</span>
 
    {{- range $P.BackReferences}}
@@ -60,15 +60,20 @@ arguments list:
      {{- if .Board -}}
       {{$X.N.Root}}/{{escboard .Board}}/
      {{- end -}}
-     {{if .Thread -}}
-      {{if (not .Board) -}}
+     {{- if .Thread -}}
+      {{- if (not .Board) -}}
        {{$X.N.Root}}/{{escboard $B}}/
       {{- end -}}
       thread/{{.Thread}}
      {{- end -}}
      {{- if .Post -}}
-      {{- if (and (not .Thread) $fullURLs) -}}
-       thread/{{$T.ID}}
+      {{- if $fullURLs -}}
+       {{- if (not .Board) -}}
+        {{$X.N.Root}}/{{escboard $B}}/
+       {{- end -}}
+       {{- if (not .Thread) -}}
+        thread/{{$T.ID}}
+       {{- end -}}
       {{- end -}}
       #{{.Post}}
      {{- end -}}
