@@ -620,13 +620,15 @@ WITH
 				SELECT
 					delbcp.g_p_id,COUNT(xbp.g_p_id) <> 0 AS hasrefs
 				FROM
-					ib0.bposts xbp
-				RIGHT JOIN
 					delbcp
+				LEFT JOIN
+					ib0.bposts xbp
 				ON
 					delbcp.g_p_id = xbp.g_p_id
 				WHERE
-					xbp.b_id != delbcp.b_id OR xbp.b_p_id != delbcp.b_p_id
+					xbp.b_id != delbcp.b_id OR
+						xbp.b_p_id != delbcp.b_p_id OR
+						xbp.g_p_id IS NULL
 				GROUP BY
 					delbcp.g_p_id
 			) AS rcnts
@@ -649,14 +651,16 @@ WITH
 				SELECT
 					delmod.mod_id,COUNT(xbp.mod_id) <> 0 AS hasrefs
 				FROM
-					ib0.bposts xbp
-				RIGHT JOIN
 					deleted_modids delmod
+				LEFT JOIN
+					ib0.bposts xbp
 				ON
 					delmod.mod_id = xbp.mod_id
 				WHERE
 					delmod.mod_id IS NOT NULL AND
-						(delmod.b_id != xbp.b_id OR delmod.b_p_id != xbp.b_p_id)
+						(delmod.b_id != xbp.b_id OR
+							delmod.b_p_id != xbp.b_p_id OR
+							xbp.mod_id IS NULL)
 				GROUP BY
 					delmod.mod_id
 			) AS rcnts
@@ -696,13 +700,13 @@ WITH
 		SELECT
 			delf.fname,COUNT(xf.fname) AS fnum
 		FROM
-			ib0.files xf
-		RIGHT JOIN
 			delf
+		LEFT JOIN
+			ib0.files xf
 		ON
 			delf.fname = xf.fname
 		WHERE
-			delf.f_id != xf.f_id
+			delf.f_id != xf.f_id OR xf.fname IS NULL
 		GROUP BY
 			delf.fname
 	),
@@ -710,13 +714,13 @@ WITH
 		SELECT
 			delf.fname,delf.thumb,COUNT(xf.thumb) AS tnum
 		FROM
-			ib0.files xf
-		RIGHT JOIN
 			delf
+		LEFT JOIN
+			ib0.files xf
 		ON
 			delf.fname = xf.fname AND delf.thumb = xf.thumb
 		WHERE
-			delf.f_id != xf.f_id
+			delf.f_id != xf.f_id OR xf.thumb IS NULL
 		GROUP BY
 			delf.fname,delf.thumb
 	)

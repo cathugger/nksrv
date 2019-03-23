@@ -49,7 +49,9 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 			return
 		}
 		// delet
-		sp.log.LogPrintf(DEBUG, "MAYB DELET file %q num %d", fname, fnum)
+		if fname != "" {
+			sp.log.LogPrintf(DEBUG, "MAYB DELET file %q num %d", fname, fnum)
+		}
 		if fname != "" && fnum == 0 {
 			sp.log.LogPrintf(DEBUG, "DELET file %q", fname)
 			err = os.Remove(sp.src.Main() + fname)
@@ -61,7 +63,9 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 				return
 			}
 		}
-		sp.log.LogPrintf(DEBUG, "MAYB DELET thumb %q num %d", tname, tnum)
+		if tname != "" {
+			sp.log.LogPrintf(DEBUG, "MAYB DELET thumb %q num %d", tname, tnum)
+		}
 		if tname != "" && tnum == 0 {
 			sp.log.LogPrintf(DEBUG, "DELET thumb %q", tname)
 			err = os.Remove(sp.thm.Main() + tname)
