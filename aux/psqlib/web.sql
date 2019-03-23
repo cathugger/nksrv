@@ -625,6 +625,8 @@ WITH
 					delbcp
 				ON
 					delbcp.g_p_id = xbp.g_p_id
+				WHERE
+					xbp.b_id != delbcp.b_id OR xbp.b_p_id != delbcp.b_p_id
 				GROUP BY
 					delbcp.g_p_id
 			) AS rcnts
@@ -634,9 +636,9 @@ WITH
 			xp.g_p_id
 	),
 	deleted_modids AS (
-		SELECT mod_id FROM delbp
+		SELECT mod_id,b_id,b_p_id FROM delbp
 		UNION ALL
-		SELECT mod_id FROM delbcp
+		SELECT mod_id,b_id,b_p_id FROM delbcp
 	),
 	clean_mods AS (
 		-- garbage collect moderator list
@@ -653,7 +655,8 @@ WITH
 				ON
 					delmod.mod_id = xbp.mod_id
 				WHERE
-					delmod.mod_id IS NOT NULL
+					delmod.mod_id IS NOT NULL AND
+						(delmod.b_id != xbp.b_id OR delmod.b_p_id != xbp.b_p_id)
 				GROUP BY
 					delmod.mod_id
 			) AS rcnts
@@ -698,6 +701,8 @@ WITH
 			delf
 		ON
 			delf.fname = xf.fname
+		WHERE
+			delf.f_id != xf.f_id
 		GROUP BY
 			delf.fname
 	),
@@ -710,6 +715,8 @@ WITH
 			delf
 		ON
 			delf.fname = xf.fname AND delf.thumb = xf.thumb
+		WHERE
+			delf.f_id != xf.f_id
 		GROUP BY
 			delf.fname,delf.thumb
 	)
