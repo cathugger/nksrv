@@ -4,12 +4,14 @@ args map:
 	"root" - root
 	"board" - board
 	"thread" - thread (optional)
+	"isreply" - whether its reply
 
 */ -}}
 
 {{$X := $.root -}}
 {{$B := $.board -}}
 {{$T := $.thread -}}
+{{$R := $.isreply -}}
 
 
 <form
@@ -33,6 +35,16 @@ args map:
     placeholder="Anonymous"
    /></td>
   </tr>
+  {{- if $R}}
+  <tr class="pf_row">
+   <th class="pf_label"><label for="options">Options</label></th>
+   <td class="pf_input"><input
+    name="options"
+    id="options"
+    type="text"
+   /></td>
+  </tr>
+  {{- else}}
   <tr class="pf_row">
    <th class="pf_label"><label for="title">Subject</label></th>
    <td class="pf_input"><input
@@ -41,6 +53,7 @@ args map:
     type="text"
    /></td>
   </tr>
+  {{- end}}
   <tr class="pf_row">
    <th class="pf_label"><label for="message">Comment</label></th>
    <td class="pf_input"><textarea

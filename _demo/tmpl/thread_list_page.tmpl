@@ -21,7 +21,7 @@
   {{- template "_boardinfo" $ -}}
 
   <p><h1>New thread</h1></p>
-  {{- template "_postform" map "root" $ "board" $.D.Board.Name -}}
+  {{- template "_postform" map "root" $ "board" $.D.Board.Name "isreply" 1  -}}
   <hr />
   {{template "_thread_list_nav" list $ 0}}
   <hr />

@@ -274,7 +274,7 @@ func (sp *PSQLIB) commonNewPost(
 	fnoptions := ib0.IBWebFormTextOptions
 
 	// XXX more fields
-	if len(f.Values[fntitle]) != 1 ||
+	if len(f.Values[fntitle]) > 1 ||
 		len(f.Values[fnname]) != 1 ||
 		len(f.Values[fnmessage]) != 1 ||
 		len(f.Values[fnoptions]) > 1 {
@@ -282,7 +282,10 @@ func (sp *PSQLIB) commonNewPost(
 		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
 
-	xftitle := f.Values[fntitle][0]
+	xftitle := ""
+	if len(f.Values[fntitle]) != 0 {
+		xftitle = f.Values[fntitle][0]
+	}
 	xfname := f.Values[fnname][0]
 	xfmessage := f.Values[fnmessage][0]
 	xfoptions := ""
