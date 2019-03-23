@@ -591,8 +591,8 @@ WITH
 		UPDATE
 			ib0.threads xt
 		SET
-			p_count = p_count - 1,
-			f_count = f_count - delbp.f_count
+			p_count = xt.p_count - 1,
+			f_count = xt.f_count - delbp.f_count
 		FROM
 			delbp
 		WHERE
@@ -607,7 +607,7 @@ WITH
 		WHERE
 			xbp.b_id = delbt.b_id AND xbp.t_id = delbt.t_id
 		RETURNING
-			xbp.b_id,xbp.b_p_id,g_p_id
+			xbp.b_id,xbp.b_p_id,xbp.g_p_id
 	),
 	delgcp AS (
 		-- delete global child posts
