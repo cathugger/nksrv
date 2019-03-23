@@ -717,7 +717,7 @@ SELECT
 	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL
 FROM
 	leftf
-JOIN
+FULL JOIN
 	leftt
 ON
 	leftf.fname = leftt.fname
