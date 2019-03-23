@@ -696,7 +696,7 @@ ON
 	leftf.fname = leftt.fname
 UNION ALL
 SELECT
-	"",0,"",0,b_id,t_id
+	'',0,'',0,b_id,t_id
 FROM
 	delbp
 WHERE
