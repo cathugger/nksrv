@@ -588,6 +588,7 @@ WITH
 	),
 	updbt AS (
 		-- update incase we haven't deleted thread earlier
+		-- TODO un-bump
 		UPDATE
 			ib0.threads xt
 		SET
@@ -686,11 +687,17 @@ WITH
 			delf.fname,delf.thumb
 	)
 SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL
 FROM
 	leftf
 JOIN
 	leftt
 ON
 	leftf.fname = leftt.fname
-
+UNION ALL
+SELECT
+	"",0,"",0,b_id,t_id
+FROM
+	delbp
+WHERE
+	t_id != b_p_id

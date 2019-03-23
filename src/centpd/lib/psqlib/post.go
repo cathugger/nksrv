@@ -22,15 +22,8 @@ func (sp *PSQLIB) unmarshalBoardConfig(
 	return
 }
 
-func (sp *PSQLIB) unmarshalThreadConfig(
-	postLimits *submissionLimits, threadOpts *threadOptions,
-	jtRL, jbTO, jtTO xtypes.JSONText) (err error) {
-
-	// jtRL - t.reply_limits
-	err = jtRL.Unmarshal(postLimits)
-	if err != nil {
-		return sp.sqlError("jtRL json unmarshal", err)
-	}
+func (sp *PSQLIB) unmarshalBoardThreadOpts(
+	threadOpts *threadOptions, jbTO, jtTO xtypes.JSONText) (err error) {
 
 	// jbTO - b.thread_opts
 	err = jbTO.Unmarshal(threadOpts)
@@ -45,4 +38,17 @@ func (sp *PSQLIB) unmarshalThreadConfig(
 	}
 
 	return
+}
+
+func (sp *PSQLIB) unmarshalThreadConfig(
+	postLimits *submissionLimits, threadOpts *threadOptions,
+	jtRL, jbTO, jtTO xtypes.JSONText) (err error) {
+
+	// jtRL - t.reply_limits
+	err = jtRL.Unmarshal(postLimits)
+	if err != nil {
+		return sp.sqlError("jtRL json unmarshal", err)
+	}
+
+	return sp.unmarshalBoardThreadOpts(threadOpts, jbTO, jtTO)
 }

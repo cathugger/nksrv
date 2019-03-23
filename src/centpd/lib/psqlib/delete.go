@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"os"
 
+	xtypes "github.com/jmoiron/sqlx/types"
+
 	. "centpd/lib/logx"
 	mm "centpd/lib/minimail"
 )
@@ -22,7 +24,14 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 	// idk if and how really that'd work.
 	// or we could just not bother with it and leave it for filesystem.
 
+	type affThr struct {
+		b boardID
+		t postID
+	}
+	var thr_aff []affThr
+
 	tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
+
 	delst := tx.Stmt(sp.st_prep[st_Web_delete_by_msgid])
 	rows, err := delst.Query(string(cmsgids))
 	if err != nil {
@@ -32,14 +41,15 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 	for rows.Next() {
 		var fname, tname string
 		var fnum, tnum int64
-		err = rows.Scan(&fname, &fnum, &tname, &tnum)
+		var xb_id, xt_id sql.NullInt64
+		err = rows.Scan(&fname, &fnum, &tname, &tnum, &xb_id, &xt_id)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("delete by msgid rows scan", err)
 			return
 		}
 		// delet
-		if fnum == 0 {
+		if fname != "" && fnum == 0 {
 			err = os.Remove(sp.src.Main() + fname)
 			if err != nil && os.IsNotExist(err) {
 				err = nil
@@ -49,7 +59,7 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 				return
 			}
 		}
-		if tnum == 0 {
+		if tname != "" && tnum == 0 {
 			err = os.Remove(sp.thm.Main() + tname)
 			if err != nil && os.IsNotExist(err) {
 				err = nil
@@ -59,10 +69,99 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 				return
 			}
 		}
+		if xb_id.Int64 != 0 && xt_id.Int64 != 0 {
+			thr_aff = append(thr_aff, affThr{
+				b: boardID(xb_id.Int64),
+				t: postID(xt_id.Int64),
+			})
+		}
 	}
 	if err = rows.Err(); err != nil {
 		err = sp.sqlError("delete by msgid rows err", err)
 		return
+	}
+
+	// now de-bump affected threads
+	for i := range thr_aff {
+		q := `
+SELECT
+	xb.b_name,xb.thread_opts,xt.thread_opts
+FROM
+	ib0.boards xb
+JOIN
+	ib0.threads xt
+ON
+	xb.b_id = xt.b_id
+WHERE
+	xb.b_id = $1 AND xt.t_id = $2
+`
+		var bname string
+		var jbTO xtypes.JSONText // board threads options
+		var jtTO xtypes.JSONText // thread options
+		threadOpts := defaultThreadOptions
+
+		err = tx.
+			QueryRow(q, thr_aff[i].b, thr_aff[i].t).
+			Scan(&bname, &jbTO, &jtTO)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// just skip it
+				continue
+			}
+			err = sp.sqlError("board x thread row query scan", err)
+			return
+		}
+
+		err = sp.unmarshalBoardThreadOpts(&threadOpts, jbTO, jtTO)
+		if err != nil {
+			return
+		}
+		sp.applyInstanceThreadOptions(&threadOpts, bname)
+
+		q2 := `
+UPDATE
+	ib0.threads
+SET
+	bump = pdate
+FROM
+	(
+		SELECT
+			pdate
+		FROM (
+			SELECT
+				pdate,
+				b_p_id,
+				sage
+			FROM
+				ib0.bposts
+			WHERE
+				-- count sages against bump limit.
+				-- because others do it like that :<
+				b_id = $1 AND t_id = $2
+			ORDER BY
+				pdate ASC,
+				b_p_id ASC
+			LIMIT
+				$3
+			-- take bump posts, sorted by original date,
+			-- only upto bump limit
+		) AS tt
+	WHERE
+		sage != TRUE
+	ORDER BY
+		pdate DESC,b_p_id DESC
+	LIMIT
+		1
+	-- and pick latest one
+) as xbump
+WHERE
+	b_id = $1 AND t_id = $2
+`
+		_, err = tx.Exec(q2, thr_aff[i].b, thr_aff[i].t, threadOpts.BumpLimit)
+		if err != nil {
+			err = sp.sqlError("thread debump exec", err)
+			return
+		}
 	}
 
 	return nil
