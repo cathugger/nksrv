@@ -22,7 +22,7 @@
   <hr />
 
   {{range $T := $.D.Threads -}}
-   <div><a href="{{$.N.Root}}/{{escboard $.T.BoardName}}/">/{{html $.T.BoardName}}/</a></div>
+   <div><a href="{{$.N.Root}}/{{escboard $T.BoardName}}/">/{{html $T.BoardName}}/</a></div>
    {{template "op" list $ (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
    {{if $T.SkippedReplies -}}
     <div><strong class="t_skipped">{{$T.SkippedReplies}}
