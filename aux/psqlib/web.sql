@@ -618,17 +618,13 @@ WITH
 			(
 				-- XXX is it even possible to have this false?
 				SELECT
-					delbcp.g_p_id,COUNT(xbp.g_p_id) <> 0 AS hasrefs
+					delbcp.g_p_id,COUNT(xbp.g_p_id) > 1 AS hasrefs
 				FROM
 					delbcp
 				LEFT JOIN
 					ib0.bposts xbp
 				ON
 					delbcp.g_p_id = xbp.g_p_id
-				WHERE
-					xbp.b_id != delbcp.b_id OR
-						xbp.b_p_id != delbcp.b_p_id OR
-						xbp.g_p_id IS NULL
 				GROUP BY
 					delbcp.g_p_id
 			) AS rcnts
@@ -649,7 +645,7 @@ WITH
 		USING
 			(
 				SELECT
-					delmod.mod_id,COUNT(xbp.mod_id) <> 0 AS hasrefs
+					delmod.mod_id,COUNT(xbp.mod_id) > 1 AS hasrefs
 				FROM
 					deleted_modids delmod
 				LEFT JOIN
@@ -657,10 +653,7 @@ WITH
 				ON
 					delmod.mod_id = xbp.mod_id
 				WHERE
-					delmod.mod_id IS NOT NULL AND
-						(delmod.b_id != xbp.b_id OR
-							delmod.b_p_id != xbp.b_p_id OR
-							xbp.mod_id IS NULL)
+					delmod.mod_id IS NOT NULL
 				GROUP BY
 					delmod.mod_id
 			) AS rcnts
@@ -698,29 +691,25 @@ WITH
 	),
 	leftf AS (
 		SELECT
-			delf.fname,COUNT(xf.fname) AS fnum
+			delf.fname,COUNT(xf.fname) - 1 AS fnum
 		FROM
 			delf
 		LEFT JOIN
 			ib0.files xf
 		ON
 			delf.fname = xf.fname
-		WHERE
-			delf.f_id != xf.f_id OR xf.fname IS NULL
 		GROUP BY
 			delf.fname
 	),
 	leftt AS (
 		SELECT
-			delf.fname,delf.thumb,COUNT(xf.thumb) AS tnum
+			delf.fname,delf.thumb,COUNT(xf.thumb) - 1 AS tnum
 		FROM
 			delf
 		LEFT JOIN
 			ib0.files xf
 		ON
 			delf.fname = xf.fname AND delf.thumb = xf.thumb
-		WHERE
-			delf.f_id != xf.f_id OR xf.thumb IS NULL
 		GROUP BY
 			delf.fname,delf.thumb
 	)
