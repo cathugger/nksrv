@@ -3,6 +3,9 @@ package psqlib
 import (
 	"database/sql"
 	"os"
+
+	. "centpd/lib/logx"
+	mm "centpd/lib/minimail"
 )
 
 func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
@@ -63,4 +66,40 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 	}
 
 	return nil
+}
+
+func (sp *PSQLIB) DemoDeleteByMsgID(msgids []string) {
+	var err error
+
+	for _, s := range msgids {
+		if !mm.ValidMessageIDStr(FullMsgIDStr(s)) {
+			sp.log.LogPrintf(ERROR, "invalid msgid %q", s)
+			return
+		}
+	}
+
+	tx, err := sp.db.DB.Begin()
+	if err != nil {
+		err = sp.sqlError("tx begin", err)
+		return
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, s := range msgids {
+		sp.log.LogPrintf(INFO, "deleting %s", s)
+		err = sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)))
+		if err != nil {
+			return
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		err = sp.sqlError("tx commit", err)
+		return
+	}
 }

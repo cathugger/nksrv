@@ -165,6 +165,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				ib0.IBWebFormTextTitle,
 				ib0.IBWebFormTextName,
 				ib0.IBWebFormTextMessage,
+				ib0.IBWebFormTextOptions,
 				"board",
 				"thread",
 			}

@@ -271,11 +271,13 @@ func (sp *PSQLIB) commonNewPost(
 	fntitle := ib0.IBWebFormTextTitle
 	fnname := ib0.IBWebFormTextName
 	fnmessage := ib0.IBWebFormTextMessage
+	fnoptions := ib0.IBWebFormTextOptions
 
 	// XXX more fields
 	if len(f.Values[fntitle]) != 1 ||
 		len(f.Values[fnname]) != 1 ||
-		len(f.Values[fnmessage]) != 1 {
+		len(f.Values[fnmessage]) != 1 ||
+		len(f.Values[fnoptions]) > 1 {
 
 		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
@@ -283,14 +285,19 @@ func (sp *PSQLIB) commonNewPost(
 	xftitle := f.Values[fntitle][0]
 	xfname := f.Values[fnname][0]
 	xfmessage := f.Values[fnmessage][0]
+	xfoptions := ""
+	if len(f.Values[fnoptions]) != 0 {
+		xfoptions = f.Values[fnoptions][0]
+	}
 
 	sp.log.LogPrintf(DEBUG,
-		"post: board %q thread %q xftitle %q xfmessage %q",
-		board, thread, xftitle, xfmessage)
+		"post: board %q thread %q xftitle %q xfmessage %q xfoptions %q",
+		board, thread, xftitle, xfmessage, xfoptions)
 
 	if !validFormText(xftitle) ||
 		!validFormText(xfname) ||
-		!validFormText(xfmessage) {
+		!validFormText(xfmessage) ||
+		!validFormText(xfoptions) {
 
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
@@ -449,6 +456,14 @@ ON
 		"form fields after processing: Title(%q) Message(%q)",
 		pInfo.MI.Title, pInfo.MI.Message)
 
+	ok, postOpts := parsePostOptions(optimiseFormLine(xfoptions))
+	if !ok {
+		return rInfo, errors.New("invalid options"), http.StatusBadRequest
+	}
+
+	pInfo.MI.Sage = isReply &&
+		(postOpts.sage || strings.ToLower(pInfo.MI.Title) == "sage")
+
 	// check for specified limits
 	var filecount int
 	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo.MI)
@@ -456,7 +471,13 @@ ON
 		return rInfo, err, http.StatusBadRequest
 	}
 
-	// XXX abort for empty msg if len(fmessage) == 0 && filecount == 0?
+	// disallow content-less msgs
+	if len(pInfo.MI.Message) == 0 &&
+		filecount == 0 &&
+		(len(signkeyseed) == 0 || len(pInfo.MI.Title) == 0) {
+
+		return rInfo, errors.New("posting empty messages isn't allowed"), http.StatusBadRequest
+	}
 
 	// at this point message should be checked
 	// we should calculate proper file names here
