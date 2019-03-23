@@ -173,7 +173,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				g_p_id,
 				pdate,
 				padded,
-				sage
+				sage,
+				mod_id
 			)
 		SELECT
 			$12,        -- b_id
@@ -183,7 +184,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
-			ugp.sage
+			ugp.sage,
+			$16         -- mod_id
 		FROM
 			ub
 		CROSS JOIN
