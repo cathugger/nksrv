@@ -680,7 +680,7 @@ WITH
 			(
 				SELECT
 					xx.b_id,
-					xx.p_count,
+					SUM(xx.p_count),
 					COUNT(delbt.b_id) AS t_count
 				FROM
 					(
@@ -701,7 +701,7 @@ WITH
 				ON
 					xx.b_id = delbt.b_id
 				GROUP BY
-					xx.b_id,xx.p_count
+					xx.b_id
 			) AS xtp
 		WHERE
 			xb.b_id = xtp.b_id
