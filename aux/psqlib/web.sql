@@ -680,7 +680,7 @@ WITH
 			(
 				SELECT
 					xx.b_id,
-					SUM(xx.p_count),
+					SUM(xx.p_count) AS p_count,
 					COUNT(delbt.b_id) AS t_count
 				FROM
 					(
