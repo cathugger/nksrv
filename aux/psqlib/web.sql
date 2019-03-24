@@ -674,7 +674,7 @@ WITH
 		UPDATE
 			ib0.boards xb
 		SET
-			p_count = xb.p_count - xtp.p_count
+			p_count = xb.p_count - xtp.p_count,
 			t_count = xb.t_count - xtp.t_count
 		FROM
 			(
