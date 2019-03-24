@@ -642,11 +642,6 @@ WITH
 		RETURNING
 			xp.g_p_id
 	),
-	deleted_modids AS (
-		SELECT mod_id,b_id,b_p_id FROM delbp
-		UNION ALL
-		SELECT mod_id,b_id,b_p_id FROM delbcp
-	),
 	clean_mods AS (
 		-- garbage collect moderator list
 		DELETE FROM
@@ -656,7 +651,11 @@ WITH
 				SELECT
 					delmod.mod_id,COUNT(xbp.mod_id) > 1 AS hasrefs
 				FROM
-					deleted_modids delmod
+					(
+						SELECT mod_id,b_id,b_p_id FROM delbp
+						UNION ALL
+						SELECT mod_id,b_id,b_p_id FROM delbcp
+					) AS delmod
 				LEFT JOIN
 					ib0.bposts xbp
 				ON
@@ -720,8 +719,11 @@ WITH
 			xgpids.g_p_id = xf.g_p_id
 		RETURNING
 			xf.f_id,xf.fname,xf.thumb
-	),
-	leftf AS (
+	)
+SELECT
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL
+FROM
+	(
 		-- minus 1 because snapshot isolation
 		SELECT
 			delf.fname,COUNT(xf.fname) - 1 AS fnum
@@ -733,8 +735,9 @@ WITH
 			delf.fname = xf.fname
 		GROUP BY
 			delf.fname
-	),
-	leftt AS (
+	) AS leftf
+FULL JOIN
+	(
 		-- minus 1 because snapshot isolation
 		SELECT
 			delf.fname,delf.thumb,COUNT(xf.thumb) - 1 AS tnum
@@ -746,13 +749,7 @@ WITH
 			delf.fname = xf.fname AND delf.thumb = xf.thumb
 		GROUP BY
 			delf.fname,delf.thumb
-	)
-SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL
-FROM
-	leftf
-FULL JOIN
-	leftt
+	) AS leftt
 ON
 	leftf.fname = leftt.fname
 UNION ALL
