@@ -701,7 +701,7 @@ WITH
 				ON
 					xx.b_id = delbt.b_id
 				GROUP BY
-					xx.b_id
+					xx.b_id,xx.p_count
 			) AS xtp
 		WHERE
 			xb.b_id = xtp.b_id
