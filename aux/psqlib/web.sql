@@ -679,21 +679,29 @@ WITH
 		FROM
 			(
 				SELECT
-					delbpx.b_id,
-					COUNT(delbpx.b_id) AS p_count,
+					xx.b_id,
+					xx.p_count,
 					COUNT(delbt.b_id) AS t_count
 				FROM
 					(
-						SELECT b_id FROM delbp
-						UNION ALL
-						SELECT b_id FROM delbcp
-					) AS delbpx
+						SELECT
+							delbpx.b_id,
+							COUNT(delbpx.b_id) AS p_count
+						FROM
+							(
+								SELECT b_id FROM delbp
+								UNION ALL
+								SELECT b_id FROM delbcp
+							) AS delbpx
+						GROUP BY
+							delbpx.b_id
+					) AS xx
 				LEFT JOIN
 					delbt
 				ON
-					delbpx.b_id = delbt.b_id
+					xx.b_id = delbt.b_id
 				GROUP BY
-					delbpx.b_id
+					xx.b_id
 			) AS xtp
 		WHERE
 			xb.b_id = xtp.b_id
