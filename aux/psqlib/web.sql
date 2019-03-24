@@ -669,31 +669,34 @@ WITH
 		WHERE
 			rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id AND mods.automanage = TRUE
 	),
-	updb_t AS (
-		-- update boards thread count
+	updb AS (
+		-- update boards post and thread counts
 		UPDATE
 			ib0.boards xb
 		SET
-			t_count = xb.t_count - 1
-		FROM
-			delbt
-		WHERE
-			xb.b_id = delbt.b_id
-	),
-	updb_p AS (
-		-- update boards post count
-		UPDATE
-			ib0.boards xb
-		SET
-			p_count = xb.p_count - 1
+			p_count = xb.p_count - xtp.p_count
+			t_count = xb.t_count - xtp.t_count
 		FROM
 			(
-				SELECT b_id FROM delbp
-				UNION
-				SELECT b_id FROM delbcp
-			) AS delbpx
+				SELECT
+					delbpx.b_id,
+					COUNT(delbpx.b_id) AS p_count,
+					COUNT(delbt.b_id) AS t_count
+				FROM
+					(
+						SELECT b_id FROM delbp
+						UNION
+						SELECT b_id FROM delbcp
+					) AS delbpx
+				LEFT JOIN
+					delbt
+				ON
+					delbpx.b_id = delbt.b_id
+				GROUP BY
+					delbpx.b_id
+			) AS xtp
 		WHERE
-			xb.b_id = delbpx.b_id
+			xb.b_id = xtp.b_id
 	),
 	delf AS (
 		-- delete relevant files
