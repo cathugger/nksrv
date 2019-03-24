@@ -685,7 +685,7 @@ WITH
 				FROM
 					(
 						SELECT b_id FROM delbp
-						UNION
+						UNION ALL
 						SELECT b_id FROM delbcp
 					) AS delbpx
 				LEFT JOIN
