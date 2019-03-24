@@ -554,6 +554,15 @@ RETURNING
 	mod_id, mod_priv
 
 -- :name delete_by_msgid
+/*
+IMPORTANT:
+https://www.postgresql.org/docs/9.6/queries-with.html
+All the statements are executed with the same snapshot (see Chapter 13),
+so they cannot "see" one another's effects on the target tables.
+This alleviates the effects of the unpredictability of the actual order
+of row updates, and means that RETURNING data is the only way to
+communicate changes between different WITH sub-statements and the main query.
+*/
 WITH
 	delgp AS (
 		-- delete global post
@@ -660,19 +669,31 @@ WITH
 		WHERE
 			rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id AND mods.automanage = TRUE
 	),
-	updb AS (
-		-- update boards (yeh I'm being lazy there)
+	updb_t AS (
+		-- update boards thread count
 		UPDATE
 			ib0.boards xb
 		SET
-			t_count = (SELECT COUNT(*) FROM ib0.threads zt WHERE xb.b_id = zt.b_id),
-			p_count = (SELECT COUNT(*) FROM ib0.bposts zbp WHERE xb.b_id = zbp.b_id)
+			t_count = xb.t_count - 1,
+		FROM
+			delbt
 		WHERE
-			xb.b_id IN (
+			xb.b_id = delbt.b_id
+	),
+	updb_p AS (
+		-- update boards post count
+		UPDATE
+			ib0.boards xb
+		SET
+			p_count = xb.p_count - 1
+		FROM
+			(
 				SELECT b_id FROM delbp
 				UNION
 				SELECT b_id FROM delbcp
-			)
+			) AS delbpx
+		WHERE
+			xb.b_id = delbpx.b_id
 	),
 	delf AS (
 		-- delete relevant files
@@ -690,6 +711,7 @@ WITH
 			xf.f_id,xf.fname,xf.thumb
 	),
 	leftf AS (
+		-- minus 1 because snapshot isolation
 		SELECT
 			delf.fname,COUNT(xf.fname) - 1 AS fnum
 		FROM
@@ -702,6 +724,7 @@ WITH
 			delf.fname
 	),
 	leftt AS (
+		-- minus 1 because snapshot isolation
 		SELECT
 			delf.fname,delf.thumb,COUNT(xf.thumb) - 1 AS tnum
 		FROM
