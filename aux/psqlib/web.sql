@@ -674,7 +674,7 @@ WITH
 		UPDATE
 			ib0.boards xb
 		SET
-			t_count = xb.t_count - 1,
+			t_count = xb.t_count - 1
 		FROM
 			delbt
 		WHERE
