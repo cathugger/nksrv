@@ -99,7 +99,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 		h_get.Handle("/", false, http.HandlerFunc(cfg.HTMLRenderer.ServeBoardList))
 
-		h_get.Handle("/_o", true,
+		h_get.Handle("/_ukko", true,
 			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					pn := r.Context().Value("pn").(string)
