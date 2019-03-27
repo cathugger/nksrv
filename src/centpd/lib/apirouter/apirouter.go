@@ -249,7 +249,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
 			})))
 
-	h.Handle("/ukko", true, h_overboard)
+	h.Handle("/overboard", true, h_overboard)
 
 	if cfg.Auth != nil {
 		h.Handle("/auth/login", false, http.HandlerFunc(
