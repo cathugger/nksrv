@@ -19,12 +19,11 @@ func (r Responder) Abort() {
 type ConnState struct {
 	inbuf [512]byte
 
-	srv  *NNTPServer
-	conn ConnCW
-	r    *bufreader.BufReader
-	dr   *bufreader.DotReader
-	w    Responder
-	log  Logger
+	srv *NNTPServer
+	r   *bufreader.BufReader
+	dr  *bufreader.DotReader
+	w   Responder
+	log Logger
 
 	prov         NNTPProvider
 	CurrentGroup interface{}

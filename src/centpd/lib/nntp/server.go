@@ -65,7 +65,8 @@ func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 			c.SetKeepAlive(false)
 		}
 	}
-	// XXX incase c == nil, returns not nil interface but interface which points to nil
+	// XXX incase c == nil, returns not nil interface,
+	// but interface which points to typed nil
 	// hopefuly err gon b set then, so that faulty nil interface won't be used
 	return c, err
 }
@@ -130,10 +131,9 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 func (s *NNTPServer) handleConnection(c ConnCW) {
 	cs := &ConnState{
 		srv:  s,
-		conn: c,
 		r:    bufreader.NewBufReader(c),
-		prov: s.prov,
 		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
+		prov: s.prov,
 	}
 	cs.log = NewLogToX(
 		s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
@@ -222,7 +222,8 @@ func (s *NNTPServer) Serve(l ListenerCW) error {
 		}
 		s.log.LogPrintf(
 			NOTICE, "accepted %s on %s", c.RemoteAddr(), c.LocalAddr())
-		// track it, we gonna need it when closing, as Serve() functions may prematurely return and thats OK
+		// track it, we gonna need it when closing,
+		// as Serve() functions may prematurely return and thats OK
 		s.registerConn(c)
 		// spawn handler
 		go s.handleConnection(c)
@@ -231,19 +232,16 @@ func (s *NNTPServer) Serve(l ListenerCW) error {
 
 func (s *NNTPServer) Close() bool {
 	s.mu.Lock()
-
 	if s.closing {
 		s.mu.Unlock()
 		return false
 	}
 	s.closing = true
-
 	// new listeners wont spawn, but closed ones may deregister
 	for l := range s.listeners {
 		l.Close()
 	}
 	// listeners should just die off now
-
 	s.mu.Unlock()
 
 	// wait for all Serve()s to quit
@@ -252,13 +250,11 @@ func (s *NNTPServer) Close() bool {
 	// they all should be ded now
 
 	s.mu.Lock()
-
 	// now kill all active connections
 	// locked because they sometimes can remove themselves
 	for c := range s.connections {
 		c.Close()
 	}
-
 	// to finish clients need to unregister
 	s.mu.Unlock()
 
@@ -267,11 +263,10 @@ func (s *NNTPServer) Close() bool {
 
 	// now, to unset closing state..
 	s.mu.Lock()
-
 	// we're done closing, so allow new servers to spawn later
 	s.closing = false
-
 	s.mu.Unlock()
+
 	// done ^_^
 	return true
 }
