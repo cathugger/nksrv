@@ -2,6 +2,7 @@ package nntp
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -33,6 +34,8 @@ type NNTPServer struct {
 	log  Logger
 	logx LoggerX
 	prov NNTPProvider
+
+	tlsConfig *tls.Config
 
 	mu          sync.Mutex
 	closing     bool
@@ -129,15 +132,37 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 }
 
 func (s *NNTPServer) handleConnection(c ConnCW) {
+	var abortconn bool
 	cs := &ConnState{
 		srv:  s,
-		r:    bufreader.NewBufReader(c),
-		w:    Responder{tp.NewWriter(bufio.NewWriter(c))},
 		prov: s.prov,
 	}
+
+	var fc net.Conn
+	if s.tlsConfig != nil {
+		// this is TLS server
+		tlsc := tls.Client(c, s.tlsConfig)
+		err := tlsc.Handshake()
+		if err != nil {
+			s.log.LogPrintf(
+				ERROR, "closing %s on %s because TLS Handshake error: %v", err)
+			c.SetLinger(-1)
+			tlsc.Close()
+			goto cleanup
+		}
+		fc = tlsc
+	} else {
+		// plaintext
+		fc = c
+	}
+
 	cs.log = NewLogToX(
 		s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
+
 	s.setupClientDefaults(cs)
+
+	cs.r = bufreader.NewBufReader(fc)
+	cs.w = Responder{tp.NewWriter(bufio.NewWriter(fc))}
 
 	if cs.AllowPosting {
 		cs.w.PrintfLine("200 hello! posting allowed.")
@@ -145,7 +170,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		cs.w.PrintfLine("201 hello! posting forbidden.")
 	}
 
-	abortconn := cs.serveClient()
+	abortconn = cs.serveClient()
 
 	if !abortconn {
 		// let OS handle FIN signaling in background
@@ -157,7 +182,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 			NOTICE, "resetting %s on %s", c.RemoteAddr(), c.LocalAddr())
 	}
 
-	c.Close()
+	fc.Close()
+
+cleanup:
 	s.unregisterConn(c)
 	s.cwg.Done()
 }
