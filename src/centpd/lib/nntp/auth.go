@@ -5,6 +5,13 @@ type UserPriv struct {
 	AllowWrite bool
 }
 
+func MergeUserPriv(a, b UserPriv) UserPriv {
+	return UserPriv{
+		AllowRead:  a.AllowRead || b.AllowRead,
+		AllowWrite: a.AllowWrite || b.AllowWrite,
+	}
+}
+
 func ParseUserPriv(s string, up UserPriv) (_ UserPriv, ok bool) {
 	for _, c := range s {
 		switch c {
@@ -19,10 +26,12 @@ func ParseUserPriv(s string, up UserPriv) (_ UserPriv, ok bool) {
 	return up, true
 }
 
-//type NNTPCertFPProvider interface {
-//	NNTPUserByFingerprint(cert *x509.Certificate) *User
-//	NNTPUserByAnchor(cert *x509.Certificate, anchor string) *User
-//}
+type UserInfo struct {
+	Name string
+	Serv string
+
+	UserPriv
+}
 
 func (s *NNTPServer) setupClientDefaults(c *ConnState) {
 	// TODO
