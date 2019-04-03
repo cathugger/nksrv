@@ -1,7 +1,6 @@
 package certfp
 
 import (
-	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
@@ -26,7 +25,6 @@ type MatchingType int
 
 const (
 	MatchingTypeIdentity MatchingType = iota
-	MatchingTypeSHA1
 	MatchingTypeSHA2_224
 	MatchingTypeSHA2_256
 	MatchingTypeSHA2_384
@@ -44,7 +42,6 @@ const (
 
 var MatchingTypeStr = [_MatchingTypeMax]string{
 	"ident",
-	"sha1",
 	"sha224",
 	"sha256",
 	"sha384",
@@ -59,11 +56,6 @@ var MatchingTypeStr = [_MatchingTypeMax]string{
 	"blake2b",
 }
 
-type FingerprintParams struct {
-	Selector     Selector
-	MatchingType MatchingType
-}
-
 var errUnknown = errors.New("unknown fingerprint type")
 var errBadSize = errors.New("unsupported fingerprint length")
 
@@ -72,9 +64,6 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 	switch ts {
 	case "ident", "id", "identity":
 		mt = MatchingTypeIdentity
-
-	case "sha1":
-		mt = MatchingTypeSHA1
 
 	case "sha2-224", "sha224":
 		mt = MatchingTypeSHA2_224
@@ -128,10 +117,6 @@ func ParseCertFP(s string) (mt MatchingType, data []byte, err error) {
 		return
 	}
 	switch mt {
-	case MatchingTypeSHA1:
-		if len(data) != 20 {
-			err = errBadSize
-		}
 	case MatchingTypeSHA2_224, MatchingTypeSHA3_224:
 		if len(data) != 28 {
 			err = errBadSize
@@ -172,10 +157,6 @@ func MakeFingerprint(
 	switch mt {
 	case MatchingTypeIdentity:
 		return data
-
-	case MatchingTypeSHA1:
-		h := sha1.Sum(data)
-		return h[:]
 
 	case MatchingTypeSHA2_224:
 		h := sha256.Sum224(data)
