@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -25,6 +26,7 @@ type MatchingType int
 
 const (
 	MatchingTypeIdentity MatchingType = iota
+	MatchingTypeRIPEMD160
 	MatchingTypeSHA2_224
 	MatchingTypeSHA2_256
 	MatchingTypeSHA2_384
@@ -42,6 +44,7 @@ const (
 
 var MatchingTypeStr = [_MatchingTypeMax]string{
 	"ident",
+	"ripemd160",
 	"sha224",
 	"sha256",
 	"sha384",
@@ -64,6 +67,9 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 	switch ts {
 	case "ident", "id", "identity":
 		mt = MatchingTypeIdentity
+
+	case "rmd160", "ripemd160", "ripemd-160":
+		mt = MatchingTypeRIPEMD160
 
 	case "sha2-224", "sha224":
 		mt = MatchingTypeSHA2_224
@@ -117,6 +123,10 @@ func ParseCertFP(s string) (mt MatchingType, data []byte, err error) {
 		return
 	}
 	switch mt {
+	case MatchingTypeRIPEMD160:
+		if len(data) != 20 {
+			err = errBadSize
+		}
 	case MatchingTypeSHA2_224, MatchingTypeSHA3_224:
 		if len(data) != 28 {
 			err = errBadSize
@@ -157,6 +167,11 @@ func MakeFingerprint(
 	switch mt {
 	case MatchingTypeIdentity:
 		return data
+
+	case MatchingTypeRIPEMD160:
+		hx := ripemd160.New()
+		hx.Write(data)
+		return hx.Sum(nil)
 
 	case MatchingTypeSHA2_224:
 		h := sha256.Sum224(data)
