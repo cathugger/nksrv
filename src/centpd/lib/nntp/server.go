@@ -92,11 +92,14 @@ func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 	return c, err
 }
 
-func NewNNTPServer(prov NNTPProvider, logx LoggerX) *NNTPServer {
+func NewNNTPServer(
+	prov NNTPProvider, logx LoggerX, runCfg *NNTPServerRunCfg) *NNTPServer {
+
 	s := &NNTPServer{
 		prov: prov,
 		logx: logx,
 	}
+	s.SetRunCfg(runCfg)
 	s.log = NewLogToX(logx, fmt.Sprintf("nntpsrv.%p", s))
 	return s
 }

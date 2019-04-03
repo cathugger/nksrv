@@ -37,7 +37,7 @@ func main() {
 		Log: NewLogToX(lgr, "testsrv"),
 	}
 
-	srv := nntp.NewNNTPServer(prov, lgr)
+	srv := nntp.NewNNTPServer(prov, lgr, &nntp.NNTPServerRunCfg{})
 
 	err = srv.ListenAndServe("tcp4", "127.0.0.1:6633", nntp.ListenParam{})
 	if err != nil {
