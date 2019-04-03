@@ -51,9 +51,8 @@ var MatchingTypeStr = [_MatchingTypeMax]string{
 	"blake2b",
 }
 
-type FingerprintData string
-
 var errUnknown = errors.New("unknown fingerprint type")
+var errBadSize = errors.New("unsupported fingerprint length")
 
 func ParseMatchingType(s string) (mt MatchingType, err error) {
 	ts := strings.ToLower(s)
@@ -74,9 +73,9 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 		mt = MatchingTypeSHAKE128
 	case "shake256", "s256":
 		mt = MatchingTypeSHAKE256
-	case "blake2s", "b2s":
+	case "blake2s", "b2s", "blake2s256":
 		mt = MatchingTypeBLAKE2s
-	case "blake2b", "b2b", "blake2", "b2":
+	case "blake2b", "b2b", "blake2b512", "blake2", "b2":
 		mt = MatchingTypeBLAKE2b
 	default:
 		err = errUnknown
@@ -84,7 +83,7 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 	return
 }
 
-func ParseCertFP(s string) (mt MatchingType, fm FingerprintData, err error) {
+func ParseCertFP(s string) (mt MatchingType, data []byte, err error) {
 	i := strings.IndexByte(s, ':')
 	if i < 0 {
 		err = errUnknown
@@ -97,17 +96,29 @@ func ParseCertFP(s string) (mt MatchingType, fm FingerprintData, err error) {
 	}
 
 	purehex := strings.Replace(s[i+1:], ":", "", -1)
-	data, err := hex.DecodeString(purehex)
+	data, err = hex.DecodeString(purehex)
 	if err != nil {
 		return
 	}
-
-	fm = FingerprintData(data)
+	switch mt {
+	case MatchingTypeSHA1:
+		if len(data) != 20 {
+			err = errBadSize
+		}
+	case MatchingTypeSHA2_256, MatchingTypeSHA3_256, MatchingTypeSHAKE128, MatchingTypeBLAKE2s:
+		if len(data) != 32 {
+			err = errBadSize
+		}
+	case MatchingTypeSHA2_512, MatchingTypeSHA3_512, MatchingTypeSHAKE256, MatchingTypeBLAKE2b:
+		if len(data) != 64 {
+			err = errBadSize
+		}
+	}
 	return
 }
 
 func MakeFingerprint(
-	cert *x509.Certificate, selector Selector, mt MatchingType) FingerprintData {
+	cert *x509.Certificate, selector Selector, mt MatchingType) []byte {
 
 	var data []byte
 	switch selector {
@@ -123,51 +134,51 @@ func MakeFingerprint(
 
 	switch mt {
 	case MatchingTypeIdentity:
-		return FingerprintData(data)
+		return data
 
 	case MatchingTypeSHA1:
 		h := sha1.Sum(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHA2_256:
 		h := sha256.Sum256(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHA2_512:
 		h := sha512.Sum512(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHA3_256:
 		h := sha3.Sum256(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHA3_512:
 		h := sha3.Sum512(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHAKE128:
 		var h [32]byte
 		sha3.ShakeSum128(h[:], data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeSHAKE256:
 		var h [64]byte
 		sha3.ShakeSum256(h[:], data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeBLAKE2s:
 		h := blake2s.Sum256(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	case MatchingTypeBLAKE2b:
 		h := blake2b.Sum512(data)
-		return FingerprintData(h[:])
+		return h[:]
 
 	default:
 		panic("unknown matchingtype")
 	}
 }
 
-func FingerprintString(mt MatchingType, d FingerprintData) string {
-	return MatchingTypeStr[mt] + ":" + hex.EncodeToString([]byte(d))
+func FingerprintString(mt MatchingType, data []byte) string {
+	return MatchingTypeStr[mt] + ":" + hex.EncodeToString(data)
 }
