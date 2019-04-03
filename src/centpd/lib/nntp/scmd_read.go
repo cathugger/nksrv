@@ -10,10 +10,10 @@ const (
 	articleHead
 	articleBody
 	articleStat
-	articleAmmount
+	_articleAmount
 )
 
-var setA = [articleAmmount]struct {
+var setA = [_articleAmount]struct {
 	byMsgID func(c *ConnState, msgid []byte) bool
 	byNum   func(c *ConnState, num uint64) bool
 	byCurr  func(c *ConnState) bool

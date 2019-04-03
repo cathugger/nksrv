@@ -58,7 +58,7 @@ func (pi *PostInfo) DeleteFiles() {
 }
 
 // for cases when we intend to store some stuff in memory,
-// but only limited ammount of it
+// but only limited amount of it
 type PostContext interface {
 	MakeFile() (PostFile, error)
 	Release()

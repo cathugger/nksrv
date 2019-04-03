@@ -140,7 +140,7 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, _ error) {
 			r.r += x
 			return
 		} else {
-			// copy ammount we can. this will fully succeed here too
+			// copy amount we can. this will fully succeed here too
 			x = copy(p[n:], r.b[r.r:x])
 			n += x
 			r.r += x
@@ -225,8 +225,8 @@ func (r *BufReader) FillBufferUpto(w int) (n int, _ error) {
 	return
 }
 
-// skips specified ammount of bytes. if specified ammount is negative, read until fail.
-// returns skipped ammount of bytes and error if specified ammount could not be skipped.
+// skips specified amount of bytes. if specified amount is negative, read until fail.
+// returns skipped amount of bytes and error if specified amount could not be skipped.
 func (r *BufReader) Discard(n int) (s int, _ error) {
 	var x int
 	for {

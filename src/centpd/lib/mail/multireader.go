@@ -15,7 +15,7 @@ type PartReader struct {
 	br    *bufreader.BufReader // underlying reader
 	extbr bool                 // whether br is external
 
-	n                int   // ammount of readable data
+	n                int   // amount of readable data
 	err              error // queued error
 	rpart            int   // how much of current part was read
 	dashBoundaryDash []byte

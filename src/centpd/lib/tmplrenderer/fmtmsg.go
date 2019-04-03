@@ -168,7 +168,7 @@ func formatmsg(
 				return
 			}
 			c := b[src]
-			inc := 1 // default ammout to skip is one character
+			inc := 1 // default amount to skip is one character
 			var esc []byte
 			switch c {
 			case '"':
@@ -242,7 +242,7 @@ func formatmsg(
 			if fe != nil {
 				return
 			}
-			// skip some ammount
+			// skip some amount
 			src += inc
 			// set new mark
 			last = src
