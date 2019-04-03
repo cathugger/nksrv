@@ -1,9 +1,12 @@
 package nntp
 
 import (
+	"crypto/tls"
 	"fmt"
 	"sort"
 	"time"
+
+	. "centpd/lib/logx"
 )
 
 var commandMap map[string]*command
@@ -48,6 +51,9 @@ func init() {
 		"SLAVE": &command{
 			cmdfunc: cmdSlave,
 			help:    "- notify server about slave status.",
+		},
+		"STARTTLS": &command{
+			cmdfunc: cmdStartTLS,
 		},
 		"DATE": &command{
 			cmdfunc: cmdDate,
@@ -272,6 +278,10 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
+	if c.srv.tlsConfig != nil && !c.tlsStarted {
+		fmt.Fprintf(dw, "STARTTLS\n")
+	}
+
 	// TODO maybe include backend identification
 	fmt.Fprintf(dw, "IMPLEMENTATION CNTPD\n")
 
@@ -459,5 +469,31 @@ func cmdDate(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdSlave(c *ConnState, args [][]byte, rest []byte) bool {
 	c.w.PrintfLine("202 slave status noted") // :^)
+	return true
+}
+
+func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
+	if c.srv.tlsConfig == nil {
+		c.w.PrintfLine("580 TLS not configured")
+		return true
+	}
+	if c.tlsStarted {
+		c.w.PrintfLine("502 TLS already activated")
+		return true
+	}
+
+	c.w.PrintfLine("382 continue with TLS negotiation")
+	tlsc := tls.Client(c.conn, c.srv.tlsConfig)
+	err := tlsc.Handshake()
+	if err != nil {
+		c.log.LogPrintf(WARN, "STARTTLS TLS negotiation error: %v", err)
+		return false
+	}
+	c.r.SetReader(tlsc)
+	c.w.Writer.W.Reset(tlsc)
+	c.Cleanup()
+	c.tlsStarted = true
+	// TODO anything more post-TLS, authorize?
+
 	return true
 }

@@ -19,16 +19,22 @@ func (r Responder) Abort() {
 type ConnState struct {
 	inbuf [512]byte
 
-	srv *NNTPServer
-	r   *bufreader.BufReader
-	dr  *bufreader.DotReader
-	w   Responder
-	log Logger
+	srv  *NNTPServer
+	conn ConnCW
+	r    *bufreader.BufReader
+	dr   *bufreader.DotReader
+	w    Responder
+	log  Logger
 
 	prov         NNTPProvider
 	CurrentGroup interface{}
 	AllowReading bool
 	AllowPosting bool
+	tlsStarted   bool
+}
+
+func (c *ConnState) Cleanup() {
+	c.CurrentGroup = nil
 }
 
 func (c *ConnState) OpenReader() ArticleReader {

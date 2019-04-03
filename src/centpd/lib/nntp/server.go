@@ -35,6 +35,7 @@ type NNTPServer struct {
 	logx LoggerX
 	prov NNTPProvider
 
+	tlsServer bool
 	tlsConfig *tls.Config
 
 	mu          sync.Mutex
@@ -135,22 +136,25 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	var abortconn bool
 	cs := &ConnState{
 		srv:  s,
+		conn: c,
 		prov: s.prov,
 	}
 
 	var fc net.Conn
-	if s.tlsConfig != nil {
+	if s.tlsServer {
 		// this is TLS server
 		tlsc := tls.Client(c, s.tlsConfig)
 		err := tlsc.Handshake()
 		if err != nil {
 			s.log.LogPrintf(
-				ERROR, "closing %s on %s because TLS Handshake error: %v", err)
+				WARN, "closing %s on %s because TLS Handshake error: %v",
+				c.RemoteAddr(), c.LocalAddr(), err)
 			c.SetLinger(-1)
 			tlsc.Close()
 			goto cleanup
 		}
 		fc = tlsc
+		cs.tlsStarted = true
 	} else {
 		// plaintext
 		fc = c

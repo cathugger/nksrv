@@ -69,9 +69,9 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 		mt = MatchingTypeSHA3_256
 	case "sha3-512":
 		mt = MatchingTypeSHA3_512
-	case "shake128", "s128":
+	case "shake128":
 		mt = MatchingTypeSHAKE128
-	case "shake256", "s256":
+	case "shake256":
 		mt = MatchingTypeSHAKE256
 	case "blake2s", "b2s", "blake2s256":
 		mt = MatchingTypeBLAKE2s
