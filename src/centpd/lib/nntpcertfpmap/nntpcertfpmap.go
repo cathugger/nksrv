@@ -11,19 +11,19 @@ import (
 	upn "centpd/lib/userpassnorm"
 )
 
-type FPKeyParam struct {
+type fpKeyParam struct {
 	sel Selector
 	mt  MatchingType
 }
 
-type FPKey struct {
-	FPKeyParam
+type fpKey struct {
+	fpKeyParam
 
 	data string
 }
 
-type Node struct {
-	FPKeyParam
+type node struct {
+	fpKeyParam
 
 	data []byte
 
@@ -31,17 +31,24 @@ type Node struct {
 }
 
 type CertFPMap struct {
-	byFingerprint   map[FPKey]*Node
-	byAnchor        map[string][]*Node
-	fingerprintVars []FPKeyParam
+	byFingerprint   map[fpKey]*node
+	byAnchor        map[string][]*node
+	fingerprintVars []fpKeyParam
 }
 
-func (m *CertFPMap) LookupByFP(cert *x509.Certificate) *nntp.UserInfo {
+func NewCertFPMap() CertFPMap {
+	return CertFPMap{
+		byFingerprint: make(map[fpKey]*node),
+		byAnchor:      make(map[string][]*node),
+	}
+}
+
+func (m *CertFPMap) NNTPUserByFingerprint(cert *x509.Certificate) *nntp.UserInfo {
 	// we need to go thru every variation we support
 	for _, par := range m.fingerprintVars {
 		fp := MakeFingerprint(cert, par.sel, par.mt)
-		k := FPKey{
-			FPKeyParam: FPKeyParam{
+		k := fpKey{
+			fpKeyParam: fpKeyParam{
 				sel: par.sel,
 				mt:  par.mt,
 			},
@@ -55,7 +62,7 @@ func (m *CertFPMap) LookupByFP(cert *x509.Certificate) *nntp.UserInfo {
 	return nil
 }
 
-func (m *CertFPMap) LookupByAnchor(
+func (m *CertFPMap) NNTPUserByAnchor(
 	cert *x509.Certificate, anchor string) *nntp.UserInfo {
 
 	anchor, err := upn.NormaliseUser(anchor)
@@ -64,11 +71,11 @@ func (m *CertFPMap) LookupByAnchor(
 	}
 
 	nodes := m.byAnchor[anchor]
-	k := FPKeyParam{sel: -1}
+	k := fpKeyParam{sel: -1}
 	var fp []byte
 	for _, n := range nodes {
-		if n.FPKeyParam != k {
-			k = n.FPKeyParam
+		if n.fpKeyParam != k {
+			k = n.fpKeyParam
 			fp = MakeFingerprint(cert, k.sel, k.mt)
 		}
 		if bytes.Equal(n.data, fp) {
@@ -78,6 +85,8 @@ func (m *CertFPMap) LookupByAnchor(
 	return nil
 }
 
+var _ nntp.CertFPProvider = (*CertFPMap)(nil)
+
 func (m *CertFPMap) Add(
 	sel Selector, certfp string, ui nntp.UserInfo) (err error) {
 
@@ -85,7 +94,7 @@ func (m *CertFPMap) Add(
 	if err != nil {
 		return
 	}
-	kp := FPKeyParam{
+	kp := fpKeyParam{
 		sel: sel,
 		mt:  mt,
 	}
@@ -95,13 +104,13 @@ func (m *CertFPMap) Add(
 			return
 		}
 	}
-	n := &Node{
-		FPKeyParam: kp,
+	n := &node{
+		fpKeyParam: kp,
 		data:       d,
 		UserInfo:   ui,
 	}
-	k := FPKey{
-		FPKeyParam: kp,
+	k := fpKey{
+		fpKeyParam: kp,
 		data:       string(d),
 	}
 
