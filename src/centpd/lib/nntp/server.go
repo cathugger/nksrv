@@ -10,7 +10,9 @@ import (
 	tp "net/textproto"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"centpd/lib/bufreader"
 	. "centpd/lib/logx"
@@ -30,13 +32,21 @@ type ListenerCW interface {
 	Addr() net.Addr
 }
 
+// config opts easy to swap at run time
+type NNTPServerRunCfg struct {
+	tlsServer bool
+	tlsConfig *tls.Config
+
+	certfpProv CertFPProvider
+	uspassProv UserPassProvider
+}
+
 type NNTPServer struct {
 	log  Logger
 	logx LoggerX
 	prov NNTPProvider
 
-	tlsServer bool
-	tlsConfig *tls.Config
+	runCfg unsafe.Pointer
 
 	mu          sync.Mutex
 	closing     bool
@@ -44,6 +54,13 @@ type NNTPServer struct {
 	cwg         sync.WaitGroup
 	listeners   map[ListenerCW]struct{}
 	connections map[ConnCW]struct{}
+}
+
+func (s *NNTPServer) GetRunCfg() *NNTPServerRunCfg {
+	return (*NNTPServerRunCfg)(atomic.LoadPointer(&s.runCfg))
+}
+func (s *NNTPServer) SetRunCfg(cfg *NNTPServerRunCfg) {
+	atomic.StorePointer(&s.runCfg, unsafe.Pointer(cfg))
 }
 
 type ListenParam struct {
@@ -140,10 +157,11 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		prov: s.prov,
 	}
 
+	rcfg := s.GetRunCfg()
 	var fc net.Conn
-	if s.tlsServer {
+	if rcfg.tlsServer {
 		// this is TLS server
-		tlsc := tls.Client(c, s.tlsConfig)
+		tlsc := tls.Client(c, rcfg.tlsConfig)
 		err := tlsc.Handshake()
 		if err != nil {
 			s.log.LogPrintf(

@@ -278,7 +278,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
-	if c.srv.tlsConfig != nil && !c.tlsStarted {
+	if c.srv.GetRunCfg().tlsConfig != nil && !c.tlsStarted {
 		fmt.Fprintf(dw, "STARTTLS\n")
 	}
 
@@ -473,7 +473,8 @@ func cmdSlave(c *ConnState, args [][]byte, rest []byte) bool {
 }
 
 func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
-	if c.srv.tlsConfig == nil {
+	rcfg := c.srv.GetRunCfg()
+	if rcfg.tlsConfig == nil {
 		c.w.PrintfLine("580 TLS not configured")
 		return true
 	}
@@ -483,7 +484,7 @@ func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	c.w.PrintfLine("382 continue with TLS negotiation")
-	tlsc := tls.Client(c.conn, c.srv.tlsConfig)
+	tlsc := tls.Client(c.conn, rcfg.tlsConfig)
 	err := tlsc.Handshake()
 	if err != nil {
 		c.log.LogPrintf(WARN, "STARTTLS TLS negotiation error: %v", err)
