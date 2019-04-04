@@ -1,8 +1,8 @@
 --- core stuff
 -- :name version
-demo5
+demo6
 -- :name init
-INSERT INTO capabilities(component,version) VALUES ('ib0','demo5')
+INSERT INTO capabilities(component,version) VALUES ('ib0','demo6')
 -- :next
 CREATE SCHEMA ib0
 
