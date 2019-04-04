@@ -204,7 +204,7 @@ func init() {
 		},
 		"OVERVIEW.FMT": &command{
 			cmdfunc: listCmdOverviewFmt,
-			help:    "- list metadata fields returned by OVER command",
+			help:    "- list metadata fields returned by OVER command.",
 		},
 	}
 
@@ -236,11 +236,13 @@ func cmdVoid(c *ConnState, args [][]byte, rest []byte) bool {
 func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 	c.w.PrintfLine("101 capability list follows")
 
+	rCfg := c.srv.GetRunCfg()
+
 	dw := c.w.DotWriter()
 
 	fmt.Fprintf(dw, "VERSION 2\n")
 
-	if c.advertiseAuth() {
+	if c.advertisePlaintextAuth(rCfg) {
 		fmt.Fprintf(dw, "AUTHINFO USER\n")
 	}
 
@@ -278,7 +280,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
-	if c.srv.GetRunCfg().tlsConfig != nil && !c.tlsStarted {
+	if rCfg.TLSConfig != nil && !c.tlsStarted {
 		fmt.Fprintf(dw, "STARTTLS\n")
 	}
 
@@ -474,7 +476,7 @@ func cmdSlave(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 	rcfg := c.srv.GetRunCfg()
-	if rcfg.tlsConfig == nil {
+	if rcfg.TLSConfig == nil {
 		c.w.PrintfLine("580 TLS not configured")
 		return true
 	}
@@ -484,7 +486,7 @@ func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	c.w.PrintfLine("382 continue with TLS negotiation")
-	tlsc := tls.Client(c.conn, rcfg.tlsConfig)
+	tlsc := tls.Client(c.conn, rcfg.TLSConfig)
 	err := tlsc.Handshake()
 	if err != nil {
 		c.log.LogPrintf(WARN, "STARTTLS TLS negotiation error: %v", err)

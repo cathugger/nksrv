@@ -34,11 +34,13 @@ type ListenerCW interface {
 
 // config opts easy to swap at run time
 type NNTPServerRunCfg struct {
-	tlsServer bool
-	tlsConfig *tls.Config
+	TLSServer bool
+	TLSConfig *tls.Config
 
-	certfpProv CertFPProvider
-	uspassProv UserPassProvider
+	CertFPProvider   CertFPProvider
+	UserPassProvider UserPassProvider
+
+	UnsafePass bool
 }
 
 type NNTPServer struct {
@@ -162,9 +164,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	rcfg := s.GetRunCfg()
 	var fc net.Conn
-	if rcfg.tlsServer {
+	if rcfg.TLSServer {
 		// this is TLS server
-		tlsc := tls.Client(c, rcfg.tlsConfig)
+		tlsc := tls.Client(c, rcfg.TLSConfig)
 		err := tlsc.Handshake()
 		if err != nil {
 			s.log.LogPrintf(WARN,

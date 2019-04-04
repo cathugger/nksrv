@@ -39,7 +39,6 @@ func (s *NNTPServer) setupClientDefaults(c *ConnState) {
 	c.AllowPosting = true
 }
 
-func (c *ConnState) advertiseAuth() bool {
-	// TODO
-	return false
+func (c *ConnState) advertisePlaintextAuth(rCfg *NNTPServerRunCfg) bool {
+	return rCfg.UserPassProvider != nil && (rCfg.UnsafePass || c.tlsStarted)
 }
