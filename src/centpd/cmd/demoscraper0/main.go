@@ -25,7 +25,7 @@ func main() {
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	nntpconn := flag.String("nntpconn", "", "nntp server connect string")
 	socks := flag.String("socks", "", "socks proxy address")
-	scrapekey := flag.String("scrapekey", "test", "scraper identifier used to store state")
+	pullkey := flag.String("pullkey", "test", "puller identifier used to store state")
 	notrace := flag.Bool("notrace", false, "disable NNTP Path trace")
 
 	flag.Parse()
@@ -72,14 +72,14 @@ func main() {
 		return
 	}
 
-	dbscraper, err := dbib.NewScraperDB(*scrapekey, true, *notrace)
+	dbpuller, err := dbib.NewPullerDB(*pullkey, true, *notrace)
 	if err != nil {
-		mlg.LogPrintln(CRITICAL, "dbib.NewScraperDB failed:", err)
+		mlg.LogPrintln(CRITICAL, "dbib.NewPullerDB failed:", err)
 		return
 	}
-	dbib.ClearScraperDBs()
+	dbib.ClearPullerDBs()
 
-	scraper := nntp.NewNNTPScraper(dbscraper, lgr)
+	puller := nntp.NewNNTPPuller(dbpuller, lgr)
 
 	var proto, host string
 	u, e := url.ParseRequestURI(*nntpconn)
@@ -116,7 +116,7 @@ func main() {
 	*/
 
 	mlg.LogPrintf(
-		NOTICE, "starting nntp scraper with proto(%s) host(%s)", proto, host)
-	scraper.Run(d, proto, host)
-	mlg.LogPrintf(NOTICE, "nntp scraper terminated")
+		NOTICE, "starting nntp puller with proto(%s) host(%s)", proto, host)
+	puller.Run(d, proto, host)
+	mlg.LogPrintf(NOTICE, "nntp puller terminated")
 }

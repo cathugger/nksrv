@@ -16,7 +16,7 @@ import (
 	. "centpd/lib/logx"
 )
 
-type ScraperDatabase interface {
+type PullerDatabase interface {
 	GetLastNewNews() (t int64, err error)
 	UpdateLastNewNews(t int64) error
 
@@ -55,20 +55,20 @@ const smallSliceSize = 800
 const largeSliceSize = 2048
 const maxListSize = 2048
 
-type NNTPScraper struct {
+type NNTPPuller struct {
 	NNTPClient
 
-	db       ScraperDatabase
+	db       PullerDatabase
 	todoList []todoArticle
 }
 
-func NewNNTPScraper(db ScraperDatabase, logx LoggerX) *NNTPScraper {
-	c := &NNTPScraper{db: db}
-	c.log = NewLogToX(logx, fmt.Sprintf("nntpscraper.%p", c))
+func NewNNTPPuller(db PullerDatabase, logx LoggerX) *NNTPPuller {
+	c := &NNTPPuller{db: db}
+	c.log = NewLogToX(logx, fmt.Sprintf("nntppuller.%p", c))
 	return c
 }
 
-func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
+func (c *NNTPPuller) doActiveList() (err error, fatal bool) {
 	err = c.w.PrintfLine("LIST")
 	if err != nil {
 		fatal = true
@@ -163,7 +163,7 @@ func (c *NNTPScraper) doActiveList() (err error, fatal bool) {
 	return
 }
 
-func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
+func (c *NNTPPuller) doNewsgroupsList() (err error, fatal bool) {
 	err = c.w.PrintfLine("LIST NEWSGROUPS")
 	if err != nil {
 		fatal = true
@@ -232,7 +232,7 @@ func (c *NNTPScraper) doNewsgroupsList() (err error, fatal bool) {
 	return
 }
 
-func (c *NNTPScraper) doCapabilities() (err error, fatal bool) {
+func (c *NNTPPuller) doCapabilities() (err error, fatal bool) {
 	c.log.LogPrintf(DEBUG, "querying CAPABILITIES")
 	err = c.w.PrintfLine("CAPABILITIES")
 	if err != nil {
@@ -300,7 +300,7 @@ type Dialer interface {
 	Dial(network, address string) (net.Conn, error)
 }
 
-func (c *NNTPScraper) Run(d Dialer, network, address string) {
+func (c *NNTPPuller) Run(d Dialer, network, address string) {
 	// TODO
 	for {
 		c.log.LogPrintf(DEBUG, "dialing...")
@@ -324,17 +324,17 @@ func (c *NNTPScraper) Run(d Dialer, network, address string) {
 		conn.Close()
 
 		if e != nil {
-			c.log.LogPrintf(WARN, "scraper error: %v", e)
+			c.log.LogPrintf(WARN, "puller error: %v", e)
 			c.log.LogPrintf(WARN, "will reconnect after 10 secs")
 			time.Sleep(10 * time.Second)
 		} else {
-			c.log.LogPrintf(WARN, "scraper closed, will wait 120 secs")
+			c.log.LogPrintf(WARN, "puller closed, will wait 120 secs")
 			time.Sleep(120 * time.Second)
 		}
 	}
 }
 
-func (c *NNTPScraper) doGroup(
+func (c *NNTPPuller) doGroup(
 	gname string) (new_id int64, err error, notexists, fatal bool) {
 
 	err = c.w.PrintfLine("GROUP %s", gname)
@@ -377,7 +377,7 @@ func (c *NNTPScraper) doGroup(
 	}
 }
 
-func (c *NNTPScraper) eatArticle(
+func (c *NNTPPuller) eatArticle(
 	msgid FullMsgIDStr, expectedgroup string) (
 	err error, fatal bool, wantroot FullMsgIDStr) {
 
@@ -403,7 +403,7 @@ func (c *NNTPScraper) eatArticle(
 	return
 }
 
-func (c *NNTPScraper) handleArticleResponse(
+func (c *NNTPPuller) handleArticleResponse(
 	msgid FullMsgIDStr, group string) (
 	normalok bool, err error, fatal bool, wantroot FullMsgIDStr) {
 
@@ -459,7 +459,7 @@ func (c *NNTPScraper) handleArticleResponse(
 	return
 }
 
-func (c *NNTPScraper) processTODOList(
+func (c *NNTPPuller) processTODOList(
 	group string, maxid int64) (new_maxid int64, err error, fatal bool) {
 
 	// TODO
@@ -657,7 +657,7 @@ func (c *NNTPScraper) processTODOList(
 	return
 }
 
-func (c *NNTPScraper) eatHdrOutput(
+func (c *NNTPPuller) eatHdrOutput(
 	r_begin, r_end int64) (err error) {
 
 	dr := c.openDotReader()
@@ -713,7 +713,7 @@ func (c *NNTPScraper) eatHdrOutput(
 	return
 }
 
-func (c *NNTPScraper) eatOverOutput(
+func (c *NNTPPuller) eatOverOutput(
 	group string, r_begin, r_end int64) (err error) {
 
 	dr := c.openDotReader()
@@ -784,7 +784,7 @@ func (c *NNTPScraper) eatOverOutput(
 	return
 }
 
-func (c *NNTPScraper) eatGroupSlice(
+func (c *NNTPPuller) eatGroupSlice(
 	group string, r_begin, r_end, maxid int64) (
 	new_maxid int64, err error, fatal bool) {
 
@@ -972,7 +972,7 @@ func (c *NNTPScraper) eatGroupSlice(
 	return
 }
 
-func (c *NNTPScraper) eatGroup(
+func (c *NNTPPuller) eatGroup(
 	group string, old_id, new_id uint64) (err error, fatal bool) {
 
 	var r_begin, r_end int64
@@ -1019,7 +1019,7 @@ func (c *NNTPScraper) eatGroup(
 	return
 }
 
-func (c *NNTPScraper) groupScanLoop() error {
+func (c *NNTPPuller) groupScanLoop() error {
 	var e error
 	var fatal bool
 
@@ -1052,7 +1052,7 @@ func (c *NNTPScraper) groupScanLoop() error {
 		return errors.New("no methods left to get group list")
 	}
 
-	c.log.LogPrintf(DEBUG, "scraper will load temp groups")
+	c.log.LogPrintf(DEBUG, "puller will load temp groups")
 	for {
 		group, new_id, old_id, e := c.db.LoadTempGroup()
 		if e != nil {
@@ -1136,7 +1136,7 @@ func (c *NNTPScraper) groupScanLoop() error {
 	return nil
 }
 
-func (c *NNTPScraper) main() error {
+func (c *NNTPPuller) main() error {
 	var e error
 	var fatal bool
 

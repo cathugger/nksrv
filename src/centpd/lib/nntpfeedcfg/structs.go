@@ -14,10 +14,10 @@ type UserCfg struct {
 }
 
 type CertFPCfg struct {
-	Cert     string `toml:"cert"`
-	PubKey   string `toml:"pubkey"`
-	Priv     string `toml:"priv"`
-	Name     string `toml:"name"`
+	Cert   string `toml:"cert"`
+	PubKey string `toml:"pubkey"`
+	Priv   string `toml:"priv"`
+	Name   string `toml:"name"`
 }
 
 type ServerInnerCfg struct {

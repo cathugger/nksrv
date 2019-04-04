@@ -45,7 +45,7 @@ type PSQLIB struct {
 	npStmts map[npTuple]*sql.Stmt
 	npMutex sync.RWMutex
 
-	scraper_nonce int64
+	puller_nonce int64
 }
 
 type Config struct {
@@ -94,7 +94,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	}
 	//p.nntpfs.RemoveDir(nntpIncomingTempDir)
 	p.nntpfs.MakeDir(nntpIncomingDir)
-	p.nntpfs.MakeDir(nntpScraperDir)
+	p.nntpfs.MakeDir(nntpPullerDir)
 
 	if cfg.TBuilder != nil {
 

@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mail"
 )
 
-func (c *NNTPScraper) readDotLine(dr *bufreader.DotReader) ([]byte, error) {
+func (c *NNTPPuller) readDotLine(dr *bufreader.DotReader) ([]byte, error) {
 	i := 0
 	for {
 		b, e := dr.ReadByte()
@@ -28,7 +28,7 @@ func (c *NNTPScraper) readDotLine(dr *bufreader.DotReader) ([]byte, error) {
 	}
 }
 
-func (c *NNTPScraper) readOnlyNewsgroup(
+func (c *NNTPPuller) readOnlyNewsgroup(
 	dr *bufreader.DotReader) ([]byte, error) {
 
 	i := 0
@@ -119,7 +119,7 @@ func parseListActiveLine(
 	return
 }
 
-func (c *NNTPScraper) getOverLineInfo(
+func (c *NNTPPuller) getOverLineInfo(
 	dr *bufreader.DotReader) (
 	id uint64, msgid, ref FullMsgID, err error, fatal bool) {
 
@@ -246,7 +246,7 @@ func (c *NNTPScraper) getOverLineInfo(
 	return
 }
 
-func (c *NNTPScraper) eatHdrMsgIDLine(
+func (c *NNTPPuller) eatHdrMsgIDLine(
 	dr *bufreader.DotReader) (
 	id uint64, msgid FullMsgID, err error) {
 
@@ -304,7 +304,7 @@ func (c *NNTPScraper) eatHdrMsgIDLine(
 	return
 }
 
-func (c *NNTPScraper) parseGroupResponse(
+func (c *NNTPPuller) parseGroupResponse(
 	rest []byte) (num, lo, hi uint64, err error) {
 
 	defer func() {

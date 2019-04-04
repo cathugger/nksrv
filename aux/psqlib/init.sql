@@ -234,9 +234,9 @@ CREATE INDEX
 	WHERE msgid IS NOT NULL
 
 
---- scraper stuff
+--- puller stuff
 -- :next
-CREATE TABLE ib0.scraper_list (
+CREATE TABLE ib0.puller_list (
 	sid      BIGSERIAL               NOT NULL,
 	sname    TEXT       COLLATE "C"  NOT NULL,
 	last_use BIGINT                  NOT NULL, -- used for cleanup
@@ -245,35 +245,35 @@ CREATE TABLE ib0.scraper_list (
 	UNIQUE (sname)
 )
 -- :next
-CREATE INDEX ON ib0.scraper_list (last_use)
+CREATE INDEX ON ib0.puller_list (last_use)
 
 
 -- :next
-CREATE TABLE ib0.scraper_last_newnews (
+CREATE TABLE ib0.puller_last_newnews (
 	sid          BIGINT NOT NULL,
 	last_newnews BIGINT NOT NULL,
 
 	PRIMARY KEY (sid),
 	FOREIGN KEY (sid)
-		REFERENCES ib0.scraper_list
+		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
 )
 
 
 -- :next
-CREATE TABLE ib0.scraper_last_newgroups (
+CREATE TABLE ib0.puller_last_newgroups (
 	sid            BIGINT NOT NULL,
 	last_newgroups BIGINT NOT NULL,
 
 	PRIMARY KEY (sid),
 	FOREIGN KEY (sid)
-		REFERENCES ib0.scraper_list
+		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
 )
 
 
 -- :next
-CREATE TABLE ib0.scraper_group_track (
+CREATE TABLE ib0.puller_group_track (
 	sid      BIGINT  NOT NULL,
 	bid      INTEGER NOT NULL,
 	last_use BIGINT  NOT NULL, -- used for cleanup
@@ -282,7 +282,7 @@ CREATE TABLE ib0.scraper_group_track (
 
 	PRIMARY KEY (sid,bid),
 	FOREIGN KEY (sid)
-		REFERENCES ib0.scraper_list
+		REFERENCES ib0.puller_list
 		ON DELETE CASCADE,
 	FOREIGN KEY (bid)
 		REFERENCES ib0.boards
@@ -290,10 +290,10 @@ CREATE TABLE ib0.scraper_group_track (
 )
 -- :next
 CREATE INDEX
-	ON ib0.scraper_group_track (sid,last_use)
+	ON ib0.puller_group_track (sid,last_use)
 -- :next
 CREATE INDEX
-	ON ib0.scraper_group_track (bid)
+	ON ib0.puller_group_track (bid)
 
 
 --- moderation stuff
@@ -306,7 +306,7 @@ CREATE TABLE ib0.banlist (
 
 	msgid      TEXT     COLLATE "C", -- msgid being banned (if any)
 	b_id       INTEGER,              -- if it's only limited to specific board
-	scraper_id BIGINT,               -- maybe it's only limited to specific scraper
+	puller_id BIGINT,               -- maybe it's only limited to specific puller
 
 	PRIMARY KEY (ban_id),
 
@@ -316,8 +316,8 @@ CREATE TABLE ib0.banlist (
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards
 		ON DELETE CASCADE,
-	FOREIGN KEY (scraper_id)
-		REFERENCES ib0.scraper_list
+	FOREIGN KEY (puller_id)
+		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
 )
 -- :next
@@ -330,8 +330,8 @@ CREATE INDEX
 	WHERE b_id IS NOT NULL
 -- :next
 CREATE INDEX
-	ON ib0.banlist (scraper_id)
-	WHERE scraper_id IS NOT NULL
+	ON ib0.banlist (puller_id)
+	WHERE puller_id IS NOT NULL
 -- :next
 CREATE INDEX
 	ON ib0.banlist (msgid)
