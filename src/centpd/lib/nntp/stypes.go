@@ -41,7 +41,7 @@ func (c *ConnState) OpenReader() ArticleReader {
 	if c.dr != nil {
 		c.dr.Reset()
 	} else {
-		c.dr = bufreader.NewDotReader(c.r, true)
+		c.dr = bufreader.NewDotReader(c.r)
 	}
 	return c.dr
 }

@@ -63,7 +63,7 @@ type NNTPClient struct {
 
 func (c *NNTPClient) openDotReader() *bufreader.DotReader {
 	if c.dr == nil {
-		c.dr = bufreader.NewDotReader(c.r, true)
+		c.dr = bufreader.NewDotReader(c.r)
 	} else {
 		c.dr.Reset()
 	}
