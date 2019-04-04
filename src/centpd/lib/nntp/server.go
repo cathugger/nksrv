@@ -167,8 +167,8 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 		tlsc := tls.Client(c, rcfg.tlsConfig)
 		err := tlsc.Handshake()
 		if err != nil {
-			s.log.LogPrintf(
-				WARN, "closing %s on %s because TLS Handshake error: %v",
+			s.log.LogPrintf(WARN,
+				"closing %s on %s because TLS Handshake error: %v",
 				c.RemoteAddr(), c.LocalAddr(), err)
 			c.SetLinger(-1)
 			tlsc.Close()
@@ -190,9 +190,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	cs.w = Responder{tp.NewWriter(bufio.NewWriter(fc))}
 
 	if cs.AllowPosting {
-		cs.w.PrintfLine("200 hello! posting allowed.")
+		cs.w.PrintfLine("200 welcome! posting allowed.")
 	} else {
-		cs.w.PrintfLine("201 hello! posting forbidden.")
+		cs.w.PrintfLine("201 welcome! posting forbidden.")
 	}
 
 	abortconn = cs.serveClient()
@@ -200,11 +200,11 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	if !abortconn {
 		// let OS handle FIN signaling in background
 		c.SetLinger(-1)
-		s.log.LogPrintf(
-			NOTICE, "closing %s on %s", c.RemoteAddr(), c.LocalAddr())
+		s.log.LogPrintf(NOTICE,
+			"closing %s on %s", c.RemoteAddr(), c.LocalAddr())
 	} else {
-		s.log.LogPrintf(
-			NOTICE, "resetting %s on %s", c.RemoteAddr(), c.LocalAddr())
+		s.log.LogPrintf(NOTICE,
+			"resetting %s on %s", c.RemoteAddr(), c.LocalAddr())
 	}
 
 	fc.Close()

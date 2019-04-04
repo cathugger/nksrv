@@ -15,7 +15,6 @@ type UserCfg struct {
 
 type CertFPCfg struct {
 	Cert     string `toml:"cert"`
-	CertFile string `toml:"cert_file"`
 	PubKey   string `toml:"pubkey"`
 	Priv     string `toml:"priv"`
 	Name     string `toml:"name"`

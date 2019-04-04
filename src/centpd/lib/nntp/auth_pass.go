@@ -11,3 +11,8 @@ type UserPassProvider interface {
 	// given username and correct password, returns info
 	NNTPCheckUserPass(username string, rpass ClientPassword) *UserInfo
 }
+
+type ActiveLogin struct {
+	ui *UserInfo
+	ch string
+}

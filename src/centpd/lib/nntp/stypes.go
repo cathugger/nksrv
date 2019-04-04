@@ -27,10 +27,10 @@ type ConnState struct {
 	log  Logger
 
 	prov         NNTPProvider
-	CurrentGroup interface{}
-	AllowReading bool
-	AllowPosting bool
-	tlsStarted   bool
+	CurrentGroup interface{}  // provider-specific
+	UserPriv                  // stuff allowed
+	tlsStarted   bool         // whether TLS tunnel activated
+	activeLogin  *ActiveLogin // for AUTHINFO USER
 }
 
 func (c *ConnState) Cleanup() {

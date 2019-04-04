@@ -1,14 +1,14 @@
 package nntp
 
 type UserPriv struct {
-	AllowRead  bool
-	AllowWrite bool
+	AllowReading bool
+	AllowPosting bool
 }
 
 func MergeUserPriv(a, b UserPriv) UserPriv {
 	return UserPriv{
-		AllowRead:  a.AllowRead || b.AllowRead,
-		AllowWrite: a.AllowWrite || b.AllowWrite,
+		AllowReading: a.AllowReading || b.AllowReading,
+		AllowPosting: a.AllowPosting || b.AllowPosting,
 	}
 }
 
@@ -16,9 +16,9 @@ func ParseUserPriv(s string, up UserPriv) (_ UserPriv, ok bool) {
 	for _, c := range s {
 		switch c {
 		case 'r':
-			up.AllowRead = true
+			up.AllowReading = true
 		case 'w':
-			up.AllowWrite = true
+			up.AllowPosting = true
 		default:
 			return up, false
 		}
