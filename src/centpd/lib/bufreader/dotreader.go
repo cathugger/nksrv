@@ -2,15 +2,33 @@
 
 package bufreader
 
-import "io"
+import (
+	"errors"
+	"io"
+)
 
 type DotReader struct {
-	r *BufReader
-	s int
+	r   *BufReader // underlying reader
+	s   int        // parser state
+	snl int        // strict newline processing
 }
 
-func NewDotReader(r *BufReader) *DotReader {
-	return &DotReader{r: r}
+const (
+	snlNone int = iota
+	snlEnabled
+	snlUnexpectedCR
+	snlUnexpectedLF
+)
+
+var errUnexpectedCR = errors.New("dotreader: CR not part of CR-LF sequence")
+var errUnexpectedLF = errors.New("dotreader: LF not part of CR-LF sequence")
+
+func NewDotReader(r *BufReader, permissive bool) (dr *DotReader) {
+	dr = &DotReader{r: r}
+	if !permissive {
+		dr.snl = snlEnabled
+	}
+	return
 }
 
 const (
@@ -41,14 +59,25 @@ func (d *DotReader) process(c byte) (byte, bool) {
 		if c != '\n' {
 			d.s = sNonBegin
 		} else {
+			// LF at the start of line
+			if d.snl != 0 {
+				d.snl = snlUnexpectedLF
+				d.s = sEOF
+				return 0, false
+			}
 			d.s = sBeginLine
 		}
+
 	case sDot:
 		if c == '\r' {
 			d.s = sDotCR
 			return 0, false
 		}
 		if c == '\n' {
+			// LF after dot
+			if d.snl != 0 {
+				d.snl = snlUnexpectedLF
+			}
 			d.s = sEOF
 			return 0, false
 		}
@@ -60,17 +89,29 @@ func (d *DotReader) process(c byte) (byte, bool) {
 			return 0, false
 		}
 		if c == '\n' {
+			// LF without CR
+			if d.snl != 0 {
+				d.snl = snlUnexpectedLF
+				d.s = sEOF
+				return 0, false
+			}
 			d.s = sBeginLine
 		}
 
 	case sDotCR:
 		if c == '\n' {
+			// normal CR-LF
 			d.s = sEOF
 			return 0, false
 		}
-		// \r without \n
+		// CR without LF
 		d.r.UnreadByte(c) // put thing we just read back
-		c = '\r'          // process \r instead
+		if d.snl != 0 {
+			d.snl = snlUnexpectedCR
+			d.s = sEOF
+			return 0, false
+		}
+		c = '\r' // process previous CR instead
 		d.s = sNonBegin
 
 	case sCR:
@@ -79,9 +120,14 @@ func (d *DotReader) process(c byte) (byte, bool) {
 			d.s = sBeginLine
 			break
 		}
-		// \r without \n
+		// CR without LF
 		d.r.UnreadByte(c) // put thing we just read back
-		c = '\r'          // process \r instead
+		if d.snl != 0 {
+			d.snl = snlUnexpectedCR
+			d.s = sEOF
+			return 0, false
+		}
+		c = '\r' // process CR instead
 		d.s = sNonBegin
 	}
 	return c, true
@@ -108,6 +154,14 @@ func (d *DotReader) Read(b []byte) (n int, e error) {
 	if d.s == sEOF {
 		// if we reached sEOF, e cannot be already set
 		e = io.EOF
+		// did we encounter newline format violation?
+		if d.snl >= 2 {
+			if d.snl == snlUnexpectedLF {
+				e = errUnexpectedLF
+			} else {
+				e = errUnexpectedCR
+			}
+		}
 	}
 	return
 }
@@ -130,6 +184,14 @@ func (d *DotReader) ReadByte() (c byte, e error) {
 	if d.s == sEOF {
 		// if we reached sEOF, e cannot be already set
 		e = io.EOF
+		// did we encounter newline format violation?
+		if d.snl >= 2 {
+			if d.snl == snlUnexpectedLF {
+				e = errUnexpectedLF
+			} else {
+				e = errUnexpectedCR
+			}
+		}
 	}
 	return
 }
@@ -153,6 +215,14 @@ func (d *DotReader) Discard(s int) (n int, e error) {
 	if d.s == sEOF {
 		// if we reached sEOF, e cannot be already set
 		e = io.EOF
+		// did we encounter newline format violation?
+		if d.snl >= 2 {
+			if d.snl == snlUnexpectedLF {
+				e = errUnexpectedLF
+			} else {
+				e = errUnexpectedCR
+			}
+		}
 	}
 	return
 }
