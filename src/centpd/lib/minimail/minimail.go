@@ -17,6 +17,7 @@ type ArticleReader interface {
 	io.Reader
 	ReadByte() (byte, error)
 	Discard(n int) (int, error)
+	InvalidNL() bool
 }
 
 func CutMessageIDStr(id FullMsgIDStr) CoreMsgIDStr {
