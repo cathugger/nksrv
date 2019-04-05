@@ -9,16 +9,35 @@ import (
 	. "centpd/lib/logx"
 )
 
-var commandMap map[string]*command
-var commandList []string
+type (
+	commandMapType  map[string]*command
+	commandListType []string
+)
 
-var listCommandMap map[string]*command
-var listCommandList []string
+var (
+	commandMap  commandMapType
+	commandList commandListType
+
+	listCommandMap  commandMapType
+	listCommandList commandListType
+
+	authCommandMap  commandMapType
+	authCommandList commandListType
+)
 
 func init() {
-	var i int
+	sortedCmdMapSlice := func(m commandMapType) (l commandListType) {
+		l = make(commandListType, len(m))
+		i := 0
+		for k := range m {
+			l[i] = k
+			i++
+		}
+		sort.Strings(l)
+		return
+	}
 
-	commandMap = map[string]*command{
+	commandMap = commandMapType{
 		"": &command{
 			cmdfunc:    cmdVoid,
 			allowextra: true,
@@ -51,6 +70,10 @@ func init() {
 		"SLAVE": &command{
 			cmdfunc: cmdSlave,
 			help:    "- notify server about slave status.",
+		},
+		"AUTHINFO": &command{
+			cmdfunc:    cmdAuthInfo,
+			allowextra: true,
 		},
 		"STARTTLS": &command{
 			cmdfunc: cmdStartTLS,
@@ -190,8 +213,9 @@ func init() {
 			help:    "<message-id> - It's dangerous to go alone! Take this.",
 		},
 	}
+	commandList = sortedCmdMapSlice(commandMap)
 
-	listCommandMap = map[string]*command{
+	listCommandMap = commandMapType{
 		"ACTIVE": &command{
 			cmdfunc: listCmdActive,
 			maxargs: 1,
@@ -207,22 +231,19 @@ func init() {
 			help:    "- list metadata fields returned by OVER command.",
 		},
 	}
+	listCommandList = sortedCmdMapSlice(listCommandMap)
 
-	commandList = make([]string, len(commandMap))
-	i = 0
-	for k := range commandMap {
-		commandList[i] = k
-		i++
+	authCommandMap = commandMapType{
+		"USER": &command{
+			cmdfunc: authCmdUser,
+			help:    "username - specify user name.",
+		},
+		"PASS": &command{
+			cmdfunc: authCmdPass,
+			help:    "password - specify password.",
+		},
 	}
-	sort.Strings(commandList)
-
-	listCommandList = make([]string, len(listCommandMap))
-	i = 0
-	for k := range listCommandMap {
-		listCommandList[i] = k
-		i++
-	}
-	sort.Strings(listCommandList)
+	authCommandList = sortedCmdMapSlice(authCommandMap)
 }
 
 func cmdVoid(c *ConnState, args [][]byte, rest []byte) bool {
@@ -373,18 +394,23 @@ func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
+	printCmds := func(p string, l commandListType, m commandMapType) {
+		for _, k := range l {
+			c := m[k]
+			if c.help != "" {
+				fmt.Fprintf(dw, "%s %s %s\n", p, k, c.help)
+			}
+		}
+	}
 	for _, k := range commandList {
 		cmd := commandMap[k]
 		if cmd.help != "" {
 			fmt.Fprintf(dw, "%s %s\n", k, cmd.help)
 		}
 		if k == "LIST" {
-			for _, lk := range listCommandList {
-				lcmd := listCommandMap[lk]
-				if lcmd.help != "" {
-					fmt.Fprintf(dw, "LIST %s %s\n", lk, lcmd.help)
-				}
-			}
+			printCmds(k, listCommandList, listCommandMap)
+		} else if k == "AUTHINFO" {
+			printCmds(k, authCommandList, authCommandMap)
 		}
 	}
 

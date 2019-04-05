@@ -8,8 +8,8 @@ import (
 
 // some of types put in small package so that nntp won't need to pull in whole mail
 
-type FullMsgID []byte // msgid with < and >
-type CoreMsgID []byte // msgid without < and >
+type FullMsgID []byte // msgid including < and >
+type CoreMsgID []byte // msgid excluding < and >
 type FullMsgIDStr string
 type CoreMsgIDStr string
 
