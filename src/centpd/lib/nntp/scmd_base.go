@@ -236,10 +236,14 @@ func init() {
 	authCommandMap = commandMapType{
 		"USER": &command{
 			cmdfunc: authCmdUser,
+			minargs: 1,
+			maxargs: 1,
 			help:    "username - specify user name.",
 		},
 		"PASS": &command{
 			cmdfunc: authCmdPass,
+			minargs: 1,
+			maxargs: 1,
 			help:    "password - specify password.",
 		},
 	}

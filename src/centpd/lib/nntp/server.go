@@ -40,7 +40,8 @@ type NNTPServerRunCfg struct {
 	CertFPProvider   CertFPProvider
 	UserPassProvider UserPassProvider
 
-	UnsafePass bool
+	UnsafePass            bool // plaintext pass without TLS
+	UnsafeEarlyUserReject bool // reject username early - allows enumeration
 }
 
 type NNTPServer struct {

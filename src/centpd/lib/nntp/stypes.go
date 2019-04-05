@@ -26,11 +26,12 @@ type ConnState struct {
 	w    Responder
 	log  Logger
 
-	prov         NNTPProvider
-	CurrentGroup interface{}  // provider-specific
-	UserPriv                  // stuff allowed
-	tlsStarted   bool         // whether TLS tunnel activated
-	activeLogin  *ActiveLogin // for AUTHINFO USER
+	prov          NNTPProvider
+	CurrentGroup  interface{}  // provider-specific
+	UserPriv                   // stuff allowed
+	tlsStarted    bool         // whether TLS tunnel activated
+	authenticated bool         // whether authenticated
+	activeLogin   *ActiveLogin // for AUTHINFO USER
 }
 
 func (c *ConnState) Cleanup() {
@@ -44,6 +45,12 @@ func (c *ConnState) OpenReader() ArticleReader {
 		c.dr = bufreader.NewDotReader(c.r)
 	}
 	return c.dr
+}
+
+func (c *ConnState) pullActiveLogin() (l *ActiveLogin) {
+	l = c.activeLogin
+	c.activeLogin = nil
+	return
 }
 
 type commandFunc func(c *ConnState, args [][]byte, rest []byte) bool

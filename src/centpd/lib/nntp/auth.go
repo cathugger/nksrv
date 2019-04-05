@@ -40,5 +40,7 @@ func (s *NNTPServer) setupClientDefaults(c *ConnState) {
 }
 
 func (c *ConnState) advertisePlaintextAuth(rCfg *NNTPServerRunCfg) bool {
-	return rCfg.UserPassProvider != nil && (rCfg.UnsafePass || c.tlsStarted)
+	return rCfg.UserPassProvider != nil &&
+		!c.authenticated &&
+		(rCfg.UnsafePass || c.tlsStarted)
 }
