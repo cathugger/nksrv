@@ -34,14 +34,22 @@ type ListenerCW interface {
 
 // config opts easy to swap at run time
 type NNTPServerRunCfg struct {
+	DefaultPriv UserPriv
+
 	TLSServer bool
 	TLSConfig *tls.Config
+	TLSPriv   UserPriv
 
 	CertFPProvider   CertFPProvider
+	CertFPAutoAuth   bool
 	UserPassProvider UserPassProvider
 
 	UnsafePass            bool // plaintext pass without TLS
 	UnsafeEarlyUserReject bool // reject username early - allows enumeration
+}
+
+var DefaultNNTPServerRunCfg = NNTPServerRunCfg{
+	DefaultPriv: UserPriv{true, true},
 }
 
 type NNTPServer struct {
@@ -164,6 +172,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	}
 
 	rcfg := s.GetRunCfg()
+
+	cs.setupDefaults(rcfg)
+
 	var fc net.Conn
 	if rcfg.TLSServer {
 		// this is TLS server
@@ -178,7 +189,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 			goto cleanup
 		}
 		fc = tlsc
-		cs.tlsStarted = true
+		cs.postTLS(rcfg, tlsc)
 	} else {
 		// plaintext
 		fc = c
@@ -186,8 +197,6 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	cs.log = NewLogToX(
 		s.logx, fmt.Sprintf("nntpsrv.%p.client.%p-%s", s, cs, c.RemoteAddr()))
-
-	s.setupClientDefaults(cs)
 
 	cs.r = bufreader.NewBufReader(fc)
 	cs.w = Responder{tp.NewWriter(bufio.NewWriter(fc))}

@@ -37,6 +37,9 @@ func init() {
 		return
 	}
 
+	// maps are initialized there because go is fucking stupid
+	// and somehow treats cmdHelp as causing reference cycle
+
 	commandMap = commandMapType{
 		"": &command{
 			cmdfunc:    cmdVoid,
@@ -245,6 +248,12 @@ func init() {
 			minargs: 1,
 			maxargs: 1,
 			help:    "password - specify password.",
+		},
+		"SASL": &command{
+			cmdfunc: authCmdSASL,
+			minargs: 1,
+			maxargs: 2,
+			help:    "mechanism [initial-response] - utilize Simple Authentication and Security Layer.",
 		},
 	}
 	authCommandList = sortedCmdMapSlice(authCommandMap)
@@ -525,8 +534,7 @@ func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 	c.r.SetReader(tlsc)
 	c.w.Writer.W.Reset(tlsc)
 	c.Cleanup()
-	c.tlsStarted = true
-	// TODO anything more post-TLS, authorize?
+	c.postTLS(rcfg, tlsc)
 
 	return true
 }

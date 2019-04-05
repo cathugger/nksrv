@@ -6,7 +6,7 @@ func cmdAuthInfo(c *ConnState, args [][]byte, rest []byte) bool {
 	args = args[:0] // reuse
 
 	if len(rest) == 0 {
-		c.w.PrintfLine("501 not enough parameters")
+		c.w.PrintfLine("501 AUTHINFO keyword expected")
 		return true
 	}
 
@@ -143,4 +143,11 @@ func (c *ConnState) loginSuccess(ui *UserInfo) {
 	c.authenticated = true
 	c.UserPriv = MergeUserPriv(c.UserPriv, ui.UserPriv)
 	c.log.LogPrintf(NOTICE, "logged in as name=%q serv=%q", ui.Name, ui.Serv)
+}
+
+func authCmdSASL(c *ConnState, args [][]byte, rest []byte) bool {
+	ToUpperASCII(args[0])
+	// TODO
+	c.w.PrintfLine("503 AUTHINFO SASL %s unimplemented", args[0])
+	return true
 }

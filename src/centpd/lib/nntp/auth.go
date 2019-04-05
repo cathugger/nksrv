@@ -1,5 +1,11 @@
 package nntp
 
+import (
+	"crypto/tls"
+
+	. "centpd/lib/logx"
+)
+
 type UserPriv struct {
 	AllowReading bool
 	AllowPosting bool
@@ -33,10 +39,26 @@ type UserInfo struct {
 	UserPriv
 }
 
-func (s *NNTPServer) setupClientDefaults(c *ConnState) {
-	// TODO
-	c.AllowReading = true
-	c.AllowPosting = true
+func (c *ConnState) setupDefaults(rCfg *NNTPServerRunCfg) {
+	c.UserPriv = rCfg.DefaultPriv
+}
+
+func (c *ConnState) postTLS(rCfg *NNTPServerRunCfg, tlsc *tls.Conn) {
+	c.tlsStarted = true
+	c.UserPriv = MergeUserPriv(c.UserPriv, rCfg.TLSPriv)
+
+	if rCfg.CertFPAutoAuth && !c.authenticated {
+		cs := tlsc.ConnectionState()
+		if len(cs.PeerCertificates) != 0 {
+			ui := rCfg.CertFPProvider.NNTPUserByFingerprint(cs.PeerCertificates[0])
+			if ui != nil {
+				c.authenticated = true
+				c.UserPriv = MergeUserPriv(c.UserPriv, ui.UserPriv)
+				c.log.LogPrintf(NOTICE,
+					"authenticated using CertFP as name=%q serv=%q", ui.Name, ui.Serv)
+			}
+		}
+	}
 }
 
 func (c *ConnState) advertisePlaintextAuth(rCfg *NNTPServerRunCfg) bool {
