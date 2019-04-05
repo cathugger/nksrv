@@ -13,17 +13,29 @@ type UserCfg struct {
 	Priv string `toml:"priv"`
 }
 
-type CertFPCfg struct {
+type CertFPInnerCfg struct {
 	Cert   string `toml:"cert"`
 	PubKey string `toml:"pubkey"`
-	Priv   string `toml:"priv"`
-	Name   string `toml:"name"`
+}
+
+type CertFPCfg struct {
+	CertFPInnerCfg
+
+	Priv string `toml:"priv"`
+	Name string `toml:"name"`
+}
+
+type PrivCertCfg struct {
+	Certificate string `toml:"cert"`
+	PrivateKey  string `toml:"priv"`
 }
 
 type ServerInnerCfg struct {
-	Enabled    bool   `toml:"enabled"`
-	Priv       string `toml:"priv"`
-	UnsafePass bool   `toml:"unsafepass"`
+	Enabled    bool        `toml:"enabled"`
+	Priv       string      `toml:"priv"`
+	TLSCert    PrivCertCfg `toml:"tls_cert"`
+	TLSNNTPS   bool        `toml:"tls_nntps"`
+	UnsafePass bool        `toml:"unsafepass"`
 	// TODO
 }
 
@@ -40,13 +52,13 @@ type ServerCfg struct {
 }
 
 type PeerInnerCfg struct {
-	Enabled     bool   `toml:"enabled"`
-	DialCert    string `toml:"dial_cert"`
-	Pull        bool   `toml:"pull"`
-	PullWorkers int    `toml:"pull_workers"`
-	Push        bool   `toml:"push"`
-	PushWorkers int    `toml:"push_workers"`
-	ServPriv    string `toml:"serv_priv"`
+	Enabled     bool        `toml:"enabled"`
+	DialCert    PrivCertCfg `toml:"dial_cert"`
+	Pull        bool        `toml:"pull"`
+	PullWorkers int         `toml:"pull_workers"`
+	Push        bool        `toml:"push"`
+	PushWorkers int         `toml:"push_workers"`
+	ServPriv    string      `toml:"serv_priv"`
 }
 
 var DefaultPeerInnerCfg = PeerInnerCfg{
@@ -58,9 +70,10 @@ var DefaultPeerInnerCfg = PeerInnerCfg{
 type PeerCfg struct {
 	PeerInnerCfg
 
-	DialAddr string       `toml:"dial"`
-	DialUser UserInnerCfg `toml:"dial_user"` // sharing this would be bad idea
-	ServUser UserCfg      `toml:"serv_user"`
+	DialAddr   string       `toml:"dial"`
+	DialUser   UserInnerCfg `toml:"dial_user"` // sharing this would be bad idea
+	ServUser   UserCfg      `toml:"serv_user"`
+	ServCertFP CertFPCfg    `toml:"serv_certfp"`
 }
 
 type FeedCfg struct {
