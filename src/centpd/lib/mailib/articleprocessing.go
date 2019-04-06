@@ -512,8 +512,32 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			return
 		}
 
-		if xismultipart && xct_par != nil && xct_par["boundary"] != "" &&
-			len(XH["Content-Disposition"]) == 0 {
+		allowedmultipart := func() bool {
+			// some multiparts can have additional important parameters
+			// we currently only take into account boundary parameter
+			// therefore, bail out if we encounter unknown params with
+			// types which may recognise them
+			// https://www.iana.org/assignments/media-types/media-types.xhtml#multipart
+			// signed, encrypted, related, report sub-types have additional params
+			mpt := xct_t[len("multipart/"):]
+			switch mpt {
+			case "mixed", "alternative", "digest", "parallel", "form-data",
+				"multilingual":
+
+				return true
+			}
+			for k := range xct_par {
+				if k != "boundary" {
+					// non-boundary parameter
+					return false
+				}
+			}
+			// if no non-boundary parameters found, OK
+			return true
+		}
+
+		if xismultipart && xct_par["boundary"] != "" &&
+			XH.GetFirst("Content-Disposition") == "" && allowedmultipart() {
 
 			has8bit := false
 
