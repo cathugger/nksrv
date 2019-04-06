@@ -68,7 +68,7 @@ func main() {
 		return
 	}
 
-	srv := nntp.NewNNTPServer(dbib, lgr, &nntp.NNTPServerRunCfg{})
+	srv := nntp.NewNNTPServer(dbib, lgr, &nntp.DefaultNNTPServerRunCfg)
 
 	var proto, host string
 	u, e := url.ParseRequestURI(*nntpbind)
