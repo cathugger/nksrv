@@ -36,7 +36,7 @@ type ListenerCW interface {
 type NNTPServerRunCfg struct {
 	DefaultPriv UserPriv
 
-	TLSServer bool
+	NNTPS     bool
 	TLSConfig *tls.Config
 	TLSPriv   UserPriv
 
@@ -176,7 +176,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	cs.setupDefaults(rcfg)
 
 	var fc net.Conn
-	if rcfg.TLSServer {
+	if rcfg.NNTPS {
 		// this is TLS server
 		tlsc := tls.Client(c, rcfg.TLSConfig)
 		err := tlsc.Handshake()

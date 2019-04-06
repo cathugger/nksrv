@@ -318,7 +318,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "STARTTLS\n")
 	}
 
-	// TODO maybe include backend identification
+	// XXX maybe include backend identification
 	fmt.Fprintf(dw, "IMPLEMENTATION CNTPD\n")
 
 	dw.Close()
@@ -377,29 +377,34 @@ func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
 			noSuchCommand()
 			return true
 		}
-		if cmd.help == "" {
-			noInfoAboutThisCommand()
+
+		if len(args) != 1 {
+			printCmd := func(p string, m commandMapType, k string) {
+				c, ok := m[k]
+				if !ok {
+					noSuchCommand()
+					return
+				}
+				if c.help == "" {
+					noInfoAboutThisCommand()
+					return
+				}
+				fmt.Fprintf(dw, "%s %s %s\n", p, k, c.help)
+			}
+			ToUpperASCII(args[1])
+			ck := unsafeBytesToStr(args[1])
+			if k == "LIST" {
+				printCmd(k, listCommandMap, ck)
+			} else if k == "AUTHINFO" {
+				printCmd(k, listCommandMap, ck)
+			} else {
+				noSuchCommand()
+			}
 			return true
 		}
-		if len(args) != 1 {
-			if k != "LIST" {
-				noSuchCommand()
-				return true
-			}
 
-			ToUpperASCII(args[1])
-			lk := unsafeBytesToStr(args[1])
-			lcmd, ok := listCommandMap[lk]
-			if !ok {
-				noSuchCommand()
-				return true
-			}
-			if lcmd.help == "" {
-				noInfoAboutThisCommand()
-				return true
-			}
-
-			fmt.Fprintf(dw, "LIST %s %s\n", lk, lcmd.help)
+		if cmd.help == "" {
+			noInfoAboutThisCommand()
 			return true
 		}
 
