@@ -132,12 +132,12 @@ func (sp *PSQLIB) applyInstanceSubmissionLimits(
 
 	// hardcoded instance limits, TODO make configurable
 
-	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxSubjectLen {
-		slimits.MaxTitleLength = maxSubjectLen
+	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxSubjectSize {
+		slimits.MaxTitleLength = maxSubjectSize
 	}
 
-	if slimits.MaxNameLength == 0 || slimits.MaxNameLength > maxNameLen {
-		slimits.MaxNameLength = maxNameLen
+	if slimits.MaxNameLength == 0 || slimits.MaxNameLength > maxNameSize {
+		slimits.MaxNameLength = maxNameSize
 	}
 
 	const maxMessageLength = mailib.DefaultMaxTextLen

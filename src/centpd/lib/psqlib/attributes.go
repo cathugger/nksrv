@@ -10,9 +10,9 @@ type postID = uint64
 
 type submissionLimits struct {
 	// message stuff
-	MaxTitleLength   uint32 `json:"max_len_title,omitempty"`
-	MaxNameLength    uint32 `json:"max_len_name,omitempty"`
-	MaxMessageLength uint32 `json:"max_len_msg,omitempty"`
+	MaxTitleLength   uint32 `json:"title_max_size,omitempty"`
+	MaxNameLength    uint32 `json:"name_max_size,omitempty"`
+	MaxMessageLength uint32 `json:"message_max_size,omitempty"`
 
 	// files count and sizes
 	FileMinNum        uint32 `json:"file_min_num,omitempty"`

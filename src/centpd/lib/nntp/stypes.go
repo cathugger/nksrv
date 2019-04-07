@@ -21,6 +21,7 @@ type ConnState struct {
 
 	srv  *NNTPServer
 	conn ConnCW
+	tlsconn *tls.Conn // TLS connection if activated
 	r    *bufreader.BufReader
 	dr   *bufreader.DotReader
 	w    Responder
@@ -29,7 +30,6 @@ type ConnState struct {
 	prov          NNTPProvider
 	CurrentGroup  interface{}  // provider-specific
 	UserPriv                   // stuff allowed
-	tlsStarted    bool         // whether TLS tunnel activated
 	authenticated bool         // whether authenticated
 	activeLogin   *ActiveLogin // for AUTHINFO USER
 }
@@ -51,6 +51,10 @@ func (c *ConnState) pullActiveLogin() (l *ActiveLogin) {
 	l = c.activeLogin
 	c.activeLogin = nil
 	return
+}
+
+func (c *ConnState) tlsStarted() bool {
+	return c.tlsconn != nil
 }
 
 type commandFunc func(c *ConnState, args [][]byte, rest []byte) bool

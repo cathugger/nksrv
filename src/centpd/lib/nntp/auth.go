@@ -44,7 +44,7 @@ func (c *ConnState) setupDefaults(rCfg *NNTPServerRunCfg) {
 }
 
 func (c *ConnState) postTLS(rCfg *NNTPServerRunCfg, tlsc *tls.Conn) {
-	c.tlsStarted = true
+	c.tlsconn = tlsc
 	c.UserPriv = MergeUserPriv(c.UserPriv, rCfg.TLSPriv)
 
 	if rCfg.CertFPAutoAuth && !c.authenticated {

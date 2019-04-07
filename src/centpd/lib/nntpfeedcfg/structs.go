@@ -34,7 +34,6 @@ type ServerInnerCfg struct {
 	Enabled    bool        `toml:"enabled"`
 	Priv       string      `toml:"priv"`
 	TLSCert    PrivCertCfg `toml:"tls_cert"`
-	TLSNNTPS   bool        `toml:"tls_nntps"`
 	UnsafePass bool        `toml:"unsafepass"`
 	// TODO
 }
@@ -47,7 +46,8 @@ var DefaultServerInnerCfg = ServerInnerCfg{
 type ServerCfg struct {
 	ServerInnerCfg
 
-	ListenAddr string `toml:"listen"`
+	Listen toml.Primitive `toml:"listen"`
+	NNTPS  bool           `toml:"tls_nntps"`
 	// TODO
 }
 
@@ -84,10 +84,10 @@ type FeedCfg struct {
 	CertFPPriv string           `toml:"certfp_priv"`
 
 	ServersDefault ServerInnerCfg   `toml:"servers_all"`
-	Servers        []toml.Primitive `toml:"servers"`
+	Servers        map[string]toml.Primitive `toml:"servers"`
 
 	PeersDefault PeerInnerCfg     `toml:"peers_all"`
-	Peers        []toml.Primitive `toml:"peers"`
+	Peers        map[string]toml.Primitive `toml:"peers"`
 }
 
 var DefaultFeedCfg = FeedCfg{

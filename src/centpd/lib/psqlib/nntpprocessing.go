@@ -288,8 +288,8 @@ func (sp *PSQLIB) netnewsSubmitFullArticle(
 }
 
 const (
-	maxNameLen    = 255
-	maxSubjectLen = 255
+	maxNameSize    = 255
+	maxSubjectSize = 255
 )
 
 func (sp *PSQLIB) netnewsSubmitArticle(
@@ -384,7 +384,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 
 		// ensure safety and sanity
-		ssub = au.TrimWSString(safeHeader(tu.TruncateText(ssub, maxSubjectLen)))
+		ssub = au.TrimWSString(safeHeader(tu.TruncateText(ssub, maxSubjectSize)))
 
 		if !isSubjectEmpty(ssub, info.isReply, isSage, info.refSubject) {
 			pi.MI.Title = ssub
@@ -401,7 +401,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		if e == nil && utf8.ValidString(a.Name) {
 			// XXX should we filter out "Anonymous" names? would save some bytes
 			pi.MI.Author = au.TrimWSString(safeHeader(
-				tu.TruncateText(a.Name, maxNameLen)))
+				tu.TruncateText(a.Name, maxNameSize)))
 		} else {
 			pi.MI.Author = "[Invalid From header]"
 		}

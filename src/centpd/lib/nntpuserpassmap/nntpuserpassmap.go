@@ -21,6 +21,10 @@ func NewUserPassMap() UserPassMap {
 	return UserPassMap{m: make(map[string]*node)}
 }
 
+func (m UserPassMap) Initialized() bool {
+	return m.m != nil
+}
+
 var _ nntp.UserPassProvider = UserPassMap{}
 
 func (m UserPassMap) Add(ui nntp.UserInfo, pass string) (err error) {
