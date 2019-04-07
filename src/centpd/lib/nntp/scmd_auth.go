@@ -80,7 +80,7 @@ func authCmdUser(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.PrintfLine("503 AUTHINFO USER unimplemented")
 		return true
 	}
-	if !c.tlsStarted && !rCfg.UnsafePass {
+	if !rCfg.UnsafePass && !c.tlsStarted() {
 		c.w.PrintfLine("483 TLS required")
 		return true
 	}
@@ -117,7 +117,7 @@ func authCmdPass(c *ConnState, args [][]byte, rest []byte) bool {
 			c.w.PrintfLine("503 AUTHINFO PASS unimplemented")
 			return true
 		}
-		if !c.tlsStarted && !rCfg.UnsafePass {
+		if !rCfg.UnsafePass && !c.tlsStarted() {
 			c.w.PrintfLine("483 TLS required")
 			return true
 		}

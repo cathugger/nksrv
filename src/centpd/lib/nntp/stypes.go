@@ -1,6 +1,7 @@
 package nntp
 
 import (
+	"crypto/tls"
 	tp "net/textproto"
 
 	"centpd/lib/bufreader"
@@ -19,13 +20,13 @@ func (r Responder) Abort() {
 type ConnState struct {
 	inbuf [512]byte
 
-	srv  *NNTPServer
-	conn ConnCW
+	srv     *NNTPServer
+	conn    ConnCW
 	tlsconn *tls.Conn // TLS connection if activated
-	r    *bufreader.BufReader
-	dr   *bufreader.DotReader
-	w    Responder
-	log  Logger
+	r       *bufreader.BufReader
+	dr      *bufreader.DotReader
+	w       Responder
+	log     Logger
 
 	prov          NNTPProvider
 	CurrentGroup  interface{}  // provider-specific

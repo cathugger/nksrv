@@ -64,5 +64,5 @@ func (c *ConnState) postTLS(rCfg *NNTPServerRunCfg, tlsc *tls.Conn) {
 func (c *ConnState) advertisePlaintextAuth(rCfg *NNTPServerRunCfg) bool {
 	return rCfg.UserPassProvider != nil &&
 		!c.authenticated &&
-		(rCfg.UnsafePass || c.tlsStarted)
+		(rCfg.UnsafePass || c.tlsStarted())
 }

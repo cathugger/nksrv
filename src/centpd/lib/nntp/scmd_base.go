@@ -314,7 +314,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
-	if rCfg.TLSConfig != nil && !c.tlsStarted {
+	if rCfg.TLSConfig != nil && !c.tlsStarted() {
 		fmt.Fprintf(dw, "STARTTLS\n")
 	}
 
@@ -524,7 +524,7 @@ func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 		c.w.PrintfLine("580 TLS not configured")
 		return true
 	}
-	if c.tlsStarted {
+	if c.tlsStarted() {
 		c.w.PrintfLine("502 TLS already activated")
 		return true
 	}

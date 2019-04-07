@@ -83,10 +83,10 @@ type FeedCfg struct {
 	CertFP     []toml.Primitive `toml:"certfp"`
 	CertFPPriv string           `toml:"certfp_priv"`
 
-	ServersDefault ServerInnerCfg   `toml:"servers_all"`
+	ServersDefault ServerInnerCfg            `toml:"servers_all"`
 	Servers        map[string]toml.Primitive `toml:"servers"`
 
-	PeersDefault PeerInnerCfg     `toml:"peers_all"`
+	PeersDefault PeerInnerCfg              `toml:"peers_all"`
 	Peers        map[string]toml.Primitive `toml:"peers"`
 }
 
