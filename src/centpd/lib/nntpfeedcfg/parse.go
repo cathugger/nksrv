@@ -109,11 +109,16 @@ func ParseCfg(cfg string) (err error) {
 			return
 		}
 
-		var listenstr string
-		err = md.PrimitiveDecode(fc_server.Listen, &listenstr)
+		listenstrs := make([]string, 1)
+		err = md.PrimitiveDecode(fc_server.Listen, &listenstrs[0])
 		if err != nil {
-
+			err = md.PrimitiveDecode(fc_server.Listen, &listenstrs)
+			if err != nil {
+				return
+			}
 		}
+		//if len(listenstrs) == 0 {
+
 	}
 
 	// TODO
