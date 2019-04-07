@@ -30,21 +30,25 @@ type PrivCertCfg struct {
 	PrivateKey  string `toml:"priv"`
 }
 
-type ServerInnerCfg struct {
+type ServerCommonCfg struct {
 	Enabled    bool        `toml:"enabled"`
 	Priv       string      `toml:"priv"`
-	TLSCert    PrivCertCfg `toml:"tls_cert"`
-	UnsafePass bool        `toml:"unsafepass"`
+	TLSPriv    string      `toml:"tls_priv"`
+	CertFPAutoAuth        bool `toml:"certfp_autoauth"`
+	TLSCert               PrivCertCfg `toml:"tls_cert"`
+	UnsafePass            bool        `toml:"unsafe_pass"`
+	UnsafeEarlyUserReject bool        `toml:"unsafe_early_user_reject"`
 	// TODO
 }
 
-var DefaultServerInnerCfg = ServerInnerCfg{
+var DefaultServerCommonCfg = ServerCommonCfg{
 	Enabled: true,
 	Priv:    "rw",
+	CertFPAutoAuth: true,
 }
 
 type ServerCfg struct {
-	ServerInnerCfg
+	ServerCommonCfg
 
 	Listen toml.Primitive `toml:"listen"`
 	NNTPS  bool           `toml:"tls_nntps"`
@@ -83,7 +87,7 @@ type FeedCfg struct {
 	CertFP     []toml.Primitive `toml:"certfp"`
 	CertFPPriv string           `toml:"certfp_priv"`
 
-	ServersDefault ServerInnerCfg            `toml:"servers_all"`
+	ServersDefault ServerCommonCfg           `toml:"servers_all"`
 	Servers        map[string]toml.Primitive `toml:"servers"`
 
 	PeersDefault PeerInnerCfg              `toml:"peers_all"`

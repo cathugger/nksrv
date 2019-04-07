@@ -23,9 +23,20 @@ type parsedBindCfg struct {
 	listenParam nntp.ListenParam
 }
 
+type parsedServerParams struct {
+	nntps                 bool
+	cert                  tls.Certificate
+	priv                  nntp.UserPriv
+	tlspriv               nntp.UserPriv
+	unsafePass            bool
+	unsafeEarlyUserReject bool
+	certfpAutoAuth        bool
+}
+
 type parsedServer struct {
 	BindCfg []parsedBindCfg
-	RunCfg  nntp.NNTPServerRunCfg
+
+	parsedServerParams
 }
 
 type parsedCfg struct {
