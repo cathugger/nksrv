@@ -310,7 +310,9 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 		if c.prov.SupportsHdr() {
 			fmt.Fprintf(dw, "HDR\n")
 		}
+	}
 
+	if c.AllowReading || c.AllowPosting {
 		fmt.Fprintf(dw, "LIST ACTIVE NEWSGROUPS OVERVIEW.FMT\n")
 	}
 
