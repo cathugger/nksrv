@@ -33,8 +33,8 @@ CREATE TABLE ib0.boards (
 	t_count BIGINT  DEFAULT 0  NOT NULL, -- thread count
 	p_count BIGINT  DEFAULT 0  NOT NULL, -- post count
 
-	badded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date added to our node
-	bdesc  TEXT                          NOT NULL, -- short description
+	badded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date added to our node
+	bdesc  TEXT                       NOT NULL, -- short description
 
 	threads_per_page INTEGER, -- <=0 - infinite, this results in only single page
 	max_active_pages INTEGER, -- <=0 - all existing pages are active
@@ -61,10 +61,10 @@ CREATE TABLE ib0.threads (
 	g_t_id BIGINT                NOT NULL, -- internal global thread OP post ID
 	t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
 
-	bump      TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
-	skip_over BOOLEAN                       NOT NULL, -- if true, do not include in overboard
-	p_count   BIGINT                        NOT NULL, -- post count
-	f_count   BIGINT                        NOT NULL, -- sum of posts' f_count
+	bump      TIMESTAMP  WITH TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
+	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
+	p_count   BIGINT                     NOT NULL, -- post count
+	f_count   BIGINT                     NOT NULL, -- sum of posts' f_count
 
 	reply_limits JSONB, -- inherits from reply_limits of ib0.boards
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
@@ -101,9 +101,9 @@ CREATE TABLE ib0.posts (
 	msgid  TEXT       COLLATE "C"  NOT NULL, -- Message-ID
 
 	-- redundant
-	pdate  TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- real date field
-	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
-	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
+	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
+	padded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
+	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
 
 	f_count INTEGER NOT NULL, -- attachment count
 
@@ -130,9 +130,9 @@ CREATE TABLE ib0.bposts (
 	g_p_id BIGINT                NOT NULL, -- global internal post ID
 
 	-- redundant
-	pdate  TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- real date field
-	padded TIMESTAMP  WITHOUT TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
-	sage   BOOLEAN                       NOT NULL, -- if true this isn't bump
+	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
+	padded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
+	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
 
 	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
 
