@@ -25,6 +25,34 @@ CREATE TABLE ib0.modlist (
 
 
 -- :next
+CREATE TABLE ib0.posts (
+	g_p_id BIGSERIAL               NOT NULL, -- global internal post ID
+	msgid  TEXT       COLLATE "C"  NOT NULL, -- Message-ID
+
+	-- redundant
+	pdate  TIMESTAMP  WITH TIME ZONE, -- real date field
+	-- date field used for sorting. will actually contain delivery date
+	-- it's not indexed there because we sometimes want to select with board keying
+	padded TIMESTAMP  WITH TIME ZONE,
+	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
+
+	f_count INTEGER NOT NULL, -- attachment count
+
+	author  TEXT                 NOT NULL, -- author name
+	trip    TEXT    COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
+	title   TEXT                 NOT NULL, -- message title/subject field
+	message TEXT                 NOT NULL, -- post message, in UTF-8
+	headers JSONB,                         -- map of lists of strings
+	attrib  JSONB,                         -- extra attributes which are optional
+	layout  JSON,                          -- multipart msg and attachment layout
+	extras  JSONB,                         -- dunno if really need this field
+
+	PRIMARY KEY (g_p_id),
+	UNIQUE      (msgid)
+)
+
+
+-- :next
 CREATE TABLE ib0.boards (
 	b_id    SERIAL               NOT NULL, -- internal board ID
 	b_name  TEXT    COLLATE "C"  NOT NULL, -- external board identifier
@@ -93,32 +121,6 @@ CREATE INDEX
 	)
 	WHERE
 		skip_over IS NOT TRUE
-
-
--- :next
-CREATE TABLE ib0.posts (
-	g_p_id BIGSERIAL               NOT NULL, -- global internal post ID
-	msgid  TEXT       COLLATE "C"  NOT NULL, -- Message-ID
-
-	-- redundant
-	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
-	padded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
-	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
-
-	f_count INTEGER NOT NULL, -- attachment count
-
-	author  TEXT                 NOT NULL, -- author name
-	trip    TEXT    COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
-	title   TEXT                 NOT NULL, -- message title/subject field
-	message TEXT                 NOT NULL, -- post message, in UTF-8
-	headers JSONB,                         -- map of lists of strings
-	attrib  JSONB,                         -- extra attributes which are optional
-	layout  JSON,                          -- multipart msg and attachment layout
-	extras  JSONB,                         -- dunno if really need this field
-
-	PRIMARY KEY (g_p_id),
-	UNIQUE      (msgid)
-)
 
 
 -- :next
@@ -304,34 +306,18 @@ CREATE TABLE ib0.banlist (
 
 	g_p_id   BIGSERIAL, -- post responsible for this ban (if any)
 
-	msgid      TEXT     COLLATE "C", -- msgid being banned (if any)
-	b_id       INTEGER,              -- if it's only limited to specific board
-	puller_id BIGINT,               -- maybe it's only limited to specific puller
+	msgid  TEXT  COLLATE "C", -- msgid being banned (if any)
 
 	PRIMARY KEY (ban_id),
 
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.posts
-		ON DELETE CASCADE,
-	FOREIGN KEY (b_id)
-		REFERENCES ib0.boards
-		ON DELETE CASCADE,
-	FOREIGN KEY (puller_id)
-		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
 )
 -- :next
 CREATE INDEX
 	ON ib0.banlist (g_p_id)
 	WHERE g_p_id IS NOT NULL
--- :next
-CREATE INDEX
-	ON ib0.banlist (b_id)
-	WHERE b_id IS NOT NULL
--- :next
-CREATE INDEX
-	ON ib0.banlist (puller_id)
-	WHERE puller_id IS NOT NULL
 -- :next
 CREATE INDEX
 	ON ib0.banlist (msgid)
