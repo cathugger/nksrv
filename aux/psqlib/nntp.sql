@@ -3,7 +3,8 @@
 SELECT
 	xbp.b_id,
 	xbp.b_p_id,
-	xp.g_p_id
+	xp.g_p_id,
+	(xp.padded IS NULL)
 FROM
 	ib0.posts AS xp
 JOIN
@@ -51,7 +52,8 @@ LEFT JOIN
 USING
 	(g_p_id)
 WHERE
-	jp.g_p_id = $1
+	-- ensure g_p_id points to valid post to prevent TOCTOU hazards
+	jp.g_p_id = $1 AND jp.padded IS NOT NULL
 ORDER BY
 	jf.f_id
 
@@ -313,7 +315,8 @@ SELECT
 	xp.headers -> 'Subject' ->> 0,
 	xp.headers -> 'From' ->> 0,
 	xp.headers -> 'Date' ->> 0,
-	xp.headers -> 'References' ->> 0
+	xp.headers -> 'References' ->> 0,
+	(xp.padded IS NULL)
 FROM
 	ib0.boards AS xb
 JOIN
@@ -400,7 +403,8 @@ LIMIT
 -- input: {msgid} {bid}
 SELECT
 	xbp.b_id,
-	xbp.b_p_id
+	xbp.b_p_id,
+	(xp.padded IS NULL)
 FROM
 	ib0.posts AS xp
 JOIN
@@ -420,7 +424,8 @@ SELECT
 	xbp.b_id,
 	xbp.b_p_id,
 	xp.title,
-	xp.headers -> 'Subject' ->> 0
+	xp.headers -> 'Subject' ->> 0,
+	(xp.padded IS NULL)
 FROM
 	ib0.posts AS xp
 JOIN
@@ -439,7 +444,8 @@ LIMIT
 SELECT
 	xbp.b_id,
 	xbp.b_p_id,
-	xp.headers -> $3 ->> 0
+	xp.headers -> $3 ->> 0,
+	(xp.padded IS NULL)
 FROM
 	ib0.posts AS xp
 JOIN

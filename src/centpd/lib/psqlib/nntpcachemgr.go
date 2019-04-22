@@ -93,16 +93,23 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(
 	var bid boardID
 	var bpid postID
 	var gpid postID
+	var isbanned bool
 
 	err := sp.st_prep[st_NNTP_articleNumByMsgID].
 		QueryRow(string(msgid), cbid).
-		Scan(&bid, &bpid, &gpid)
+		Scan(&bid, &bpid, &gpid, &isbanned)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
+	if isbanned {
+		// we could signal this in some other way later maybe
+		return errNotExist
+	}
+
+	// this kind of query should never modify current article ID
 
 	cpnum := bpidIfGroupEq(cbid, bid, bpid)
 
@@ -158,6 +165,8 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
+
+	// current article ID isn't to be modified because it'd be the same
 
 	return sp.nntpObtainItemOrStat(w, gs.bpid, msgid, gpid)
 }

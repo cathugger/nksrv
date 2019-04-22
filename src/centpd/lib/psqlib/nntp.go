@@ -700,6 +700,8 @@ func (sp *PSQLIB) GetOverByMsgID(
 		title  string
 
 		hsubject, hfrom, hdate, hrefs sql.NullString
+
+		isbanned bool
 	)
 
 	err := sp.st_prep[st_NNTP_GetOverByMsgID].
@@ -712,13 +714,18 @@ func (sp *PSQLIB) GetOverByMsgID(
 			&hsubject,
 			&hfrom,
 			&hdate,
-			&hrefs)
+			&hrefs,
+			&isbanned)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false
 		}
 		w.ResInternalError(sp.sqlError("overview query", err))
 		return true
+	}
+	if isbanned {
+		// this kind of signaling so far
+		return false
 	}
 	if !hsubject.Valid {
 		hsubject.String = title
@@ -900,12 +907,13 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 	var bpid postID
 	var err error
 	var h sql.NullString
+	isbanned := false
 
 	if shdr == "Message-ID" {
 
 		err = sp.st_prep[st_NNTP_GetHdrByMsgID_msgid].
 			QueryRow(msgid, cbid).
-			Scan(&bid, &bpid)
+			Scan(&bid, &bpid, &isbanned)
 		if err == nil {
 			h.String = fmt.Sprintf("<%s>", sid)
 		}
@@ -916,7 +924,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 		err = sp.st_prep[st_NNTP_GetHdrByMsgID_subject].
 			QueryRow(msgid, cbid).
-			Scan(&bid, &bpid, &title, &h)
+			Scan(&bid, &bpid, &title, &h, &isbanned)
 		if err == nil && !h.Valid {
 			h.String = title
 		}
@@ -933,7 +941,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 		err = sp.st_prep[st_NNTP_GetHdrByMsgID_any].
 			QueryRow(msgid, cbid, shdr).
-			Scan(&bid, &bpid, &h)
+			Scan(&bid, &bpid, &h, &isbanned)
 
 	}
 	if err != nil {
@@ -942,6 +950,10 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		}
 		w.ResInternalError(sp.sqlError("hdr query", err))
 		return true
+	}
+	if isbanned {
+		// this kind of signaling so far
+		return false
 	}
 
 	if rfc {
