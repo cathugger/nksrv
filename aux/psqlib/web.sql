@@ -569,7 +569,7 @@ WITH
 		DELETE FROM
 			ib0.posts
 		WHERE
-			msgid = $1
+			msgid = $1 AND padded IS NOT NULL
 		RETURNING
 			g_p_id,f_count
 	),
