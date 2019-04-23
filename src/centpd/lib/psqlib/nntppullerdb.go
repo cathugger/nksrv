@@ -275,7 +275,7 @@ ORDER BY xb.b_name`
 func (s *PullerDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
 	cmsgid := cutMsgID(msgid)
 	// check if we already have it
-	exists, err := s.sp.nntpCheckArticleExists(cmsgid)
+	exists, err := s.sp.nntpCheckArticleExistsOrBanned(cmsgid)
 	if err != nil {
 		return false, err
 	}
@@ -285,7 +285,8 @@ func (s *PullerDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
 func (s *PullerDB) DoesReferenceExist(
 	ref FullMsgIDStr) (exists bool, err error) {
 
-	return s.sp.nntpCheckArticleExists(cutMsgID(ref))
+	exists, _, err = s.sp.nntpCheckArticleValidAndBanned(cutMsgID(ref))
+	return
 }
 
 var (

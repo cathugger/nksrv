@@ -1,10 +1,35 @@
+-- :name nntp_article_exists_or_banned_by_msgid
+-- input: cmsgid
+-- output: 1
+SELECT
+	1
+FROM
+	ib0.posts
+WHERE
+	msgid = $1
+LIMIT
+	1
+
+-- :name nntp_article_valid_and_banned_by_msgid
+-- input: cmsgid
+-- output: is_banned
+SELECT
+	(xp.padded IS NULL) AS is_banned
+FROM
+	ib0.posts
+WHERE
+	msgid = $1
+LIMIT
+	1
+
+
 -- :name nntp_article_num_by_msgid
 -- input: msgid curr_group_id
 SELECT
 	xbp.b_id,
 	xbp.b_p_id,
 	xp.g_p_id,
-	(xp.padded IS NULL)
+	(xp.padded IS NULL) AS is_banned
 FROM
 	ib0.posts AS xp
 JOIN

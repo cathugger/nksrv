@@ -244,20 +244,36 @@ ON TRUE`
 	return
 }
 
-func (sp *PSQLIB) nntpCheckArticleExists(
+func (sp *PSQLIB) nntpCheckArticleExistsOrBanned(
 	unsafe_sid CoreMsgIDStr) (exists bool, err error) {
 
-	var dummy int
-	q := "SELECT 1 FROM ib0.posts WHERE msgid = $1 LIMIT 1"
-	err = sp.db.DB.QueryRow(q, string(unsafe_sid)).Scan(&dummy)
+	var dummy int64
+
+	err = sp.st_prep[st_NNTP_articleExistsOrBannedByMsgID].
+		QueryRow(string(unsafe_sid)).Scan(&dummy)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return false, sp.sqlError("article existence query scan", err)
 		}
 		return false, nil
-	} else {
-		return true, nil
 	}
+
+	return true, nil
+}
+
+func (sp *PSQLIB) nntpCheckArticleValidAndBanned(
+	unsafe_sid CoreMsgIDStr) (exists, isBanned bool, err error) {
+
+	err = sp.st_prep[st_NNTP_articleValidAndBannedByMsgID].
+		QueryRow(string(unsafe_sid)).Scan(&isBanned)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return false, false, sp.sqlError("article existence query scan", err)
+		}
+		return false, false, nil
+	}
+
+	return !isBanned, isBanned, nil
 }
 
 var (
@@ -348,7 +364,7 @@ func (sp *PSQLIB) HandleIHave(
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
+	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		return true
@@ -389,7 +405,7 @@ func (sp *PSQLIB) HandleCheck(
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
+	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		return true
@@ -410,7 +426,7 @@ func (sp *PSQLIB) HandleTakeThis(
 
 	unsafe_sid := unsafeCoreMsgIDToStr(msgid)
 	// check if we already have it
-	exists, err := sp.nntpCheckArticleExists(unsafe_sid)
+	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
 		w.ResInternalError(err)
 		r.Discard(-1)
@@ -506,10 +522,10 @@ func (sp *PSQLIB) ensureArticleDoesntExist(
 	msgid CoreMsgIDStr) (err error, unexpected bool) {
 
 	// check if we already have it
-	exists, e := sp.nntpCheckArticleExists(msgid)
-	if e != nil {
+	exists, err := sp.nntpCheckArticleExistsOrBanned(msgid)
+	if err != nil {
 		err = fmt.Errorf(
-			"error while checking article existence: %v", e)
+			"error while checking article existence: %v", err)
 		unexpected = true
 		return
 	}

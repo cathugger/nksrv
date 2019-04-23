@@ -8,7 +8,10 @@ import (
 )
 
 const (
-	st_NNTP_articleNumByMsgID = iota
+	st_NNTP_articleExistsOrBannedByMsgID = iota
+	st_NNTP_articleValidAndBannedByMsgID
+
+	st_NNTP_articleNumByMsgID
 	st_NNTP_articleMsgIDByNum
 
 	st_NNTP_articleGetByGPID
@@ -72,6 +75,9 @@ type st_reference struct {
 }
 
 var st_names = [st_max]st_reference{
+	st_reference{"nntp", "nntp_article_exists_or_banned_by_msgid"},
+	st_reference{"nntp", "nntp_article_valid_and_banned_by_msgid"},
+
 	st_reference{"nntp", "nntp_article_num_by_msgid"},
 	st_reference{"nntp", "nntp_article_msgid_by_num"},
 
