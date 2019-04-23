@@ -13,7 +13,7 @@ CREATE TYPE modpriv_t AS ENUM ('none', 'mod')
 -- :next
 -- design will (very) probably change in the future
 CREATE TABLE ib0.modlist (
-	mod_id     BIGSERIAL               NOT NULL,
+	mod_id     BIGINT     GENERATED ALWAYS AS IDENTITY,
 	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
 	automanage BOOLEAN                 NOT NULL,
 	mod_priv   modpriv_t               NOT NULL DEFAULT 'none',
@@ -26,8 +26,8 @@ CREATE TABLE ib0.modlist (
 
 -- :next
 CREATE TABLE ib0.posts (
-	g_p_id BIGSERIAL               NOT NULL, -- global internal post ID
-	msgid  TEXT       COLLATE "C"  NOT NULL, -- Message-ID
+	g_p_id BIGINT  GENERATED ALWAYS AS IDENTITY, -- global internal post ID
+	msgid  TEXT    COLLATE "C"  NOT NULL,        -- Message-ID
 
 	-- redundant
 	pdate  TIMESTAMP  WITH TIME ZONE, -- real date field
@@ -54,9 +54,9 @@ CREATE TABLE ib0.posts (
 
 -- :next
 CREATE TABLE ib0.boards (
-	b_id    SERIAL               NOT NULL, -- internal board ID
-	b_name  TEXT    COLLATE "C"  NOT NULL, -- external board identifier
-	last_id BIGINT  DEFAULT 0    NOT NULL, -- used for post/thread IDs
+	b_id    INTEGER  GENERATED ALWAYS AS IDENTITY, -- internal board ID
+	b_name  TEXT     COLLATE "C"  NOT NULL,        -- external board identifier
+	last_id BIGINT   DEFAULT 0    NOT NULL,        -- used for post/thread IDs
 
 	t_count BIGINT  DEFAULT 0  NOT NULL, -- thread count
 	p_count BIGINT  DEFAULT 0  NOT NULL, -- post count
@@ -186,8 +186,8 @@ CREATE TYPE ftype_t AS ENUM (
 )
 -- :next
 CREATE TABLE ib0.files (
-	f_id   BIGSERIAL NOT NULL, -- internal file ID of this file
-	g_p_id BIGINT    NOT NULL, -- post file belongs to
+	f_id   BIGINT GENERATED ALWAYS AS IDENTITY, -- internal file ID of this file
+	g_p_id BIGINT NOT NULL,                     -- post file belongs to
 
 	fname    TEXT     COLLATE "C"  NOT NULL, -- internal file name of original file. not unique!
 	ftype    ftype_t               NOT NULL, -- file type
@@ -211,7 +211,7 @@ CREATE INDEX ON ib0.files (fname,thumb)
 -- :next
 -- index of failed references, so that we can pick them up and correct
 CREATE TABLE ib0.failrefs (
-	fr_id BIGSERIAL NOT NULL,
+	fr_id BIGINT GENERATED ALWAYS AS IDENTITY,
 
 	g_p_id BIGINT NOT NULL,
 
@@ -239,9 +239,9 @@ CREATE INDEX
 --- puller stuff
 -- :next
 CREATE TABLE ib0.puller_list (
-	sid      BIGSERIAL               NOT NULL,
-	sname    TEXT       COLLATE "C"  NOT NULL,
-	last_use BIGINT                  NOT NULL, -- used for cleanup
+	sid      BIGINT  GENERATED ALWAYS AS IDENTITY,
+	sname    TEXT    COLLATE "C"  NOT NULL,
+	last_use BIGINT               NOT NULL, -- used for cleanup
 
 	PRIMARY KEY (sid),
 	UNIQUE (sname)
@@ -301,10 +301,10 @@ CREATE INDEX
 --- moderation stuff
 -- :next
 CREATE TABLE ib0.banlist (
-	ban_id   BIGSERIAL NOT NULL,
-	ban_info TEXT      NOT NULL,
+	ban_id   BIGINT GENERATED ALWAYS AS IDENTITY,
+	ban_info TEXT   NOT NULL,
 
-	g_p_id   BIGSERIAL, -- post responsible for this ban (if any)
+	g_p_id   BIGINT, -- post responsible for this ban (if any)
 
 	msgid  TEXT  COLLATE "C", -- msgid being banned (if any)
 

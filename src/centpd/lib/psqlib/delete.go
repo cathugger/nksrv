@@ -10,27 +10,34 @@ import (
 	mm "centpd/lib/minimail"
 )
 
-func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
-	// NOTE: nuking OP also nukes whole thread
-	// NOTE:
-	// because of file dedup we do,
-	// we must write-lock whole table to avoid new posts adding new entries
-	// and thus successfuly completing their file move,
-	// because we gonna delete files we extracted
-	// TODO:
-	// above mentioned method sorta sucks for concurrency.
-	// maybe we should instead do dedup inside DB and count references and
-	// that would then provide row-level locks?
-	// idk if and how really that'd work.
-	// or we could just not bother with it and leave it for filesystem.
+// NOTE: nuking OP also nukes whole thread
+// NOTE:
+// because of file dedup we do,
+// we must write-lock whole table to avoid new posts adding new entries
+// and thus successfuly completing their file move,
+// because we gonna delete files we extracted
+// TODO:
+// above mentioned method sorta sucks for concurrency.
+// maybe we should instead do dedup inside DB and count references and
+// that would then provide row-level locks?
+// idk if and how really that'd work.
+// or we could just not bother with it and leave it for filesystem.
 
-	type affThr struct {
-		b boardID
-		t postID
+func (sp *PSQLIB) preDelete(tx *sql.Tx) (err error) {
+	_, err = tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
+	if err != nil {
+		err = sp.sqlError("lock files query", err)
 	}
-	var thr_aff []affThr
+	return
+}
 
-	tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
+func (sp *PSQLIB) deleteByMsgID(
+	tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
+
+	err = sp.preDelete(tx)
+	if err != nil {
+		return
+	}
 
 	delst := tx.Stmt(sp.st_prep[st_Web_delete_by_msgid])
 	rows, err := delst.Query(string(cmsgids))
@@ -38,6 +45,38 @@ func (sp *PSQLIB) deleteByMsgID(tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
 		err = sp.sqlError("delete by msgid query", err)
 		return
 	}
+
+	err = sp.postDelete(tx, rows)
+	return
+}
+
+func (sp *PSQLIB) banByMsgID(
+	tx *sql.Tx, cmsgids CoreMsgIDStr, bannedby postID, reason string) (err error) {
+
+	err = sp.preDelete(tx)
+	if err != nil {
+		return
+	}
+
+	banst := tx.Stmt(sp.st_prep[st_Web_ban_by_msgid])
+	rows, err := banst.Query(string(cmsgids), bannedby, reason)
+	if err != nil {
+		err = sp.sqlError("ban by msgid query", err)
+		return
+	}
+
+	err = sp.postDelete(tx, rows)
+	return
+}
+
+func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
+
+	type affThr struct {
+		b boardID
+		t postID
+	}
+	var thr_aff []affThr
+
 	for rows.Next() {
 		var fname, tname string
 		var fnum, tnum int64

@@ -58,17 +58,30 @@ func (sp *PSQLIB) InitIb0() {
 }
 
 func (sp *PSQLIB) CheckIb0() (initialised bool, versionerror error) {
+	q := "SHOW server_version_num"
+	var vernum int64
+	err := sp.db.DB.QueryRow(q).Scan(&vernum)
+	if err != nil {
+		return false, sp.sqlError("server version query", err)
+	}
+	const verreq = 100000
+	if vernum < verreq {
+		return false, fmt.Errorf("we require at least server version %d, got %d", verreq, vernum)
+	}
+
+	q = "SELECT version FROM capabilities WHERE component = 'ib0' LIMIT 1"
 	var ver string
-	q := "SELECT version FROM capabilities WHERE component = 'ib0' LIMIT 1"
-	err := sp.db.DB.QueryRow(q).Scan(&ver)
+	err = sp.db.DB.QueryRow(q).Scan(&ver)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		return false, sp.sqlError("version row query", err)
 	}
+
 	if ver != currIb0Version {
 		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currIb0Version)
 	}
+
 	return true, nil
 }
