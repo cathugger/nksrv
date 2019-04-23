@@ -58,8 +58,10 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
+	bannedbynull := sql.NullInt64{Int64: int64(bannedby), Valid: bannedby != 0}
+
 	banst := tx.Stmt(sp.st_prep[st_Web_ban_by_msgid])
-	rows, err := banst.Query(string(cmsgids), bannedby, reason)
+	rows, err := banst.Query(string(cmsgids), bannedbynull, reason)
 	if err != nil {
 		err = sp.sqlError("ban by msgid query", err)
 		return
@@ -217,7 +219,7 @@ WHERE
 	return nil
 }
 
-func (sp *PSQLIB) DemoDeleteByMsgID(msgids []string) {
+func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	var err error
 
 	for _, s := range msgids {
@@ -240,7 +242,11 @@ func (sp *PSQLIB) DemoDeleteByMsgID(msgids []string) {
 
 	for _, s := range msgids {
 		sp.log.LogPrintf(INFO, "deleting %s", s)
-		err = sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)))
+		if banreason == "" {
+			err = sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)))
+		} else {
+			err = sp.banByMsgID(tx, cutMsgID(FullMsgIDStr(s)), 0, banreason)
+		}
 		if err != nil {
 			return
 		}

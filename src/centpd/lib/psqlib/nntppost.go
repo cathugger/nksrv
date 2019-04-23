@@ -109,6 +109,7 @@ WHERE b_name=$1`
 
 		// new post
 		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
+		// get info about board being posted in and thread and OP
 		q := `WITH
 	xb AS (
 		SELECT

@@ -16,6 +16,7 @@ func main() {
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
+	banstr := flag.String("ban", "", "ban reason (if unset, won't ban)")
 
 	flag.Parse()
 
@@ -49,5 +50,5 @@ func main() {
 	}
 
 	args := flag.Args()
-	dbib.DemoDeleteByMsgID(args)
+	dbib.DemoDeleteOrBanByMsgID(args, *banstr)
 }
