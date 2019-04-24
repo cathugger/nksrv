@@ -794,7 +794,7 @@ WITH
 				headers,
 				attrib,
 				layout,
-				extras,
+				extras
 			)
 		VALUES
 			(
@@ -803,10 +803,10 @@ WITH
 				NULL,
 				FALSE,
 				0,
-				"",
-				"",
-				"",
-				"",
+				'',
+				'',
+				'',
+				'',
 				NULL,
 				NULL,
 				NULL,

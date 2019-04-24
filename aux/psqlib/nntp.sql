@@ -14,7 +14,7 @@ LIMIT
 -- input: cmsgid
 -- output: is_banned
 SELECT
-	(xp.padded IS NULL) AS is_banned
+	(padded IS NULL) AS is_banned
 FROM
 	ib0.posts
 WHERE
