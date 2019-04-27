@@ -62,6 +62,8 @@ const (
 	st_Web_autoregister_mod
 	st_Web_delete_by_msgid
 	st_Web_ban_by_msgid
+	st_Web_bname_topts_by_tid
+	st_Web_refresh_bump_by_tid
 
 	st_max
 )
@@ -129,6 +131,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "autoregister_mod"},
 	st_reference{"web", "delete_by_msgid"},
 	st_reference{"web", "ban_by_msgid"},
+	st_reference{"web", "bname_topts_by_tid"},
+	st_reference{"web", "refresh_bump_by_tid"},
 }
 
 func loadStatements() {

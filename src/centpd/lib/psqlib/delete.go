@@ -51,7 +51,8 @@ func (sp *PSQLIB) deleteByMsgID(
 }
 
 func (sp *PSQLIB) banByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr, bannedby postID, reason string) (err error) {
+	tx *sql.Tx, cmsgids CoreMsgIDStr, bannedby postID, reason string) (
+	err error) {
 
 	err = sp.preDelete(tx)
 	if err != nil {
@@ -130,29 +131,26 @@ func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
 		return
 	}
 
+	// thread opts, refresh bump statements
+	var toptsst, refbump *sql.Stmt
+
 	// now de-bump affected threads
 	for _, ta := range thr_aff {
 		sp.log.LogPrintf(DEBUG, "DEBUMP board %d thread %d", ta.b, ta.t)
 
-		q := `
-SELECT
-	xb.b_name,xb.thread_opts,xt.thread_opts
-FROM
-	ib0.boards xb
-JOIN
-	ib0.threads xt
-ON
-	xb.b_id = xt.b_id
-WHERE
-	xb.b_id = $1 AND xt.t_id = $2
-`
+		if toptsst == nil {
+			toptsst = tx.Stmt(sp.st_prep[st_Web_bname_topts_by_tid])
+			refbump = tx.Stmt(sp.st_prep[st_Web_refresh_bump_by_tid])
+		}
+
 		var bname string
 		var jbTO xtypes.JSONText // board threads options
 		var jtTO xtypes.JSONText // thread options
 		threadOpts := defaultThreadOptions
 
-		err = tx.
-			QueryRow(q, ta.b, ta.t).
+		// first obtain thread opts to figure out bump limit
+		err = toptsst.
+			QueryRow(ta.b, ta.t).
 			Scan(&bname, &jbTO, &jtTO)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -170,46 +168,8 @@ WHERE
 		}
 		sp.applyInstanceThreadOptions(&threadOpts, bname)
 
-		q2 := `
-UPDATE
-	ib0.threads
-SET
-	bump = pdate
-FROM
-	(
-		SELECT
-			pdate
-		FROM (
-			SELECT
-				pdate,
-				b_p_id,
-				sage
-			FROM
-				ib0.bposts
-			WHERE
-				-- count sages against bump limit.
-				-- because others do it like that :<
-				b_id = $1 AND t_id = $2
-			ORDER BY
-				pdate ASC,
-				b_p_id ASC
-			LIMIT
-				$3
-			-- take bump posts, sorted by original date,
-			-- only upto bump limit
-		) AS tt
-	WHERE
-		sage != TRUE
-	ORDER BY
-		pdate DESC,b_p_id DESC
-	LIMIT
-		1
-	-- and pick latest one
-) as xbump
-WHERE
-	b_id = $1 AND t_id = $2
-`
-		_, err = tx.Exec(q2, ta.b, ta.t, threadOpts.BumpLimit)
+		// perform bump refresh
+		_, err = refbump.Exec(ta.b, ta.t, threadOpts.BumpLimit)
 		if err != nil {
 			err = sp.sqlError("thread debump exec", err)
 			return

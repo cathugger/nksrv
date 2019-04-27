@@ -553,6 +553,7 @@ ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update so
 RETURNING
 	mod_id, mod_priv
 
+
 -- :name delete_by_msgid
 /*
 IMPORTANT:
@@ -1015,3 +1016,56 @@ FROM
 	delbp
 WHERE
 	t_id != b_p_id
+
+
+-- :name bname_topts_by_tid
+SELECT
+	xb.b_name,xb.thread_opts,xt.thread_opts
+FROM
+	ib0.boards xb
+JOIN
+	ib0.threads xt
+ON
+	xb.b_id = xt.b_id
+WHERE
+	xb.b_id = $1 AND xt.t_id = $2
+
+-- :name refresh_bump_by_tid
+UPDATE
+	ib0.threads
+SET
+	bump = pdate
+FROM
+	(
+		SELECT
+			pdate
+		FROM
+			(
+				SELECT
+					pdate,
+					b_p_id,
+					sage
+				FROM
+					ib0.bposts
+				WHERE
+					-- count sages against bump limit.
+					-- because others do it like that :<
+					b_id = $1 AND t_id = $2
+				ORDER BY
+					pdate ASC,
+					b_p_id ASC
+				LIMIT
+					$3
+				-- take bump posts, sorted by original date,
+				-- only upto bump limit
+			) AS tt
+		WHERE
+			sage != TRUE
+		ORDER BY
+			pdate DESC,b_p_id DESC
+		LIMIT
+			1
+		-- and pick latest one
+	) as xbump
+WHERE
+	b_id = $1 AND t_id = $2

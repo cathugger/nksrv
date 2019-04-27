@@ -312,7 +312,7 @@ CREATE TABLE ib0.banlist (
 
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.posts
-		ON DELETE CASCADE
+		ON DELETE CASCADE    -- see trigger below
 )
 -- :next
 CREATE INDEX
