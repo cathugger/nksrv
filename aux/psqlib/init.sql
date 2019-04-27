@@ -322,3 +322,43 @@ CREATE INDEX
 CREATE INDEX
 	ON ib0.banlist (msgid)
 	WHERE msgid IS NOT NULL
+-- :next
+-- to be ran AFTER delet from banlist
+CREATE FUNCTION
+	ib0_gc_banposts_after()
+RETURNS
+	TRIGGER
+AS
+$$
+	BEGIN
+		-- XXX check if OLD.msgid != NULL? idk if worth atm.
+		-- garbage collect void placeholder posts when all bans for them are lifted
+		DELETE FROM
+			ib0.posts xp
+		USING
+			(
+				SELECT
+					OLD.msgid,COUNT(delbl.msgid) > 0 AS hasrefs
+				FROM
+					ib0.banlist delbl
+				WHERE
+					OLD.msgid = delbl.msgid AND delbl.msgid IS NOT NULL
+				GROUP BY
+					delbl.msgid
+			) AS delp
+		WHERE
+			delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
+	END;
+$$
+LANGUAGE
+	plpgsql
+-- :next
+CREATE TRIGGER
+	ib0_banlist_after_del
+AFTER
+	DELETE
+ON
+	ib0.banlist
+FOR EACH ROW
+EXECUTE PROCEDURE
+	ib0_gc_banposts_after()
