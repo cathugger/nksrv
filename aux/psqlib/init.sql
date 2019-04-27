@@ -338,16 +338,22 @@ $$
 		USING
 			(
 				SELECT
-					OLD.msgid,COUNT(delbl.msgid) > 0 AS hasrefs
+					delbl.msgid,COUNT(exibl.msgid) > 0 AS hasrefs
 				FROM
-					ib0.banlist delbl
+					(SELECT OLD.msgid) AS delbl
+				LEFT JOIN
+					ib0.banlist exibl
+				ON
+					delbl.msgid = exibl.msgid
 				WHERE
-					OLD.msgid = delbl.msgid AND delbl.msgid IS NOT NULL
+					delbl.msgid IS NOT NULL
 				GROUP BY
 					delbl.msgid
 			) AS delp
 		WHERE
 			delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
+
+		RETURN NULL;
 	END;
 $$
 LANGUAGE
