@@ -20,7 +20,7 @@ var modCtlCmds = map[string]modCtlCmdFunc{
 
 		// TODO add ban
 
-		err = sp.deleteByMsgID(tx, cutMsgID(fmsgids))
+		err = sp.banByMsgID(tx, cutMsgID(fmsgids), gpid, "TODO")
 		if err != nil {
 			return
 		}
