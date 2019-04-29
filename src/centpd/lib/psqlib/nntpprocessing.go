@@ -88,8 +88,8 @@ type nntpParsedInfo struct {
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
-	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string, post bool,
-	notrace bool) (
+	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string,
+	post, notrace bool) (
 	info nntpParsedInfo, err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	var restrictions []headerRestriction
@@ -121,8 +121,9 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	hmsgids := H["Message-ID"]
 	if len(hmsgids) != 0 {
 
+		// this should be done at parsing time already
 		// yes we modify header there
-		hmsgids[0].V = au.TrimWSString(hmsgids[0].V)
+		// hmsgids[0].V = au.TrimWSString(hmsgids[0].V)
 
 		hid := FullMsgIDStr(hmsgids[0].V)
 
@@ -134,6 +135,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		cid := cutMsgID(hid)
 
 		if unsafe_sid != cid && unsafe_sid != "" {
+			// check for mismatch of provided
 			err = fmt.Errorf(
 				"provided Message-ID <%s> doesn't match article Message-ID <%s>",
 				unsafe_sid, cid)
@@ -143,32 +145,45 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		info.FullMsgIDStr = hid
 
 	} else if unsafe_sid != "" {
+		// no Message-ID header but we have Message-ID given to us via other means
+		// just make it on our own
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
 		H["Message-ID"] = mail.OneHeaderVal(fmsgids)
 		info.FullMsgIDStr = FullMsgIDStr(fmsgids)
 	} else if !post {
+		// no known Message-ID and not POST, error out
 		err = errors.New("missing Message-ID")
 		return
 	}
+	// incase POST and no Message-ID, we'll figure it out later
 
 	// Date
+	nowtimeu := date.NowTimeUnix()
 	if len(H["Date"]) != 0 {
 		hdate := H.GetFirst("Date")
+		// NOTE: incase POST we try to parse in more strict way
+		// limiting syntax of non-POST stuff would hurt propagation
 		pdate, e := mail.ParseDateX(hdate, !post)
 		if e != nil {
 			err = fmt.Errorf("error parsing Date header %q: %v", hdate, e)
 			return
 		}
 		info.PostedDate = pdate.Unix()
+		// check if message is not too new
+		const maxFutureSecs = 5 * 60 // 5 minutes
+		if info.PostedDate-maxFutureSecs > nowtimeu {
+			err = errors.New("date is too far in the future")
+			return
+		}
+		// TODO check for too old aswell
+		// checking for too old may help to clean up message reject/ban filters
+		// however I'm not sure if we can reliably obtain cutoff
+		// TODO think of & document cutoff handling
 	} else {
-		tu := date.NowTimeUnix()
-		H["Date"] = mail.OneHeaderVal(mail.FormatDate(time.Unix(tu, 0)))
-		info.PostedDate = tu
+		// incase POST and has no Date field, make one
+		H["Date"] = mail.OneHeaderVal(mail.FormatDate(time.Unix(nowtimeu, 0)))
+		info.PostedDate = nowtimeu
 	}
-
-	// TODO check if message is not too new
-	// maybe check for too old aswell
-	// checking for too old may help to clean up message reject/ban filters
 
 	// Newsgroups
 	hgroup := au.TrimWSString(H["Newsgroups"][0].V)

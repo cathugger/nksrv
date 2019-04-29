@@ -13,6 +13,7 @@ func ParseDateX(date string, permissive bool) (t time.Time, err error) {
 	if err == nil {
 		return
 	}
+
 	if permissive {
 		// try some known workarounds
 		fallbacks := [...]string{
@@ -26,14 +27,15 @@ func ParseDateX(date string, permissive bool) (t time.Time, err error) {
 			}
 		}
 	}
+
 	return time.Time{}, errors.New("unsupported date format")
 }
 
 func FormatDate(t time.Time) string {
 	t = t.UTC()
+	W := t.Weekday()
 	Y, M, D := t.Date()
 	h, m, s := t.Clock()
-	W := t.Weekday()
 	// non-recent nntpchan (fixed in 4d4aea61fedc) is very inflexible with this
 	// TODO axe out weekday when the time is right
 	return fmt.Sprintf(
