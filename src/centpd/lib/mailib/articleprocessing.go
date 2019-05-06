@@ -384,7 +384,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
 	ZH mail.Headers, zct_t string, zct_par map[string]string, eatinner bool,
 	zr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string, textindex int,
 	IH mail.Headers, zerr error) {
 
 	defer func() {
@@ -456,6 +456,9 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 					obj.Data = nil
 				}
 				return
+			} else if !preservemsgattachment {
+				// incase msg is filled use msg not attachment content
+				textindex = len(pi.FI) + 1
 			}
 		}
 
@@ -765,7 +768,7 @@ func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
 	XH mail.Headers, xct_t string, xct_par map[string]string, eatinner bool,
 	xr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	pi PostInfo, tmpfilenames []string, thumbfilenames []string, textindex int,
 	IH mail.Headers, err error) {
 
 	return DefaultMailProcessorConfig.DevourMessageBody(

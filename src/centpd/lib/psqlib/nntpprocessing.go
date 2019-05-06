@@ -325,7 +325,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	ver, iow := mailibsign.PrepareVerifier(H, act_t, act_par, eatinner)
 
-	pi, tmpfns, tmpthmfns, IH, err := mailib.DevourMessageBody(
+	pi, tmpfns, tmpthmfns, textindex, IH, err := mailib.DevourMessageBody(
 		&sp.src, texec, H, act_t, act_par, eatinner, br, iow)
 	if err != nil {
 		err = fmt.Errorf("%q devourTransferArticle failed: %v",
@@ -459,6 +459,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 	// TODO use
 	_ = priv
+	_ = textindex
 
 	var gpid postID
 	// perform insert
