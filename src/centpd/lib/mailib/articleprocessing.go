@@ -80,7 +80,7 @@ func (cfg *MailProcessorConfig) processMessagePrepareReader(
 
 func (cfg *MailProcessorConfig) processMessageText(
 	r io.Reader, binary bool, ct_t string, ct_par map[string]string) (
-	_ io.Reader, rstr string, finished bool, msgattachment bool, err error) {
+	_ io.Reader, rstr string, finished, preservemsgattachment bool, err error) {
 
 	// TODO maybe make configurable?
 	const defaultTextBuf = 512
@@ -136,7 +136,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 				} else {
 					// if contains nil characters, we need to modify it..
 					rstr = tu.NormalizeTextMessage(strings.TrimRight(str, "\000"))
-					msgattachment = true
+					preservemsgattachment = true
 					// keep going, we need to preserve content
 				}
 			} else if cset == "" {
@@ -146,7 +146,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 		}
 
 		// attempt to decode, if still haven't
-		if !msgattachment && cset != "" && !UorA {
+		if !preservemsgattachment && cset != "" && !UorA {
 			cod, e := ianaindex.MIME.Encoding(cset)
 			if e == nil {
 				dec := cod.NewDecoder()
@@ -157,7 +157,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 					// because this is just converted copy
 					// so might aswell normalize and optimize it further
 					rstr = tu.NormalizeTextMessage(dstr)
-					msgattachment = true
+					preservemsgattachment = true
 					// proceed with processing as attachment
 				} else {
 					// ignore
@@ -176,7 +176,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 		r = io.MultiReader(strings.NewReader(str), r)
 	}
 
-	return r, rstr, false, msgattachment, nil
+	return r, rstr, false, preservemsgattachment, nil
 }
 
 func takeInFile(
@@ -415,8 +415,8 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
 		binary bool) (obj BodyObject, err error) {
 
-		// is used when message is properly decoded
-		msgattachment := false
+		// attachment is original of msg field what must be preserved, msg was decoded
+		preservemsgattachment := false
 
 		cdis := H.GetFirst("Content-Disposition")
 		var cdis_t string
@@ -443,7 +443,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 			var str string
 			var finished bool
-			r, str, finished, msgattachment, err =
+			r, str, finished, preservemsgattachment, err =
 				cfg.processMessageText(r, binary, ct_t, ct_par)
 			if err != nil {
 				return
@@ -462,14 +462,14 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		// if this point is reached, we'll need to add this as attachment
 
 		fi, fn, thmfn, err := processMessageAttachment(
-			src, thm, msgattachment, r, binary, ct_t, ct_par, cdis_par, nil)
+			src, thm, preservemsgattachment, r, binary, ct_t, ct_par, cdis_par, nil)
 		if err != nil {
 			return
 		}
 		tmpfilenames = append(tmpfilenames, fn)
 		thumbfilenames = append(thumbfilenames, thmfn)
 
-		if msgattachment {
+		if preservemsgattachment {
 			// if translated message was already stored in msg field
 			fi.Type = ftypes.FTypeMsg
 		}
