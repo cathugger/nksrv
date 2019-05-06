@@ -157,6 +157,33 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	}
 	// incase POST and no Message-ID, we'll figure it out later
 
+	// Newsgroups
+	hgroup := au.TrimWSString(H["Newsgroups"][0].V)
+	// normally allowed multiple ones, separated by `,` and space,
+	// but we only support single-board posts
+	if !nntp.ValidGroupSlice(unsafeStrToBytes(hgroup)) {
+		err = fmt.Errorf("newsgroup %q not supported", hgroup)
+		return
+	}
+	if expectgroup != "" && hgroup != expectgroup {
+		err = fmt.Errorf("newsgroup %q not expected", hgroup)
+		return
+	}
+	info.Newsgroup = hgroup
+
+	// References
+	var troot FullMsgIDStr
+	if len(H["References"]) != 0 {
+		troot = mail.ExtractFirstValidReference(H["References"][0].V)
+		if troot == info.FullMsgIDStr && info.FullMsgIDStr != "" {
+			if post {
+				err = errors.New("self-references not allowed")
+				return
+			}
+			troot = ""
+		}
+	}
+
 	// Date
 	nowtimeu := date.NowTimeUnix()
 	if len(H["Date"]) != 0 {
@@ -183,33 +210,6 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		// incase POST and has no Date field, make one
 		H["Date"] = mail.OneHeaderVal(mail.FormatDate(time.Unix(nowtimeu, 0)))
 		info.PostedDate = nowtimeu
-	}
-
-	// Newsgroups
-	hgroup := au.TrimWSString(H["Newsgroups"][0].V)
-	// normally allowed multiple ones, separated by `,` and space,
-	// but we only support single-board posts
-	if !nntp.ValidGroupSlice(unsafeStrToBytes(hgroup)) {
-		err = fmt.Errorf("newsgroup %q not supported", hgroup)
-		return
-	}
-	if expectgroup != "" && hgroup != expectgroup {
-		err = fmt.Errorf("newsgroup %q not expected", hgroup)
-		return
-	}
-	info.Newsgroup = hgroup
-
-	// References
-	var troot FullMsgIDStr
-	if len(H["References"]) != 0 {
-		troot = mail.ExtractFirstValidReference(H["References"][0].V)
-		if troot == info.FullMsgIDStr && info.FullMsgIDStr != "" {
-			if post {
-				err = errors.New("self-references not allowed")
-				return
-			}
-			troot = ""
-		}
 	}
 
 	// actual DB check on group and refered article
