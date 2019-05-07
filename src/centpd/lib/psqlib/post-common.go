@@ -16,11 +16,12 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 	}
 }
 
-func (sp *PSQLIB) registeredMod(pubkeystr string) (modid int64, priv ModPriv, err error) {
+func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
 	var privstr string
+	st := tx.Stmt(sp.st_prep[st_Web_autoregister_mod])
 	x := 0
 	for {
-		err = sp.st_prep[st_Web_autoregister_mod].QueryRow(pubkeystr).Scan(&modid, &privstr)
+		err = st.QueryRow(pubkeystr).Scan(&modid, &privstr)
 		if err != nil {
 			if err == sql.ErrNoRows && x < 100 {
 				x++

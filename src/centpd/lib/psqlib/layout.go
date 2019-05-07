@@ -72,7 +72,7 @@ func tohex(b []byte) string {
 
 func (sp *PSQLIB) fillWebPostDetails(
 	i mailib.PostInfo, frm form.Form, board string,
-	ref CoreMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
+	ref FullMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
 	_ mailib.PostInfo, fmsgids FullMsgIDStr, mfn, pubkeystr string, err error) {
 
 	i = sp.fillWebPostInner(i, board, ref, inreplyto)
@@ -214,7 +214,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 func (sp *PSQLIB) fillWebPostInner(
 	i mailib.PostInfo, board string,
-	ref CoreMsgIDStr, inreplyto []string) mailib.PostInfo {
+	ref FullMsgIDStr, inreplyto []string) mailib.PostInfo {
 
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
@@ -253,7 +253,7 @@ func (sp *PSQLIB) fillWebPostInner(
 
 	// References
 	if ref != "" {
-		i.H["References"] = mail.OneHeaderVal(fmt.Sprintf("<%s>", ref))
+		i.H["References"] = mail.OneHeaderVal(string(ref))
 	}
 
 	// In-Reply-To

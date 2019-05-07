@@ -561,9 +561,13 @@ ON
 
 	// fill in layout/sign
 	var fmsgids FullMsgIDStr
+	var fref FullMsgIDStr
+	if ref.String != "" {
+		fref = FullMsgIDStr(fmt.Sprintf("<%s>", ref.String))
+	}
 	var pubkeystr string
 	pInfo, fmsgids, msgfn, pubkeystr, err = sp.fillWebPostDetails(
-		pInfo, f, board, CoreMsgIDStr(ref.String), inreplyto, true, tu, signkeyseed)
+		pInfo, f, board, fref, inreplyto, true, tu, signkeyseed)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}
@@ -595,13 +599,11 @@ ON
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
-		modid, priv, err = sp.registeredMod(pubkeystr)
+		modid, priv, err = sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
 	}
-	// TODO use
-	_ = priv
 
 	var gpid postID
 	// perform insert
@@ -616,6 +618,17 @@ ON
 	}
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
+	}
+
+	// execute mod cmd
+	if priv > ModPrivNone {
+		// we should execute it
+		// we never put message in file when processing message
+		err = sp.execModCmd(
+			tx, gpid, modid, priv, pInfo, nil, 0, fmsgids, fref)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
 	}
 
 	// fixup references

@@ -85,6 +85,7 @@ type insertSqlInfo struct {
 type nntpParsedInfo struct {
 	insertSqlInfo
 	mailib.ParsedMessageInfo
+	FRef FullMsgIDStr
 }
 
 func (sp *PSQLIB) nntpDigestTransferHead(
@@ -172,15 +173,14 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	info.Newsgroup = hgroup
 
 	// References
-	var troot FullMsgIDStr
 	if len(H["References"]) != 0 {
-		troot = mail.ExtractFirstValidReference(H["References"][0].V)
-		if troot == info.FullMsgIDStr && info.FullMsgIDStr != "" {
+		info.FRef = mail.ExtractFirstValidReference(H["References"][0].V)
+		if info.FRef == info.FullMsgIDStr && info.FullMsgIDStr != "" {
 			if post {
 				err = errors.New("self-references not allowed")
 				return
 			}
-			troot = ""
+			info.FRef = ""
 		}
 	}
 
@@ -215,16 +215,16 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// actual DB check on group and refered article
 	var wr bool
 	info.insertSqlInfo, err, unexpected, wr =
-		sp.acceptArticleHead(hgroup, troot, info.PostedDate)
+		sp.acceptArticleHead(hgroup, info.FRef, info.PostedDate)
 	if err != nil {
 		if err == errNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
 		} else if err == errNoSuchThread {
 			err = fmt.Errorf(
-				"refering to non-existing root post %s not allowed", troot)
+				"refering to non-existing root post %s not allowed", info.FRef)
 		}
 		if wr {
-			wantroot = troot
+			wantroot = info.FRef
 		}
 		return
 	}
@@ -451,15 +451,12 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
-		modid, priv, err = sp.registeredMod(pubkeystr)
+		modid, priv, err = sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			unexpected = true
 			return
 		}
 	}
-	// TODO use
-	_ = priv
-	_ = textindex
 
 	var gpid postID
 	// perform insert
@@ -476,6 +473,18 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		err = fmt.Errorf("post insertion failed: %v", err)
 		unexpected = true
 		return
+	}
+
+	// execute mod cmd
+	if priv > ModPrivNone {
+		// we should execute it
+		err = sp.execModCmd(
+			tx, gpid, modid, priv, pi, tmpfns, textindex,
+			info.FullMsgIDStr, info.FRef)
+		if err != nil {
+			unexpected = true
+			return
+		}
 	}
 
 	// fixup references

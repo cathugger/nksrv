@@ -2,36 +2,117 @@ package psqlib
 
 import (
 	"database/sql"
+	"io"
+	"os"
+	"strings"
 
+	"centpd/lib/bufreader"
+	"centpd/lib/mailib"
 	mm "centpd/lib/minimail"
 )
 
-type modCtlCmdFunc func(
-	sp *PSQLIB, tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr,
-	cmd string, args []string) (err error)
+func (sp *PSQLIB) modCmdDelete(
+	tx *sql.Tx, gpid postID,
+	pi mailib.PostInfo, selfid, ref FullMsgIDStr,
+	cmd string, args []string) (err error) {
 
-var modCtlCmds = map[string]modCtlCmdFunc{
-	"delete": func(
-		sp *PSQLIB, tx *sql.Tx, gpid postID, selfid, ref FullMsgIDStr,
-		cmd string, args []string) (err error) {
-
-		if len(args) < 1 {
-			return
-		}
-
-		fmsgids := FullMsgIDStr(args[0])
-
-		if !mm.ValidMessageIDStr(fmsgids) ||
-			fmsgids == selfid || fmsgids == ref {
-
-			return
-		}
-
-		err = sp.banByMsgID(tx, cutMsgID(fmsgids), gpid, "TODO")
-		if err != nil {
-			return
-		}
-
+	if len(args) == 0 {
 		return
-	},
+	}
+
+	fmsgids := FullMsgIDStr(args[0])
+
+	if !mm.ValidMessageIDStr(fmsgids) ||
+		fmsgids == selfid || fmsgids == ref {
+
+		// XXX log fail
+		return // just ignore, cannot do this
+	}
+
+	err = sp.banByMsgID(tx, cutMsgID(fmsgids), gpid, pi.MI.Title)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func getModCmdInput(
+	pi mailib.PostInfo, filenames []string, textindex int) (io.Reader, io.Closer, error) {
+
+	if textindex <= 0 {
+		return strings.NewReader(pi.MI.Message), nil, nil
+	}
+	f, err := os.Open(filenames[textindex-1])
+	if err != nil {
+		return nil, nil, err
+	}
+	return f, f, nil
+}
+
+func (sp *PSQLIB) execModCmd(
+	tx *sql.Tx, gpid postID, modid int64, modpriv ModPriv,
+	pi mailib.PostInfo, filenames []string, textindex int,
+	selfid, ref FullMsgIDStr) (err error) {
+
+	r, c, err := getModCmdInput(pi, filenames, textindex)
+	if err != nil {
+		return
+	}
+	if c != nil {
+		defer c.Close()
+	}
+
+	var linebuf [2048]byte
+	br := bufreader.NewBufReaderSize(r, 1024)
+	for {
+		var read int
+		read, err = br.ReadUntil(linebuf[:], '\n')
+		if err != nil && err != io.EOF {
+			if err == bufreader.ErrDelimNotFound {
+				// skip dis line it's too long
+				// XXX maybe log warning
+				// drain
+				for {
+					_, err = br.ReadUntil(linebuf[:], '\n')
+					if err != bufreader.ErrDelimNotFound {
+						break
+					}
+				}
+				continue
+			}
+			// an actual error while reading
+			return
+		}
+
+		hadeof := err == io.EOF
+
+		unsafe_line := unsafeBytesToStr(linebuf[:read])
+		unsafe_fields := strings.Fields(unsafe_line)
+
+		if len(unsafe_fields) != 0 {
+
+			cmd := strings.ToLower(unsafe_fields[0])
+			args := unsafe_fields[1:]
+
+			// TODO log commands we couldn't understand
+			switch cmd {
+			case "delete":
+				if modpriv >= ModPrivMod {
+					// global delete by msgid
+					err = sp.modCmdDelete(tx, gpid, pi, selfid, ref, cmd, args)
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
+
+		// EOF
+		if hadeof {
+			break
+		}
+	}
+
+	return nil
 }

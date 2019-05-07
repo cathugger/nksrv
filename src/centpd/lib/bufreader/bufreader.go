@@ -119,6 +119,7 @@ func (r *BufReader) ReadUntil(p []byte, q byte) (n int, _ error) {
 			if r.err != nil {
 				return n, r.readErr()
 			}
+			// fill in
 			x, r.err = r.u.Read(r.b)
 			if x < 0 {
 				panic("negative read")
