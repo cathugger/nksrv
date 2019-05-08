@@ -304,20 +304,23 @@ CREATE TABLE ib0.banlist (
 	ban_id   BIGINT GENERATED ALWAYS AS IDENTITY,
 	ban_info TEXT   NOT NULL,
 
-	g_p_id   BIGINT, -- post responsible for this ban (if any)
+	-- board post responsible for this ban (if any)
+	b_id     INTEGER,
+	b_p_id   BIGINT,
 
 	msgid  TEXT  COLLATE "C", -- msgid being banned (if any)
 
 	PRIMARY KEY (ban_id),
 
-	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.posts
+	FOREIGN KEY (b_id,b_p_id)
+		REFERENCES ib0.bposts
+		MATCH FULL
 		ON DELETE CASCADE    -- see trigger below
 )
 -- :next
 CREATE INDEX
-	ON ib0.banlist (g_p_id)
-	WHERE g_p_id IS NOT NULL
+	ON ib0.banlist (b_id,b_p_id)
+	WHERE b_id IS NOT NULL AND b_p_id IS NOT NULL
 -- :next
 CREATE INDEX
 	ON ib0.banlist (msgid)

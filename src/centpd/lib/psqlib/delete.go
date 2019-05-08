@@ -51,7 +51,7 @@ func (sp *PSQLIB) deleteByMsgID(
 }
 
 func (sp *PSQLIB) banByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr, bannedby postID, reason string) (
+	tx *sql.Tx, cmsgids CoreMsgIDStr, banbid boardID, banbpid postID, reason string) (
 	err error) {
 
 	err = sp.preDelete(tx)
@@ -59,10 +59,17 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
-	bannedbynull := sql.NullInt64{Int64: int64(bannedby), Valid: bannedby != 0}
+	bidn := sql.NullInt64{
+		Int64: int64(banbid),
+		Valid: banbid != 0 && banbpid != 0,
+	}
+	bpidn := sql.NullInt64{
+		Int64: int64(banbpid),
+		Valid: banbid != 0 && banbpid != 0,
+	}
 
 	banst := tx.Stmt(sp.st_prep[st_Web_ban_by_msgid])
-	rows, err := banst.Query(string(cmsgids), bannedbynull, reason)
+	rows, err := banst.Query(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
 		err = sp.sqlError("ban by msgid query", err)
 		return
@@ -205,7 +212,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 		if banreason == "" {
 			err = sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)))
 		} else {
-			err = sp.banByMsgID(tx, cutMsgID(FullMsgIDStr(s)), 0, banreason)
+			err = sp.banByMsgID(tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason)
 		}
 		if err != nil {
 			return

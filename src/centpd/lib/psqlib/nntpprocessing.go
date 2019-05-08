@@ -458,14 +458,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}
 
-	var gpid postID
+	var gpid, bpid postID
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
+		gpid, bpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		gpid, err = sp.insertNewReply(tx,
+		gpid, bpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
 			pi, modid)
 	}
@@ -479,7 +479,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	if priv > ModPrivNone {
 		// we should execute it
 		err = sp.execModCmd(
-			tx, gpid, modid, priv, pi, tmpfns, textindex,
+			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns, textindex,
 			info.FullMsgIDStr, info.FRef)
 		if err != nil {
 			unexpected = true

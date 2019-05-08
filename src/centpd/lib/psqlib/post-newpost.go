@@ -190,6 +190,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ub
 		CROSS JOIN
 			ugp
+		RETURNING
+			g_p_id,b_p_id
 	)`
 	b.WriteString(st2)
 
@@ -235,9 +237,9 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 
 	st3 := `
 SELECT
-	g_p_id
+	g_p_id,b_p_id
 FROM
-	ugp`
+	ubp`
 
 	b.WriteString(st3)
 
@@ -261,7 +263,8 @@ type replyTargetInfo struct {
 }
 
 func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
-	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (gpid postID, err error) {
+	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (
+	gpid postID, bpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -357,9 +360,9 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&gpid)
+	err = r.Scan(&gpid, &bpid)
 	if err != nil {
-		return 0, sp.sqlError("newreply insert query scan", err)
+		return 0, 0, sp.sqlError("newreply insert query scan", err)
 	}
 
 	// done

@@ -605,14 +605,14 @@ ON
 		}
 	}
 
-	var gpid postID
+	var gpid, bpid postID
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
+		gpid, bpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		gpid, err = sp.insertNewReply(tx,
+		gpid, bpid, err = sp.insertNewReply(tx,
 			replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
 			pInfo, modid)
 	}
@@ -625,7 +625,7 @@ ON
 		// we should execute it
 		// we never put message in file when processing message
 		err = sp.execModCmd(
-			tx, gpid, modid, priv, pInfo, nil, 0, fmsgids, fref)
+			tx, gpid, bid, bpid, modid, priv, pInfo, nil, 0, fmsgids, fref)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}

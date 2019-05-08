@@ -12,7 +12,7 @@ import (
 )
 
 func (sp *PSQLIB) modCmdDelete(
-	tx *sql.Tx, gpid postID,
+	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	pi mailib.PostInfo, selfid, ref FullMsgIDStr,
 	cmd string, args []string) (err error) {
 
@@ -29,7 +29,7 @@ func (sp *PSQLIB) modCmdDelete(
 		return // just ignore, cannot do this
 	}
 
-	err = sp.banByMsgID(tx, cutMsgID(fmsgids), gpid, pi.MI.Title)
+	err = sp.banByMsgID(tx, cutMsgID(fmsgids), bid, bpid, pi.MI.Title)
 	if err != nil {
 		return
 	}
@@ -51,7 +51,7 @@ func getModCmdInput(
 }
 
 func (sp *PSQLIB) execModCmd(
-	tx *sql.Tx, gpid postID, modid int64, modpriv ModPriv,
+	tx *sql.Tx, gpid postID, bid boardID, bpid postID, modid int64, modpriv ModPriv,
 	pi mailib.PostInfo, filenames []string, textindex int,
 	selfid, ref FullMsgIDStr) (err error) {
 
@@ -100,7 +100,7 @@ func (sp *PSQLIB) execModCmd(
 			case "delete":
 				if modpriv >= ModPrivMod {
 					// global delete by msgid
-					err = sp.modCmdDelete(tx, gpid, pi, selfid, ref, cmd, args)
+					err = sp.modCmdDelete(tx, gpid, bid, bpid, pi, selfid, ref, cmd, args)
 				}
 			}
 			if err != nil {

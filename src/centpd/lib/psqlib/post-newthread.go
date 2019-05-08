@@ -132,13 +132,15 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			ub
 		CROSS JOIN
 			ugp
+		RETURNING
+			g_p_id,b_p_id
 	)`
 	// footer
 	stf := `
 SELECT
-	g_p_id
+	g_p_id,b_p_id
 FROM
-	ugp`
+	ubp`
 
 	if n == 0 {
 		st = sth + stf
@@ -199,7 +201,7 @@ FROM
 
 func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 	bid boardID, pInfo mailib.PostInfo, skipover bool, modid int64) (
-	gpid postID, err error) {
+	gpid postID, bpid postID, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -289,9 +291,9 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	err = r.Scan(&gpid)
+	err = r.Scan(&gpid, &bpid)
 	if err != nil {
-		return 0, sp.sqlError("newthread insert query scan", err)
+		return 0, 0, sp.sqlError("newthread insert query scan", err)
 	}
 
 	// done

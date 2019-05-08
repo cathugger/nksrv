@@ -769,14 +769,16 @@ WITH
 		INSERT INTO
 			ib0.banlist (
 				msgid,
-				g_p_id,
+				b_id,
+				b_p_id,
 				ban_info
 			)
 		VALUES
 			(
 				$1,
 				$2,
-				$3
+				$3,
+				$4
 			)
 	),
 	delgp AS (
