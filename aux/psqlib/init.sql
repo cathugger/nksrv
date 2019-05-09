@@ -334,7 +334,6 @@ RETURNS
 AS
 $$
 	BEGIN
-		-- XXX check if OLD.msgid != NULL? idk if worth atm.
 		-- garbage collect void placeholder posts when all bans for them are lifted
 		DELETE FROM
 			ib0.posts xp
@@ -343,7 +342,7 @@ $$
 				SELECT
 					delbl.msgid,COUNT(exibl.msgid) > 0 AS hasrefs
 				FROM
-					(SELECT OLD.msgid) AS delbl
+					oldrows AS delbl
 				LEFT JOIN
 					ib0.banlist exibl
 				ON
@@ -368,6 +367,7 @@ AFTER
 	DELETE
 ON
 	ib0.banlist
-FOR EACH ROW
+REFERENCING OLD TABLE AS oldrows
+FOR EACH STATEMENT
 EXECUTE PROCEDURE
 	ib0_gc_banposts_after()
