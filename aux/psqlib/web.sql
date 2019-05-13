@@ -118,7 +118,8 @@ LEFT JOIN
 			p_name,
 			pdate
 		FROM (
-			SELECT *
+			SELECT
+				*
 			FROM
 				(
 					SELECT
@@ -258,7 +259,8 @@ LEFT JOIN
 			p_name,
 			pdate
 		FROM (
-			SELECT *
+			SELECT
+				*
 			FROM
 				(
 					SELECT
