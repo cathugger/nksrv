@@ -1075,11 +1075,59 @@ WHERE
 	b_id = $1 AND t_id = $2
 
 
--- :name update_mod_priv
-UPDATE
-	ib0.modlist
-SET
-	mod_priv = $2,
+-- :name set_mod_priv
+INSERT INTO
+	ib0.modlist (
+		mod_pubkey,
+		automanage,
+		mod_priv
+	)
+VALUES
+	(
+		$1,
+		TRUE,
+		$2
+	)
+ON CONFLICT
+	DO UPDATE
+	SET
+		mod_priv = $2,
+		automanage = FALSE
+	WHERE
+		mod_priv <> $2 OR automanage <> FALSE
+RETURNING -- inserted or modified
+	mod_id
 
+-- :name unset_mod
+-- args: <pubkey>
+WITH
+	-- do update there
+	upd_mod AS (
+		UPDATE
+			ib0.modlist
+		SET
+			mod_priv = 'none', -- don't see point having anything else there
+			automanage = TRUE
+		WHERE
+			mod_pubkey = $1
+		RETURNING
+			mod_id
+	)
+-- garbage collect moderator list
+DELETE FROM
+	ib0.modlist mods
+USING
+	(
+		SELECT
+			delmod.mod_id,COUNT(xbp.mod_id) > 0 AS hasrefs
+		FROM
+			upd_mod AS delmod
+		LEFT JOIN
+			ib0.bposts xbp
+		ON
+			delmod.mod_id = xbp.mod_id
+		GROUP BY
+			delmod.mod_id
+	) AS rcnts
 WHERE
-	mod_pubkey = $1 AND mod_priv <> $2
+	rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id
