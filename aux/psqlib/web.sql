@@ -1071,3 +1071,13 @@ FROM
 	) as xbump
 WHERE
 	b_id = $1 AND t_id = $2
+
+
+-- :name update_mod_priv
+UPDATE
+	ib0.modlist
+SET
+	mod_priv = $2,
+
+WHERE
+	mod_pubkey = $1 AND mod_priv <> $2

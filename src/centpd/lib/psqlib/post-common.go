@@ -34,3 +34,7 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 		return
 	}
 }
+
+func (sp *PSQLIB) updateModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err error) {
+
+}
