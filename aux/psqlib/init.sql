@@ -333,30 +333,30 @@ RETURNS
 	TRIGGER
 AS
 $$
-	BEGIN
-		-- garbage collect void placeholder posts when all bans for them are lifted
-		DELETE FROM
-			ib0.posts xp
-		USING
-			(
-				SELECT
-					delbl.msgid,COUNT(exibl.msgid) > 0 AS hasrefs
-				FROM
-					oldrows AS delbl
-				LEFT JOIN
-					ib0.banlist exibl
-				ON
-					delbl.msgid = exibl.msgid
-				WHERE
-					delbl.msgid IS NOT NULL
-				GROUP BY
-					delbl.msgid
-			) AS delp
-		WHERE
-			delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
+BEGIN
+	-- garbage collect void placeholder posts when all bans for them are lifted
+	DELETE FROM
+		ib0.posts xp
+	USING
+		(
+			SELECT
+				delbl.msgid,COUNT(exibl.msgid) > 0 AS hasrefs
+			FROM
+				oldrows AS delbl
+			LEFT JOIN
+				ib0.banlist exibl
+			ON
+				delbl.msgid = exibl.msgid
+			WHERE
+				delbl.msgid IS NOT NULL
+			GROUP BY
+				delbl.msgid
+		) AS delp
+	WHERE
+		delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
 
-		RETURN NULL;
-	END;
+	RETURN NULL;
+END;
 $$
 LANGUAGE
 	plpgsql
