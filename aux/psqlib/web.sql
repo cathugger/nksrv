@@ -1109,7 +1109,8 @@ WITH
 			mod_priv = 'none', -- don't see point having anything else there
 			automanage = TRUE
 		WHERE
-			mod_pubkey = $1
+			mod_pubkey = $1 AND
+			(mod_priv <> 'none' OR automanage <> TRUE)
 		RETURNING
 			mod_id
 	)
