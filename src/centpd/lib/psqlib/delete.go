@@ -39,7 +39,7 @@ func (sp *PSQLIB) deleteByMsgID(
 		return
 	}
 
-	delst := tx.Stmt(sp.st_prep[st_Web_delete_by_msgid])
+	delst := tx.Stmt(sp.st_prep[st_web_delete_by_msgid])
 	rows, err := delst.Query(string(cmsgids))
 	if err != nil {
 		err = sp.sqlError("delete by msgid query", err)
@@ -68,7 +68,7 @@ func (sp *PSQLIB) banByMsgID(
 		Valid: banbid != 0 && banbpid != 0,
 	}
 
-	banst := tx.Stmt(sp.st_prep[st_Web_ban_by_msgid])
+	banst := tx.Stmt(sp.st_prep[st_web_ban_by_msgid])
 	rows, err := banst.Query(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
 		err = sp.sqlError("ban by msgid query", err)
@@ -146,8 +146,8 @@ func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
 		sp.log.LogPrintf(DEBUG, "DEBUMP board %d thread %d", ta.b, ta.t)
 
 		if toptsst == nil {
-			toptsst = tx.Stmt(sp.st_prep[st_Web_bname_topts_by_tid])
-			refbump = tx.Stmt(sp.st_prep[st_Web_refresh_bump_by_tid])
+			toptsst = tx.Stmt(sp.st_prep[st_web_bname_topts_by_tid])
+			refbump = tx.Stmt(sp.st_prep[st_web_refresh_bump_by_tid])
 		}
 
 		var bname string

@@ -21,7 +21,7 @@ import (
 func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 	var err error
 
-	rows, err := sp.st_prep[st_Web_listboards].Query()
+	rows, err := sp.st_prep[st_web_listboards].Query()
 	if err != nil {
 		return sp.sqlError("boards query", err), http.StatusInternalServerError
 	}
@@ -73,7 +73,7 @@ func webCleanHeaders(h mail.Headers) {
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	board string, num uint32) (error, int) {
 
-	rows, err := sp.st_prep[st_Web_thread_list_page].Query(board, num)
+	rows, err := sp.st_prep[st_web_thread_list_page].Query(board, num)
 	if err != nil {
 		return sp.sqlError("Web_thread_list_page query", err),
 			http.StatusInternalServerError
@@ -319,7 +319,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		return errNoSuchPage, http.StatusNotFound
 	}
 
-	rows, err := sp.st_prep[st_Web_overboard_page].Query(num, 10)
+	rows, err := sp.st_prep[st_web_overboard_page].Query(num, 10)
 	if err != nil {
 		return sp.sqlError("Web_overboard_page query", err),
 			http.StatusInternalServerError
@@ -517,7 +517,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 func (sp *PSQLIB) IBGetThreadCatalog(
 	page *ib0.IBThreadCatalog, board string) (error, int) {
 
-	rows, err := sp.st_prep[st_Web_thread_catalog].Query(board)
+	rows, err := sp.st_prep[st_web_thread_catalog].Query(board)
 	if err != nil {
 		return sp.sqlError("Web_catalog query", err),
 			http.StatusInternalServerError
@@ -645,7 +645,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	board string, threadid string) (error, int) {
 
-	rows, err := sp.st_prep[st_Web_thread].Query(board, threadid)
+	rows, err := sp.st_prep[st_web_thread].Query(board, threadid)
 	if err != nil {
 		return sp.sqlError("Web_thread query", err),
 			http.StatusInternalServerError

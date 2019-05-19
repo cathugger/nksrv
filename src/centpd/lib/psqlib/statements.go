@@ -45,25 +45,25 @@ const (
 	st_NNTP_GetHdrByCurr_subject
 	st_NNTP_GetHdrByCurr_any
 
-	st_Web_listboards
+	st_web_listboards
 
-	st_Web_thread_list_page
+	st_web_thread_list_page
 
-	st_Web_overboard_page
+	st_web_overboard_page
 
-	st_Web_thread_catalog
+	st_web_thread_catalog
 
-	st_Web_thread
+	st_web_thread
 
-	st_Web_failref_write
-	st_Web_failref_find
-	st_Web_update_post_attrs
+	st_web_failref_write
+	st_web_failref_find
+	st_web_update_post_attrs
 
-	st_Web_autoregister_mod
-	st_Web_delete_by_msgid
-	st_Web_ban_by_msgid
-	st_Web_bname_topts_by_tid
-	st_Web_refresh_bump_by_tid
+	st_web_autoregister_mod
+	st_web_delete_by_msgid
+	st_web_ban_by_msgid
+	st_web_bname_topts_by_tid
+	st_web_refresh_bump_by_tid
 
 	st_max
 )

@@ -638,9 +638,9 @@ func (sp *PSQLIB) fixupFailRefsInTx(
 		panic("wtf")
 	}
 
-	failref_wr_st := tx.Stmt(sp.st_prep[st_Web_failref_write])
-	failref_up_st := tx.Stmt(sp.st_prep[st_Web_update_post_attrs])
-	failref_fn_st := tx.Stmt(sp.st_prep[st_Web_failref_find])
+	failref_wr_st := tx.Stmt(sp.st_prep[st_web_failref_write])
+	failref_up_st := tx.Stmt(sp.st_prep[st_web_update_post_attrs])
+	failref_fn_st := tx.Stmt(sp.st_prep[st_web_failref_find])
 
 	if len(failrefs) != 0 {
 		sp.log.LogPrintf(DEBUG, "writing %d failed refs", len(failrefs))

@@ -18,7 +18,7 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 
 func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
 	var privstr string
-	st := tx.Stmt(sp.st_prep[st_Web_autoregister_mod])
+	st := tx.Stmt(sp.st_prep[st_web_autoregister_mod])
 	x := 0
 	for {
 		err = st.QueryRow(pubkeystr).Scan(&modid, &privstr)
@@ -27,7 +27,7 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 				x++
 				continue
 			}
-			err = sp.sqlError("st_Web_autoregister_mod queryrowscan", err)
+			err = sp.sqlError("st_web_autoregister_mod queryrowscan", err)
 			return
 		}
 		priv = StringToModPriv(privstr)
@@ -38,6 +38,7 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err error) {
 	//ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
 	// do key update
+
 	// if unchanged, return
 	// read msgs of mod
 	// for each, clear effect of message, then parse message and apply actions
