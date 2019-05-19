@@ -65,6 +65,8 @@ const (
 	st_web_bname_topts_by_tid
 	st_web_refresh_bump_by_tid
 
+	st_web_set_mod_priv
+
 	st_max
 )
 
@@ -133,6 +135,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "ban_by_msgid"},
 	st_reference{"web", "bname_topts_by_tid"},
 	st_reference{"web", "refresh_bump_by_tid"},
+
+	st_reference{"web", "set_mod_priv"},
 }
 
 func loadStatements() {

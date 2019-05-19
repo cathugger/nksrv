@@ -36,10 +36,18 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 }
 
 func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err error) {
-	//ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
+	ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
 	// do key update
-
-	// if unchanged, return
+	var modid int64
+	err = ust.QueryRow(pubkeystr, newpriv.String()).Scan(&modid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// we changed nothing so return now
+			return nil
+		}
+		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
+	}
+	_ = modid
 	// read msgs of mod
 	// for each, clear effect of message, then parse message and apply actions
 

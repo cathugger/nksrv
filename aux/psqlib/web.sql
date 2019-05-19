@@ -1086,6 +1086,7 @@ WHERE
 
 
 -- :name set_mod_priv
+-- args: <pubkey> <newpriv>
 INSERT INTO
 	ib0.modlist (
 		mod_pubkey,
