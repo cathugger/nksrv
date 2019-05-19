@@ -476,24 +476,34 @@ SELECT
 	unnest($4::text[]) AS msgid
 
 -- :name web_failref_find
--- args: p_name,board,msgid
+-- args: offset,p_name,board,msgid
 WITH
 	msgs AS (
 		SELECT
-			g_p_id
+			*
 		FROM
-			ib0.failrefs
+			(
+				SELECT
+					g_p_id
+				FROM
+					ib0.failrefs
+				WHERE
+					-- index-search by first 8 bytes, then narrow
+					(p_name LIKE substring($2 for 8) || '%') AND
+						($2 LIKE p_name || '%') AND
+						(b_name IS NULL OR b_name = $3)
+				UNION
+				SELECT
+					g_p_id
+				FROM
+					ib0.failrefs
+				WHERE
+					msgid = $4
+				ORDER BY
+					g_p_id
+			) AS x
 		WHERE
-			(p_name LIKE substring($1 for 8) || '%') AND
-				($1 LIKE p_name || '%') AND
-				(b_name IS NULL OR b_name = $2)
-		UNION
-		SELECT
-			g_p_id
-		FROM
-			ib0.failrefs
-		WHERE
-			msgid = $3
+			g_p_id > $1
 		LIMIT
 			8192
 	)

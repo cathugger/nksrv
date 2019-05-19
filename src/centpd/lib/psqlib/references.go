@@ -565,10 +565,10 @@ type failedRefData struct {
 }
 
 func (sp *PSQLIB) findFailedReferences(
-	st *sql.Stmt, pname string, pboard string, msgid CoreMsgIDStr) (
+	st *sql.Stmt, off postID, pname string, pboard string, msgid CoreMsgIDStr) (
 	frefs []failedRefData, err error) {
 
-	rows, err := st.Query(pname, pboard, string(msgid))
+	rows, err := st.Query(off, pname, pboard, string(msgid))
 	if err != nil {
 		err = sp.sqlError("find_failrefs query", err)
 		return
@@ -652,44 +652,60 @@ func (sp *PSQLIB) fixupFailRefsInTx(
 		return
 	}
 
-	// obtain infos about posts with failed refs we can fix
-	frefpostsinfos, err := sp.findFailedReferences(
-		failref_fn_st, p_name, b_name, msgid)
-	if err != nil {
-		return
-	}
-
-	if len(frefpostsinfos) != 0 {
-		sp.log.LogPrintf(DEBUG, "found %d failref posts", len(frefpostsinfos))
-	}
-
-	for i := range frefpostsinfos {
-		var newfailrefs []ibref_nntp.Reference
-
-		// update references and collect new failed references
-		frefpostsinfos[i].pattrib.References, newfailrefs, err =
-			sp.processReferencesOnIncoming(
-				tx, frefpostsinfos[i].message, frefpostsinfos[i].inreplyto,
-				frefpostsinfos[i].bid, frefpostsinfos[i].tid)
+	var frefpostsinfos []failedRefData
+	// in loop because can repeat
+	offset := postID(0)
+	for {
+		// obtain infos about posts with failed refs we can fix
+		frefpostsinfos, err = sp.findFailedReferences(
+			failref_fn_st, offset, p_name, b_name, msgid)
 		if err != nil {
 			return
 		}
 
-		sp.log.LogPrintf(DEBUG, "failrefpost %d: %d refs %d fails",
-			i, len(frefpostsinfos[i].pattrib.References), len(newfailrefs))
-
-		// store updated refs
-		err = sp.updatePostReferences(
-			failref_up_st, frefpostsinfos[i].gpid, frefpostsinfos[i].pattrib)
-		if err != nil {
-			return
+		if len(frefpostsinfos) != 0 || offset != 0 {
+			sp.log.LogPrintf(DEBUG, "found %d failref posts", len(frefpostsinfos))
 		}
 
-		// unconditionally store new failed refs
-		err = sp.writeFailRefs(
-			failref_wr_st, frefpostsinfos[i].gpid, newfailrefs)
-		if err != nil {
-			return
+		for i := range frefpostsinfos {
+			var newfailrefs []ibref_nntp.Reference
+
+			// update references and collect new failed references
+			frefpostsinfos[i].pattrib.References, newfailrefs, err =
+				sp.processReferencesOnIncoming(
+					tx, frefpostsinfos[i].message, frefpostsinfos[i].inreplyto,
+					frefpostsinfos[i].bid, frefpostsinfos[i].tid)
+			if err != nil {
+				return
+			}
+
+			sp.log.LogPrintf(DEBUG, "failrefpost %d: %d refs %d fails",
+				i, len(frefpostsinfos[i].pattrib.References), len(newfailrefs))
+
+			// store updated refs
+			err = sp.updatePostReferences(
+				failref_up_st, frefpostsinfos[i].gpid, frefpostsinfos[i].pattrib)
+			if err != nil {
+				return
+			}
+
+			// unconditionally store new failed refs
+			// also deletes old ones of same gpid
+			err = sp.writeFailRefs(
+				failref_wr_st, frefpostsinfos[i].gpid, newfailrefs)
+			if err != nil {
+				return
+			}
+		}
+
+		if len(frefpostsinfos) < 8192 {
+			// the usual case
+			break
+		} else {
+			// we can't know if we processed them all, so lets do search again
+			offset = frefpostsinfos[len(frefpostsinfos)-1].gpid
+			sp.log.LogPrintf(DEBUG, "continuing failref loop")
+			continue
 		}
 	}
 
