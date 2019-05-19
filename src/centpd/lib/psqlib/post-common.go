@@ -36,5 +36,8 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 }
 
 func (sp *PSQLIB) updateModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err error) {
-
+	// do key update
+	// if unchanged, return
+	// read msgs of mod
+	// for each, clear effect of message, then parse message and apply actions
 }
