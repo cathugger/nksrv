@@ -22,6 +22,7 @@ type PostInfo struct {
 	H mail.Headers
 	A PostAttributes
 	L PartInfo
+	E PostExtraAttribs
 }
 
 type IBThumbAttributes struct {
@@ -39,6 +40,11 @@ type MessageInfo struct {
 
 type PostAttributes struct {
 	References []ib0.IBMessageReference `json:"refs,omitempty"`
+}
+
+type PostExtraAttribs struct {
+	// if msg txt is in attachment, 1-based index which file it is
+	TextAttachment uint32 `json:"text_attach,omitempty"`
 }
 
 type FileInfo struct {

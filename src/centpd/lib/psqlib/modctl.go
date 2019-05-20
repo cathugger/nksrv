@@ -38,7 +38,7 @@ func (sp *PSQLIB) modCmdDelete(
 }
 
 func getModCmdInput(
-	pi mailib.PostInfo, filenames []string, textindex int) (io.Reader, io.Closer, error) {
+	pi mailib.PostInfo, filenames []string, textindex uint32) (io.Reader, io.Closer, error) {
 
 	if textindex <= 0 {
 		return strings.NewReader(pi.MI.Message), nil, nil
@@ -52,7 +52,7 @@ func getModCmdInput(
 
 func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID, modid int64, modpriv ModPriv,
-	pi mailib.PostInfo, filenames []string, textindex int,
+	pi mailib.PostInfo, filenames []string, textindex uint32,
 	selfid, ref FullMsgIDStr) (err error) {
 
 	r, c, err := getModCmdInput(pi, filenames, textindex)

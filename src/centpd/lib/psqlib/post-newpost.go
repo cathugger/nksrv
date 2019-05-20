@@ -15,7 +15,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 16
+const postRQMsgArgCount = 17
 const postRQFileArgCount = 7
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -55,7 +55,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				message,       -- 8
 				headers,       -- 9
 				attrib,        -- 10
-				layout         -- 11
+				layout,        -- 11
+				extras         -- 12
 			)
 		VALUES
 			(
@@ -69,7 +70,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				$8,        -- message
 				$9,        -- headers
 				$10,       -- attrib
-				$11        -- layout
+				$11,       -- layout
+				$12        -- extras
 			)
 		RETURNING
 			g_p_id,pdate,padded,sage
@@ -82,7 +84,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1
 		WHERE
 			-- TODO insert into multiple boards
-			b_id = $12
+			b_id = $13
 		RETURNING
 			last_id
 	),`
@@ -114,7 +116,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					WHERE
 						-- count sages against bump limit.
 						-- because others do it like that :<
-						b_id = $12 AND t_id = $13
+						b_id = $13 AND t_id = $14
 					UNION ALL
 					SELECT
 						$1,
@@ -126,7 +128,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 						pdate ASC,
 						b_p_id ASC
 					LIMIT
-						$14
+						$15
 					-- take bump posts, sorted by original date,
 					-- only upto bump limit
 				) AS tt
@@ -139,7 +141,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				-- and pick latest one
 			) as xbump
 		WHERE
-			b_id = $12 AND t_id = $13
+			b_id = $13 AND t_id = $14
 	),`
 		b.WriteString(st_bump)
 	} else {
@@ -151,7 +153,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1,
 			f_count = f_count + $3
 		WHERE
-			b_id = $12 AND t_id = $13
+			b_id = $13 AND t_id = $14
 	),
 	utx AS (
 		SELECT
@@ -177,15 +179,15 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				mod_id
 			)
 		SELECT
-			$12,        -- b_id
-			$13,        -- t_id
+			$13,        -- b_id
+			$14,        -- t_id
 			ub.last_id,
-			$15,        -- p_name
+			$16,        -- p_name
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
 			ugp.sage,
-			$16         -- mod_id
+			$17         -- mod_id
 		FROM
 			ub
 		CROSS JOIN
@@ -289,6 +291,10 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 	if err != nil {
 		panic(err)
 	}
+	Ejson, err := json.Marshal(&pInfo.E)
+	if err != nil {
+		panic(err)
+	}
 
 	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
 
@@ -306,6 +312,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 			Hjson,
 			Ajson,
 			Ljson,
+			Ejson,
 
 			rti.bid,
 			rti.tid,
@@ -329,13 +336,14 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		args[8] = Hjson
 		args[9] = Ajson
 		args[10] = Ljson
+		args[11] = Ejson
 
-		args[11] = rti.bid
-		args[12] = rti.tid
-		args[13] = rti.bumpLimit
+		args[12] = rti.bid
+		args[13] = rti.tid
+		args[14] = rti.bumpLimit
 
-		args[14] = pInfo.ID
-		args[15] = smodid
+		args[15] = pInfo.ID
+		args[16] = smodid
 
 		for i := range pInfo.FI {
 

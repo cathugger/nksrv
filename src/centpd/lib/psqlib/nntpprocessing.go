@@ -325,7 +325,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	ver, iow := mailibsign.PrepareVerifier(H, act_t, act_par, eatinner)
 
-	pi, tmpfns, tmpthmfns, textindex, IH, err := mailib.DevourMessageBody(
+	pi, tmpfns, tmpthmfns, IH, err := mailib.DevourMessageBody(
 		&sp.src, texec, H, act_t, act_par, eatinner, br, iow)
 	if err != nil {
 		err = fmt.Errorf("%q devourTransferArticle failed: %v",
@@ -479,7 +479,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	if priv > ModPrivNone {
 		// we should execute it
 		err = sp.execModCmd(
-			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns, textindex,
+			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns, pi.E.TextAttachment,
 			info.FullMsgIDStr, info.FRef)
 		if err != nil {
 			unexpected = true

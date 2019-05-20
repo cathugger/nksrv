@@ -10,7 +10,7 @@ import (
 	"centpd/lib/mailib"
 )
 
-const postTQMsgArgCount = 14
+const postTQMsgArgCount = 15
 const postTQFileArgCount = 7
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
@@ -48,7 +48,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				message,       -- 7
 				headers,       -- 8
 				attrib,        -- 9
-				layout         -- 10
+				layout,        -- 10
+				extras         -- 11
 			)
 		VALUES
 			(
@@ -62,7 +63,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				$7,        -- message
 				$8,        -- headers
 				$9,        -- attrib
-				$10        -- layout
+				$10,       -- layout
+				$11        -- extras
 			)
 		RETURNING
 			g_p_id,pdate,padded
@@ -75,7 +77,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			t_count = t_count + 1,
 			p_count = p_count + 1
 		WHERE
-			b_id = $11
+			b_id = $12
 		RETURNING
 			last_id
 	),
@@ -92,14 +94,14 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				skip_over
 			)
 		SELECT
-			$11,        -- b_id
+			$12,        -- b_id
 			ub.last_id, -- t_id
 			ugp.g_p_id, -- g_t_id
-			$12,        -- t_name
+			$13,        -- t_name
 			$1,         -- pdate
 			1,          -- p_count
 			$2,         -- f_count
-			$13         -- skip_over
+			$14         -- skip_over
 		FROM
 			ub
 		CROSS JOIN
@@ -119,15 +121,15 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				mod_id
 			)
 		SELECT
-			$11,
-			ub.last_id,
-			ub.last_id,
 			$12,
+			ub.last_id,
+			ub.last_id,
+			$13,
 			ugp.g_p_id,
 			ugp.pdate,
 			ugp.padded,
 			FALSE,
-			$14
+			$15
 		FROM
 			ub
 		CROSS JOIN
@@ -226,6 +228,10 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 	if err != nil {
 		panic(err)
 	}
+	Ejson, err := json.Marshal(&pInfo.E)
+	if err != nil {
+		panic(err)
+	}
 
 	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
 
@@ -242,6 +248,7 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 			Hjson,
 			Ajson,
 			Ljson,
+			Ejson,
 
 			bid,
 			pInfo.ID,
@@ -262,11 +269,12 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 		args[7] = Hjson
 		args[8] = Ajson
 		args[9] = Ljson
+		args[10] = Ejson
 
-		args[10] = bid
-		args[11] = pInfo.ID
-		args[12] = skipover
-		args[13] = smodid
+		args[11] = bid
+		args[12] = pInfo.ID
+		args[13] = skipover
+		args[14] = smodid
 
 		for i := range pInfo.FI {
 
