@@ -38,12 +38,12 @@ func (sp *PSQLIB) modCmdDelete(
 }
 
 func getModCmdInput(
-	pi mailib.PostInfo, filenames []string, textindex uint32) (io.Reader, io.Closer, error) {
+	pi mailib.PostInfo, filenames []string) (io.Reader, io.Closer, error) {
 
-	if textindex <= 0 {
+	if pi.E.TextAttachment <= 0 {
 		return strings.NewReader(pi.MI.Message), nil, nil
 	}
-	f, err := os.Open(filenames[textindex-1])
+	f, err := os.Open(filenames[pi.E.TextAttachment-1])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,11 +51,12 @@ func getModCmdInput(
 }
 
 func (sp *PSQLIB) execModCmd(
-	tx *sql.Tx, gpid postID, bid boardID, bpid postID, modid int64, modpriv ModPriv,
-	pi mailib.PostInfo, filenames []string, textindex uint32,
+	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
+	modid int64, modpriv ModPriv,
+	pi mailib.PostInfo, filenames []string,
 	selfid, ref FullMsgIDStr) (err error) {
 
-	r, c, err := getModCmdInput(pi, filenames, textindex)
+	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
 		return
 	}

@@ -479,7 +479,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	if priv > ModPrivNone {
 		// we should execute it
 		err = sp.execModCmd(
-			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns, pi.E.TextAttachment,
+			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
 			info.FullMsgIDStr, info.FRef)
 		if err != nil {
 			unexpected = true

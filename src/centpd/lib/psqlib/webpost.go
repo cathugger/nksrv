@@ -625,7 +625,7 @@ ON
 		// we should execute it
 		// we never put message in file when processing message
 		err = sp.execModCmd(
-			tx, gpid, bid, bpid, modid, priv, pInfo, nil, 0, fmsgids, fref)
+			tx, gpid, bid, bpid, modid, priv, pInfo, nil, fmsgids, fref)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
