@@ -1143,3 +1143,70 @@ USING
 	) AS rcnts
 WHERE
 	rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id
+
+-- :name fetch_and_clear_mod_msgs
+-- args: <modid>
+-- fetches all messages of mod, and also clears all their actions
+WITH
+	zbp AS (
+		SELECT
+			b_id,
+			b_p_id,
+			g_p_id
+		FROM
+			ib0.bposts xbp
+		WHERE
+			xbp.mod_id = $1
+	),
+	zd AS (
+		DELETE FROM
+			ib0.banlist bl
+		USING
+			zbp
+		WHERE
+			bl.b_id = x.b_id AND bl.b_p_id = x.b_p_id
+	)
+SELECT
+	zbp.g_p_id,
+	zbp.b_id,
+	zbp.b_p_id,
+	yb.b_name,
+	yp.msgid,
+	ypp.msgid,
+	yf.fname
+FROM
+	zbp
+-- board
+JOIN
+	ib0.boards yb
+ON
+	zbp.b_id = yb.b_id
+-- global post
+JOIN
+	ib0.posts yp
+ON
+	zbp.g_p_id = yp.g_p_id
+-- files of global post
+LEFT JOIN LATERAL
+	(
+		SELECT
+			xf.fname
+		FROM
+			ib0.files xf
+		WHERE
+			yp.g_p_id = xf.g_p_id
+		ORDER BY
+			xf.f_id -- important
+	) AS yf
+ON
+	TRUE
+-- parent board post
+LEFT JOIN
+	ib0.bposts ypbp
+ON
+	zbp.b_id = ypbp.b_id AND zbp.t_id = zbp.b_p_id AND zbp.t_id != zbp.b_p_id
+-- parent global post
+LEFT JOIN
+	ib0.posts ypp
+ON
+	ypbp.g_p_id = ypp.g_p_id

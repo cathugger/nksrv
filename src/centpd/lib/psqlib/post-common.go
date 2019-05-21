@@ -39,6 +39,9 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 	ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
 	// do key update
 	var modid int64
+	// this probably should lock relevant row.
+	// that should block reads of this row I think?
+	// which would mean no further new mod posts for this key
 	err = ust.QueryRow(pubkeystr, newpriv.String()).Scan(&modid)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -47,7 +50,19 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 		}
 		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
 	}
-	_ = modid
+	/*
+	zbp.g_p_id,
+	zbp.b_id,
+	zbp.b_p_id,
+	yb.b_name,
+	yp.msgid,
+	ypp.msgid,
+	yf.fname
+	*/
+	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
+	xst.Query(modid)
+	// TODO finish
+
 	// read msgs of mod
 	// for each, clear effect of message, then parse message and apply actions
 
