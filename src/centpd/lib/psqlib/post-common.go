@@ -50,17 +50,75 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 		}
 		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
 	}
-	/*
-	zbp.g_p_id,
-	zbp.b_id,
-	zbp.b_p_id,
-	yb.b_name,
-	yp.msgid,
-	ypp.msgid,
-	yf.fname
-	*/
 	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
-	xst.Query(modid)
+	startctid := uint64(0)
+	for {
+		rows, err := xst.Query(modid, startgpid)
+		if err != nil {
+			return sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
+		}
+		type idt struct {
+			bid boardID
+			bpid postID
+		}
+		lastx = idt{0,0}
+		type postinfo struct {
+			gpid postID
+			xid idt
+			bname string
+			msgid string
+			ref string
+			files []string
+		}
+		var posts []postinfo
+		for rows.Next() {
+			/*
+			zbp.ctid,
+			zbp.g_p_id,
+			zbp.b_id,
+			zbp.b_p_id,
+			yb.b_name,
+			yp.msgid,
+			ypp.msgid,
+			yf.fname
+			*/
+
+			var p postinfo
+			var ref, fname sql.NullString
+
+			err = rows.Scan(
+				&startctid, &p.gpid,&p.xid.bid,&p.xid.bpid,
+				&p.bname,&p.msgid,&ref,&fname)
+			if err != nil {
+				rows.Close()
+				return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
+			}
+
+			var pp *postinfo
+			if lastx != p.xid {
+				lastx = p.xid
+				p.ref = ref.String
+				posts = append(posts, p)
+			}
+			pp = &posts[len(posts)-1]
+			if fname.String != "" {
+				pp.files = append(pp.files, fname.String)
+			}
+		}
+		if err = rows.Err(); err != nil {
+			return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
+		}
+
+		// TODO process posts list
+
+		if len(posts) < 8192 {
+			// normal
+			break
+		} else {
+			// recheck
+			continue
+		}
+	}
 	// TODO finish
 
 	// read msgs of mod

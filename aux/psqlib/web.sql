@@ -1145,18 +1145,23 @@ WHERE
 	rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id
 
 -- :name fetch_and_clear_mod_msgs
--- args: <modid>
+-- args: <modid> <last_ctid>
 -- fetches all messages of mod, and also clears all their actions
 WITH
 	zbp AS (
 		SELECT
 			b_id,
 			b_p_id,
-			g_p_id
+			g_p_id,
+			ctid
 		FROM
-			ib0.bposts xbp
+			ib0.bposts
 		WHERE
-			xbp.mod_id = $1
+			mod_id = $1 AND ctid > $2
+		ORDER BY
+			ctid
+		LIMIT
+			8192
 	),
 	zd AS (
 		DELETE FROM
@@ -1167,6 +1172,7 @@ WITH
 			bl.b_id = x.b_id AND bl.b_p_id = x.b_p_id
 	)
 SELECT
+	zbp.ctid,
 	zbp.g_p_id,
 	zbp.b_id,
 	zbp.b_p_id,
