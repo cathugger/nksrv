@@ -66,6 +66,7 @@ const (
 	st_web_refresh_bump_by_tid
 
 	st_web_set_mod_priv
+	st_web_fetch_and_clear_mod_msgs
 
 	st_max
 )
@@ -137,6 +138,7 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "refresh_bump_by_tid"},
 
 	st_reference{"web", "set_mod_priv"},
+	st_reference{"web", "fetch_and_clear_mod_msgs"},
 }
 
 func loadStatements() {

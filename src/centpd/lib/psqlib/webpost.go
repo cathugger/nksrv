@@ -562,8 +562,9 @@ ON
 	// fill in layout/sign
 	var fmsgids FullMsgIDStr
 	var fref FullMsgIDStr
-	if ref.String != "" {
-		fref = FullMsgIDStr(fmt.Sprintf("<%s>", ref.String))
+	cref := CoreMsgIDStr(ref.String)
+	if cref != "" {
+		fref = FullMsgIDStr(fmt.Sprintf("<%s>", cref))
 	}
 	var pubkeystr string
 	pInfo, fmsgids, msgfn, pubkeystr, err = sp.fillWebPostDetails(
@@ -625,7 +626,7 @@ ON
 		// we should execute it
 		// we never put message in file when processing message
 		err = sp.execModCmd(
-			tx, gpid, bid, bpid, modid, priv, pInfo, nil, fmsgids, fref)
+			tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID, cref)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}

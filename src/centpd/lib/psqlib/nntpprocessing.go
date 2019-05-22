@@ -480,7 +480,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		// we should execute it
 		err = sp.execModCmd(
 			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
-			info.FullMsgIDStr, info.FRef)
+			pi.MessageID, cutMsgID(info.FRef))
 		if err != nil {
 			unexpected = true
 			return

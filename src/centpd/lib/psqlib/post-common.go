@@ -2,7 +2,9 @@ package psqlib
 
 import (
 	"database/sql"
+	"time"
 
+	"centpd/lib/mailib"
 	"centpd/lib/thumbnailer"
 )
 
@@ -51,56 +53,63 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
 	}
 	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
-	startctid := uint64(0)
+	offset := uint64(0)
 	for {
-		rows, err := xst.Query(modid, startgpid)
+		rows, err := xst.Query(modid, offset)
 		if err != nil {
 			return sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
 		}
 		type idt struct {
-			bid boardID
+			bid  boardID
 			bpid postID
 		}
-		lastx = idt{0,0}
+		lastx := idt{0, 0}
 		type postinfo struct {
-			gpid postID
-			xid idt
-			bname string
-			msgid string
-			ref string
-			files []string
+			gpid    postID
+			xid     idt
+			bname   string
+			msgid   string
+			ref     string
+			title   string
+			date    time.Time
+			message string
+			txtidx  uint32
+			files   []string
 		}
 		var posts []postinfo
 		for rows.Next() {
 			/*
-			zbp.ctid,
-			zbp.g_p_id,
-			zbp.b_id,
-			zbp.b_p_id,
-			yb.b_name,
-			yp.msgid,
-			ypp.msgid,
-			yf.fname
+				zbp.g_p_id,
+				zbp.b_id,
+				zbp.b_p_id,
+				yb.b_name,
+				yp.msgid,
+				ypp.msgid,
+				yp.title,
+				yp.pdate,
+				yp.message,
+				yp.extras -> 'text_attach',
+				yf.fname
 			*/
-
 			var p postinfo
 			var ref, fname sql.NullString
+			var txtidx sql.NullInt64
 
 			err = rows.Scan(
-				&startctid, &p.gpid,&p.xid.bid,&p.xid.bpid,
-				&p.bname,&p.msgid,&ref,&fname)
+				&p.gpid, &p.xid.bid, &p.xid.bpid, &p.bname, &p.msgid, &ref,
+				&p.title, &p.date, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
 			}
 
-			var pp *postinfo
 			if lastx != p.xid {
 				lastx = p.xid
 				p.ref = ref.String
+				p.txtidx = uint32(txtidx.Int64)
 				posts = append(posts, p)
 			}
-			pp = &posts[len(posts)-1]
+			pp := &posts[len(posts)-1]
 			if fname.String != "" {
 				pp.files = append(pp.files, fname.String)
 			}
@@ -109,20 +118,37 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 			return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
 		}
 
-		// TODO process posts list
+		for i := range posts {
+			// prepare postinfo good enough for execModCmd
+			pi := mailib.PostInfo{
+				MessageID: CoreMsgIDStr(posts[i].msgid),
+				Date:      posts[i].date.UTC(),
+				MI: mailib.MessageInfo{
+					Title:   posts[i].title,
+					Message: posts[i].message,
+				},
+				E: mailib.PostExtraAttribs{
+					TextAttachment: posts[i].txtidx,
+				},
+			}
+			err = sp.execModCmd(
+				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
+				newpriv, pi, posts[i].files, pi.MessageID, CoreMsgIDStr(posts[i].ref))
+			if err != nil {
+				return err
+			}
+		}
 
-		if len(posts) < 8192 {
-			// normal
+		if len(posts) < 4096 {
+			// if less than limit that means we dont need another query
 			break
 		} else {
-			// recheck
+			// issue another query, there may be more data
+			offset += uint64(len(posts))
+			posts = posts[:0]
 			continue
 		}
 	}
-	// TODO finish
-
-	// read msgs of mod
-	// for each, clear effect of message, then parse message and apply actions
 
 	return
 }

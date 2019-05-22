@@ -13,7 +13,7 @@ import (
 
 func (sp *PSQLIB) modCmdDelete(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	pi mailib.PostInfo, selfid, ref FullMsgIDStr,
+	pi mailib.PostInfo, selfid, ref CoreMsgIDStr,
 	cmd string, args []string) (err error) {
 
 	if len(args) == 0 {
@@ -21,15 +21,15 @@ func (sp *PSQLIB) modCmdDelete(
 	}
 
 	fmsgids := FullMsgIDStr(args[0])
-
-	if !mm.ValidMessageIDStr(fmsgids) ||
-		fmsgids == selfid || fmsgids == ref {
-
-		// XXX log fail
-		return // just ignore, cannot do this
+	if !mm.ValidMessageIDStr(fmsgids) {
+		return
+	}
+	cmsgids := cutMsgID(fmsgids)
+	if cmsgids == selfid || cmsgids == ref {
+		return
 	}
 
-	err = sp.banByMsgID(tx, cutMsgID(fmsgids), bid, bpid, pi.MI.Title)
+	err = sp.banByMsgID(tx, cmsgids, bid, bpid, pi.MI.Title)
 	if err != nil {
 		return
 	}
@@ -54,7 +54,7 @@ func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	modid int64, modpriv ModPriv,
 	pi mailib.PostInfo, filenames []string,
-	selfid, ref FullMsgIDStr) (err error) {
+	selfid, ref CoreMsgIDStr) (err error) {
 
 	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
