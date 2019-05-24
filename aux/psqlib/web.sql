@@ -1088,7 +1088,7 @@ WHERE
 -- :name set_mod_priv
 -- args: <pubkey> <newpriv>
 INSERT INTO
-	ib0.modlist (
+	ib0.modlist ml (
 		mod_pubkey,
 		automanage,
 		mod_priv
@@ -1105,7 +1105,7 @@ ON CONFLICT (mod_pubkey)
 		mod_priv = $2,
 		automanage = FALSE
 	WHERE
-		mod_priv <> $2 OR automanage <> FALSE
+		ml.mod_priv <> $2 OR ml.automanage <> FALSE
 RETURNING -- inserted or modified
 	mod_id
 
