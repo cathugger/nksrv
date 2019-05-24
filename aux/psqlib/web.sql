@@ -1096,14 +1096,13 @@ INSERT INTO
 VALUES
 	(
 		$1,
-		TRUE,
+		FALSE,
 		$2
 	)
-ON CONFLICT (mod_pubkey)
-	DO UPDATE
+ON CONFLICT (mod_pubkey) DO UPDATE
 	SET
-		mod_priv = $2,
-		automanage = FALSE
+		automanage = FALSE,
+		mod_priv = $2
 	WHERE
 		ml.mod_priv <> $2 OR ml.automanage <> FALSE
 RETURNING -- inserted or modified
@@ -1117,7 +1116,7 @@ WITH
 		UPDATE
 			ib0.modlist
 		SET
-			mod_priv = 'none', -- don't see point having anything else there
+			mod_priv = 'none', -- don't see point having anything else there yet
 			automanage = TRUE
 		WHERE
 			mod_pubkey = $1 AND
