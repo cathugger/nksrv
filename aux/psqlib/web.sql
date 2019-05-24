@@ -1152,6 +1152,7 @@ WITH
 		SELECT
 			b_id,
 			b_p_id,
+			t_id,
 			g_p_id
 		FROM
 			ib0.bposts
@@ -1214,7 +1215,7 @@ ON
 LEFT JOIN
 	ib0.bposts ypbp
 ON
-	zbp.b_id = ypbp.b_id AND zbp.t_id = zbp.b_p_id AND zbp.t_id != zbp.b_p_id
+	zbp.b_id = ypbp.b_id AND zbp.t_id = ypbp.b_p_id AND zbp.t_id != zbp.b_p_id
 -- parent global post
 LEFT JOIN
 	ib0.posts ypp
