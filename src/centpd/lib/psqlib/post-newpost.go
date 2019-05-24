@@ -159,7 +159,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		SELECT
 			1
 		LIMIT
-			$14
+			$15
 	),`
 		b.WriteString(st_nobump)
 	}
