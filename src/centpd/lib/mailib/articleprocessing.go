@@ -515,32 +515,19 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			return
 		}
 
-		allowedmultipart := func() bool {
-			// some multiparts can have additional important parameters
-			// we currently only take into account boundary parameter
-			// therefore, bail out if we encounter unknown params with
-			// types which may recognise them
-			// https://www.iana.org/assignments/media-types/media-types.xhtml#multipart
-			// signed, encrypted, related, report sub-types have additional params
+		allowmpparam := func() bool {
 			mpt := xct_t[len("multipart/"):]
 			switch mpt {
 			case "mixed", "alternative", "digest", "parallel", "form-data",
 				"multilingual":
-
-				return true
+				// we know these have no more params
+				return false
 			}
-			for k := range xct_par {
-				if k != "boundary" {
-					// non-boundary parameter
-					return false
-				}
-			}
-			// if no non-boundary parameters found, OK
 			return true
 		}
 
 		if xismultipart && xct_par["boundary"] != "" &&
-			XH.GetFirst("Content-Disposition") == "" && allowedmultipart() {
+			XH.GetFirst("Content-Disposition") == "" {
 
 			has8bit := false
 
@@ -601,9 +588,17 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 			// no more parts
 			err = nil
-			// we're not going to save parameters of this
+
+			// params of this go elsewhere
 			XH["Content-Type"][0].V =
 				au.TrimWSString(au.UntilString(XH["Content-Type"][0].V, ';'))
+			// no need for this param after parsing
+			// XXX maybe clone instead of modifying given?
+			delete(xct_par, "boundary") // never include this there
+			if len(xct_par) != 0 && allowmpparam() {
+				rpinfo.MPParams = xct_par
+			}
+
 			// fill in
 			rpinfo.Body.Data = pis
 			rpinfo.Binary = xbinary
