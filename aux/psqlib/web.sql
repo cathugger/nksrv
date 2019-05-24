@@ -1170,7 +1170,7 @@ WITH
 		USING
 			zbp
 		WHERE
-			bl.b_id = x.b_id AND bl.b_p_id = x.b_p_id
+			bl.b_id = zbp.b_id AND bl.b_p_id = zbp.b_p_id
 	)
 SELECT
 	zbp.g_p_id,
