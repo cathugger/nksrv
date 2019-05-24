@@ -1088,7 +1088,7 @@ WHERE
 -- :name set_mod_priv
 -- args: <pubkey> <newpriv>
 INSERT INTO
-	ib0.modlist ml (
+	ib0.modlist AS ml (
 		mod_pubkey,
 		automanage,
 		mod_priv
