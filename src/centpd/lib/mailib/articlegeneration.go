@@ -25,12 +25,30 @@ func randomBoundary() string {
 	return ht.SBase64Enc.EncodeToString(b[:])
 }
 
-func modifyMultipartType(ct string) (_ string, rb string, _ error) {
+func modifyMultipartType(
+	ct string, params map[string]string) (res string, rb string, _ error) {
+
 	if ct == "" {
 		return "", "", errNoContentType
 	}
+
 	rb = randomBoundary()
-	return ct + "; boundary=" + rb, rb, nil
+
+	if len(params) == 0 {
+		// fast path
+		return ct + "; boundary=" + rb, rb, nil
+	} else {
+		par := make(map[string]string)
+		for k, v := range params {
+			par[k] = v
+		}
+		par["boundary"] = rb
+		res = mail.FormatMediaTypeX(ct, par)
+		if res == "" {
+			return "", "", errors.New("mail.FormatMediaTypeX failed")
+		}
+		return res, rb, nil
+	}
 }
 
 func setCTE(
@@ -93,7 +111,7 @@ func GenerateMessage(
 
 		pi.H["Content-Type"] = pi.H["Content-Type"][:1]
 		pi.H["Content-Type"][0].V, mpboundary, err =
-			modifyMultipartType(pi.H["Content-Type"][0].V)
+			modifyMultipartType(pi.H["Content-Type"][0].V, pi.L.MPParams)
 		if err != nil {
 			return
 		}
@@ -203,12 +221,13 @@ func GenerateMessage(
 						mail.OneHeaderVal("8bit")
 				}
 
-				pis[i].Headers["Content-Type"] = []mail.HeaderVal{{}}
-				pis[i].Headers["Content-Type"][0].V, pb, err =
-					modifyMultipartType(pis[i].ContentType)
+				var ctv string
+				ctv, pb, err =
+					modifyMultipartType(pis[i].ContentType, pis[i].MPParams)
 				if err != nil {
 					return
 				}
+				pis[i].Headers["Content-Type"] = mail.OneHeaderVal(ctv)
 			}
 
 			err = pw.StartNextPart(pis[i].Headers)

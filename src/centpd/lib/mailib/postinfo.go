@@ -125,20 +125,22 @@ func (i *BodyObject) UnmarshalJSON(b []byte) (err error) {
 }
 
 type PartInfoInner struct {
-	ContentType string       `json:"t,omitempty"`
-	Binary      bool         `json:"x,omitempty"`
-	HasNull     bool         `json:"0,omitempty"` // not used if Binary
-	Has8Bit     bool         `json:"8,omitempty"` // not used if Binary or HasNull
-	Headers     mail.Headers `json:"h,omitempty"`
-	Body        BodyObject   `json:"b"`
+	ContentType string            `json:"t,omitempty"`
+	Binary      bool              `json:"x,omitempty"`
+	HasNull     bool              `json:"0,omitempty"` // not used if Binary
+	Has8Bit     bool              `json:"8,omitempty"` // not used if Binary or HasNull
+	Headers     mail.Headers      `json:"h,omitempty"`
+	MPParams    map[string]string `json:"m,omitempty"`
+	Body        BodyObject        `json:"b"`
 }
 
 func (i *PartInfoInner) onlyBody() bool {
 	return i.ContentType == "" &&
-		!i.Binary &&
-		!i.HasNull &&
-		!i.Has8Bit &&
-		len(i.Headers) == 0
+		i.Binary == false &&
+		i.HasNull == false &&
+		i.Has8Bit == false &&
+		len(i.Headers) == 0 &&
+		len(i.MPParams) == 0
 }
 
 type PartInfo struct {
