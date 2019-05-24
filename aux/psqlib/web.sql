@@ -1099,7 +1099,7 @@ VALUES
 		TRUE,
 		$2
 	)
-ON CONFLICT
+ON CONFLICT (mod_pubkey)
 	DO UPDATE
 	SET
 		mod_priv = $2,
