@@ -2,6 +2,8 @@ package psqlib
 
 import (
 	"database/sql"
+	"encoding/hex"
+	"strings"
 	"time"
 
 	. "centpd/lib/logx"
@@ -156,6 +158,15 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 
 func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 	var err error
+
+	for i, s := range mods {
+		if _, err = hex.DecodeString(s); err != nil {
+			sp.log.LogPrintf(ERROR, "invalid modid %q", s)
+			return
+		}
+		// we use uppercase (I forgot why)
+		mods[i] = strings.ToUpper(s)
+	}
 
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
