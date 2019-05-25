@@ -51,13 +51,14 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we changed nothing so return now
-			sp.log.LogPrintf(DEBUG, "setmodpriv: priv unchanged")
+			sp.log.LogPrintf(DEBUG, "setmodpriv: %s priv unchanged", pubkeystr)
 			return nil
 		}
 		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
 	}
 
-	sp.log.LogPrintf(DEBUG, "setmodpriv: priv changed, modid %d", modid)
+	sp.log.LogPrintf(DEBUG,
+		"setmodpriv: %s priv changed, modid %d", pubkeystr, modid)
 
 	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
