@@ -51,10 +51,15 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we changed nothing so return now
+			sp.log.LogPrintf(DEBUG, "setmodpriv: priv unchanged")
 			return nil
 		}
 		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
 	}
+
+	sp.log.LogPrintf(DEBUG, "setmodpriv: priv changed, modid %d", modid)
+
+	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
 	offset := uint64(0)
 	for {
@@ -114,7 +119,7 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 			}
 			pp := &posts[len(posts)-1]
 			if fname.String != "" {
-				pp.files = append(pp.files, fname.String)
+				pp.files = append(pp.files, srcdir+fname.String)
 			}
 		}
 		if err = rows.Err(); err != nil {
@@ -134,6 +139,11 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 					TextAttachment: posts[i].txtidx,
 				},
 			}
+
+			sp.log.LogPrintf(DEBUG,
+				"setmodpriv: executing <%s> from board[%s]",
+				posts[i].msgid, posts[i].bname)
+
 			err = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
 				newpriv, pi, posts[i].files, pi.MessageID, CoreMsgIDStr(posts[i].ref))
