@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 
+	. "centpd/lib/logx"
 	"centpd/lib/mailib"
 	"centpd/lib/thumbnailer"
 )
@@ -32,7 +33,7 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 			err = sp.sqlError("st_web_autoregister_mod queryrowscan", err)
 			return
 		}
-		priv = StringToModPriv(privstr)
+		priv, _ = StringToModPriv(privstr)
 		return
 	}
 }
@@ -151,4 +152,37 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 	}
 
 	return
+}
+
+func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
+	var err error
+
+	tx, err := sp.db.DB.Begin()
+	if err != nil {
+		err = sp.sqlError("tx begin", err)
+		sp.log.LogPrintf(ERROR, "%v", err)
+		return
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, s := range mods {
+		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, newpriv.String())
+
+		err = sp.setModPriv(tx, s, newpriv)
+		if err != nil {
+			sp.log.LogPrintf(ERROR, "%v", err)
+			return
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		err = sp.sqlError("tx commit", err)
+		sp.log.LogPrintf(ERROR, "%v", err)
+		return
+	}
 }

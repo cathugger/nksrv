@@ -199,6 +199,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
 		err = sp.sqlError("tx begin", err)
+		sp.log.LogPrintf(ERROR, "%v", err)
 		return
 	}
 	defer func() {
@@ -215,6 +216,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 			err = sp.banByMsgID(tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason)
 		}
 		if err != nil {
+			sp.log.LogPrintf(ERROR, "%v", err)
 			return
 		}
 	}
@@ -222,6 +224,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	err = tx.Commit()
 	if err != nil {
 		err = sp.sqlError("tx commit", err)
+		sp.log.LogPrintf(ERROR, "%v", err)
 		return
 	}
 }

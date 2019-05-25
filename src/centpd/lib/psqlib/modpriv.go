@@ -22,8 +22,9 @@ func init() {
 	}
 }
 
-func StringToModPriv(s string) ModPriv {
-	return ModPrivM[s]
+func StringToModPriv(s string) (ModPriv, bool) {
+	mp, ok := ModPrivM[s] // silly go
+	return mp, ok
 }
 
 func (t ModPriv) String() string {
