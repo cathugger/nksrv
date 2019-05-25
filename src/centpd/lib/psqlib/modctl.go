@@ -87,6 +87,7 @@ func (sp *PSQLIB) execModCmd(
 		}
 
 		hadeof := err == io.EOF
+		err = nil
 
 		unsafe_line := unsafeBytesToStr(linebuf[:read])
 		unsafe_fields := strings.Fields(unsafe_line)
