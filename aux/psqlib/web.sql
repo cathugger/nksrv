@@ -152,7 +152,7 @@ LEFT JOIN LATERAL
 ON
 	TRUE
 WHERE
-	xb.b_name=$1
+	xb.b_name = $1
 
 -- :name web_overboard_page
 -- input: {page num} {threads_per_page}
@@ -198,8 +198,8 @@ FROM
 			zt.skip_over IS NOT TRUE
 		ORDER BY
 			zt.bump DESC,
-			zt.b_id ASC,
-			zt.t_id ASC
+			zt.g_t_id ASC,
+			zt.b_id ASC
 		LIMIT
 			(CASE
 				WHEN
@@ -284,16 +284,19 @@ LEFT JOIN
 	ib0.posts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
-LEFT JOIN
-	ib0.files AS xf
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.files zf
+		WHERE
+			xp.g_p_id = zf.g_p_id
+		ORDER BY
+			zf.f_id ASC
+	) AS xf
 ON
-	xp.g_p_id = xf.g_p_id
-ORDER BY
-	xt.bump DESC,
-	xt.t_id ASC,
-	xbp.pdate ASC,
-	xbp.b_p_id ASC,
-	xf.f_id ASC
+	TRUE
 
 -- :name web_thread_catalog
 -- input: {b_name}
