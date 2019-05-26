@@ -401,10 +401,19 @@ SELECT
 	xf.thumbcfg
 FROM
 	ib0.boards AS xb
-LEFT JOIN
-	ib0.threads AS xt
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.threads zt
+		WHERE
+			zt.b_id = xb.b_id AND zt.t_name = $2
+		LIMIT
+			1
+	) AS xt
 ON
-	xb.b_id = xt.b_id
+	TRUE
 LEFT JOIN
 	LATERAL (
 		SELECT
@@ -444,7 +453,7 @@ LEFT JOIN
 ON
 	xp.g_p_id = xf.g_p_id
 WHERE
-	xb.b_name=$1 AND xt.t_name = $2
+	xb.b_name=$1
 ORDER BY
 	xbp.pdate ASC,
 	xbp.b_p_id ASC,
