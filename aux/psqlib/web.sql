@@ -39,20 +39,7 @@ SELECT
 	xf.filecfg,
 	xf.thumbcfg
 FROM
-	(
-		SELECT
-			b_id,
-			bdesc,
-			attrib,
-			threads_per_page,
-			t_count
-		FROM
-			ib0.boards
-		WHERE
-			b_name=$1
-		LIMIT
-			1
-	) AS xb
+	ib0.boards xb
 LEFT JOIN
 	LATERAL (
 		SELECT
@@ -151,16 +138,21 @@ LEFT JOIN
 	ib0.posts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
-LEFT JOIN
-	ib0.files AS xf
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.files zf
+		WHERE
+			xp.g_p_id = zf.g_p_id
+		ORDER BY
+			zf.f_id
+	) AS xf
 ON
-	xp.g_p_id = xf.g_p_id
-ORDER BY
-	xt.bump DESC,
-	xt.t_id ASC,
-	xbp.pdate ASC,
-	xbp.b_p_id ASC,
-	xf.f_id ASC
+	TRUE
+WHERE
+	xb.b_name=$1
 
 -- :name web_overboard_page
 -- input: {page num} {threads_per_page}
