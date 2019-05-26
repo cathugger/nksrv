@@ -203,7 +203,7 @@ CREATE TABLE ib0.files (
 		REFERENCES ib0.posts
 )
 -- :next
-CREATE INDEX ON ib0.files (g_p_id)
+CREATE INDEX ON ib0.files (g_p_id,f_id) -- f_id helps sorted retrieval
 -- :next
 CREATE INDEX ON ib0.files (fname,thumb)
 

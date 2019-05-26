@@ -440,24 +440,38 @@ LEFT JOIN
 	) AS xto
 ON
 	TRUE
-LEFT JOIN
-	ib0.bposts AS xbp
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.bposts zbp
+		WHERE
+			xt.b_id = zbp.b_id AND xt.t_id = zbp.t_id
+		ORDER BY
+			zbp.pdate ASC,zbp.b_p_id ASC
+	) AS xbp
 ON
-	xt.b_id = xbp.b_id AND xt.t_id = xbp.t_id
+	TRUE
 LEFT JOIN
 	ib0.posts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
-LEFT JOIN
-	ib0.files AS xf
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.files zf
+		WHERE
+			xp.g_p_id = zf.g_p_id
+		ORDER BY
+			zf.f_id ASC
+	) AS xf
 ON
-	xp.g_p_id = xf.g_p_id
+	TRUE
 WHERE
 	xb.b_name=$1
-ORDER BY
-	xbp.pdate ASC,
-	xbp.b_p_id ASC,
-	xf.f_id ASC
 
 
 
