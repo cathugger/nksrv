@@ -322,17 +322,27 @@ SELECT
 	xf.thumb,
 	xf.thumbcfg
 FROM
-	ib0.boards AS xb
-LEFT JOIN
-	ib0.threads AS xt
+	ib0.boards xb
+LEFT JOIN LATERAL
+	(
+		SELECT
+			*
+		FROM
+			ib0.threads zt
+		WHERE
+			xb.b_id = zt.b_id
+		ORDER BY
+			zt.bump DESC,
+			zt.t_id ASC
+	) AS xt
 ON
-	xb.b_id = xt.b_id
+	TRUE
 LEFT JOIN
-	ib0.bposts AS xbp
+	ib0.bposts xbp
 ON
 	xt.b_id = xbp.b_id AND xt.t_id = xbp.b_p_id
 LEFT JOIN
-	ib0.posts AS xp
+	ib0.posts xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN
@@ -356,10 +366,6 @@ ON
 	TRUE
 WHERE
 	xb.b_name = $1
-ORDER BY
-	xt.bump DESC,
-	xt.t_id ASC,
-	xf.f_id ASC
 
 -- :name web_thread
 -- input: {b_name} {t_name}
