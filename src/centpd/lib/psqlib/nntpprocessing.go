@@ -477,10 +477,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	// execute mod cmd
 	if priv > ModPrivNone {
+		var cref CoreMsgIDStr
+		if info.FRef != "" {
+			cref = cutMsgID(info.FRef)
+		}
 		// we should execute it
 		err = sp.execModCmd(
 			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
-			pi.MessageID, cutMsgID(info.FRef))
+			pi.MessageID, cref)
 		if err != nil {
 			unexpected = true
 			return
