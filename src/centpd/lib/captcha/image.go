@@ -54,7 +54,7 @@ func NewImage(digits []byte, seed [16]byte, width, height int) *Image {
 	y := m.rng.Int(border, maxy-border)
 	// Draw digits.
 	for _, n := range digits {
-		m.drawDigit(font[n], x, y)
+		m.drawDigit(&font[n], x, y)
 		x += m.numWidth + m.dotSize
 	}
 	// Draw strike-through line.
@@ -198,7 +198,7 @@ func (m *Image) strikeThrough() {
 	}
 }
 
-func (m *Image) drawDigit(digit [fontWidth * fontHeight]byte, x, y int) {
+func (m *Image) drawDigit(digit *[fontWidth * fontHeight]byte, x, y int) {
 	skf := m.rng.Float(-maxSkew, maxSkew)
 	xs := float64(x)
 	r := m.dotSize / 2
