@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"errors"
+	"time"
 )
 
 type Answer string
@@ -12,13 +13,28 @@ type Distortion []byte
 
 /*
  * layout for key:
- * 8[keyid]|24[nonce]|?[encrypted data]
+ * 8[keyid]|24[nonce]|?[encrypted data]|16[poly1305]
+ * 8+24+16 = 48
  * leyout for data:
- * 2[type]|8[expiredate]|1[x]|x[keydata]|?[random]
+ * 1[type]|8[expiredate]|1[l]|6[keydata]|16[seed]
+ * 1+8+1+6+16 = 32
+ * 48 + 32 = 80
+ * 80*8/5=128
  */
 
+const MACOverhead = 16
+const MaxChalLen = 12
+const KeyDataLen = 32
+const EncKeyLen = 80
+const DefaultChalLen = 8
+const DefaultExpireSecs = 60 * 15 // 15 mins
+
 func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
-	b := make([]byte, 8+24+len(k)+kek.Overhead())
+	if kek.Overhead() != MACOverhead {
+		panic("bad kek.Overhead()")
+	}
+
+	b := make([]byte, 8+24+len(k)+MACOverhead)
 
 	binary.BigEndian.PutUint64(b[0:8], keyid)
 
@@ -35,7 +51,7 @@ func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
 }
 
 func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
-	if len(ek) <= 8+24+kek.Overhead() {
+	if len(ek) != EncKeyLen {
 		err = errors.New("invalid key")
 	}
 
@@ -46,4 +62,79 @@ func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
 	}
 
 	return
+}
+
+func PackKeyData(
+	k []byte, typ uint8, exp int64, chal []byte, seed [16]byte) {
+
+	k[0] = typ
+
+	binary.BigEndian.PutUint64(k[1:1+8], uint64(exp)+0x4000000000000000)
+
+	k[1+8] = byte(len(chal))
+
+	if len(chal) > MaxChalLen {
+		panic("challenge too long")
+	}
+	_, err := packBCD(k[1+8+1:1+8+1], chal)
+	if err != nil {
+		panic("packBCD err: " + err.Error())
+	}
+
+	copy(k[1+8+1+6:], seed[:])
+}
+
+func UnpackKeyData(
+	k []byte) (typ uint8, exp int64, chal []byte, seed [16]byte, err error) {
+
+	typ = k[0]
+
+	exp = int64(binary.BigEndian.Uint64(k[1:1+8]) - 0x4000000000000000)
+
+	challen := k[1+8]
+	if challen > MaxChalLen {
+		err = errors.New("bad challenge length")
+	}
+
+	chal, err = unpackBCD(nil, k[1+8+1:1+8+1+6], int(challen))
+	if err != nil {
+		return
+	}
+
+	copy(seed[:], k[1+8+1+6:])
+
+	return
+}
+
+func RandomChallenge(length int) (chal []byte, seed [16]byte) {
+	if length <= 0 {
+		length = DefaultChalLen
+	} else if length > MaxChalLen {
+		panic("challenge len too large")
+	}
+
+	chal = RandomDigits(length)
+
+	_, err := crand.Read(seed[:])
+	if err != nil {
+		panic("crand read: " + err.Error())
+	}
+
+	return
+}
+
+func EncryptChallenge(
+	kek cipher.AEAD, keyid uint64,
+	typ uint8, expp int64, chal []byte, seed [16]byte) []byte {
+
+	if expp <= 0 {
+		expp = DefaultExpireSecs
+	}
+
+	t := time.Now().Unix()
+
+	var kd [KeyDataLen]byte
+	PackKeyData(kd[:], typ, t+expp, chal, seed)
+
+	return EncryptKey(kek, keyid, kd[:], t)
 }

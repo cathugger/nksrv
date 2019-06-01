@@ -5,7 +5,6 @@
 package captcha
 
 import (
-	"bytes"
 	"image"
 	"image/color"
 	"image/png"
@@ -85,20 +84,8 @@ func (m *Image) getRandomPalette() color.Palette {
 	return p
 }
 
-// encodedPNG encodes an image to PNG and returns
-// the result as a byte slice.
-func (m *Image) encodedPNG() []byte {
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, m.Paletted); err != nil {
-		panic(err.Error())
-	}
-	return buf.Bytes()
-}
-
-// WriteTo writes captcha image in PNG format into the given writer.
-func (m *Image) WriteTo(w io.Writer) (int64, error) {
-	n, err := w.Write(m.encodedPNG())
-	return int64(n), err
+func (m *Image) WritePNG(w io.Writer) error {
+	return png.Encode(w, m.Paletted)
 }
 
 func (m *Image) calculateSizes(width, height, ncount int) {

@@ -35,7 +35,7 @@ func BenchmarkImageWriteTo(b *testing.B) {
 	counter := &byteCounter{}
 	for i := 0; i < b.N; i++ {
 		img := NewImage(d, seed, StdWidth, StdHeight)
-		img.WriteTo(counter)
+		img.WritePNG(counter)
 		b.SetBytes(counter.n)
 		counter.n = 0
 	}
