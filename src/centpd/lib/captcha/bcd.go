@@ -40,7 +40,7 @@ func unpackBCD(out []byte, in []byte, xlen int) ([]byte, error) {
 
 	b := make([]byte, xlen)
 
-	ii := len(in) - 1
+	ii := (xlen+1)/2 - 1
 	bi := xlen - 1
 	for bi > 0 {
 		b[bi-1], b[bi] = in[ii]>>4, in[ii]&15

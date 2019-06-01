@@ -4,9 +4,7 @@
 
 package captcha
 
-import (
-	"crypto/rand"
-)
+import crand "crypto/rand"
 
 // Purposes for seed derivation. The goal is to make deterministic PRNG produce
 // different outputs for images and audio by using different derived seeds.
@@ -26,7 +24,7 @@ func RandomDigits(length int) []byte {
 // randomBytes returns a byte slice of the given length read from CSPRNG.
 func randomBytes(length int) (b []byte) {
 	b = make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := crand.Read(b); err != nil {
 		panic("captcha: error reading random source: " + err.Error())
 	}
 	return
