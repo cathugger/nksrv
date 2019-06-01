@@ -10,7 +10,7 @@ const (
 	blackChar  = 1
 )
 
-var font = [10][fontWidth*fontHeight]byte{
+var font = [10][fontWidth * fontHeight]byte{
 	{ // 0
 		0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0,
 		0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0,

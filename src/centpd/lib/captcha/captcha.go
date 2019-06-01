@@ -1,9 +1,10 @@
 package captcha
 
 import (
+	"crypto/cipher"
 	crand "crypto/rand"
-	"time"
 	"encoding/binary"
+	"errors"
 )
 
 type Answer string
@@ -17,13 +18,13 @@ type Distortion []byte
  */
 
 func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
-	b := make([]byte, 8 + 24 + len(k) + kek.Overhead())
+	b := make([]byte, 8+24+len(k)+kek.Overhead())
 
 	binary.BigEndian.PutUint64(b[0:8], keyid)
 
-	binary.BigEndian.PutUint32(b[8:8+4], uint32(uint64(t) >> 1))
+	binary.BigEndian.PutUint32(b[8:8+4], uint32(uint64(t)>>1))
 
-	_, err := crand.Read(b[8+4:8+24])
+	_, err := crand.Read(b[8+4 : 8+24])
 	if err != nil {
 		panic("crand read: " + err.Error())
 	}
@@ -34,7 +35,7 @@ func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
 }
 
 func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
-	if len(ek) <= 8 + 24 + kek.Overhead() {
+	if len(ek) <= 8+24+kek.Overhead() {
 		err = errors.New("invalid key")
 	}
 

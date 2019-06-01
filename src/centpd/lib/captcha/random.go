@@ -5,10 +5,7 @@
 package captcha
 
 import (
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
-	"io"
 )
 
 // Purposes for seed derivation. The goal is to make deterministic PRNG produce
