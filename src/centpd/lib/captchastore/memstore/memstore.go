@@ -32,9 +32,11 @@ func (ms *MemStore) StoreSolved(obj []byte, expires, nowtime int64) (fresh bool,
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 
-	for xp := ms.tail; xp != nil && xp.exp < nowtime; xp = xp.next {
-		ms.head = xp.next
-		xp.next.prev = nil
+	for xp := ms.tail; xp != nil && xp.exp < nowtime; xp = xp.prev {
+		ms.tail = xp.prev
+		if xp.prev != nil {
+			xp.prev.next = nil
+		}
 		delete(ms.solved, string(xp.obj))
 	}
 
