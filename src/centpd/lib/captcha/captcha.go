@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"time"
+
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 type Answer string
@@ -48,6 +50,27 @@ func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
 	kek.Seal(b[8+24:8+24], b[8:8+24], k, b[0:8])
 
 	return b
+}
+
+func ParseKEK(kek []byte) cipher.AEAD {
+	c, err := chacha20poly1305.NewX(kek)
+	if err != nil {
+		panic("chacha20poly1305.NewX err: " + err.Error())
+	}
+	return c
+}
+
+func RandomKEK() (id uint64, kek []byte) {
+	var b [chacha20poly1305.KeySize + 8]byte
+
+	_, err := crand.Read(b[:])
+	if err != nil {
+		panic("crand.Read err: " + err.Error())
+	}
+
+	kek = b[:chacha20poly1305.KeySize]
+	id = binary.LittleEndian.Uint64(b[chacha20poly1305.KeySize:]) & 0x7FffFFffFFffFFff
+	return
 }
 
 func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
