@@ -73,9 +73,17 @@ func RandomKEK() (id uint64, kek []byte) {
 	return
 }
 
+func UnpackKeyID(ek []byte) (id uint64, err error) {
+	if len(ek) < 8 {
+		err = errors.New("invalid length")
+		return
+	}
+	return binary.BigEndian.Uint64(ek[:8]), nil
+}
+
 func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
 	if len(ek) != EncKeyLen {
-		err = errors.New("invalid key")
+		err = errors.New("invalid length")
 	}
 
 	k, err = kek.Open(ek[8+24:8+24], ek[8:8+24], ek[8+24:], ek[0:8])

@@ -273,17 +273,11 @@ func (sp *PSQLIB) commonNewPost(
 	fnmessage := ib0.IBWebFormTextMessage
 	fnoptions := ib0.IBWebFormTextOptions
 
-	fcaptchakey := ib0.IBWebFormTextCaptchaKey
-	fcaptchaans := ib0.IBWebFormTextCaptchaAns
-
 	// XXX more fields
 	if len(f.Values[fntitle]) > 1 ||
 		len(f.Values[fnname]) != 1 ||
 		len(f.Values[fnmessage]) != 1 ||
-		len(f.Values[fnoptions]) > 1 ||
-		(sp.webcaptcha != nil &&
-			(len(f.Values[fcaptchakey]) != 1 ||
-				len(f.Values[fcaptchaans]) != 1)) {
+		len(f.Values[fnoptions]) > 1 {
 
 		return rInfo, errInvalidSubmission, http.StatusBadRequest
 	}
@@ -300,11 +294,9 @@ func (sp *PSQLIB) commonNewPost(
 	}
 
 	if sp.webcaptcha != nil {
-		xfcaptchakey := f.Values[fcaptchakey][0]
-		xfcaptchaans := f.Values[fcaptchaans][0]
-
-		if err = sp.webcaptcha.CheckCaptcha(xfcaptchakey, xfcaptchaans); err != nil {
-			return rInfo, err, http.StatusUnauthorized
+		var code int
+		if err, code = sp.webcaptcha.CheckCaptcha(r, f.Values); err != nil {
+			return rInfo, err, code
 		}
 	}
 
