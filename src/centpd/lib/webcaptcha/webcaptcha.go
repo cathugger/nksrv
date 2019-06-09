@@ -3,7 +3,6 @@ package webcaptcha
 import (
 	"bytes"
 	"crypto/cipher"
-	"encoding/base32"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"centpd/lib/captcha"
 	"centpd/lib/captchastore"
+	"centpd/lib/hashtools"
 	ib0 "centpd/lib/webib0"
 )
 
@@ -22,14 +22,17 @@ type captchaKey struct {
 }
 
 type WebCaptcha struct {
-	keys       map[uint64]captchaKey
-	store      captchastore.CaptchaStore
-	usecookies bool
+	keys          map[uint64]captchaKey
+	prim          uint64
+	store         captchastore.CaptchaStore
+	usecookies    bool
+	length        int
+	validduration int64
 }
 
 var errInvalidMissing = errors.New("invalid submission: doesn't include captcha fields")
 
-var keyenc = base32.StdEncoding.WithPadding(base32.NoPadding)
+var keyenc = hashtools.LowerBase32Enc
 
 func NewWebCaptcha(store captchastore.CaptchaStore, usecookies bool) (*WebCaptcha, error) {
 	keks, err := store.LoadKEKs(captcha.RandomKEK)
@@ -37,15 +40,22 @@ func NewWebCaptcha(store captchastore.CaptchaStore, usecookies bool) (*WebCaptch
 		return nil, err
 	}
 	keys := make(map[uint64]captchaKey)
+	prim := int64(-1)
 	for i := range keks {
 		pkek := captcha.ParseKEK(keks[i].KEK)
-		keys[keks[i].ID] = captchaKey{
+		id := keks[i].ID
+		disabled := keks[i].Disabled
+		keys[id] = captchaKey{
 			kek:      pkek,
-			disabled: keks[i].Disabled,
+			disabled: disabled,
+		}
+		if !disabled && prim < 0 {
+			prim = int64(id)
 		}
 	}
 	return &WebCaptcha{
 		keys:       keys,
+		prim:       uint64(prim),
 		store:      store,
 		usecookies: usecookies,
 	}, nil
@@ -66,7 +76,52 @@ func text2fbcd(txt string) ([]byte, error) {
 	return b, nil
 }
 
-func (wc *WebCaptcha) CheckCaptcha(r *http.Request, fields map[string][]string) (error, int) {
+func (wc *WebCaptcha) unpackAndValidateKey(
+	str string, nowt int64) (
+	dk []byte, typ byte, exp int64, chal []byte, seed [16]byte, err error, code int) {
+
+	ek, err := keyenc.DecodeString(str)
+	if err != nil {
+		err, code = fmt.Errorf("invalid captcha key: %v", err), http.StatusBadRequest
+		return
+	}
+	id, err := captcha.UnpackKeyID(ek)
+	if err != nil {
+		err, code = fmt.Errorf("invalid captcha key: %v", err), http.StatusBadRequest
+		return
+	}
+	kek, ok := wc.keys[id]
+	if !ok {
+		err, code = errors.New("captcha key id not known"), http.StatusUnauthorized
+		return
+	}
+	if kek.disabled {
+		err, code = errors.New("captcha key id disabled"), http.StatusUnauthorized
+		return
+	}
+	dk, err = captcha.DecryptKey(kek.kek, ek)
+	if err != nil {
+		err, code = fmt.Errorf("invalid captcha key: %v", err), http.StatusBadRequest
+		return
+	}
+	typ, exp, chal, seed, err = captcha.UnpackKeyData(dk)
+	if err != nil {
+		err, code = fmt.Errorf("invalid captcha key: %v", err), http.StatusBadRequest
+		return
+	}
+	if nowt >= exp {
+		err, code = errors.New("expired captcha key"), http.StatusUnauthorized
+		return
+	}
+	if typ != 0 {
+		err, code = errors.New("invalid captcha key: unsupported type"), http.StatusBadRequest
+		return
+	}
+	// oki so far
+	return
+}
+
+func (wc *WebCaptcha) CheckCaptcha(r *http.Request, fields map[string][]string) (err error, code int) {
 	fcaptchakey := ib0.IBWebFormTextCaptchaKey
 	fcaptchaans := ib0.IBWebFormTextCaptchaAns
 
@@ -83,59 +138,60 @@ func (wc *WebCaptcha) CheckCaptcha(r *http.Request, fields map[string][]string) 
 		}
 		xfcaptchaans = fields[fcaptchaans][0]
 
-		c, e := r.Cookie("captchakey")
-		if e != nil {
+		c, err := r.Cookie(fcaptchakey)
+		if err != nil {
 			return errors.New("invalid submission: missing captchakey cookie"), http.StatusBadRequest
 		}
 		xfcaptchakey = c.Value
 	}
 
-	ek, e := keyenc.DecodeString(xfcaptchakey)
-	if e != nil {
-		return fmt.Errorf("invalid captcha key: %v", e), http.StatusBadRequest
-	}
-
-	id, e := captcha.UnpackKeyID(ek)
-	if e != nil {
-		return fmt.Errorf("invalid captcha key: %v", e), http.StatusBadRequest
-	}
-
-	kek, ok := wc.keys[id]
-	if !ok {
-		return errors.New("captcha key id not known"), http.StatusUnauthorized
-	}
-	if kek.disabled {
-		return errors.New("captcha key id disabled"), http.StatusUnauthorized
-	}
-	dk, e := captcha.DecryptKey(kek.kek, ek)
-	if e != nil {
-		return fmt.Errorf("invalid captcha key: %v", e), http.StatusBadRequest
-	}
-	typ, exp, chal, _, e := captcha.UnpackKeyData(dk)
-	if e != nil {
-		return fmt.Errorf("invalid captcha key: %v", e), http.StatusBadRequest
-	}
 	nowt := time.Now().Unix()
-	if nowt >= exp {
-		return errors.New("expired captcha key"), http.StatusUnauthorized
+	dk, _, exp, chal, _, err, code := wc.unpackAndValidateKey(xfcaptchakey, nowt)
+	if err != nil {
+		return
 	}
-	if typ != 0 {
-		return errors.New("invalid captcha key: unsupported type"), http.StatusBadRequest
+	b_ans, err := text2fbcd(xfcaptchaans)
+	if err != nil {
+		return fmt.Errorf("invalid captcha answer: %v", err), http.StatusUnauthorized
 	}
-	bans, e := text2fbcd(xfcaptchaans)
-	if e != nil {
-		return fmt.Errorf("invalid captcha answer: %v", e), http.StatusUnauthorized
-	}
-	if !bytes.Equal(chal, bans) {
+	if !bytes.Equal(chal, b_ans) {
 		return errors.New("incorrect captcha answer"), http.StatusUnauthorized
 	}
-	fresh, e := wc.store.StoreSolved(dk, exp, nowt)
-	if e != nil {
-		return fmt.Errorf("captcha store err: %v", e), http.StatusInternalServerError
+	fresh, err := wc.store.StoreSolved(dk, exp, nowt)
+	if err != nil {
+		return fmt.Errorf("captcha store err: %v", err), http.StatusInternalServerError
 	}
 	if !fresh {
 		return errors.New("captcha key is already used up"), http.StatusUnauthorized
 	}
 	// all good
-	return nil, 0
+	return
+}
+
+func (wc *WebCaptcha) ServeCaptcha(
+	w http.ResponseWriter, key string, width, height int) (
+	err error, code int) {
+
+	var chal []byte
+	var seed [16]byte
+
+	if !wc.usecookies {
+		nowt := time.Now().Unix()
+		_, _, _, chal, seed, err, code = wc.unpackAndValidateKey(key, nowt)
+		if err != nil {
+			return
+		}
+	} else {
+		chal, seed = captcha.RandomChallenge(wc.length)
+		ek, _, _ := captcha.EncryptChallenge(wc.keys[wc.prim].kek, wc.prim, 0, wc.validduration, chal, seed)
+		// XXX think of better attribs for cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:  ib0.IBWebFormTextCaptchaKey,
+			Value: keyenc.EncodeToString(ek),
+		})
+	}
+
+	img := captcha.NewImage(chal, seed, width, height)
+	img.WritePNG(w) // XXX pre-buffer?
+	return
 }

@@ -156,16 +156,18 @@ func RandomChallenge(length int) (chal []byte, seed [16]byte) {
 
 func EncryptChallenge(
 	kek cipher.AEAD, keyid uint64,
-	typ uint8, expp int64, chal []byte, seed [16]byte) []byte {
+	typ uint8, dur int64, chal []byte, seed [16]byte) (
+	ek []byte, _, exp int64) {
 
-	if expp <= 0 {
-		expp = DefaultExpireSecs
+	if dur <= 0 {
+		dur = DefaultExpireSecs
 	}
 
 	t := time.Now().Unix()
+	exp = t + dur
 
 	var kd [KeyDataLen]byte
-	PackKeyData(kd[:], typ, t+expp, chal, seed)
+	PackKeyData(kd[:], typ, exp, chal, seed)
 
-	return EncryptKey(kek, keyid, kd[:], t)
+	return EncryptKey(kek, keyid, kd[:], t), dur, exp
 }

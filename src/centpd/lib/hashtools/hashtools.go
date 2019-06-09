@@ -21,8 +21,11 @@ var LowerBase32HexEnc = base32.
 	WithPadding(base32.NoPadding)
 
 // custom base64 set (preserves sort order) without padding
-var SBase64Set = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-	"_abcdefghijklmnopqrstuvwxyz"
+var SBase64Set = "-" +
+	"0123456789" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+	"_" +
+	"abcdefghijklmnopqrstuvwxyz"
 var SBase64Enc = base64.
 	NewEncoding(SBase64Set).
 	WithPadding(base64.NoPadding)
