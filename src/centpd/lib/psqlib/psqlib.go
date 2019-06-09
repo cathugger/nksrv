@@ -15,6 +15,7 @@ import (
 	"centpd/lib/nilthumbnailer"
 	"centpd/lib/psql"
 	"centpd/lib/thumbnailer"
+	"centpd/lib/webcaptcha"
 )
 
 type PSQLIB struct {
@@ -34,6 +35,7 @@ type PSQLIB struct {
 	instance             string
 	maxArticleBodySize   int64
 	autoAddNNTPPostGroup bool
+	webcaptcha           *webcaptcha.WebCaptcha
 
 	st_prep [st_max]*sql.Stmt
 

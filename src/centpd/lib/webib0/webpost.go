@@ -22,10 +22,12 @@ var IBWebFormFileFields = []string{
 }
 
 var (
-	IBWebFormTextTitle   = "title"
-	IBWebFormTextName    = "name"
-	IBWebFormTextMessage = "message"
-	IBWebFormTextOptions = "options"
+	IBWebFormTextTitle      = "title"
+	IBWebFormTextName       = "name"
+	IBWebFormTextMessage    = "message"
+	IBWebFormTextOptions    = "options"
+	IBWebFormTextCaptchaKey = "captcha_key"
+	IBWebFormTextCaptchaAns = "captcha_ans"
 )
 
 type IBNewBoardInfo struct {
