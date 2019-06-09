@@ -176,8 +176,7 @@ func (wc *WebCaptcha) ServeCaptcha(
 	var seed [16]byte
 
 	if !wc.usecookies {
-		nowt := time.Now().Unix()
-		_, _, _, chal, seed, err, code = wc.unpackAndValidateKey(key, nowt)
+		_, _, _, chal, seed, err, code = wc.unpackAndValidateKey(key, time.Now().Unix())
 		if err != nil {
 			return
 		}
@@ -194,4 +193,10 @@ func (wc *WebCaptcha) ServeCaptcha(
 	img := captcha.NewImage(chal, seed, width, height)
 	img.WritePNG(w) // XXX pre-buffer?
 	return
+}
+
+func (wc *WebCaptcha) NewKey() string {
+	chal, seed := captcha.RandomChallenge(wc.length)
+	ek, _, _ := captcha.EncryptChallenge(wc.keys[wc.prim].kek, wc.prim, 0, wc.validduration, chal, seed)
+	return keyenc.EncodeToString(ek)
 }
