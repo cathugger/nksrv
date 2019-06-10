@@ -26,9 +26,10 @@ type WebCaptcha struct {
 	prim          uint64
 	primkek       cipher.AEAD
 	store         captchastore.CaptchaStore
-	usecookies    bool
 	length        int
 	validduration int64
+
+	UseCookies bool
 }
 
 var errInvalidMissing = errors.New(
@@ -64,7 +65,7 @@ func NewWebCaptcha(
 		prim:       uint64(prim),
 		primkek:    primkek,
 		store:      store,
-		usecookies: usecookies,
+		UseCookies: usecookies,
 	}, nil
 }
 
@@ -143,7 +144,7 @@ func (wc *WebCaptcha) CheckCaptcha(
 	fcaptchaans := ib0.IBWebFormTextCaptchaAns
 
 	var xfcaptchakey, xfcaptchaans string
-	if !wc.usecookies {
+	if !wc.UseCookies {
 		if len(fields[fcaptchakey]) != 1 || len(fields[fcaptchaans]) != 1 {
 			return errInvalidMissing, http.StatusBadRequest
 		}
@@ -197,7 +198,7 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 	var chal []byte
 	var seed [16]byte
 
-	if !wc.usecookies {
+	if !wc.UseCookies {
 		_, _, _, chal, seed, err, code =
 			wc.unpackAndValidateKey(key, time.Now().Unix())
 		if err != nil {
