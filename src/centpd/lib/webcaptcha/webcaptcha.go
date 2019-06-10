@@ -22,8 +22,9 @@ type captchaKey struct {
 }
 
 type WebCaptcha struct {
-	keys          map[uint64]captchaKey
+	keks          map[uint64]captchaKey
 	prim          uint64
+	primkek       cipher.AEAD
 	store         captchastore.CaptchaStore
 	usecookies    bool
 	length        int
@@ -38,27 +39,30 @@ var keyenc = hashtools.LowerBase32Enc
 func NewWebCaptcha(
 	store captchastore.CaptchaStore, usecookies bool) (*WebCaptcha, error) {
 
-	keks, err := store.LoadKEKs(captcha.RandomKEK)
+	lkeks, err := store.LoadKEKs(captcha.RandomKEK)
 	if err != nil {
 		return nil, err
 	}
-	keys := make(map[uint64]captchaKey)
+	keks := make(map[uint64]captchaKey)
 	prim := int64(-1)
-	for i := range keks {
-		pkek := captcha.ParseKEK(keks[i].KEK)
-		id := keks[i].ID
-		disabled := keks[i].Disabled
-		keys[id] = captchaKey{
+	var primkek cipher.AEAD
+	for i := range lkeks {
+		pkek := captcha.ParseKEK(lkeks[i].KEK)
+		id := lkeks[i].ID
+		disabled := lkeks[i].Disabled
+		keks[id] = captchaKey{
 			kek:      pkek,
 			disabled: disabled,
 		}
 		if !disabled && prim < 0 {
 			prim = int64(id)
+			primkek = pkek
 		}
 	}
 	return &WebCaptcha{
-		keys:       keys,
+		keks:       keks,
 		prim:       uint64(prim),
+		primkek:    primkek,
 		store:      store,
 		usecookies: usecookies,
 	}, nil
@@ -96,7 +100,7 @@ func (wc *WebCaptcha) unpackAndValidateKey(
 			http.StatusBadRequest
 		return
 	}
-	kek, ok := wc.keys[id]
+	kek, ok := wc.keks[id]
 	if !ok {
 		err, code = errors.New("captcha key id not known"),
 			http.StatusUnauthorized
@@ -202,7 +206,7 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 	} else {
 		chal, seed = captcha.RandomChallenge(wc.length)
 		ek, _, _ := captcha.EncryptChallenge(
-			wc.keys[wc.prim].kek, wc.prim, 0, wc.validduration, chal, seed)
+			wc.primkek, wc.prim, 0, wc.validduration, chal, seed)
 		// XXX think of better attribs for cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:  ib0.IBWebFormTextCaptchaKey,
@@ -218,6 +222,6 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 func (wc *WebCaptcha) NewKey() string {
 	chal, seed := captcha.RandomChallenge(wc.length)
 	ek, _, _ := captcha.EncryptChallenge(
-		wc.keys[wc.prim].kek, wc.prim, 0, wc.validduration, chal, seed)
+		wc.primkek, wc.prim, 0, wc.validduration, chal, seed)
 	return keyenc.EncodeToString(ek)
 }
