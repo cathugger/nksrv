@@ -14,6 +14,7 @@ import (
 	"centpd/lib/renderer"
 	sp "centpd/lib/staticprovider"
 	ib0 "centpd/lib/webib0"
+	wc "centpd/lib/webcaptcha"
 )
 
 type Cfg struct {
@@ -22,6 +23,7 @@ type Cfg struct {
 	FileProvider    fp.HTTPFileProvider   // handles _src and _thm
 	APIHandler      http.Handler          // handles _api
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
+	WebCaptcha      wc.WebCaptcha
 	// fallback?
 }
 
