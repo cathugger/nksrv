@@ -76,7 +76,7 @@ func main() {
 	for i := 0; i+1 < len(args); i += 2 {
 		key := args[i]
 		notrace := false
-		if key[0] == '!' {
+		if key[0] == '.' {
 			key = key[1:]
 			notrace = true
 		}
