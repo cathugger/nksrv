@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"time"
 
 	"golang.org/x/net/proxy"
 
@@ -136,5 +137,6 @@ func main() {
 
 	// XXX
 	for {
+		time.Sleep(30 * time.Second)
 	}
 }
