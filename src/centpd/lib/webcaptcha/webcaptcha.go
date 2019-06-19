@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"golang.org/x/text/unicode/norm"
@@ -215,8 +216,13 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 		})
 	}
 
+	// TODO sync.Pool if there's need
 	img := captcha.NewImage(chal, seed, width, height)
-	img.WritePNG(w) // XXX pre-buffer?
+	var b bytes.Buffer
+	img.WritePNG(&b)
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+	w.Write(b.Bytes())
 	return
 }
 
