@@ -61,6 +61,7 @@ type Config struct {
 	TCfgReply          *thumbnailer.ThumbConfig
 	TCfgSage           *thumbnailer.ThumbConfig
 	AltThumber         *altthumber.AltThumber
+	WebCaptcha         *webcaptcha.WebCaptcha
 	AddBoardOnNNTPPost bool
 }
 
@@ -138,6 +139,8 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
 	p.instance = "nekochan"          // TODO config
 	p.maxArticleBodySize = 256 << 20 // TODO config
+
+	p.webcaptcha = cfg.WebCaptcha
 
 	p.autoAddNNTPPostGroup = cfg.AddBoardOnNNTPPost
 

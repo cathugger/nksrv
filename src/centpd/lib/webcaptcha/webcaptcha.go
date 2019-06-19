@@ -96,6 +96,10 @@ func (wc *WebCaptcha) unpackAndValidateKey(
 			http.StatusBadRequest
 		return
 	}
+	if len(ek) == 0 {
+		err, code = errors.New("no captcha key provided"), http.StatusBadRequest
+		return
+	}
 	id, err := captcha.UnpackKeyID(ek)
 	if err != nil {
 		err, code = fmt.Errorf("invalid captcha key: %v", err),
