@@ -58,6 +58,10 @@ type FileInfo struct {
 	ThumbAttrib IBThumbAttributes      // thumbnail attributes
 }
 
+func (x FileInfo) Equivalent(y FileInfo) bool {
+	return x.ID == y.ID && x.Original == y.Original && x.Size == y.Size
+}
+
 //// layout should be:
 
 /*

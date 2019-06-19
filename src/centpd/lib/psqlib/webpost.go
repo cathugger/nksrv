@@ -455,7 +455,9 @@ ON
 		// we currently only support ed25519 seed syntax
 		tripseed, e := hex.DecodeString(tripstr)
 		if e != nil || len(tripseed) != ed25519.SeedSize {
-			return rInfo, errors.New("invalid tripcode syntax; we expected 64 hex chars"), http.StatusBadRequest
+			return rInfo,
+				errors.New("invalid tripcode syntax; we expected 64 hex chars"),
+				http.StatusBadRequest
 		}
 		signkeyseed = tripseed
 	}
@@ -486,7 +488,9 @@ ON
 		filecount == 0 &&
 		(len(signkeyseed) == 0 || len(pInfo.MI.Title) == 0) {
 
-		return rInfo, errors.New("posting empty messages isn't allowed"), http.StatusBadRequest
+		return rInfo,
+			errors.New("posting empty messages isn't allowed"),
+			http.StatusBadRequest
 	}
 
 	// at this point message should be checked
@@ -540,6 +544,14 @@ ON
 			}
 			if len(fi.Attrib) != 0 {
 				pInfo.FI[x].FileAttrib = fi.Attrib
+			}
+
+			for xx := 0; xx < x; xx++ {
+				if pInfo.FI[xx].Equivalent(pInfo.FI[x]) {
+					return rInfo,
+						fmt.Errorf("duplicate file: %d is same as %d", xx, x),
+						http.StatusBadRequest
+				}
 			}
 
 			x++
