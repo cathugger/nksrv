@@ -193,7 +193,7 @@ func (wc *WebCaptcha) CheckCaptcha(
 }
 
 func (wc *WebCaptcha) ServeCaptchaPNG(
-	w http.ResponseWriter, key string, width, height int) (
+	w http.ResponseWriter, r *http.Request, key string, width, height int) (
 	err error, code int) {
 
 	var chal []byte

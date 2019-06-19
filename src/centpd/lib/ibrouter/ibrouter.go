@@ -13,8 +13,8 @@ import (
 	fp "centpd/lib/httpibfileprovider"
 	"centpd/lib/renderer"
 	sp "centpd/lib/staticprovider"
-	ib0 "centpd/lib/webib0"
 	wc "centpd/lib/webcaptcha"
+	ib0 "centpd/lib/webib0"
 )
 
 type Cfg struct {
@@ -23,7 +23,7 @@ type Cfg struct {
 	FileProvider    fp.HTTPFileProvider   // handles _src and _thm
 	APIHandler      http.Handler          // handles _api
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
-	WebCaptcha      wc.WebCaptcha
+	WebCaptcha      *wc.WebCaptcha
 	// fallback?
 }
 
@@ -195,6 +195,23 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			}
 		}))
 		h.Handle("/_post", false, h_post)
+	}
+
+	if cfg.WebCaptcha != nil {
+		h_captchaget := handler.NewSimplePath().
+			Handle("/captcha.png", false, http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					err := r.ParseForm()
+					if err != nil {
+						http.Error(w, "bad query", http.StatusBadRequest)
+						return
+					}
+
+					key := r.Form.Get("key")
+					cfg.WebCaptcha.ServeCaptchaPNG(w, r, key, 150, 50)
+				}))
+		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
+		h.Handle("/_captcha", true, h_captcha)
 	}
 
 	return h_root
