@@ -228,7 +228,7 @@ FROM
 LEFT JOIN
 	LATERAL (
 		SELECT
-			zb.b_name
+			*
 		FROM
 			ib0.boards AS zb
 		WHERE
