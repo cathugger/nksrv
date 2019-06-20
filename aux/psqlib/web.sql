@@ -158,7 +158,7 @@ WHERE
 -- input: {page num} {threads_per_page}
 SELECT
 	xt.b_id,
-	xb.b_name,
+	xt.b_name,
 	xt.t_id,
 	xt.t_name,
 	xt.p_count,
@@ -187,6 +187,7 @@ FROM
 	(
 		SELECT
 			zt.b_id,
+			zb.b_name,
 			zt.t_id,
 			zt.t_name,
 			zt.bump,
@@ -196,6 +197,10 @@ FROM
 			ib0.threads AS zt
 		WHERE
 			zt.skip_over IS NOT TRUE
+		JOIN
+			ib0.boards AS zb
+		ON
+			zt.b_id = zb.b_id
 		ORDER BY
 			zt.bump DESC,
 			zt.g_t_id ASC,
@@ -225,17 +230,6 @@ FROM
 				END
 			)
 	) AS xt
-LEFT JOIN
-	LATERAL (
-		SELECT
-			*
-		FROM
-			ib0.boards AS zb
-		WHERE
-			xt.b_id = zb.b_id
-	) AS xb
-ON
-	TRUE
 LEFT JOIN
 	LATERAL (
 		SELECT
@@ -287,17 +281,11 @@ LEFT JOIN
 	) AS xbp
 ON
 	TRUE
+-- XXX possibly misorder join, too annoy to move inside
 LEFT JOIN
-	LATERAL (
-		SELECT
-			*
-		FROM
-			ib0.posts AS zp
-		WHERE
-			xbp.g_p_id = zp.g_p_id
-	) AS xp
+	ib0.posts AS xp
 ON
-	TRUE
+	xbp.g_p_id = xp.g_p_id
 LEFT JOIN LATERAL
 	(
 		SELECT
