@@ -244,6 +244,10 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 
 func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 	isVoid := func(x string) bool {
+		// ignore () if any; pointless, probably won't happen in practice
+		if len(x) != 0 && x[0] == '(' && x[len(x)-1] == ')' {
+			x = au.TrimWSString(x[1:len(x)-1])
+		}
 		// content-less subjects some shitty nodes like spamming
 		return x == "" || au.EqualFoldString(x, "None") ||
 			au.EqualFoldString(x, "no subject")
@@ -273,7 +277,13 @@ func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 			// parent probably was void, so check for that
 			return isVoid(s)
 		} else {
-			// Re: parent
+			// `Re: parent`
+			// XXX some newsreaders use `Re: subject` (eg. `Re: None`) of post
+			// they reply to (In-Reply-To), as opposed to thread subject.
+			// we currently don't extract any data about sole In-Reply-To post subject,
+			// and we're not going to as it'd be expensive for little gain.
+			// only viable solution would be stripping everything starting with `Re:`,
+			// but I don't wanna do that (yet).
 			return au.EqualFoldString(s, ref_subject)
 		}
 	} else {
