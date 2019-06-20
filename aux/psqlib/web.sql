@@ -157,7 +157,7 @@ WHERE
 -- :name web_overboard_page
 -- input: {page num} {threads_per_page}
 SELECT
-	xb.b_id,
+	xt.b_id,
 	xb.b_name,
 	xt.t_id,
 	xt.t_name,
@@ -225,10 +225,17 @@ FROM
 				END
 			)
 	) AS xt
-JOIN
-	ib0.boards AS xb
+LEFT JOIN
+	LATERAL (
+		SELECT
+			zb.b_name
+		FROM
+			ib0.boards AS zb
+		WHERE
+			xt.b_id = zb.b_id
+	) AS xb
 ON
-	xt.b_id = xb.b_id
+	TRUE
 LEFT JOIN
 	LATERAL (
 		SELECT
