@@ -195,12 +195,12 @@ FROM
 			zt.f_count
 		FROM
 			ib0.threads AS zt
-		WHERE
-			zt.skip_over IS NOT TRUE
 		JOIN
 			ib0.boards AS zb
 		ON
 			zt.b_id = zb.b_id
+		WHERE
+			zt.skip_over IS NOT TRUE
 		ORDER BY
 			zt.bump DESC,
 			zt.g_t_id ASC,
