@@ -288,9 +288,16 @@ LEFT JOIN
 ON
 	TRUE
 LEFT JOIN
-	ib0.posts AS xp
+	LATERAL (
+		SELECT
+			*
+		FROM
+			ib0.posts AS zp
+		WHERE
+			xbp.g_p_id = zp.g_p_id
+	) AS xp
 ON
-	xbp.g_p_id = xp.g_p_id
+	TRUE
 LEFT JOIN LATERAL
 	(
 		SELECT
