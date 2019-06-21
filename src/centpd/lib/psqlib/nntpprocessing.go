@@ -242,17 +242,18 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	return
 }
 
-func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
-	isVoid := func(x string) bool {
-		// ignore () if any; pointless, probably won't happen in practice
-		if len(x) != 0 && x[0] == '(' && x[len(x)-1] == ')' {
-			x = au.TrimWSString(x[1:len(x)-1])
-		}
-		// content-less subjects some shitty nodes like spamming
-		return x == "" || au.EqualFoldString(x, "None") ||
-			au.EqualFoldString(x, "no subject")
+func isSubjectVoid(x string) bool {
+	// ignore () if any; pointless, probably won't happen in practice
+	if len(x) != 0 && x[0] == '(' && x[len(x)-1] == ')' {
+		x = au.TrimWSString(x[1 : len(x)-1])
 	}
-	if isVoid(s) {
+	// content-less subjects some shitty nodes like spamming
+	return x == "" || au.EqualFoldString(x, "None") ||
+		au.EqualFoldString(x, "no subject")
+}
+
+func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
+	if isSubjectVoid(s) {
 		return true
 	}
 	if isReply {
@@ -275,7 +276,7 @@ func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 		}
 		if ref_subject == "" {
 			// parent probably was void, so check for that
-			return isVoid(s)
+			return isSubjectVoid(s)
 		} else {
 			// `Re: parent`
 			// XXX some newsreaders use `Re: subject` (eg. `Re: None`) of post
