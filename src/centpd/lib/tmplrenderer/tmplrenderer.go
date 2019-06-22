@@ -50,10 +50,6 @@ const (
 	rtmplMax
 )
 
-var xnames = [...]string{
-	"op",
-	"reply",
-}
 var pnames = [ptmplMax]string{
 	"board_list",
 	"board_list_err",
@@ -109,7 +105,6 @@ type msgFmtCfg struct {
 
 type tmplTOMLSection struct {
 	ContentType string `toml:"content_type"`
-	Charset     string `toml:"charset"`
 }
 
 type tmplTOML map[string]*tmplTOMLSection
@@ -189,13 +184,6 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		}
 
 		return
-	}
-	for i := range xnames {
-		_, _, e := doTemplate(xnames[i])
-		if e != nil {
-			return e
-		}
-		delete(tt, xnames[i])
 	}
 	doFullTemplate := func(name string) (
 		t *template.Template, ft string, fe error) {
