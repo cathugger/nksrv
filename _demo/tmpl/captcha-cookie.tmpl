@@ -1,12 +1,12 @@
-{% /* called from form */ -%}
+{%/* called from form */ -%}
 
 <tr>
  <th>Captcha</th>
  <td>
   <img
-   src="{%(env).PRoot%}/_captcha/captcha.png"
-   width="{%(env).Captcha.Width%}"
-   height="{%(env).Captcha.Height%}"
+   src="{% (env).PRoot %}/_captcha/captcha.png"
+   width="{% (env).Captcha.Width %}"
+   height="{% (env).Captcha.Height %}"
    alt="captcha image"
   >
  </td>
