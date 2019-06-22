@@ -1,0 +1,23 @@
+{% /* called from form */ -%}
+
+<tr>
+ <th>Captcha</th>
+ <td>
+  <img
+   src="{%(env).PRoot%}/_captcha/captcha.png"
+   width="{%(env).Captcha.Width%}"
+   height="{%(env).Captcha.Height%}"
+   alt="captcha image"
+  >
+ </td>
+</tr>
+<tr>
+ <th>Solution</th>
+ <td>
+  <input
+   name="captcha_ans"
+   id="captcha_ans"
+   type="text"
+  />
+ </td>
+</tr>
