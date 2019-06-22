@@ -59,7 +59,7 @@ func invokeCaptcha(mc metaContext, x interface{}) (string, error) {
 		"dict": f_dict,
 		"map":  f_dict,
 
-		"env":     wrapEnv(mc),
+		"env":     wrapMCEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -83,7 +83,7 @@ func invokePart(
 		"dict": f_dict,
 		"map":  f_dict,
 
-		"env":     wrapEnv(mc),
+		"env":     wrapMCEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -98,13 +98,11 @@ func wrapMCInvokePart(
 	}
 }
 
-func wrapEnv(mc metaContext) func() interface{} {
+func wrapMCEnv(mc metaContext) func() interface{} {
 	return func() interface{} { return mc.env }
 }
 
-func invokePage(
-	mc metaContext, name, part string) (string, error) {
-
+func invokePage(mc metaContext, name, part string) (string, error) {
 	if part != "" {
 		name = "page-" + name + "-" + part
 	} else {
@@ -117,7 +115,7 @@ func invokePage(
 		"dict": f_dict,
 		"map":  f_dict,
 
-		"env":     wrapEnv(mc),
+		"env":     wrapMCEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -125,14 +123,13 @@ func invokePage(
 }
 
 func invokeBase(mc metaContext, base, name string) (string, error) {
-
 	t := metaTmplFromFile(mc.dir, "base-"+name)
 	t.Funcs(template.FuncMap{
 		"list": f_list,
 		"dict": f_dict,
 		"map":  f_dict,
 
-		"env":     wrapEnv(mc),
+		"env":     wrapMCEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 		"page": func(part string) (string, error) {
