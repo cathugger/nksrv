@@ -64,9 +64,9 @@ func invokeCaptcha(mc metaContext, x interface{}) (string, error) {
 }
 
 func wrapMCInvokeCaptcha(
-	mc metaContext) func(name string, x interface{}) (string, error) {
+	mc metaContext) func(x interface{}) (string, error) {
 
-	return func(name string, x interface{}) (string, error) {
+	return func(x interface{}) (string, error) {
 		return invokeCaptcha(mc, x)
 	}
 }
