@@ -15,6 +15,7 @@ import (
 
 	. "centpd/lib/logx"
 	"centpd/lib/renderer"
+	"centpd/lib/webcaptcha"
 	ib0 "centpd/lib/webib0"
 
 	"github.com/BurntSushi/toml"
@@ -125,6 +126,7 @@ type TmplRenderer struct {
 	m  msgFmtCfg
 	l  Logger
 	ni NodeInfo
+	wc *webcaptcha.WebCaptcha
 }
 
 func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
@@ -143,10 +145,14 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		}
 	}
 
+	cm := ""
+	if tr.wc != nil && tr.wc.UseCookies {
+		cm = "cookie"
+	}
 	root := template.New("").Funcs(funcs)
 	mc := metaContext{
 		dir:         cfg.TemplateDir,
-		captchamode: "",
+		captchamode: cm,
 		env:         &tr.ni,
 	}
 
@@ -244,6 +250,7 @@ type TmplRendererCfg struct {
 	TemplateDir string
 	Logger      LoggerX
 	NodeInfo    NodeInfo
+	WebCaptcha  *webcaptcha.WebCaptcha
 }
 
 func (tr *TmplRenderer) execTmpl(
@@ -356,7 +363,7 @@ func NewTmplRenderer(
 	p ib0.IBProvider, cfg TmplRendererCfg) (
 	tr *TmplRenderer, err error) {
 
-	tr = &TmplRenderer{p: p, ni: cfg.NodeInfo}
+	tr = &TmplRenderer{p: p, ni: cfg.NodeInfo, wc: cfg.WebCaptcha}
 
 	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
 
