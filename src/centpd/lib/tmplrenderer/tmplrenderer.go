@@ -212,7 +212,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		return t, mime.FormatMediaType(mt, par), nil
 	}
 	for i := range pnames {
-		t, ct, e := doFullTemplate("", pnames[i])
+		t, ct, e := doFullTemplate("content", pnames[i])
 		if e != nil {
 			return e
 		}
