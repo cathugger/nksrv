@@ -193,7 +193,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				cfg.HTMLRenderer.DressPostResult(w, rInfo, false, err, code)
 			}
 		}))
-		h.Handle("/_post", false, h_post)
+		h.Handle("/_post/post", false, h_post)
 	}
 
 	if cfg.WebCaptcha != nil {
@@ -212,7 +212,11 @@ func NewIBRouter(cfg Cfg) http.Handler {
 						cfg.CaptchaInfo.Width, cfg.CaptchaInfo.Height)
 				}))
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
-		h.Handle("/_captcha", true, h_captcha)
+		if !cfg.WebCaptcha.UseCookie {
+			h.Handle("/_captcha", true, h_captcha)
+		} else {
+			h.Handle("/_post", true, h_captcha)
+		}
 	}
 
 	return h_root
