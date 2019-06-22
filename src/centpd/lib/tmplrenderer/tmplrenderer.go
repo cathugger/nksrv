@@ -108,7 +108,6 @@ type msgFmtCfg struct {
 }
 
 type tmplTOMLSection struct {
-	FileName    string `toml:"file"`
 	ContentType string `toml:"content_type"`
 	Charset     string `toml:"charset"`
 }
@@ -162,31 +161,30 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	}
 
 	root := template.New("").Funcs(funcs)
+	mc := metaContext{
+		dir:         cfg.TemplateDir,
+		captchamode: "",
+	}
 
 	doTemplate := func(name string) (
 		t *template.Template, ct string, fe error) {
 
-		filename := name + ".tmpl"
 		s, ok := tt[name]
 		if ok {
-			if s.FileName != "" {
-				filename = s.FileName
-			}
 			ct = s.ContentType
 		}
 
-		tinfo, fe := ioutil.ReadFile(path.Join(
-			cfg.TemplateDir, filename))
+		tinfo, fe := loadMetaTmpl(mc, "", name)
 		if fe != nil {
 			fe = fmt.Errorf(
-				"failed to read template file %q: %v", filename, fe)
+				"failed to read template %q file: %v", name, fe)
 			return
 		}
 
 		t, fe = root.New(name).Parse(string(tinfo))
 		if fe != nil {
-			fe = fmt.Errorf("failed to parse template file %q: %v",
-				filename, fe)
+			fe = fmt.Errorf(
+				"failed to parse template %q file: %v", name, fe)
 			return
 		}
 

@@ -2,6 +2,7 @@ package tmplrenderer
 
 import (
 	"io/ioutil"
+	"path"
 	"strings"
 	"text/template"
 )
@@ -26,10 +27,11 @@ import (
 type metaContext struct {
 	dir         string
 	captchamode string
+	env         interface{}
 }
 
 func metaTmplFromFile(dir, name string) *template.Template {
-	f, err := ioutil.ReadFile(dir + name + ".tmpl")
+	f, err := ioutil.ReadFile(path.Join(dir, name+".tmpl"))
 	if err != nil {
 		panic("ioutil.ReadFile fail: " + err.Error())
 	}
@@ -51,12 +53,13 @@ func invokeCaptcha(mc metaContext, x interface{}) (string, error) {
 		return "", nil
 	}
 
-	t := metaTmplFromFile(mc.dir, "captcha_"+mc.captchamode)
+	t := metaTmplFromFile(mc.dir, "captcha-"+mc.captchamode)
 	t.Funcs(template.FuncMap{
 		"list": f_list,
 		"dict": f_dict,
 		"map":  f_dict,
 
+		"env":     wrapEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -71,13 +74,16 @@ func wrapMCInvokeCaptcha(
 	}
 }
 
-func invokePart(mc metaContext, name string, x interface{}) (string, error) {
-	t := metaTmplFromFile(mc.dir, "part_"+name)
+func invokePart(
+	mc metaContext, name string, x interface{}) (string, error) {
+
+	t := metaTmplFromFile(mc.dir, "part-"+name)
 	t.Funcs(template.FuncMap{
 		"list": f_list,
 		"dict": f_dict,
 		"map":  f_dict,
 
+		"env":     wrapEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -92,13 +98,17 @@ func wrapMCInvokePart(
 	}
 }
 
+func wrapEnv(mc metaContext) func() interface{} {
+	return func() interface{} { return mc.env }
+}
+
 func invokePage(
-	mc metaContext, name, part string, env interface{}) (string, error) {
+	mc metaContext, name, part string) (string, error) {
 
 	if part != "" {
-		name = "page_" + name + "_" + part
+		name = "page-" + name + "-" + part
 	} else {
-		name = "page_" + name
+		name = "page-" + name
 	}
 	t := metaTmplFromFile(mc.dir, name)
 
@@ -107,36 +117,37 @@ func invokePage(
 		"dict": f_dict,
 		"map":  f_dict,
 
+		"env":     wrapEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
-	return execToString(t, env)
+	return execToString(t, mc.env)
 }
 
-func invokeBase(
-	mc metaContext, base, name string, env interface{}) (string, error) {
+func invokeBase(mc metaContext, base, name string) (string, error) {
 
-	t := metaTmplFromFile(mc.dir, "base_"+name)
+	t := metaTmplFromFile(mc.dir, "base-"+name)
 	t.Funcs(template.FuncMap{
 		"list": f_list,
 		"dict": f_dict,
 		"map":  f_dict,
 
+		"env":     wrapEnv(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
-		"page": func(part string, env interface{}) (string, error) {
-			return invokePage(mc, name, part, env)
+		"page": func(part string) (string, error) {
+			return invokePage(mc, name, part)
 		},
 	})
-	return execToString(t, env)
+	return execToString(t, mc.env)
 }
 
 func loadMetaTmpl(
-	mc metaContext, base, name string, env interface{}) (string, error) {
+	mc metaContext, base, name string) (string, error) {
 
 	if base != "" {
-		return invokeBase(mc, base, name, env)
+		return invokeBase(mc, base, name)
 	} else {
-		return invokePage(mc, name, "", env)
+		return invokePage(mc, name, "")
 	}
 }
