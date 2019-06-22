@@ -66,10 +66,14 @@ func invokeCaptcha(mc metaContext, x interface{}) (string, error) {
 }
 
 func wrapMCInvokeCaptcha(
-	mc metaContext) func(x interface{}) (string, error) {
+	mc metaContext) func(x ...interface{}) (string, error) {
 
-	return func(x interface{}) (string, error) {
-		return invokeCaptcha(mc, x)
+	return func(x ...interface{}) (string, error) {
+		var xx interface{}
+		if len(x) != 0 {
+			xx = x[0]
+		}
+		return invokeCaptcha(mc, xx)
 	}
 }
 
@@ -90,10 +94,14 @@ func invokePart(
 }
 
 func wrapMCInvokePart(
-	mc metaContext) func(name string, x interface{}) (string, error) {
+	mc metaContext) func(name string, x ...interface{}) (string, error) {
 
-	return func(name string, x interface{}) (string, error) {
-		return invokePart(mc, name, x)
+	return func(name string, x ...interface{}) (string, error) {
+		var xx interface{}
+		if len(x) != 0 {
+			xx = x[0]
+		}
+		return invokePart(mc, name, xx)
 	}
 }
 
