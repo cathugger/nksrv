@@ -123,7 +123,7 @@ func invokePage(mc metaContext, name, part string) (string, error) {
 }
 
 func invokeBase(mc metaContext, base, name string) (string, error) {
-	t := metaTmplFromFile(mc.dir, "base-"+name)
+	t := metaTmplFromFile(mc.dir, "base-"+base)
 	t.Funcs(template.FuncMap{
 		"list": f_list,
 		"dict": f_dict,
