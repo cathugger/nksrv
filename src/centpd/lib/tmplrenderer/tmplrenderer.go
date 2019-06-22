@@ -105,6 +105,7 @@ type msgFmtCfg struct {
 
 type tmplTOMLSection struct {
 	ContentType string `toml:"content_type"`
+	Base        string `toml:"base"`
 }
 
 type tmplTOML map[string]*tmplTOMLSection
@@ -161,15 +162,18 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		captchamode: "",
 	}
 
-	doTemplate := func(name string) (
+	doTemplate := func(base, name string) (
 		t *template.Template, ct string, fe error) {
 
 		s, ok := tt[name]
 		if ok {
 			ct = s.ContentType
+			if s.Base != "" {
+				base = s.Base
+			}
 		}
 
-		tinfo, fe := loadMetaTmpl(mc, "", name)
+		tinfo, fe := loadMetaTmpl(mc, base, name)
 		if fe != nil {
 			fe = fmt.Errorf(
 				"failed to read template %q file: %v", name, fe)
@@ -185,10 +189,10 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 
 		return
 	}
-	doFullTemplate := func(name string) (
+	doFullTemplate := func(base, name string) (
 		t *template.Template, ft string, fe error) {
 
-		t, ct, fe := doTemplate(name)
+		t, ct, fe := doTemplate(base, name)
 		if fe != nil {
 			return
 		}
@@ -208,7 +212,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		return t, mime.FormatMediaType(mt, par), nil
 	}
 	for i := range pnames {
-		t, ct, e := doFullTemplate(pnames[i])
+		t, ct, e := doFullTemplate("", pnames[i])
 		if e != nil {
 			return e
 		}
@@ -218,7 +222,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		delete(tt, pnames[i])
 	}
 	for i := range rnames {
-		t, ct, e := doFullTemplate(rnames[i])
+		t, ct, e := doFullTemplate("", rnames[i])
 		if e != nil {
 			return e
 		}
@@ -228,7 +232,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		delete(tt, rnames[i])
 	}
 	for n := range tt {
-		_, _, e := doTemplate(n)
+		_, _, e := doTemplate("", n)
 		if e != nil {
 			return e
 		}
