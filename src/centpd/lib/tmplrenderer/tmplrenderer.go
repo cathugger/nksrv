@@ -22,7 +22,7 @@ import (
 
 var _ renderer.Renderer = (*TmplRenderer)(nil)
 
-// page
+// page content
 const (
 	ptmplBoardList = iota
 	ptmplBoardListErr
@@ -212,7 +212,11 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		return t, mime.FormatMediaType(mt, par), nil
 	}
 	for i := range pnames {
-		t, ct, e := doFullTemplate("content", pnames[i])
+		base := ""
+		if i&1 == 0 {
+			base = "content"
+		}
+		t, ct, e := doFullTemplate(base, pnames[i])
 		if e != nil {
 			return e
 		}
