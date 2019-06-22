@@ -21,7 +21,7 @@ var IBWebFormFileFields = []string{
 	"file13", "file14", "file15", "file16",
 }
 
-var (
+const (
 	IBWebFormTextTitle      = "title"
 	IBWebFormTextName       = "name"
 	IBWebFormTextMessage    = "message"
@@ -40,7 +40,7 @@ type IBNewBoardInfo struct {
 }
 
 type IBWebPostProvider interface {
-	IBGetPostParams() (*form.ParserParams, form.FileOpener)
+	IBGetPostParams() (*form.ParserParams, form.FileOpener, []string)
 
 	IBDefaultBoardInfo() IBNewBoardInfo
 	IBPostNewBoard(r *http.Request, bi IBNewBoardInfo) (err error, code int)

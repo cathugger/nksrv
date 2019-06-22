@@ -142,11 +142,21 @@ func (wc *WebCaptcha) unpackAndValidateKey(
 	return
 }
 
+const (
+	fcaptchakey = ib0.IBWebFormTextCaptchaKey
+	fcaptchaans = ib0.IBWebFormTextCaptchaAns
+)
+
+func (wc *WebCaptcha) TextFields() []string {
+	if !wc.UseCookies {
+		return []string{fcaptchakey, fcaptchaans}
+	} else {
+		return []string{fcaptchaans}
+	}
+}
+
 func (wc *WebCaptcha) CheckCaptcha(
 	r *http.Request, fields map[string][]string) (err error, code int) {
-
-	fcaptchakey := ib0.IBWebFormTextCaptchaKey
-	fcaptchaans := ib0.IBWebFormTextCaptchaAns
 
 	var xfcaptchakey, xfcaptchaans string
 	if !wc.UseCookies {

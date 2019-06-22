@@ -124,21 +124,8 @@ type TmplRenderer struct {
 	tr [rtmplMax]tmplThing
 	m  msgFmtCfg
 	l  Logger
+	ni NodeInfo
 }
-
-type nopWCloser struct {
-	io.Writer
-}
-
-func (nopWCloser) Close() error {
-	return nil
-}
-
-func nopWCCreator(w http.ResponseWriter) io.WriteCloser {
-	return nopWCloser{w}
-}
-
-var _ wcCreator = nopWCCreator
 
 func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	var tt tmplTOML
@@ -160,6 +147,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	mc := metaContext{
 		dir:         cfg.TemplateDir,
 		captchamode: "",
+		env:         &tr.ni,
 	}
 
 	doTemplate := func(base, name string) (
@@ -255,6 +243,7 @@ func tmplWC(
 type TmplRendererCfg struct {
 	TemplateDir string
 	Logger      LoggerX
+	NodeInfo    NodeInfo
 }
 
 func (tr *TmplRenderer) execTmpl(
@@ -364,9 +353,10 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 }
 
 func NewTmplRenderer(
-	p ib0.IBProvider, cfg TmplRendererCfg) (tr *TmplRenderer, err error) {
+	p ib0.IBProvider, cfg TmplRendererCfg) (
+	tr *TmplRenderer, err error) {
 
-	tr = &TmplRenderer{p: p}
+	tr = &TmplRenderer{p: p, ni: cfg.NodeInfo}
 
 	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
 
@@ -388,9 +378,10 @@ func (tr *TmplRenderer) ServeBoardList(
 
 	l := &struct {
 		D ib0.IBBoardList
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
+		N: &tr.ni,
 		R: tr,
 	}
 
@@ -414,9 +405,10 @@ func (tr *TmplRenderer) ServeThreadListPage(
 
 	l := &struct {
 		D ib0.IBThreadListPage
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
+		N: &tr.ni,
 		R: tr,
 	}
 
@@ -450,9 +442,10 @@ func (tr *TmplRenderer) ServeOverboardPage(
 
 	l := &struct {
 		D ib0.IBOverboardPage
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
+		N: &tr.ni,
 		R: tr,
 	}
 
@@ -485,9 +478,10 @@ func (tr *TmplRenderer) ServeThread(
 
 	l := &struct {
 		D ib0.IBThreadPage
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
+		N: &tr.ni,
 		R: tr,
 	}
 
@@ -519,9 +513,10 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 
 	l := &struct {
 		D ib0.IBThreadCatalog
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
+		N: &tr.ni,
 		R: tr,
 	}
 
@@ -550,13 +545,14 @@ func (tr *TmplRenderer) DressNewBoardResult(
 		B string // board name
 		E error
 		C int
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
 		S: err == nil,
 		B: bname,
 		E: err,
 		C: code,
+		N: &tr.ni,
 		R: tr,
 	}
 	if err == nil {
@@ -574,12 +570,13 @@ func (tr *TmplRenderer) DressPostResult(
 		D ib0.IBPostedInfo
 		E error
 		C int
-		N NodeInfo
+		N *NodeInfo
 		R *TmplRenderer
 	}{
 		D: pi,
 		E: err,
 		C: code,
+		N: &tr.ni,
 		R: tr,
 	}
 	if newthread {

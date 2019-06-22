@@ -23,13 +23,6 @@ type Cfg struct {
 	// fallback?
 }
 
-var textFields = []string{
-	ib0.IBWebFormTextTitle,
-	ib0.IBWebFormTextName,
-	ib0.IBWebFormTextMessage,
-	ib0.IBWebFormTextOptions,
-}
-
 func eatMessagePost(
 	w http.ResponseWriter, r *http.Request,
 	wpp ib0.IBWebPostProvider) (f form.Form, ok bool) {
@@ -46,11 +39,11 @@ func eatMessagePost(
 		return
 	}
 
-	fparam, fopener := wpp.IBGetPostParams()
+	fparam, fopener, tfields := wpp.IBGetPostParams()
 	var err error
 	f, err = fparam.ParseForm(
 		r.Body, param["boundary"],
-		textFields, ib0.IBWebFormFileFields,
+		tfields, ib0.IBWebFormFileFields,
 		fopener)
 	if err != nil {
 		// TODO

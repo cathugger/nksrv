@@ -2,6 +2,7 @@ package democonfigs
 
 import (
 	"centpd/lib/altthumber"
+	"centpd/lib/captchainfo"
 	"centpd/lib/demoib"
 	"centpd/lib/fstore"
 	"centpd/lib/gothumbnailer"
@@ -29,4 +30,9 @@ var CfgPSQLIB = psqlib.Config{
 		Height: 200,
 		Color:  "#DDFFDD",
 	},
+}
+
+var CfgCaptchaInfo = captchainfo.CaptchaInfo{
+	Width:  150,
+	Height: 50,
 }

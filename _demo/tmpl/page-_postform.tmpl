@@ -86,12 +86,13 @@ args map:
        for="showmorefiles"
        class="showmorefiles"
       >More</label>
-     {{else}}
+     {{else -}}
      </div>
      {{end -}}
     {{- end -}}
    </td>
   </tr>
+{% captcha -%}
   <tr class="pf_row">
    <th class="pf_label"></th>
    <td class="pf_input"><div

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"centpd/lib/captchainfo"
 	"centpd/lib/handler"
 	fp "centpd/lib/httpibfileprovider"
 	"centpd/lib/renderer"
@@ -24,6 +25,7 @@ type Cfg struct {
 	APIHandler      http.Handler          // handles _api
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
 	WebCaptcha      *wc.WebCaptcha
+	CaptchaInfo     captchainfo.CaptchaInfo
 	// fallback?
 }
 
@@ -144,6 +146,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			}))
 	}
 
+	fparam, fopener, tfields := cfg.WebPostProvider.IBGetPostParams()
+	textFields := append(tfields, []string{
+		"board",
+		"thread",
+	}...)
+
 	// TODO maybe should do it in more REST-ful way and add to html handler?
 	if cfg.WebPostProvider != nil {
 		if cfg.HTMLRenderer == nil {
@@ -162,15 +170,6 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				return
 			}
 
-			fparam, fopener := cfg.WebPostProvider.IBGetPostParams()
-			textFields := []string{
-				ib0.IBWebFormTextTitle,
-				ib0.IBWebFormTextName,
-				ib0.IBWebFormTextMessage,
-				ib0.IBWebFormTextOptions,
-				"board",
-				"thread",
-			}
 			var err error
 			f, err := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
 			if err != nil {
@@ -208,7 +207,9 @@ func NewIBRouter(cfg Cfg) http.Handler {
 					}
 
 					key := r.Form.Get("key")
-					cfg.WebCaptcha.ServeCaptchaPNG(w, r, key, 150, 50)
+					cfg.WebCaptcha.ServeCaptchaPNG(
+						w, r, key,
+						cfg.CaptchaInfo.Width, cfg.CaptchaInfo.Height)
 				}))
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
 		h.Handle("/_captcha", true, h_captcha)

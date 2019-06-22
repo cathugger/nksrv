@@ -44,8 +44,19 @@ func (o formFileOpener) OpenFile() (*os.File, error) {
 
 // FIXME: this probably in future should go thru some sort of abstractation
 
-func (sp *PSQLIB) IBGetPostParams() (*form.ParserParams, form.FileOpener) {
-	return &sp.fpp, sp.ffo
+func (sp *PSQLIB) IBGetPostParams() (
+	*form.ParserParams, form.FileOpener, []string) {
+
+	tfields := []string{
+		ib0.IBWebFormTextTitle,
+		ib0.IBWebFormTextName,
+		ib0.IBWebFormTextMessage,
+		ib0.IBWebFormTextOptions,
+	}
+	if sp.webcaptcha != nil {
+		tfields = append(tfields, sp.webcaptcha.TextFields()...)
+	}
+	return &sp.fpp, sp.ffo, tfields
 }
 
 func matchExtension(fn, ext string) bool {

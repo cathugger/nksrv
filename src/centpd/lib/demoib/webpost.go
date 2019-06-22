@@ -30,10 +30,19 @@ func (formFileOpener) OpenFile() (*os.File, error) {
 	return ioutil.TempFile("", "webpost-")
 }
 
+var textFields = []string{
+	ib0.IBWebFormTextTitle,
+	ib0.IBWebFormTextName,
+	ib0.IBWebFormTextMessage,
+	ib0.IBWebFormTextOptions,
+}
+
 // FIXME: this probably in future should go thru some sort of abstractation
 
-func (IBProviderDemo) IBGetPostParams() (*form.ParserParams, form.FileOpener) {
-	return &form.DefaultParserParams, formFileOpener{}
+func (IBProviderDemo) IBGetPostParams() (
+	*form.ParserParams, form.FileOpener, []string) {
+
+	return &form.DefaultParserParams, formFileOpener{}, textFields
 }
 
 type CoreMsgIDStr = mm.CoreMsgIDStr
