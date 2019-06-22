@@ -33,6 +33,6 @@ var CfgPSQLIB = psqlib.Config{
 }
 
 var CfgCaptchaInfo = captchainfo.CaptchaInfo{
-	Width:  150,
-	Height: 50,
+	Width:  300,
+	Height: 65,
 }
