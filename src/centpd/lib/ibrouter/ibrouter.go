@@ -212,7 +212,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 						cfg.CaptchaInfo.Width, cfg.CaptchaInfo.Height)
 				}))
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
-		if !cfg.WebCaptcha.UseCookie {
+		if !cfg.WebCaptcha.UseCookies {
 			h.Handle("/_captcha", true, h_captcha)
 		} else {
 			h.Handle("/_post", true, h_captcha)
