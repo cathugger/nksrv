@@ -44,7 +44,6 @@ func (tr *TmplRenderer) ServeThreadListPage(
 	}{
 		N: &tr.ni,
 		R: tr,
-		C: tr.newCaptchaKey(),
 	}
 
 	err, code := tr.p.IBGetThreadListPage(&l.D, board, page)
@@ -63,12 +62,16 @@ func (tr *TmplRenderer) ServeThreadListPage(
 		tr.outTmplP(w, ptmplThreadListPageErr, code, ctx)
 		return
 	}
+
+	l.C = tr.newCaptchaKey(w)
+
 	if !l.D.HasBackRefs {
 		for i := range l.D.Threads {
 			ib0.ProcessBackReferences(l.D.Board.Name, &l.D.Threads[i].IBCommonThread)
 		}
 		l.D.HasBackRefs = true
 	}
+
 	tr.outTmplP(w, ptmplThreadListPage, 200, l)
 }
 
@@ -119,7 +122,6 @@ func (tr *TmplRenderer) ServeThread(
 	}{
 		N: &tr.ni,
 		R: tr,
-		C: tr.newCaptchaKey(),
 	}
 
 	err, code := tr.p.IBGetThread(&l.D, board, thread)
@@ -138,10 +140,14 @@ func (tr *TmplRenderer) ServeThread(
 		tr.outTmplP(w, ptmplThreadErr, code, ctx)
 		return
 	}
+
+	l.C = tr.newCaptchaKey(w)
+
 	if !l.D.HasBackRefs {
 		ib0.ProcessBackReferences(l.D.Board.Name, &l.D.IBCommonThread)
 		l.D.HasBackRefs = true
 	}
+
 	tr.outTmplP(w, ptmplThread, 200, l)
 }
 

@@ -363,8 +363,14 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	return nil
 }
 
-func (tr *TmplRenderer) newCaptchaKey() string {
+func (tr *TmplRenderer) newCaptchaKey(w http.ResponseWriter) string {
 	if tr.wc != nil && !tr.wc.UseCookies {
+		// make page containing key uncacheable
+		w.Header().Set(
+			"Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+
 		return tr.wc.NewKey()
 	} else {
 		return ""

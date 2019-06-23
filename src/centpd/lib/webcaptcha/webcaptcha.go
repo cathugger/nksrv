@@ -240,7 +240,7 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 			Name:  ib0.IBWebFormTextCaptchaKey,
 			Value: keyenc.EncodeToString(ek),
 		})
-		// make it uncacheable if cookie-based
+		// make image uncacheable if cookie-based
 		w.Header().Set(
 			"Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
