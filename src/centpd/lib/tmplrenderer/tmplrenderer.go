@@ -150,7 +150,7 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		if tr.wc.UseCookies {
 			cm = "cookie"
 		} else {
-			cm = "normal"
+			cm = "simple"
 		}
 	}
 	root := template.New("").Funcs(funcs)
