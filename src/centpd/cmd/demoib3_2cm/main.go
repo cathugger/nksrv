@@ -41,6 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 	mlg := logx.NewLogToX(lgr, "main")
+	mlg.LogPrint(logx.NOTICE, "initializing")
 
 	err = emime.LoadMIMEDatabase("mime.types")
 	if err != nil {
