@@ -73,6 +73,8 @@ func main() {
 			ssi = true
 		case "esi":
 			esi = true
+		default:
+			panic("unknown captchamode")
 		}
 	}
 	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), usecookies)
