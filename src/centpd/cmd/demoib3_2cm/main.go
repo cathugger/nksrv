@@ -31,7 +31,7 @@ func main() {
 	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
 	readonly := flag.Bool("readonly", false, "read-only mode")
-	usecookies := flag.Bool("usecookies", false, "use cookies for captcha")
+	captchamode := flag.String("captchamode", "simple", "[simple, cookie, ssi, esi]")
 
 	flag.Parse()
 
@@ -61,7 +61,21 @@ func main() {
 	}
 	defer db.Close()
 
-	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), *usecookies)
+	var usecookies bool
+	var ssi, esi bool
+	if !*readonly {
+		switch *captchamode {
+		case "simple":
+			usecookies = false
+		case "cookie":
+			usecookies = true
+		case "ssi":
+			ssi = true
+		case "esi":
+			esi = true
+		}
+	}
+	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), usecookies)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return
@@ -85,6 +99,8 @@ func main() {
 			Captcha: democonfigs.CfgCaptchaInfo,
 		},
 		WebCaptcha: webcap,
+		SSI:        ssi,
+		ESI:        esi,
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
@@ -109,6 +125,8 @@ func main() {
 		arcfg.WebPostProvider = dbib
 		ircfg.WebPostProvider = dbib
 		ircfg.WebCaptcha = webcap
+		ircfg.SSI = ssi
+		ircfg.ESI = esi
 	}
 	arh := ar.NewAPIRouter(arcfg)
 	ircfg.APIHandler = arh

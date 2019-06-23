@@ -67,6 +67,8 @@ func (tr *TmplRenderer) DressPostResult(
 func (tr *TmplRenderer) WebCaptchaInclude(
 	w http.ResponseWriter, r *http.Request) {
 
+	// XXX IP whitelist? though that could be server-wise at that point
+
 	// make document containing key uncacheable
 	w.Header().Set(
 		"Cache-Control", "no-cache, no-store, must-revalidate")
