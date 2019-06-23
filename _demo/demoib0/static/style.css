@@ -173,6 +173,12 @@ a.name {
 	box-sizing: border-box;
 }
 
+#captcha_img {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 /* breakpoint at 600px */
 @media screen and (max-width: 600px) {
 	.thread_stats, .opimg, .rimg {
