@@ -146,8 +146,12 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 	}
 
 	cm := ""
-	if tr.wc != nil && tr.wc.UseCookies {
-		cm = "cookie"
+	if tr.wc != nil {
+		if tr.wc.UseCookies {
+			cm = "cookie"
+		} else {
+			cm = "normal"
+		}
 	}
 	root := template.New("").Funcs(funcs)
 	mc := metaContext{
@@ -359,6 +363,14 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 	return nil
 }
 
+func (tr *TmplRenderer) newCaptchaKey() string {
+	if tr.wc != nil && !tr.wc.UseCookies {
+		return tr.wc.NewKey()
+	} else {
+		return ""
+	}
+}
+
 func NewTmplRenderer(
 	p ib0.IBProvider, cfg TmplRendererCfg) (
 	tr *TmplRenderer, err error) {
@@ -378,225 +390,4 @@ func NewTmplRenderer(
 	}
 
 	return
-}
-
-func (tr *TmplRenderer) ServeBoardList(
-	w http.ResponseWriter, r *http.Request) {
-
-	l := &struct {
-		D ib0.IBBoardList
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		N: &tr.ni,
-		R: tr,
-	}
-
-	err, code := tr.p.IBGetBoardList(&l.D)
-	if err != nil {
-		ctx := struct {
-			Code int
-			Err  error
-		}{
-			code,
-			err,
-		}
-		tr.outTmplP(w, ptmplBoardListErr, code, ctx)
-		return
-	}
-	tr.outTmplP(w, ptmplBoardList, 200, l)
-}
-
-func (tr *TmplRenderer) ServeThreadListPage(
-	w http.ResponseWriter, r *http.Request, board string, page uint32) {
-
-	l := &struct {
-		D ib0.IBThreadListPage
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		N: &tr.ni,
-		R: tr,
-	}
-
-	err, code := tr.p.IBGetThreadListPage(&l.D, board, page)
-	if err != nil {
-		ctx := struct {
-			Code  int
-			Err   error
-			Board string
-			Page  uint32
-		}{
-			code,
-			err,
-			board,
-			page,
-		}
-		tr.outTmplP(w, ptmplThreadListPageErr, code, ctx)
-		return
-	}
-	if !l.D.HasBackRefs {
-		for i := range l.D.Threads {
-			ib0.ProcessBackReferences(l.D.Board.Name, &l.D.Threads[i].IBCommonThread)
-		}
-		l.D.HasBackRefs = true
-	}
-	tr.outTmplP(w, ptmplThreadListPage, 200, l)
-}
-
-func (tr *TmplRenderer) ServeOverboardPage(
-	w http.ResponseWriter, r *http.Request, page uint32) {
-
-	l := &struct {
-		D ib0.IBOverboardPage
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		N: &tr.ni,
-		R: tr,
-	}
-
-	err, code := tr.p.IBGetOverboardPage(&l.D, page)
-	if err != nil {
-		ctx := struct {
-			Code int
-			Err  error
-			Page uint32
-		}{
-			code,
-			err,
-			page,
-		}
-		tr.outTmplP(w, ptmplOverboardPageErr, code, ctx)
-		return
-	}
-	if !l.D.HasBackRefs {
-		for i := range l.D.Threads {
-			ib0.ProcessBackReferences(
-				l.D.Threads[i].BoardName, &l.D.Threads[i].IBCommonThread)
-		}
-		l.D.HasBackRefs = true
-	}
-	tr.outTmplP(w, ptmplOverboardPage, 200, l)
-}
-
-func (tr *TmplRenderer) ServeThread(
-	w http.ResponseWriter, r *http.Request, board, thread string) {
-
-	l := &struct {
-		D ib0.IBThreadPage
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		N: &tr.ni,
-		R: tr,
-	}
-
-	err, code := tr.p.IBGetThread(&l.D, board, thread)
-	if err != nil {
-		ctx := struct {
-			Code   int
-			Err    error
-			Board  string
-			Thread string
-		}{
-			code,
-			err,
-			board,
-			thread,
-		}
-		tr.outTmplP(w, ptmplThreadErr, code, ctx)
-		return
-	}
-	if !l.D.HasBackRefs {
-		ib0.ProcessBackReferences(l.D.Board.Name, &l.D.IBCommonThread)
-		l.D.HasBackRefs = true
-	}
-	tr.outTmplP(w, ptmplThread, 200, l)
-}
-
-func (tr *TmplRenderer) ServeThreadCatalog(
-	w http.ResponseWriter, r *http.Request, board string) {
-
-	l := &struct {
-		D ib0.IBThreadCatalog
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		N: &tr.ni,
-		R: tr,
-	}
-
-	err, code := tr.p.IBGetThreadCatalog(&l.D, board)
-	if err != nil {
-		ctx := struct {
-			Code  int
-			Err   error
-			Board string
-		}{
-			code,
-			err,
-			board,
-		}
-		tr.outTmplP(w, ptmplThreadCatalogErr, code, ctx)
-		return
-	}
-	tr.outTmplP(w, ptmplThreadCatalog, 200, l)
-}
-
-func (tr *TmplRenderer) DressNewBoardResult(
-	w http.ResponseWriter, bname string, err error, code int) {
-
-	l := &struct {
-		S bool   // success
-		B string // board name
-		E error
-		C int
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		S: err == nil,
-		B: bname,
-		E: err,
-		C: code,
-		N: &tr.ni,
-		R: tr,
-	}
-	if err == nil {
-		tr.outTmplR(w, rtmplCreatedBoard, 200, l)
-	} else {
-		tr.outTmplR(w, rtmplCreatedBoardErr, code, l)
-	}
-}
-
-func (tr *TmplRenderer) DressPostResult(
-	w http.ResponseWriter, pi ib0.IBPostedInfo, newthread bool,
-	err error, code int) {
-
-	l := &struct {
-		D ib0.IBPostedInfo
-		E error
-		C int
-		N *NodeInfo
-		R *TmplRenderer
-	}{
-		D: pi,
-		E: err,
-		C: code,
-		N: &tr.ni,
-		R: tr,
-	}
-	if newthread {
-		if err == nil {
-			tr.outTmplR(w, rtmplCreatedThread, 200, l)
-		} else {
-			tr.outTmplR(w, rtmplCreatedThreadErr, code, l)
-		}
-	} else {
-		if err == nil {
-			tr.outTmplR(w, rtmplCreatedPost, 200, l)
-		} else {
-			tr.outTmplR(w, rtmplCreatedPostErr, code, l)
-		}
-	}
 }

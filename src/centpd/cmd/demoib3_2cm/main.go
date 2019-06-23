@@ -31,6 +31,7 @@ func main() {
 	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
 	readonly := flag.Bool("readonly", false, "read-only mode")
+	usecookies := flag.Bool("usecookies", false, "use cookies for captcha")
 
 	flag.Parse()
 
@@ -60,7 +61,7 @@ func main() {
 	}
 	defer db.Close()
 
-	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), true)
+	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), *usecookies)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return
