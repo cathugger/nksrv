@@ -228,6 +228,11 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 			Name:  ib0.IBWebFormTextCaptchaKey,
 			Value: keyenc.EncodeToString(ek),
 		})
+		// make it uncacheable if cookie-based
+		w.Header().Set(
+			"Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 	}
 
 	// TODO sync.Pool if there's need
@@ -237,13 +242,6 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 	// correct type and length
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
-	// make it uncacheable if cookie-based
-	if wc.UseCookies {
-		w.Header().Set(
-			"Cache-Control", "no-cache, no-store, must-revalidate")
-		w.Header().Set("Pragma", "no-cache")
-		w.Header().Set("Expires", "0")
-	}
 	// write it out
 	w.Write(b.Bytes())
 	return
