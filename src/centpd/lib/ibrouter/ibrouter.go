@@ -26,6 +26,8 @@ type Cfg struct {
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
 	WebCaptcha      *wc.WebCaptcha
 	CaptchaInfo     captchainfo.CaptchaInfo
+	SSI             bool
+	ESI             bool
 	// fallback?
 }
 
@@ -68,11 +70,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 	if cfg.FileProvider != nil {
 		h_src := handler.NewMethod().Handle("GET", handler.NewRegexPath().
-			Handle("/{{id:[^_./][^/]*}}(?:/[^/]*)?", false, http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					id := r.Context().Value("id").(string)
-					cfg.FileProvider.ServeSrc(w, r, id)
-				})))
+			Handle("/{{id:[^_./][^/]*}}(?:/[^/]*)?", false,
+				http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						id := r.Context().Value("id").(string)
+						cfg.FileProvider.ServeSrc(w, r, id)
+					})))
 		h_thm := handler.NewMethod().Handle("GET", handler.NewRegexPath().
 			Handle("/{{id:[^_./][^/]*}}", false, http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
@@ -85,12 +88,14 @@ func NewIBRouter(cfg Cfg) http.Handler {
 	}
 
 	if cfg.StaticProvider != nil {
-		h_static := handler.NewMethod().Handle("GET", handler.NewRegexPath().
-			Handle("/{{id:[^_./][^/]*(?:/[^_./][^/]*)*}}?", false, http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					id := r.Context().Value("id").(string)
-					cfg.StaticProvider.ServeStatic(w, r, id)
-				})))
+		h_static := handler.NewMethod().Handle("GET",
+			handler.NewRegexPath().
+				Handle("/{{id:[^_./][^/]*(?:/[^_./][^/]*)*}}?",
+					false, http.HandlerFunc(func(
+						w http.ResponseWriter, r *http.Request) {
+						id := r.Context().Value("id").(string)
+						cfg.StaticProvider.ServeStatic(w, r, id)
+					})))
 		h.Handle("/_static", true, h_static)
 	}
 
@@ -106,7 +111,9 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 		h_get.Handle("/_ukko", true,
 			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.HandlerFunc(func(
+					w http.ResponseWriter, r *http.Request) {
+
 					pn := r.Context().Value("pn").(string)
 					ok, pni := handlePageNum(w, r, pn)
 					if !ok {
@@ -139,8 +146,10 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				cfg.HTMLRenderer.ServeThreadCatalog(w, r, b)
 			}))
 
-		h_getbr.Handle("/thread/{{t}}(?:/[^/]*)?", false, http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+		h_getbr.Handle("/thread/{{t}}(?:/[^/]*)?", false,
+			http.HandlerFunc(func(
+				w http.ResponseWriter, r *http.Request) {
+
 				b := r.Context().Value("b").(string)
 				t := r.Context().Value("t").(string)
 				cfg.HTMLRenderer.ServeThread(w, r, b, t)
@@ -189,13 +198,17 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				if len(f.Values["board"]) != 1 ||
 					len(f.Values["thread"]) > 1 {
 
-					http.Error(w, "invalid form params", http.StatusBadRequest)
+					http.Error(w,
+						"invalid form params",
+						http.StatusBadRequest)
 					return
 				}
 				board := f.Values["board"][0]
 				var rInfo ib0.IBPostedInfo
 				var code int
-				if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
+				if len(f.Values["thread"]) == 0 ||
+					f.Values["thread"][0] == "" {
+
 					rInfo, err, code =
 						cfg.WebPostProvider.IBPostNewThread(w, r, f, board)
 					cfg.HTMLRenderer.DressPostResult(
@@ -228,6 +241,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 						http.Error(w, err.Error(), code)
 					}
 				}))
+		if !cfg.WebCaptcha.UseCookies && (cfg.SSI || cfg.ESI) {
+			h_captchaget.Handle("/include", false, http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					cfg.HTMLRenderer.WebCaptchaInclude(w, r)
+				}))
+		}
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
 		if !cfg.WebCaptcha.UseCookies {
 			h.Handle("/_captcha", true, h_captcha)

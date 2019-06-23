@@ -62,3 +62,16 @@ func (tr *TmplRenderer) DressPostResult(
 		}
 	}
 }
+
+// XXX kinda bad place to put this
+func (tr *TmplRenderer) WebCaptchaInclude(
+	w http.ResponseWriter, r *http.Request) {
+
+	// make document containing key uncacheable
+	w.Header().Set(
+		"Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
+	tr.outTmplR(w, rtmplCaptchaInclude, 200, tr.wc.NewKey())
+}

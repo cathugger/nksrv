@@ -20,4 +20,6 @@ type Renderer interface {
 		w http.ResponseWriter, bname string, err error, code int)
 	DressPostResult(w http.ResponseWriter, pi ib0.IBPostedInfo,
 		newthread bool, err error, code int)
+
+	WebCaptchaInclude(w http.ResponseWriter, r *http.Request)
 }

@@ -47,6 +47,7 @@ const (
 	rtmplCreatedThreadErr
 	rtmplCreatedPost
 	rtmplCreatedPostErr
+	rtmplCaptchaInclude
 
 	rtmplMax
 )
@@ -70,6 +71,7 @@ var rnames = [rtmplMax]string{
 	"created_thread_err",
 	"created_post",
 	"created_post_err",
+	"captcha_include",
 }
 
 type msgFmtTOML struct {
@@ -120,13 +122,16 @@ type tmplThing struct {
 }
 
 type TmplRenderer struct {
-	p  ib0.IBProvider
-	tp [ptmplMax]tmplThing
-	tr [rtmplMax]tmplThing
-	m  msgFmtCfg
-	l  Logger
-	ni NodeInfo
-	wc *webcaptcha.WebCaptcha
+	p    ib0.IBProvider
+	tp   [ptmplMax]tmplThing
+	tr   [rtmplMax]tmplThing
+	m    msgFmtCfg
+	l    Logger
+	ni   NodeInfo
+	wc   *webcaptcha.WebCaptcha
+	scap bool // simple captcha
+	ssi  bool
+	esi  bool
 }
 
 func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
@@ -145,19 +150,23 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		}
 	}
 
-	cm := ""
-	if tr.wc != nil {
-		if tr.wc.UseCookies {
-			cm = "cookie"
-		} else {
-			cm = "simple"
-		}
-	}
 	root := template.New("").Funcs(funcs)
 	mc := metaContext{
-		dir:         cfg.TemplateDir,
-		captchamode: cm,
-		env:         &tr.ni,
+		dir: cfg.TemplateDir,
+		env: &tr.ni,
+	}
+	if tr.wc != nil {
+		if tr.scap {
+			mc.captchamode = "simple"
+		} else if tr.wc.UseCookies {
+			mc.captchamode = "cookie"
+		} else if tr.ssi {
+			mc.captchamode = "ssi"
+		} else if tr.esi {
+			mc.captchamode = "esi"
+		} else {
+			panic("wtf")
+		}
 	}
 
 	doTemplate := func(base, name string) (
@@ -255,6 +264,8 @@ type TmplRendererCfg struct {
 	Logger      LoggerX
 	NodeInfo    NodeInfo
 	WebCaptcha  *webcaptcha.WebCaptcha
+	SSI         bool
+	ESI         bool
 }
 
 func (tr *TmplRenderer) execTmpl(
@@ -268,7 +279,8 @@ func (tr *TmplRenderer) execTmpl(
 }
 
 func (tr *TmplRenderer) outTmplX(
-	w http.ResponseWriter, tt *tmplThing, tname string, code int, d interface{}) {
+	w http.ResponseWriter, tt *tmplThing,
+	tname string, code int, d interface{}) {
 
 	ww := tmplWC(w, tt, code)
 	tr.execTmpl(tt, tname, ww, d)
@@ -364,7 +376,7 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 }
 
 func (tr *TmplRenderer) newCaptchaKey(w http.ResponseWriter) string {
-	if tr.wc != nil && !tr.wc.UseCookies {
+	if tr.scap {
 		// make page containing key uncacheable
 		w.Header().Set(
 			"Cache-Control", "no-cache, no-store, must-revalidate")
@@ -381,7 +393,16 @@ func NewTmplRenderer(
 	p ib0.IBProvider, cfg TmplRendererCfg) (
 	tr *TmplRenderer, err error) {
 
-	tr = &TmplRenderer{p: p, ni: cfg.NodeInfo, wc: cfg.WebCaptcha}
+	tr = &TmplRenderer{
+		p:  p,
+		ni: cfg.NodeInfo,
+		wc: cfg.WebCaptcha,
+		scap: cfg.WebCaptcha != nil &&
+			!cfg.WebCaptcha.UseCookies &&
+			!cfg.SSI && !cfg.ESI,
+		ssi: cfg.SSI,
+		esi: cfg.ESI,
+	}
 
 	tr.l = NewLogToX(cfg.Logger, fmt.Sprintf("tmplrenderer.%p", tr))
 

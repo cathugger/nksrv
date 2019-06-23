@@ -169,3 +169,9 @@ func (j *JSONRenderer) DressPostResult(
 
 	e.Encode(ps)
 }
+
+func (j *JSONRenderer) WebCaptchaInclude(
+	w http.ResponseWriter, r *http.Request) {
+
+	// XXX do not make sense yet so do nothing
+}

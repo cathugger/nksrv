@@ -1,0 +1,21 @@
+<tr class="pf_row">
+ <th class="pf_label">Captcha</th>
+ <td class="pf_input">
+  <img
+   id="captcha_img"
+   src="{% (env).PRoot %}/_captcha/captcha.png?key={{.}}"
+   width="{% (env).Captcha.Width %}"
+   height="{% (env).Captcha.Height %}"
+   alt="captcha image"
+  >
+  <input name="captcha_key" type="hidden" value="{{.}}" />
+ </td>
+</tr>
+<tr class="pf_row">
+ <th class="pf_label">Solution</th>
+ <td class="pf_input"><input
+  name="captcha_ans"
+  id="captcha_ans"
+  type="text"
+ /></td>
+</tr>
