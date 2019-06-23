@@ -1,9 +1,10 @@
 {%/* called from form */ -%}
 
-<tr>
- <th>Captcha</th>
- <td>
+<tr class="pf_row">
+ <th class="pf_label">Captcha</th>
+ <td class="pf_input">
   <img
+   id="captcha_img"
    src="{% (env).PRoot %}/_post/captcha.png"
    width="{% (env).Captcha.Width %}"
    height="{% (env).Captcha.Height %}"
@@ -11,9 +12,9 @@
   >
  </td>
 </tr>
-<tr>
- <th>Solution</th>
- <td>
+<tr class="pf_row">
+ <th class="pf_label">Solution</th>
+ <td class="pf_input">
   <input
    name="captcha_ans"
    id="captcha_ans"
