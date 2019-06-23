@@ -257,7 +257,8 @@ func countRealFiles(FI []mailib.FileInfo) (FC int) {
 }
 
 func (sp *PSQLIB) commonNewPost(
-	r *http.Request, f form.Form, board, thread string, isReply bool) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
 
 	var pInfo mailib.PostInfo
@@ -306,7 +307,7 @@ func (sp *PSQLIB) commonNewPost(
 
 	if sp.webcaptcha != nil {
 		var code int
-		if err, code = sp.webcaptcha.CheckCaptcha(r, f.Values); err != nil {
+		if err, code = sp.webcaptcha.CheckCaptcha(w, r, f.Values); err != nil {
 			return rInfo, err, code
 		}
 	}
@@ -800,7 +801,8 @@ RETURNING
 }
 
 func (sp *PSQLIB) IBPostNewBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	err, duplicate := sp.addNewBoard(bi)
 	if err != nil {
@@ -815,21 +817,24 @@ func (sp *PSQLIB) IBPostNewBoard(
 }
 
 func (sp *PSQLIB) IBPostNewThread(
-	r *http.Request, f form.Form, board string) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return sp.commonNewPost(r, f, board, "", false)
+	return sp.commonNewPost(w, r, f, board, "", false)
 }
 
 func (sp *PSQLIB) IBPostNewReply(
-	r *http.Request, f form.Form, board, thread string) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return sp.commonNewPost(r, f, board, thread, true)
+	return sp.commonNewPost(w, r, f, board, thread, true)
 }
 
 func (sp *PSQLIB) IBUpdateBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	q := `UPDATE ib0.boards
 SET
@@ -860,7 +865,8 @@ WHERE bname = $1`
 }
 
 func (sp *PSQLIB) IBDeleteBoard(
-	r *http.Request, board string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board string) (
+	err error, code int) {
 
 	// TODO delet any of posts in board
 	var bid boardID
@@ -877,7 +883,8 @@ func (sp *PSQLIB) IBDeleteBoard(
 }
 
 func (sp *PSQLIB) IBDeletePost(
-	r *http.Request, board, post string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board, post string) (
+	err error, code int) {
 
 	// TODO
 	return nil, 0

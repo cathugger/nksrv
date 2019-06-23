@@ -109,7 +109,8 @@ func isAdmin(claims jwt.MapClaims) bool {
 }
 
 func (s *IBOAuth2) IBPostNewBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	var claims jwt.MapClaims
 	claims, err, code = s.validateOAuth2(r)
@@ -119,33 +120,35 @@ func (s *IBOAuth2) IBPostNewBoard(
 	if !isAdmin(claims) {
 		return errors.New("admin privilege needed"), 401
 	}
-	return s.IBWebPostProvider.IBPostNewBoard(r, bi)
+	return s.IBWebPostProvider.IBPostNewBoard(w, r, bi)
 }
 
 func (s *IBOAuth2) IBPostNewThread(
-	r *http.Request, f form.Form, board string) (
+	w http.ResponseWriter, r *http.Request, f form.Form, board string) (
 	rInfo ib0.IBPostedInfo, err error, code int) {
 
 	_, err, code = s.validateOAuth2(r)
 	if err != nil {
 		return
 	}
-	return s.IBWebPostProvider.IBPostNewThread(r, f, board)
+	return s.IBWebPostProvider.IBPostNewThread(w, r, f, board)
 }
 
 func (s *IBOAuth2) IBPostNewReply(
-	r *http.Request, f form.Form, board, thread string) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board, thread string) (
 	rInfo ib0.IBPostedInfo, err error, code int) {
 
 	_, err, code = s.validateOAuth2(r)
 	if err != nil {
 		return
 	}
-	return s.IBWebPostProvider.IBPostNewReply(r, f, board, thread)
+	return s.IBWebPostProvider.IBPostNewReply(w, r, f, board, thread)
 }
 
 func (s *IBOAuth2) IBUpdateBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	var claims jwt.MapClaims
 	claims, err, code = s.validateOAuth2(r)
@@ -155,11 +158,12 @@ func (s *IBOAuth2) IBUpdateBoard(
 	if !isAdmin(claims) {
 		return errors.New("admin privilege needed"), 401
 	}
-	return s.IBWebPostProvider.IBUpdateBoard(r, bi)
+	return s.IBWebPostProvider.IBUpdateBoard(w, r, bi)
 }
 
 func (s *IBOAuth2) IBDeleteBoard(
-	r *http.Request, board string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board string) (
+	err error, code int) {
 
 	var claims jwt.MapClaims
 	claims, err, code = s.validateOAuth2(r)
@@ -169,11 +173,12 @@ func (s *IBOAuth2) IBDeleteBoard(
 	if !isAdmin(claims) {
 		return errors.New("admin privilege needed"), 401
 	}
-	return s.IBWebPostProvider.IBDeleteBoard(r, board)
+	return s.IBWebPostProvider.IBDeleteBoard(w, r, board)
 }
 
 func (s *IBOAuth2) IBDeletePost(
-	r *http.Request, board, post string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board, post string) (
+	err error, code int) {
 
 	var claims jwt.MapClaims
 	claims, err, code = s.validateOAuth2(r)
@@ -183,5 +188,5 @@ func (s *IBOAuth2) IBDeletePost(
 	if !isAdmin(claims) {
 		return errors.New("admin privilege needed"), 401
 	}
-	return s.IBWebPostProvider.IBDeletePost(r, board, post)
+	return s.IBWebPostProvider.IBDeletePost(w, r, board, post)
 }

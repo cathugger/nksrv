@@ -97,7 +97,9 @@ func (wc *WebCaptcha) unpackAndValidateKey(
 		return
 	}
 	if len(ek) == 0 {
-		err, code = errors.New("no captcha key provided"), http.StatusBadRequest
+		err, code = errors.New(
+			"no captcha key provided (duplicate submission?)"),
+			http.StatusBadRequest
 		return
 	}
 	id, err := captcha.UnpackKeyID(ek)
@@ -156,7 +158,9 @@ func (wc *WebCaptcha) TextFields() []string {
 }
 
 func (wc *WebCaptcha) CheckCaptcha(
-	r *http.Request, fields map[string][]string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request,
+	fields map[string][]string) (
+	err error, code int) {
 
 	var xfcaptchakey, xfcaptchaans string
 	if !wc.UseCookies {
@@ -197,6 +201,14 @@ func (wc *WebCaptcha) CheckCaptcha(
 	if err != nil {
 		return fmt.Errorf("captcha store err: %v", err),
 			http.StatusInternalServerError
+	}
+	// regardless whether we spent it or not, tell client to delet cookie
+	if wc.UseCookies {
+		http.SetCookie(w, &http.Cookie{
+			Name:   ib0.IBWebFormTextCaptchaKey,
+			Value:  "",
+			MaxAge: -1,
+		})
 	}
 	if !fresh {
 		return errors.New("captcha key is already used up"),

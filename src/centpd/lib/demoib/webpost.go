@@ -74,7 +74,7 @@ func optimiseFormLine(line string) (s string) {
 }
 
 func commonNewPost(
-	r *http.Request, f form.Form, board, thread string, isReply bool) (
+	w http.ResponseWriter, r *http.Request, f form.Form, board, thread string, isReply bool) (
 	rInfo postedInfo, err error, _ int) {
 
 	defer func() {
@@ -168,7 +168,8 @@ func (IBProviderDemo) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 }
 
 func (IBProviderDemo) IBPostNewBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	if bi.Name != "test" {
 		return nil, 0
@@ -178,21 +179,24 @@ func (IBProviderDemo) IBPostNewBoard(
 }
 
 func (IBProviderDemo) IBPostNewThread(
-	r *http.Request, f form.Form, board string) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return commonNewPost(r, f, board, "", false)
+	return commonNewPost(w, r, f, board, "", false)
 }
 
 func (IBProviderDemo) IBPostNewReply(
-	r *http.Request, f form.Form, board, thread string) (
+	w http.ResponseWriter, r *http.Request,
+	f form.Form, board, thread string) (
 	rInfo postedInfo, err error, _ int) {
 
-	return commonNewPost(r, f, board, thread, true)
+	return commonNewPost(w, r, f, board, thread, true)
 }
 
 func (IBProviderDemo) IBUpdateBoard(
-	r *http.Request, bi ib0.IBNewBoardInfo) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
+	err error, code int) {
 
 	if bi.Name == "test" {
 		return nil, 0
@@ -202,7 +206,8 @@ func (IBProviderDemo) IBUpdateBoard(
 }
 
 func (IBProviderDemo) IBDeleteBoard(
-	r *http.Request, board string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board string) (
+	err error, code int) {
 
 	if board == "test" {
 		return nil, 0
@@ -212,7 +217,8 @@ func (IBProviderDemo) IBDeleteBoard(
 }
 
 func (IBProviderDemo) IBDeletePost(
-	r *http.Request, board, post string) (err error, code int) {
+	w http.ResponseWriter, r *http.Request, board, post string) (
+	err error, code int) {
 
 	if board != "test" {
 		return errors.New("board not found"), http.StatusNotFound

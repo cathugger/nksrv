@@ -43,20 +43,29 @@ type IBWebPostProvider interface {
 	IBGetPostParams() (*form.ParserParams, form.FileOpener, []string)
 
 	IBDefaultBoardInfo() IBNewBoardInfo
-	IBPostNewBoard(r *http.Request, bi IBNewBoardInfo) (err error, code int)
+	IBPostNewBoard(
+		w http.ResponseWriter, r *http.Request, bi IBNewBoardInfo) (
+		err error, code int)
 
 	IBPostNewThread(
-		r *http.Request, f form.Form, board string) (
+		w http.ResponseWriter, r *http.Request,
+		f form.Form, board string) (
 		rInfo IBPostedInfo, err error, code int)
 
 	IBPostNewReply(
-		r *http.Request, f form.Form, board, thread string) (
+		w http.ResponseWriter, r *http.Request,
+		f form.Form, board, thread string) (
 		rInfo IBPostedInfo, err error, code int)
 
-	IBUpdateBoard(r *http.Request, bi IBNewBoardInfo) (err error, code int)
+	IBUpdateBoard(
+		w http.ResponseWriter, r *http.Request, bi IBNewBoardInfo) (
+		err error, code int)
 
-	IBDeleteBoard(r *http.Request, board string) (err error, code int)
+	IBDeleteBoard(
+		w http.ResponseWriter, r *http.Request, board string) (
+		err error, code int)
 
 	IBDeletePost(
-		r *http.Request, board, post string) (err error, code int)
+		w http.ResponseWriter, r *http.Request, board, post string) (
+		err error, code int)
 }

@@ -101,7 +101,8 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		h_get := handler.NewSimplePath()
 		h_html.Handle("GET", h_get)
 
-		h_get.Handle("/", false, http.HandlerFunc(cfg.HTMLRenderer.ServeBoardList))
+		h_get.Handle("/", false, http.HandlerFunc(
+			cfg.HTMLRenderer.ServeBoardList))
 
 		h_get.Handle("/_ukko", true,
 			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
@@ -159,40 +160,53 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		}
 
 		h_post := handler.NewMethod()
-		h_post.Handle("POST", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ct, param, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			if e != nil {
-				http.Error(w, fmt.Sprintf("failed to parse content type: %v", e), http.StatusBadRequest)
-				return
-			}
-			if ct != "multipart/form-data" || param["boundary"] == "" {
-				http.Error(w, "bad Content-Type", http.StatusBadRequest)
-				return
-			}
+		h_post.Handle("POST", http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				ct, param, e :=
+					mime.ParseMediaType(r.Header.Get("Content-Type"))
+				if e != nil {
+					http.Error(w,
+						fmt.Sprintf("failed to parse content type: %v", e),
+						http.StatusBadRequest)
+					return
+				}
+				if ct != "multipart/form-data" || param["boundary"] == "" {
+					http.Error(w, "bad Content-Type", http.StatusBadRequest)
+					return
+				}
 
-			var err error
-			f, err := fparam.ParseForm(r.Body, param["boundary"], textFields, ib0.IBWebFormFileFields, fopener)
-			if err != nil {
-				// TODO
-				http.Error(w, fmt.Sprintf("error parsing form: %v", err), http.StatusBadRequest)
-				return
-			}
-			if len(f.Values["board"]) != 1 || len(f.Values["thread"]) > 1 {
-				http.Error(w, "invalid form params", http.StatusBadRequest)
-				return
-			}
-			board := f.Values["board"][0]
-			var rInfo ib0.IBPostedInfo
-			var code int
-			if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
-				rInfo, err, code = cfg.WebPostProvider.IBPostNewThread(r, f, board)
-				cfg.HTMLRenderer.DressPostResult(w, rInfo, true, err, code)
-			} else {
-				rInfo, err, code = cfg.WebPostProvider.
-					IBPostNewReply(r, f, board, f.Values["thread"][0])
-				cfg.HTMLRenderer.DressPostResult(w, rInfo, false, err, code)
-			}
-		}))
+				var err error
+				f, err := fparam.ParseForm(
+					r.Body, param["boundary"],
+					textFields, ib0.IBWebFormFileFields, fopener)
+				if err != nil {
+					// TODO
+					http.Error(w,
+						fmt.Sprintf("error parsing form: %v", err),
+						http.StatusBadRequest)
+					return
+				}
+				if len(f.Values["board"]) != 1 ||
+					len(f.Values["thread"]) > 1 {
+
+					http.Error(w, "invalid form params", http.StatusBadRequest)
+					return
+				}
+				board := f.Values["board"][0]
+				var rInfo ib0.IBPostedInfo
+				var code int
+				if len(f.Values["thread"]) == 0 || f.Values["thread"][0] == "" {
+					rInfo, err, code =
+						cfg.WebPostProvider.IBPostNewThread(w, r, f, board)
+					cfg.HTMLRenderer.DressPostResult(
+						w, rInfo, true, err, code)
+				} else {
+					rInfo, err, code = cfg.WebPostProvider.
+						IBPostNewReply(w, r, f, board, f.Values["thread"][0])
+					cfg.HTMLRenderer.DressPostResult(
+						w, rInfo, false, err, code)
+				}
+			}))
 		h.Handle("/_post/post", false, h_post)
 	}
 
@@ -207,9 +221,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 					}
 
 					key := r.Form.Get("key")
-					cfg.WebCaptcha.ServeCaptchaPNG(
+					err, code := cfg.WebCaptcha.ServeCaptchaPNG(
 						w, r, key,
 						cfg.CaptchaInfo.Width, cfg.CaptchaInfo.Height)
+					if err != nil {
+						http.Error(w, err.Error(), code)
+					}
 				}))
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
 		if !cfg.WebCaptcha.UseCookies {

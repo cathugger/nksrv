@@ -111,7 +111,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				}
 
 				rInfo, err, code := cfg.WebPostProvider.
-					IBPostNewReply(r, f, b, t)
+					IBPostNewReply(w, r, f, b, t)
 
 				cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
 			}))
@@ -130,7 +130,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					}
 
 					rInfo, err, code := cfg.WebPostProvider.
-						IBPostNewThread(r, f, b)
+						IBPostNewThread(w, r, f, b)
 
 					cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
 				})))
@@ -146,7 +146,8 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 		h_boardsroot.Handle("POST", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 
-				ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+				ct, _, e :=
+					mime.ParseMediaType(r.Header.Get("Content-Type"))
 				if e != nil {
 					http.Error(
 						w, fmt.Sprintf("failed to parse content type: %v", e),
@@ -168,7 +169,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					return
 				}
 
-				e, code := cfg.WebPostProvider.IBPostNewBoard(r, nbi)
+				e, code := cfg.WebPostProvider.IBPostNewBoard(w, r, nbi)
 				cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 			}))
@@ -183,15 +184,17 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 			Handle("PATCH", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 
-					ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+					ct, _, e :=
+						mime.ParseMediaType(r.Header.Get("Content-Type"))
 					if e != nil {
-						http.Error(
-							w, fmt.Sprintf("failed to parse content type: %v", e),
+						http.Error(w,
+							fmt.Sprintf("failed to parse content type: %v", e),
 							http.StatusBadRequest)
 						return
 					}
 					if ct != "application/json" {
-						http.Error(w, "bad Content-Type", http.StatusBadRequest)
+						http.Error(
+							w, "bad Content-Type", http.StatusBadRequest)
 						return
 					}
 
@@ -207,14 +210,14 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 
 					nbi.Name = r.Context().Value("b").(string)
 
-					e, code := cfg.WebPostProvider.IBUpdateBoard(r, nbi)
+					e, code := cfg.WebPostProvider.IBUpdateBoard(w, r, nbi)
 					cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 				})).
 			Handle("DELETE", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 					b := r.Context().Value("b").(string)
-					e, code := cfg.WebPostProvider.IBDeleteBoard(r, b)
+					e, code := cfg.WebPostProvider.IBDeleteBoard(w, r, b)
 					if e != nil {
 						http.Error(w, e.Error(), code)
 						return
@@ -248,7 +251,8 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 		h.Handle("/auth/login", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 
-				ct, _, e := mime.ParseMediaType(r.Header.Get("Content-Type"))
+				ct, _, e :=
+					mime.ParseMediaType(r.Header.Get("Content-Type"))
 				if e != nil {
 					http.Error(
 						w, fmt.Sprintf("failed to parse content type: %v", e),
