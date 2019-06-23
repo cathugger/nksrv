@@ -234,8 +234,17 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 	img := captcha.NewImage(chal, seed, width, height)
 	var b bytes.Buffer
 	img.WritePNG(&b)
+	// correct type and length
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+	// make it uncacheable if cookie-based
+	if wc.UseCookies {
+		w.Header().Set(
+			"Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+	}
+	// write it out
 	w.Write(b.Bytes())
 	return
 }
