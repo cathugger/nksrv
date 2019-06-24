@@ -86,6 +86,8 @@ func obtainFromCache(
 	return true, e
 }
 
+var errRestart = errors.New("plz restart kthxbai")
+
 func (ce *CacheEngine) ObtainItem(
 	w CopyDestination, objid string, objinfo interface{}) error {
 
@@ -94,9 +96,12 @@ func (ce *CacheEngine) ObtainItem(
 	var o, oo *cacheObj
 	var cpub *cachepub.CachePub
 	var exists bool
+	var done int64
+	var r io.Reader
 
 	filename := ce.b.MakeFilename(objid)
 
+begin:
 	ce.m.RLock()
 	o = ce.w[objid]
 	ce.m.RUnlock()
@@ -194,8 +199,12 @@ func (ce *CacheEngine) ObtainItem(
 
 readExisting:
 
-	r := o.p.NewReader()
-	done, err := w.CopyFrom(r, objid, objinfo)
+	if o.p == nil {
+		// object is content-less
+		goto skipReading
+	}
+	r = o.p.NewReader()
+	done, err = w.CopyFrom(r, objid, objinfo)
 	if !xos.IsClosed(err) {
 		// nil(which would mean full success) or non-recoverable error
 		if err == nil {
@@ -212,6 +221,7 @@ readExisting:
 		return fmt.Errorf(
 			"CachePub in unexpected error state: %v", err)
 	}
+skipReading:
 	// wait till file gets moved to stable storage
 	// XXX maybe simpler design (spinlock, or finished being read in atomic way) would be better?
 	o.m.RLock()
@@ -222,6 +232,9 @@ readExisting:
 	o.m.RUnlock()
 	// check error from worker
 	if err != nil {
+		if err == errRestart {
+			goto begin
+		}
 		return fmt.Errorf("finisherr: %v", err)
 	}
 	// read from stable storage
