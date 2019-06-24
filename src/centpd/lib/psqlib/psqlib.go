@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"centpd/lib/altthumber"
+	"centpd/lib/cacheengine"
 	"centpd/lib/fstore"
 	. "centpd/lib/logx"
 	"centpd/lib/mail/form"
@@ -24,7 +25,7 @@ type PSQLIB struct {
 	src                  fstore.FStore
 	thm                  fstore.FStore
 	nntpfs               fstore.FStore
-	nntpmgr              nntpCacheMgr
+	nntpce               cacheengine.CacheEngine
 	thumbnailer          thumbnailer.Thumbnailer
 	tplan_thread         thumbnailer.ThumbPlan
 	tplan_reply          thumbnailer.ThumbPlan
@@ -127,7 +128,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		p.thumbnailer = nilthumbnailer.NilThumbnailer{}
 	}
 
-	p.nntpmgr = newNNTPCacheMgr()
+	p.nntpce = cacheengine.NewCacheEngine(nntpcachemgr{p})
 
 	p.altthumb = *cfg.AltThumber
 

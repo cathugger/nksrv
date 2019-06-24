@@ -2,118 +2,72 @@ package psqlib
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
 	"io"
 	"os"
-	"sync"
 
 	"golang.org/x/crypto/blake2s"
 
-	"centpd/lib/cachepub"
-	fu "centpd/lib/fileutil"
 	ht "centpd/lib/hashtools"
-	"centpd/lib/xos"
 )
 
-// this gon be fuken weird and complicated im telling u
-
-// obtain is hybrid get-cached-or-make-on-the-spot operation
-// to minimise latency, we should be able to begin submission of document to requester(s) before generation operation isn't yet finished
-// to achieve that in efficient and relatively simple way, generation is output to single file handle opened in read-write mode
-// then pread is used by reader who initiated operation, and by any reader(s) who also requested result of operation before it was finished
-// when generation is done, file handle is forcefuly closed (so that no slow reader(s) could block the following)
-//   and file is moved to stable storage
-// if forceful close interrupted any ongoing pread operation of reader(s),
-//   they then shall independently open file moved to stable storage, seek and proceed reading remaining data
-// this design should be safe to use in operating systems, where opening in write mode imply obtaining exclusive lock of file (Windows)
-
-// when doing map locking, assume that generation operation takes longer than filesystem check of existing cached object,
-//   and do not hold lock during check
-// this should improve concurrency, and hopefuly not cause much harm in case assumption isn't true and object is regenerated
-
-type nntpCacheObj struct {
-	m         sync.RWMutex
-	cond      *sync.Cond
-	finished  bool
-	finisherr error // file move error
-	p         *cachepub.CachePub
+type nntpidinfo struct {
+	bpid postID
+	gpid postID
 }
 
-type nntpCacheMgr struct {
-	m        sync.RWMutex
-	wipCache map[CoreMsgIDStr]*nntpCacheObj
+type nntpcachemgr struct {
+	sp *PSQLIB
 }
 
-func newNNTPCacheMgr() nntpCacheMgr {
-	return nntpCacheMgr{
-		wipCache: make(map[CoreMsgIDStr]*nntpCacheObj),
-	}
-}
-
-func obtainFromCache(
-	w nntpCopyer, filename string, off int64,
-	bpid postID, msgid CoreMsgIDStr, gpid postID) (bool, error) {
-
-	f, e := os.Open(filename)
-	if e != nil {
-		if os.IsNotExist(e) {
-			e = nil
-		}
-		return false, e
-	}
-	defer f.Close()
-
-	if off != 0 {
-		_, e = f.Seek(off, 0)
-		if e != nil {
-			return true, e
-		}
-	}
-
-	_, e = w.Copy(bpid, msgid, gpid, f)
-
-	return true, e
-}
-
-func (sp *PSQLIB) makeFilename(id CoreMsgIDStr) string {
+func (mgr nntpcachemgr) MakeFilename(id string) string {
 	// id can contain invalid chars like /
 	// we could just base32 id itself but that would allow it to grow over common file name limit of 255
 	// so do blake2s
-	idsum := blake2s.Sum256(unsafeStrToBytes(string(id)))
+	idsum := blake2s.Sum256(unsafeStrToBytes(id))
 	enc := ht.LowerBase32Enc.EncodeToString(idsum[:])
-	return sp.nntpfs.Main() + enc + ".eml"
+	return mgr.sp.nntpfs.Main() + enc + ".eml"
+}
+
+func (mgr nntpcachemgr) NewTempFile() (*os.File, error) {
+	return mgr.sp.nntpfs.TempFile("", "")
+}
+
+func (mgr nntpcachemgr) Generate(
+	w io.Writer, objid string, objinfo interface{}) error {
+
+	x := objinfo.(nntpidinfo)
+	return mgr.sp.nntpGenerate(w, x.bpid, CoreMsgIDStr(objid), x.gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByMsgID(
 	w nntpCopyer, cs *ConnState, msgid CoreMsgIDStr) error {
 
-	cbid := currSelectedGroupID(cs)
+	cb_bid := currSelectedGroupID(cs)
 
-	var bid boardID
-	var bpid postID
-	var gpid postID
-	var isbanned bool
+	var p_bid boardID
+	var p_bpid postID
+	var p_gpid postID
+	var p_isbanned bool
 
 	err := sp.st_prep[st_NNTP_articleNumByMsgID].
-		QueryRow(string(msgid), cbid).
-		Scan(&bid, &bpid, &gpid, &isbanned)
+		QueryRow(string(msgid), cb_bid).
+		Scan(&p_bid, &p_bpid, &p_gpid, &p_isbanned)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
 		return sp.sqlError("posts row query scan", err)
 	}
-	if isbanned {
+	if p_isbanned {
 		// we could signal this in some other way later maybe
 		return errNotExist
 	}
 
 	// this kind of query should never modify current article ID
 
-	cpnum := bpidIfGroupEq(cbid, bid, bpid)
+	cb_bpid := bpidIfGroupEq(cb_bid, p_bid, p_bpid)
 
-	return sp.nntpObtainItemOrStat(w, cpnum, msgid, gpid)
+	return sp.nntpObtainItemOrStat(w, cb_bpid, msgid, p_gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByNum(
@@ -124,12 +78,12 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 		return errNoBoardSelected
 	}
 
-	var msgid CoreMsgIDStr
-	var gpid postID
+	var p_msgid CoreMsgIDStr
+	var p_gpid postID
 
 	err := sp.st_prep[st_NNTP_articleMsgIDByNum].
 		QueryRow(gs.bid, num).
-		Scan(&msgid, &gpid)
+		Scan(&p_msgid, &p_gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
@@ -141,7 +95,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 	// therefore pass state to copyer so it can set it
 	w.SetGroupState(gs)
 
-	return sp.nntpObtainItemOrStat(w, num, msgid, gpid)
+	return sp.nntpObtainItemOrStat(w, num, p_msgid, p_gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
@@ -174,159 +128,13 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 func (sp *PSQLIB) nntpObtainItemOrStat(
 	w nntpCopyer, bpid postID, msgid CoreMsgIDStr, gpid postID) error {
 
+	nii := nntpidinfo{bpid: bpid, gpid: gpid}
+
 	if _, ok := w.(*statNNTPCopyer); !ok {
-		return sp.nntpObtainItem(w, bpid, msgid, gpid)
+		return sp.nntpce.ObtainItem(w, string(msgid), nii)
 	} else {
 		// interface abuse
-		_, err := w.Copy(bpid, msgid, gpid, nil)
+		_, err := w.CopyFrom(nil, string(msgid), nii)
 		return err
 	}
-}
-
-func (sp *PSQLIB) nntpObtainItem(
-	w nntpCopyer, bpid postID, msgid CoreMsgIDStr, gpid postID) error {
-
-	var f *os.File
-	var err error
-	var o, oo *nntpCacheObj
-	var cpub *cachepub.CachePub
-
-	c := &sp.nntpmgr
-
-	filename := sp.makeFilename(msgid)
-
-	c.m.RLock()
-	o = c.wipCache[msgid]
-	c.m.RUnlock()
-
-	if o == nil {
-		exists, err := obtainFromCache(w, filename, 0, bpid, msgid, gpid)
-		if exists || err != nil {
-			// if we finished successfuly, or failed in a way we cannot recover
-			return err
-		}
-	} else {
-		goto readExisting
-	}
-
-	// neither file nor wip object exist, so make new
-	f, err = sp.nntpfs.TempFile("", "")
-	if err != nil {
-		return fmt.Errorf("failed making temporary file: %v", err)
-	}
-	cpub = cachepub.NewCachePub(f)
-	o = &nntpCacheObj{p: cpub}
-	o.cond = sync.NewCond(o.m.RLocker())
-
-	c.m.Lock()
-	oo = c.wipCache[msgid]
-	if oo == nil {
-		c.wipCache[msgid] = o
-	}
-	c.m.Unlock()
-
-	if oo != nil {
-		// running generator exists
-		// uhhh now we have to delete our existing thing..
-		fn := f.Name()
-		f.Close()
-		os.Remove(fn)
-		// and switch to what we got
-		o = oo
-		goto readExisting
-	}
-
-	// start generator
-	// do et
-	go func() {
-		var we error // dangerous
-
-		we = sp.nntpGenerate(cpub, bpid, msgid, gpid)
-		if we != nil {
-			if we == io.EOF {
-				we = io.ErrUnexpectedEOF
-			}
-			cpub.Cancel(we)
-		} else {
-			cpub.Finish()
-		}
-		tn := f.Name()
-		// XXX maybe we should wait a little there so that readers could finish reading? idk
-		// at this point file was written but if close fails,
-		// readers (who didn't finish before close) won't be able to
-		// read rest/reopen. therefore signal error
-		e := f.Close()
-		if we == nil && e != nil {
-			we = fmt.Errorf("worker failed closing file: %v", e)
-		}
-		if we == nil {
-			// move from tmp to stable
-			we = fu.RenameNoClobber(tn, filename)
-			if os.IsExist(we) {
-				we = nil
-			}
-			if we != nil {
-				we = fmt.Errorf("worker failed renaming file: %v", we)
-			}
-		}
-		if we != nil {
-			os.Remove(tn)
-		}
-		// notify readers if any about availability
-		o.m.Lock()
-		o.finished = true
-		o.finisherr = we
-		o.m.Unlock()
-		o.cond.Broadcast()
-		// take out of map
-		c.m.Lock()
-		delete(c.wipCache, msgid)
-		c.m.Unlock()
-	}()
-
-readExisting:
-
-	r := o.p.NewReader()
-	done, err := w.Copy(bpid, msgid, gpid, r)
-	if !xos.IsClosed(err) {
-		// nil(which would mean full success) or non-recoverable error
-		if err == nil {
-			return nil
-		} else {
-			return fmt.Errorf("nntpObtainItem: w.Copy err: %v", err)
-		}
-	}
-	// file was closed
-	// sanity check if it was actually written properly
-	err = o.p.Error()
-	if err != io.EOF {
-		return fmt.Errorf(
-			"nntpObtainItem: CachePub in unexpected error state: %v", err)
-	}
-	// wait till file gets moved to stable storage
-	// XXX maybe simpler design (spinlock, or finished being read in atomic way) would be better?
-	o.m.RLock()
-	for !o.finished {
-		o.cond.Wait()
-	}
-	err = o.finisherr
-	o.m.RUnlock()
-	// check error from worker
-	if err != nil {
-		return fmt.Errorf("nntpObtainItem: finisherr: %v", err)
-	}
-	// read from stable storage
-	exists, err := obtainFromCache(w, filename, done, bpid, msgid, gpid)
-	if exists || err != nil {
-		// if we finished successfuly, or failed in a way we cannot recover
-		if err == nil {
-			return nil
-		} else {
-			return fmt.Errorf(
-				"nntpObtainItem: failed obtaining after generation: %v", err)
-		}
-	}
-	// this shouldn't happen
-	return errors.New(
-		"nntpObtainItem: after generation obtainFromCache didn't find file")
 }

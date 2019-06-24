@@ -2,15 +2,22 @@ package psqlib
 
 import (
 	"io"
+
+	"centpd/lib/cacheengine"
 )
 
+func generic2nntpcopyer(
+	objid string, objinfo interface{}) (
+	msgid CoreMsgIDStr, bpid, gpid postID) {
+
+	x := objinfo.(nntpidinfo)
+	return CoreMsgIDStr(objid), x.bpid, x.gpid
+}
+
 type nntpCopyer interface {
-	Copy(
-		bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
-		written int64, err error)
+	cacheengine.CopyDestination
 
 	SetGroupState(gs *groupState)
-
 	IsClosed() bool
 }
 
@@ -25,9 +32,11 @@ func (c *fullNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *fullNNTPCopyer) Copy(
-	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
+func (c *fullNNTPCopyer) CopyFrom(
+	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
+
+	msgid, bpid, gpid := generic2nntpcopyer(objid, objinfo)
 
 	buf := make([]byte, 32*1024)
 
@@ -46,6 +55,7 @@ func (c *fullNNTPCopyer) Copy(
 		// successful get - set new id
 		if c.gs != nil {
 			c.gs.bpid = bpid
+			c.gs.gpid = gpid
 		}
 
 		c.w.ResArticleFollows(bpid, msgid)
@@ -101,9 +111,11 @@ func (c *headNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *headNNTPCopyer) Copy(
-	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
+func (c *headNNTPCopyer) CopyFrom(
+	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
+
+	msgid, bpid, gpid := generic2nntpcopyer(objid, objinfo)
 
 	buf := make([]byte, 32*1024)
 
@@ -207,9 +219,11 @@ func (c *bodyNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *bodyNNTPCopyer) Copy(
-	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
+func (c *bodyNNTPCopyer) CopyFrom(
+	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
+
+	msgid, bpid, gpid := generic2nntpcopyer(objid, objinfo)
 
 	buf := make([]byte, 32*1024)
 
@@ -303,9 +317,11 @@ func (c *statNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c statNNTPCopyer) Copy(
-	bpid postID, msgid CoreMsgIDStr, gpid postID, src io.Reader) (
+func (c statNNTPCopyer) CopyFrom(
+	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
+
+	msgid, bpid, gpid := generic2nntpcopyer(objid, objinfo)
 
 	// successful get - set new id
 	if c.gs != nil {
