@@ -159,6 +159,8 @@ func (ce *CacheEngine) ObtainItem(
 		// at this point file was written but if close fails,
 		// readers (who didn't finish before close) won't be able to
 		// read rest/reopen. therefore signal error
+		// XXX new readers AFTER this will probably get "file already closed"
+		// hopefuly that's guaranteed
 		e := fx.Close()
 		if we == nil && e != nil {
 			we = fmt.Errorf("worker failed closing file: %v", e)
@@ -176,16 +178,18 @@ func (ce *CacheEngine) ObtainItem(
 		if we != nil {
 			os.Remove(tn)
 		}
-		// notify readers if any about availability
+		// mark as done
 		o.m.Lock()
 		o.finished = true
 		o.finisherr = we
 		o.m.Unlock()
+		// notify readers if any about availability
 		o.cond.Broadcast()
 		// take out of map
 		ce.m.Lock()
 		delete(ce.w, objid)
 		ce.m.Unlock()
+		// XXX waitgroup? but is there harm to leak this goroutine?
 	}()
 
 readExisting:
@@ -235,4 +239,38 @@ readExisting:
 	// ensure we print something meaningful in such weird race case
 	return errors.New(
 		"after generation obtainFromCache didn't find file")
+}
+
+/* notes about hypothetical
+ * "deleted but not commited" "commited but interrupted before delete"
+ * case:
+ * we should probably delete and park placeholder to deny making new cache entries
+ * after stuff gets commited, signal "gone" status
+ * this way we won't leave files even after unclean shutdown after commit but before delete
+ */
+
+func (ce *CacheEngine) RemoveItem(objid string) (err error) {
+	// XXX how do we handle remove denial because of active readers?
+	// could inject fake obj into w and spin until last reader finishes
+	// but it won't come up on any system other than windows probably
+
+	filename := ce.b.MakeFilename(objid)
+
+	ce.m.RLock()
+	o := ce.w[objid]
+	ce.m.RUnlock()
+
+	if o != nil {
+		o.m.RLock()
+		for !o.finished {
+			o.cond.Wait()
+		}
+		o.m.RUnlock()
+	}
+
+	err = os.Remove(filename)
+	if err != nil && os.IsNotExist(err) {
+		err = nil
+	}
+	return
 }

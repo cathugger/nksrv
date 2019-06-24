@@ -24,7 +24,7 @@ func (fl NormalFileList) OpenFileAt(i int) (io.ReadCloser, error) {
 }
 
 func (sp *PSQLIB) nntpGenerate(
-	w io.Writer, bpid postID, msgid CoreMsgIDStr, gpid postID) (err error) {
+	w io.Writer, msgid CoreMsgIDStr, gpid postID) (err error) {
 
 	// fetch info about post. some of info we don't care about
 	rows, err := sp.st_prep[st_NNTP_articleGetByGPID].Query(gpid)

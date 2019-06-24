@@ -36,7 +36,7 @@ func (mgr nntpcachemgr) Generate(
 	w io.Writer, objid string, objinfo interface{}) error {
 
 	x := objinfo.(nntpidinfo)
-	return mgr.sp.nntpGenerate(w, x.bpid, CoreMsgIDStr(objid), x.gpid)
+	return mgr.sp.nntpGenerate(w, CoreMsgIDStr(objid), x.gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByMsgID(
