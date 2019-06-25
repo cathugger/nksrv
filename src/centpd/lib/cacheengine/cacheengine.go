@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"sync"
 
 	"centpd/lib/cachepub"
@@ -262,28 +263,76 @@ skipReading:
  * this way we won't leave files even after unclean shutdown after commit but before delete
  */
 
-func (ce *CacheEngine) RemoveItem(objid string) (err error) {
+func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 	// XXX how do we handle remove denial because of active readers?
 	// could inject fake obj into w and spin until last reader finishes
 	// but it won't come up on any system other than windows probably
 
 	filename := ce.b.MakeFilename(objid)
 
-	ce.m.RLock()
-	o := ce.w[objid]
-	ce.m.RUnlock()
+	n := new(cacheObj)
+	n.cond = sync.NewCond(n.m.RLocker())
 
-	if o != nil {
+	for {
+		ce.m.Lock()
+		o := ce.w[objid]
+		if o == nil {
+			ce.w[objid] = n
+		}
+		ce.m.Unlock()
+
+		if o == nil {
+			break
+		}
+
 		o.m.RLock()
 		for !o.finished {
 			o.cond.Wait()
 		}
 		o.m.RUnlock()
+
+		// mightve been already finished in which case we're spinnin
+		runtime.Gosched()
 	}
 
 	err = os.Remove(filename)
 	if err != nil && os.IsNotExist(err) {
 		err = nil
+	}
+	if err != nil {
+		// we've failed so don't hold lock as file is still on disk
+		ce.RemoveItemFinish(objid)
+	}
+	return
+}
+
+func (ce *CacheEngine) RemoveItemFinish(objid string) {
+	ce.m.Lock()
+	o := ce.w[objid]
+	delete(ce.w, objid)
+	ce.m.Unlock()
+
+	if o == nil {
+		return
+	}
+
+	if o.p != nil {
+		panic("o.p != nil")
+	}
+
+	// mark as done
+	o.m.Lock()
+	o.finished = true
+	o.finisherr = errRestart
+	o.m.Unlock()
+	// notify readers if any about (un)availability
+	o.cond.Broadcast()
+}
+
+func (ce *CacheEngine) RemoveItem(objid string) (err error) {
+	err = ce.RemoveItemStart(objid)
+	if err == nil {
+		ce.RemoveItemFinish(objid)
 	}
 	return
 }
