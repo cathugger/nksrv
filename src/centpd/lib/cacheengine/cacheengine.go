@@ -119,25 +119,28 @@ func (ce *CacheEngine) ObtainItem(
 		o.m.Lock()
 		if o.n > 0 {
 			o.n--
-			nx = o.n
+			nx, fx = o.n, o.f
 		} else {
 			nx = -1
 		}
 		o.m.Unlock()
 		// GC
 		if nx == 0 {
+			// if nx == 0 it's all ours as no other thread can have this value
 			ce.m.Lock()
 			if o == ce.w[objid] {
-				o.m.Lock()
-				if o.n == 0 {
-					if o.f != nil {
-						o.f.Close()
-						o.f = nil
-					}
-				}
-				o.m.Unlock()
+				// take out
+				delete(ce.w, objid)
 			}
 			ce.m.Unlock()
+
+			if fx != nil {
+				fx.Close()
+
+				o.m.Lock()
+				o.f = nil
+				o.m.Unlock()
+			}
 		}
 	}
 
@@ -412,27 +415,22 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 
 	filename := ce.b.MakeFilename(objid)
 
-	n := new(cacheObj)
+	n := &cacheObj{n: 1}
 	n.c = sync.NewCond(n.m.RLocker())
 
-	for {
-		ce.m.Lock()
-		o := ce.w[objid]
-		if o == nil {
-			ce.w[objid] = n
-		}
-		ce.m.Unlock()
+	ce.m.Lock()
+	o := ce.w[objid]
+	ce.w[objid] = n // overwrite existing if any
+	ce.m.Unlock()
 
-		if o == nil {
-			break
-		}
-
+	if o != nil {
+		// we have already existing, wait till it gets cleared
 		o.m.RLock()
-		o.c.Wait()
+		for (o.n > 0 || o.f != nil) && o.e == nil {
+			o.c.Wait()
+		}
 		o.m.RUnlock()
-
-		// mightve been already finished in which case we're spinnin
-		runtime.Gosched()
+		// okay it should be finished at this point
 	}
 
 	err = os.Remove(filename)
@@ -456,13 +454,14 @@ func (ce *CacheEngine) RemoveItemFinish(objid string) {
 		return
 	}
 
-	if o.p != nil {
-		panic("o.p != nil")
+	if o.p != nil || o.f != nil || o.e != nil {
+		panic("wrong object condition")
 	}
 
-	// mark as done
+	// mark as done & ded
 	o.m.Lock()
 	o.e = errRestart
+	o.n = 0
 	o.m.Unlock()
 	// notify readers if any about (un)availability
 	o.c.Broadcast()
