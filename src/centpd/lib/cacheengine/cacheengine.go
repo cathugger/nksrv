@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/xerrors"
 
@@ -84,31 +85,6 @@ type CopyDestination interface {
 		written int64, err error)
 }
 
-func obtainFromCache(
-	w CopyDestination, filename string, off int64,
-	objid string, objinfo interface{}) (bool, error) {
-
-	f, e := os.Open(filename)
-	if e != nil {
-		if os.IsNotExist(e) {
-			e = nil
-		}
-		return false, e
-	}
-	defer f.Close()
-
-	if off != 0 {
-		_, e = f.Seek(off, 0)
-		if e != nil {
-			return true, e
-		}
-	}
-
-	_, e = w.CopyFrom(f, objid, objinfo)
-
-	return true, e
-}
-
 var errRestart = errors.New("plz restart kthxbai")
 
 func (ce *CacheEngine) ObtainItem(
@@ -124,9 +100,11 @@ func (ce *CacheEngine) ObtainItem(
 	var done int64
 	var r io.Reader
 	var wg sync.WaitGroup
+	var cp_read_done int32
 
 	filename := ce.b.MakeFilename(objid)
 
+	// expects ce.w to be locked in some way, and o to point to current object
 	register_to_o := func() {
 		o.m.Lock()
 		if o.n > 0 {
@@ -136,6 +114,7 @@ func (ce *CacheEngine) ObtainItem(
 		o.m.Unlock()
 	}
 
+	// expects ce.w to be unlocked, and o to point to current object
 	unregister_from_o := func() {
 		o.m.Lock()
 		if o.n > 0 {
@@ -162,6 +141,7 @@ func (ce *CacheEngine) ObtainItem(
 		}
 	}
 
+	// expects ce.w to be unlocked, marks oo as broken and takes it out
 	oo_broken := func(el error) {
 		// take it out
 		ce.m.Lock()
@@ -181,6 +161,7 @@ func (ce *CacheEngine) ObtainItem(
 	}
 
 begin:
+	// first time check
 	ce.m.RLock()
 	o = ce.w[objid]
 	if o != nil {
@@ -195,9 +176,11 @@ begin:
 	}
 
 	if o == nil {
+		// new cache obj
 		oo = &cacheObj{n: 1}
 		oo.c = sync.NewCond(oo.m.RLocker())
 
+		// second time check & set
 		ce.m.Lock()
 		o = ce.w[objid]
 		if o == nil {
@@ -208,7 +191,8 @@ begin:
 		ce.m.Unlock()
 
 		if o == nil {
-			// entry didn't exist previously
+			// entry didn't exist previously, we successfuly set it
+
 			o = oo
 
 			// first attempt to open existing passive file
@@ -278,6 +262,24 @@ begin:
 						os.Remove(tn)
 					}
 					if we == nil {
+						if atomic.LoadInt32(&cp_read_done) != 0 {
+							dontRead := false
+							// if reader already finished
+							oo.m.Lock()
+							// and it was only one reader
+							if oo.n == 1 {
+								// set err to restart because new threads may pick
+								oo.e = errRestart
+								dontRead = true
+							}
+							oo.m.Unlock()
+							// skip opening file for reading
+							if dontRead {
+								oo.c.Broadcast()
+								wg.Done()
+								return
+							}
+						}
 						// open file for reading
 						fx, we = os.Open(filename)
 						if we != nil {
@@ -303,6 +305,7 @@ begin:
 				goto feedFromCachePub
 			} else {
 				// err == nil, we've successfuly opened file for reading
+
 				oo.m.Lock()
 				oo.f = fx
 				oo.m.Unlock()
@@ -311,9 +314,13 @@ begin:
 
 				goto feedFromReadFile
 			}
+			// never reached
 		}
 	}
-	// entry exists see if it's not empty
+
+	// o != nil, either first time or second time
+
+	// entry exists wait (if needed) until it has something to say
 	if px == nil && fx == nil && ex == nil {
 		o.m.RLock()
 		for o.p == nil && o.f == nil && o.e == nil {
@@ -338,8 +345,13 @@ begin:
 
 feedFromCachePub:
 	r = px.NewReader()
+
 	done, ex = w.CopyFrom(r, objid, objinfo)
+
 	if !xos.IsClosed(ex) {
+
+		atomic.StoreInt32(&cp_read_done, 1)
+
 		// nil(which would mean full success) or non-recoverable error
 		if ex != nil {
 			ex = xerrors.Errorf("cachepub consumption error: %w", ex)
@@ -348,13 +360,17 @@ feedFromCachePub:
 		wg.Wait() // ensure writer thread is done
 
 		unregister_from_o()
+
 		return ex
 	}
 	// file was closed
 	// sanity check if it was actually written properly
 	ex = px.Error()
 	if ex != io.EOF {
+		wg.Wait() // ensure writer thread is done
+
 		unregister_from_o()
+
 		return xerrors.Errorf(
 			"CachePub in unexpected error state: %w", ex)
 	}
