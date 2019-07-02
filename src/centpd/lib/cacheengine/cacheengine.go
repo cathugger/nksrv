@@ -2,11 +2,12 @@ package cacheengine
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"sync"
+
+	"golang.org/x/xerrors"
 
 	"centpd/lib/cachepub"
 	fu "centpd/lib/fileutil"
@@ -29,12 +30,33 @@ import (
 //   and do not hold lock during check
 // this should improve concurrency, and hopefuly not cause much harm in case assumption isn't true and object is regenerated
 
+// access pattern:
+// every user wanting to read any current value must rlock
+// every user wanting to write to finished/finisherr/p/f/n, must wlock
+// if n == 0, object must be taken off active object pool
+// n==0 on enter CAN happen if object is being removed from pool; in this case, wait on cond and try taking off new object after
 type cacheObj struct {
-	m         sync.RWMutex
-	cond      *sync.Cond
-	finished  bool
-	finisherr error // file move error
-	p         *cachepub.CachePub
+	m sync.RWMutex // guard for all
+	c *sync.Cond   // cond for reading new stuff
+
+	n int                // current amount of readers (refcount for gc)
+	f *os.File           // for shared reading
+	p *cachepub.CachePub // for shared reading while writing
+	e error              // error
+}
+
+type sharedReader struct {
+	f *os.File
+	n int64
+}
+
+func (r *sharedReader) Read(b []byte) (n int, err error) {
+	n, err = r.f.ReadAt(b, r.n)
+	if n < 0 {
+		panic("negative read")
+	}
+	r.n += int64(n)
+	return
 }
 
 type Backend interface {
@@ -92,167 +114,271 @@ var errRestart = errors.New("plz restart kthxbai")
 func (ce *CacheEngine) ObtainItem(
 	w CopyDestination, objid string, objinfo interface{}) error {
 
-	var fx *os.File
-	var err error
 	var o, oo *cacheObj
-	var cpub *cachepub.CachePub
-	var exists bool
+
+	var nx int
+	var fx *os.File
+	var px *cachepub.CachePub
+	var ex error
+
 	var done int64
 	var r io.Reader
+	var wg sync.WaitGroup
 
 	filename := ce.b.MakeFilename(objid)
+
+	register_to_o := func() {
+		o.m.Lock()
+		if o.n > 0 {
+			o.n++
+		}
+		nx, px, fx, ex = o.n, o.p, o.f, o.e
+		o.m.Unlock()
+	}
+
+	unregister_from_o := func() {
+		o.m.Lock()
+		if o.n > 0 {
+			o.n--
+			nx = o.n
+		} else {
+			nx = -1
+		}
+		o.m.Unlock()
+		// GC
+		if nx == 0 {
+			ce.m.Lock()
+			if o == ce.w[objid] {
+				o.m.Lock()
+				if o.n == 0 {
+					if o.f != nil {
+						o.f.Close()
+						o.f = nil
+					}
+				}
+				o.m.Unlock()
+			}
+			ce.m.Unlock()
+		}
+	}
+
+	oo_broken := func(el error) {
+		// take it out
+		ce.m.Lock()
+		if oo == ce.w[objid] {
+			delete(ce.w, objid)
+		}
+		ce.m.Unlock()
+
+		// mark as broke
+		oo.m.Lock()
+		oo.e = el // propagate error
+		oo.n = 0  // not suitable for usage anymore
+		oo.m.Unlock()
+
+		// signal
+		oo.c.Broadcast()
+	}
 
 begin:
 	ce.m.RLock()
 	o = ce.w[objid]
+	if o != nil {
+		register_to_o()
+	}
 	ce.m.RUnlock()
 
+	if o != nil && nx <= 0 {
+		// if it's got 0 users we aint going to use it as it's being closed
+		runtime.Gosched()
+		goto begin
+	}
+
 	if o == nil {
-		exists, err = obtainFromCache(w, filename, 0, objid, objinfo)
-		if exists || err != nil {
-			// if we finished successfuly, or failed in a way we cannot recover
-			return err
-		}
-	} else {
-		goto readExisting
-	}
+		oo = &cacheObj{n: 1}
+		oo.c = sync.NewCond(oo.m.RLocker())
 
-	// neither file nor wip object exist, so make new
-	fx, err = ce.b.NewTempFile()
-	if err != nil {
-		return fmt.Errorf("failed making temporary file: %v", err)
-	}
-	cpub = cachepub.NewCachePub(fx)
-	o = &cacheObj{p: cpub}
-	o.cond = sync.NewCond(o.m.RLocker())
-
-	ce.m.Lock()
-	oo = ce.w[objid]
-	// don't overwrite existing object
-	// incase it was made while we weren't looking
-	if oo == nil {
-		ce.w[objid] = o
-	}
-	ce.m.Unlock()
-
-	if oo != nil {
-		// running generator exists
-		// uhhh now we have to delete our existing thing..
-		fn := fx.Name()
-		fx.Close()
-		os.Remove(fn)
-		// and switch to what we got
-		o = oo
-		goto readExisting
-	}
-
-	// start generator
-	// do et
-	go func() {
-		var we error // dangerous - don't confuse with outer err
-
-		we = ce.b.Generate(cpub, objid, objinfo)
-		if we != nil {
-			if we == io.EOF {
-				we = io.ErrUnexpectedEOF
-			}
-			cpub.Cancel(we)
-		} else {
-			cpub.Finish()
-		}
-		tn := fx.Name()
-		// XXX maybe we should wait a little there so that readers could finish reading? idk
-		// at this point file was written but if close fails,
-		// readers (who didn't finish before close) won't be able to
-		// read rest/reopen. therefore signal error
-		// XXX new readers AFTER this will probably get "file already closed"
-		// hopefuly that's guaranteed
-		e := fx.Close()
-		if we == nil && e != nil {
-			we = fmt.Errorf("worker failed closing file: %v", e)
-		}
-		if we == nil {
-			// move from tmp to stable
-			we = fu.RenameNoClobber(tn, filename)
-			if os.IsExist(we) {
-				we = nil
-			}
-			if we != nil {
-				we = fmt.Errorf("worker failed renaming file: %v", we)
-			}
-		}
-		if we != nil {
-			os.Remove(tn)
-		}
-		// mark as done
-		o.m.Lock()
-		o.finished = true
-		o.finisherr = we
-		o.m.Unlock()
-		// notify readers if any about availability
-		o.cond.Broadcast()
-		// take out of map
 		ce.m.Lock()
-		delete(ce.w, objid)
-		ce.m.Unlock()
-		// XXX waitgroup? but is there harm to leak this goroutine?
-	}()
-
-readExisting:
-
-	if o.p == nil {
-		// object is content-less
-		goto skipReading
-	}
-	r = o.p.NewReader()
-	done, err = w.CopyFrom(r, objid, objinfo)
-	if !xos.IsClosed(err) {
-		// nil(which would mean full success) or non-recoverable error
-		if err == nil {
-			// all done there no need to read file anymore
-			return nil
+		o = ce.w[objid]
+		if o == nil {
+			ce.w[objid] = oo
 		} else {
-			return fmt.Errorf("w.CopyFrom err: %v", err)
+			register_to_o()
 		}
+		ce.m.Unlock()
+
+		if o == nil {
+			// entry didn't exist previously
+			o = oo
+
+			// first attempt to open existing passive file
+			fx, ex = os.Open(filename)
+			if ex != nil {
+				if !os.IsNotExist(ex) {
+					ex = xerrors.Errorf("failed opening passive file: %w", ex)
+					oo_broken(ex)
+					return ex
+				}
+
+				// passive file doesn't exist, so we'll generate new one
+				fx, ex = ce.b.NewTempFile()
+				if ex != nil {
+					ex = xerrors.Errorf("failed making temporary file: %w", ex)
+					oo_broken(ex)
+					return ex
+				}
+
+				// put up cachepub
+				px = cachepub.NewCachePub(fx)
+				oo.m.Lock()
+				oo.p = px
+				oo.m.Unlock()
+				oo.c.Broadcast() // let readers know that we now have cachepub
+
+				// start generator
+				// do et
+				wg.Add(1)
+				go func() {
+					var we error // dangerous - don't confuse with outer err
+
+					we = ce.b.Generate(px, objid, objinfo)
+					if we != nil {
+						we = xerrors.Errorf("worker failed generating: %w", we)
+						px.Cancel(we)
+					} else {
+						px.Finish()
+					}
+					tn := fx.Name()
+					// XXX maybe we should wait a little there so that readers could finish reading? idk
+					// at this point file was written but if close fails,
+					// readers (who didn't finish before close) won't be able to
+					// read rest/reopen. therefore signal error
+					// XXX new readers AFTER this will probably get "file already closed"
+					// hopefuly that's guaranteed
+					cle := fx.Close()
+					// once closed, it'll become useless. don't let new readers stumble upon it
+					oo.m.Lock()
+					oo.p = nil
+					oo.m.Unlock()
+					// don't notify yet, do that once we've opened file for reading
+					if we == nil && cle != nil {
+						we = xerrors.Errorf("worker failed closing file: %w", cle)
+					}
+					if we == nil {
+						// move from tmp to stable
+						we = fu.RenameNoClobber(tn, filename)
+						if os.IsExist(we) {
+							we = nil
+						}
+						if we != nil {
+							we = xerrors.Errorf("worker failed renaming file: %w", we)
+						}
+					}
+					if we != nil {
+						os.Remove(tn)
+					}
+					if we == nil {
+						// open file for reading
+						fx, we = os.Open(filename)
+						if we != nil {
+							// not supposed to happen - file we've just closed is gone
+							we = xerrors.Errorf("worker failed reopening file: %w", we)
+						}
+					}
+					if we != nil {
+						// error
+						fx = nil
+						oo_broken(we)
+					} else {
+						// done ok
+						oo.m.Lock()
+						oo.f = fx
+						oo.m.Unlock()
+						// notify readers if any about availability
+						oo.c.Broadcast()
+					}
+					wg.Done()
+				}()
+
+				goto feedFromCachePub
+			} else {
+				// err == nil, we've successfuly opened file for reading
+				oo.m.Lock()
+				oo.f = fx
+				oo.m.Unlock()
+
+				oo.c.Broadcast()
+
+				goto feedFromReadFile
+			}
+		}
+	}
+	// entry exists see if it's not empty
+	if px == nil && fx == nil && ex == nil {
+		o.m.RLock()
+		for o.p == nil && o.f == nil && o.e == nil {
+			o.c.Wait()
+		}
+		px, fx, ex = o.p, o.f, o.e
+		o.m.RUnlock()
+	}
+
+	if ex != nil {
+		// it signals error ugh
+		unregister_from_o()
+		if ex == errRestart {
+			goto begin
+		}
+		return xerrors.Errorf("reported object error: %w", ex)
+	}
+	if fx != nil {
+		goto feedFromReadFile
+	}
+	// px != nil
+
+feedFromCachePub:
+	r = px.NewReader()
+	done, ex = w.CopyFrom(r, objid, objinfo)
+	if !xos.IsClosed(ex) {
+		// nil(which would mean full success) or non-recoverable error
+		if ex != nil {
+			ex = xerrors.Errorf("cachepub consumption error: %w", ex)
+		}
+
+		wg.Wait() // ensure writer thread is done
+
+		unregister_from_o()
+		return ex
 	}
 	// file was closed
 	// sanity check if it was actually written properly
-	err = o.p.Error()
-	if err != io.EOF {
-		return fmt.Errorf(
-			"CachePub in unexpected error state: %v", err)
+	ex = px.Error()
+	if ex != io.EOF {
+		unregister_from_o()
+		return xerrors.Errorf(
+			"CachePub in unexpected error state: %w", ex)
 	}
-skipReading:
-	// wait till file gets moved to stable storage
-	// XXX maybe simpler design (spinlock, or finished being read in atomic way) would be better?
+
 	o.m.RLock()
-	for !o.finished {
-		o.cond.Wait()
+	for o.f == nil && o.e == nil {
+		o.c.Wait()
 	}
-	err = o.finisherr
+	fx, ex = o.f, o.e
 	o.m.RUnlock()
-	// check error from worker
-	if err != nil {
-		if err == errRestart {
-			goto begin
-		}
-		return fmt.Errorf("finisherr: %v", err)
+
+	if ex != nil {
+		unregister_from_o()
+		return xerrors.Errorf("reported object error: %w", ex)
 	}
-	// read from stable storage
-	exists, err = obtainFromCache(w, filename, done, objid, objinfo)
-	if exists || err != nil {
-		// if we finished successfuly, or failed in a way we cannot recover
-		if err == nil {
-			return nil
-		} else {
-			return fmt.Errorf(
-				"failed obtaining after generation: %v", err)
-		}
+
+feedFromReadFile:
+	r = &sharedReader{f: fx, n: done}
+	_, ex = w.CopyFrom(r, objid, objinfo)
+	if ex != nil {
+		ex = xerrors.Errorf("sharedreader consumption error: %w", ex)
 	}
-	// this shouldn't happen, but in theory could
-	// ensure we print something meaningful in such weird race case
-	return errors.New(
-		"after generation obtainFromCache didn't find file")
+	unregister_from_o()
+	return ex
 }
 
 /* notes about hypothetical
@@ -271,7 +397,7 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 	filename := ce.b.MakeFilename(objid)
 
 	n := new(cacheObj)
-	n.cond = sync.NewCond(n.m.RLocker())
+	n.c = sync.NewCond(n.m.RLocker())
 
 	for {
 		ce.m.Lock()
@@ -286,9 +412,7 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 		}
 
 		o.m.RLock()
-		for !o.finished {
-			o.cond.Wait()
-		}
+		o.c.Wait()
 		o.m.RUnlock()
 
 		// mightve been already finished in which case we're spinnin
@@ -322,11 +446,10 @@ func (ce *CacheEngine) RemoveItemFinish(objid string) {
 
 	// mark as done
 	o.m.Lock()
-	o.finished = true
-	o.finisherr = errRestart
+	o.e = errRestart
 	o.m.Unlock()
 	// notify readers if any about (un)availability
-	o.cond.Broadcast()
+	o.c.Broadcast()
 }
 
 func (ce *CacheEngine) RemoveItem(objid string) (err error) {
