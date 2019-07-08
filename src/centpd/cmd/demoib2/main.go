@@ -40,15 +40,16 @@ func main() {
 	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
 		TemplateDir: "_demo/tmpl",
 		Logger:      lgr,
+		StaticDir:   di.StaticDir.Dir(),
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
 		os.Exit(1)
 	}
 	rcfg := ir.Cfg{
-		HTMLRenderer:   rend,
-		StaticProvider: di.IBProviderDemo{},
-		FileProvider:   di.IBProviderDemo{},
+		HTMLRenderer: rend,
+		StaticDir:    di.StaticDir,
+		FileProvider: di.IBProviderDemo{},
 	}
 	rh := ir.NewIBRouter(rcfg)
 

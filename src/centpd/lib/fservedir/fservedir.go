@@ -10,7 +10,7 @@ import (
 	"centpd/lib/fserve"
 )
 
-var _ fserve.FServe = FServeDir{}
+var _ fserve.FServe = (*FServeDir)(nil)
 
 type MIMETypeSetter interface {
 	SetMIMETypeByName(w http.ResponseWriter, name string)
@@ -41,9 +41,7 @@ type Config struct {
 	CacheControl   string
 }
 
-// "no-cache, must-revalidate"
-
-func NewFServeDir(dir string, cfg Config) FServeDir {
+func NewFServeDir(dir string, cfg Config) *FServeDir {
 	if i := len(dir); i > 0 && !os.IsPathSeparator(dir[i-1]) {
 		dir = dir + string(os.PathSeparator)
 	}
@@ -52,14 +50,14 @@ func NewFServeDir(dir string, cfg Config) FServeDir {
 		cfg.MIMETypeSetter = DefaultMIMETypeSetter{}
 	}
 
-	return FServeDir{
+	return &FServeDir{
 		dir:         dir,
 		mts:         cfg.MIMETypeSetter,
 		cachectlstr: cfg.CacheControl,
 	}
 }
 
-func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
+func (d *FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 
 	fname := d.dir + id
 
@@ -92,6 +90,13 @@ func (d FServeDir) FServe(w http.ResponseWriter, r *http.Request, id string) {
 	} else {
 		// shouldn't happen
 		//http.ServeContent(w, r, fname, time.Time{}, f)
-		panic(fmt.Errorf("f.Stat() failed: %v", err))
+		//panic(fmt.Errorf("f.Stat() failed: %v", err))
+		s := fmt.Sprintf(
+			"500 internal server error: failed to stat %q: %v", fname, err)
+		http.Error(w, s, http.StatusInternalServerError)
 	}
+}
+
+func (d *FServeDir) Dir() string {
+	return d.dir
 }

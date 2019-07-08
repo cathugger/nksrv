@@ -10,17 +10,17 @@ import (
 	"strconv"
 
 	"centpd/lib/captchainfo"
+	fsd "centpd/lib/fservedir"
 	"centpd/lib/handler"
 	fp "centpd/lib/httpibfileprovider"
 	"centpd/lib/renderer"
-	sp "centpd/lib/staticprovider"
 	wc "centpd/lib/webcaptcha"
 	ib0 "centpd/lib/webib0"
 )
 
 type Cfg struct {
 	HTMLRenderer    renderer.Renderer // handles everything else?
-	StaticProvider  sp.StaticProvider
+	StaticDir       *fsd.FServeDir
 	FileProvider    fp.HTTPFileProvider   // handles _src and _thm
 	APIHandler      http.Handler          // handles _api
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
@@ -87,14 +87,15 @@ func NewIBRouter(cfg Cfg) http.Handler {
 			Handle("/_thm", true, h_thm)
 	}
 
-	if cfg.StaticProvider != nil {
+	if cfg.StaticDir != nil {
 		h_static := handler.NewMethod().Handle("GET",
 			handler.NewRegexPath().
 				Handle("/{{id:[^_./][^/]*(?:/[^_./][^/]*)*}}?",
 					false, http.HandlerFunc(func(
 						w http.ResponseWriter, r *http.Request) {
+
 						id := r.Context().Value("id").(string)
-						cfg.StaticProvider.ServeStatic(w, r, id)
+						cfg.StaticDir.FServe(w, r, id)
 					})))
 		h.Handle("/_static", true, h_static)
 	}

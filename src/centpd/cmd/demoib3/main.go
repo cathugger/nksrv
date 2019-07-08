@@ -100,7 +100,7 @@ func main() {
 	})
 	rcfg := ir.Cfg{
 		HTMLRenderer:    rend,
-		StaticProvider:  di.IBProviderDemo{},
+		StaticDir:       di.StaticDir,
 		FileProvider:    di.IBProviderDemo{},
 		WebPostProvider: dbib,
 		APIHandler:      ah,

@@ -1,10 +1,16 @@
 package tmplrenderer
 
 import (
+	"encoding/hex"
+	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"text/template"
+
+	"golang.org/x/crypto/blake2b"
 )
 
 /*
@@ -28,6 +34,7 @@ type metaContext struct {
 	dir         string
 	captchamode string
 	env         interface{}
+	staticdir   string
 }
 
 func metaTmplAndFile(
@@ -59,6 +66,7 @@ func invokeCaptcha(mc metaContext, x interface{}) (string, error) {
 		"map":  f_dict,
 
 		"env":     wrapMCEnv(mc),
+		"static":  wrapMCStatic(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -87,6 +95,7 @@ func invokePart(
 		"map":  f_dict,
 
 		"env":     wrapMCEnv(mc),
+		"static":  wrapMCStatic(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -109,6 +118,37 @@ func wrapMCEnv(mc metaContext) func() interface{} {
 	return func() interface{} { return mc.env }
 }
 
+func hashStaticFile(dir, name string) (string, error) {
+	fname := dir + name
+	f, e := os.Open(fname)
+	if e != nil {
+		return "", fmt.Errorf("error opening %q: %v", fname, e)
+	}
+
+	const hashlen = 8
+
+	b, e := blake2b.New(hashlen, nil)
+	if e != nil {
+		panic(e)
+	}
+
+	_, e = io.Copy(b, f)
+	if e != nil {
+		return "", fmt.Errorf("error reading %q: %v", fname, e)
+	}
+
+	var sum [hashlen]byte
+	b.Sum(sum[:0])
+
+	return name + "?v=" + hex.EncodeToString(sum[:]), nil
+}
+
+func wrapMCStatic(mc metaContext) func(string) (string, error) {
+	return func(name string) (string, error) {
+		return hashStaticFile(mc.staticdir, name)
+	}
+}
+
 func invokePage(mc metaContext, name, part string) (string, error) {
 	if part != "" {
 		name = "page-" + name + "-" + part
@@ -123,6 +163,7 @@ func invokePage(mc metaContext, name, part string) (string, error) {
 		"map":  f_dict,
 
 		"env":     wrapMCEnv(mc),
+		"static":  wrapMCStatic(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 	})
@@ -137,6 +178,7 @@ func invokeBase(mc metaContext, base, name string) (string, error) {
 		"map":  f_dict,
 
 		"env":     wrapMCEnv(mc),
+		"static":  wrapMCStatic(mc),
 		"invoke":  wrapMCInvokePart(mc),
 		"captcha": wrapMCInvokeCaptcha(mc),
 		"page": func(part string) (string, error) {

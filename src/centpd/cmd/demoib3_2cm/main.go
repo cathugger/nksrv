@@ -103,6 +103,7 @@ func main() {
 		WebCaptcha: webcap,
 		SSI:        ssi,
 		ESI:        esi,
+		StaticDir:  di.StaticDir.Dir(),
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
@@ -118,10 +119,10 @@ func main() {
 		Renderer: jrend,
 	}
 	ircfg := ir.Cfg{
-		HTMLRenderer:   rend,
-		StaticProvider: di.IBProviderDemo{},
-		FileProvider:   di.IBProviderDemo{},
-		CaptchaInfo:    democonfigs.CfgCaptchaInfo,
+		HTMLRenderer: rend,
+		StaticDir:    di.StaticDir,
+		FileProvider: di.IBProviderDemo{},
+		CaptchaInfo:  democonfigs.CfgCaptchaInfo,
 	}
 	if !*readonly {
 		arcfg.WebPostProvider = dbib

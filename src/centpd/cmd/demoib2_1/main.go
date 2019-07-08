@@ -37,9 +37,9 @@ func main() {
 	}
 
 	rcfg := ir.Cfg{
-		HTMLRenderer:   rend,
-		StaticProvider: di.IBProviderDemo{},
-		FileProvider:   di.IBProviderDemo{},
+		HTMLRenderer: rend,
+		StaticDir:    di.StaticDir,
+		FileProvider: di.IBProviderDemo{},
 	}
 	rh := ir.NewIBRouter(rcfg)
 

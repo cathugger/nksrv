@@ -76,6 +76,7 @@ func main() {
 	rend, err := rt.NewTmplRenderer(dbib, rt.TmplRendererCfg{
 		TemplateDir: *tmpldir,
 		Logger:      lgr,
+		StaticDir:   di.StaticDir.Dir(),
 	})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
@@ -91,9 +92,9 @@ func main() {
 		Renderer: jrend,
 	}
 	ircfg := ir.Cfg{
-		HTMLRenderer:   rend,
-		StaticProvider: di.IBProviderDemo{},
-		FileProvider:   di.IBProviderDemo{},
+		HTMLRenderer: rend,
+		StaticDir:    di.StaticDir,
+		FileProvider: di.IBProviderDemo{},
 	}
 	if !*readonly {
 		arcfg.WebPostProvider = dbib

@@ -152,8 +152,9 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 
 	root := template.New("").Funcs(funcs)
 	mc := metaContext{
-		dir: cfg.TemplateDir,
-		env: &tr.ni,
+		dir:       cfg.TemplateDir,
+		env:       &tr.ni,
+		staticdir: cfg.StaticDir,
 	}
 	if tr.wc != nil {
 		if tr.scap {
@@ -266,6 +267,7 @@ type TmplRendererCfg struct {
 	WebCaptcha  *webcaptcha.WebCaptcha
 	SSI         bool
 	ESI         bool
+	StaticDir   string
 }
 
 func (tr *TmplRenderer) execTmpl(
