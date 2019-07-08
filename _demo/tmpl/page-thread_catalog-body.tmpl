@@ -15,7 +15,7 @@
      {{- if .Thumb.ID -}}
       <img
        class="cat_img"
-       src="{{$.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"
+       src="{% (env).FRoot %}/_thm/{{urlpath .Thumb.ID}}"
        {{- if .Thumb.Width}}
        width="{{.Thumb.Width}}"
        {{- end}}
@@ -27,7 +27,7 @@
      {{- else -}}
       <img
        class="cat_img"
-       src="{{$.N.Root}}/_static/{{urlpath .Thumb.Alt}}"
+       src="{% (env).Root %}/_static/{{urlpath .Thumb.Alt}}"
        {{- if .Thumb.Width}}
        width="{{.Thumb.Width}}"
        {{- end}}

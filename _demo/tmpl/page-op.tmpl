@@ -97,7 +97,7 @@ arguments list:
     <a
      class="filelink"
      title="{{html .Original}}"
-     href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}/{{urlpath .Original}}"
+     href="{% (env).FRoot %}/_src/{{urlpath .ID}}/{{urlpath .Original}}"
      target="_blank"
      rel="noopener"
     >
@@ -110,14 +110,14 @@ arguments list:
 
    <a
     class="imglink"
-    href="{{$X.N.FRoot}}/_src/{{urlpath .ID}}"
+    href="{% (env).FRoot %}/_src/{{urlpath .ID}}"
     target="_blank"
     rel="noopener"
    >
     {{- if .Thumb.ID -}}
      <img
       class="imgthumb"
-      src="{{$X.N.FRoot}}/_thm/{{urlpath .Thumb.ID}}"
+      src="{% (env).FRoot %}/_thm/{{urlpath .Thumb.ID}}"
       alt="{{html .ID}}"
       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
@@ -125,7 +125,7 @@ arguments list:
     {{- else if .Thumb.Alt -}}
      <img
       class="imgthumb"
-      src="{{$X.N.Root}}/_static/{{urlpath .Thumb.Alt}}"
+      src="{% (env).Root %}/_static/{{urlpath .Thumb.Alt}}"
       alt="{{html .ID}}"
       {{- if .Thumb.Width}} width="{{.Thumb.Width}}"{{end}}
       {{- if .Thumb.Height}} height="{{.Thumb.Height}}"{{end}}
