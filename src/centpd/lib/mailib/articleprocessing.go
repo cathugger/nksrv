@@ -561,6 +561,10 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 				var pbinary bool
 				pxr, _, pbinary, err =
 					cfg.processMessagePrepareReader(pcte, pismultipart, pr)
+				if err != nil {
+					// XXX maybe skip only this part?
+					return
+				}
 
 				var partI PartInfo
 				partI.ContentType = pct
