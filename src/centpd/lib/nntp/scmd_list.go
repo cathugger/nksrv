@@ -80,13 +80,13 @@ func cmdXGTitle(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(args) > 0 {
 		wildmat = args[0]
 		if !validWildmat(wildmat) {
-			c.w.PrintfLine("501 invalid wildmat")
+			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}
 	}
 
 	if !c.AllowReading && !c.AllowPosting {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
@@ -109,9 +109,10 @@ Xref:full
 `)
 
 func listCmdOverviewFmt(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.ResListFollows()
+	AbortOnErr(c.w.ResListFollows())
 	dw := c.w.DotWriter()
-	dw.Write(overviewFmt)
-	dw.Close()
+	_, e := dw.Write(overviewFmt)
+	AbortOnErr(e)
+	AbortOnErr(dw.Close())
 	return true
 }

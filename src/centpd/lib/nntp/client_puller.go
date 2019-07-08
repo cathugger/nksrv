@@ -478,7 +478,12 @@ func (c *NNTPPuller) processTODOList(
 			maxid, new_maxid)
 		if new_maxid >= 0 && new_maxid > maxid {
 			c.log.LogPrintf(DEBUG, "processTODOList defer: updating group id")
-			c.db.UpdateGroupID(group, uint64(new_maxid))
+			e := c.db.UpdateGroupID(group, uint64(new_maxid))
+			if e != nil {
+				// non-serious
+				c.log.LogPrintf(WARN,
+					"processTODOList updating group id fail: %v", e)
+			}
 		}
 	}()
 
