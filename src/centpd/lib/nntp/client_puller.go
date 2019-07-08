@@ -29,10 +29,10 @@ type PullerDatabase interface {
 	UpdateGroupID(group string, id uint64) error
 
 	// to keep list of received newsgroups
-	StartTempGroups() error        // before we start adding
-	CancelTempGroups()             // if we fail in middle of adding
-	FinishTempGroups(partial bool) // after all list is added
-	DoneTempGroups()               // after we finished using them
+	StartTempGroups() error              // before we start adding
+	CancelTempGroups()                   // if we fail in middle of adding
+	FinishTempGroups(partial bool) error // after all list is added
+	DoneTempGroups()                     // after we finished using them
 	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
 	StoreTempGroup(group []byte, old_id uint64) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)

@@ -186,17 +186,18 @@ func (s *PullerDB) StartTempGroups() error {
 func (s *PullerDB) CancelTempGroups() {
 	// nothing :^)
 }
-func (s *PullerDB) FinishTempGroups(partial bool) {
+func (s *PullerDB) FinishTempGroups(partial bool) (err error) {
 	// there, if partial == false, we can clean up old
 	if !partial {
 		nonce := s.getNonce()
 		q := `DELETE FROM ib0.puller_group_track
 WHERE sid = $1 AND last_use <> $2`
-		_, e := s.sp.db.DB.Exec(q, s.id, nonce)
-		if e != nil {
-			s.sp.sqlError("puller_group_track delete query execution", e)
+		_, err = s.sp.db.DB.Exec(q, s.id, nonce)
+		if err != nil {
+			return s.sp.sqlError("puller_group_track delete query execution", err)
 		}
 	}
+	return
 }
 func (s *PullerDB) DoneTempGroups() {
 	// we would clean something up if we cared
@@ -214,7 +215,7 @@ ON CONFLICT (sid,bid)
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce, new_id)
 	if e != nil {
-		s.sp.sqlError("puller_group_track upsert query execution", e)
+		return s.sp.sqlError("puller_group_track upsert query execution", e)
 	}
 	return nil
 }
@@ -229,7 +230,7 @@ ON CONFLICT (sid,bid)
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce)
 	if e != nil {
-		s.sp.sqlError("puller_group_track upsert query execution", e)
+		return s.sp.sqlError("puller_group_track upsert query execution", e)
 	}
 	return nil
 }
@@ -246,7 +247,7 @@ ORDER BY xb.b_name`
 		s.temp_rows, err = s.sp.db.DB.Query(q, s.id, s.nonce)
 		if err != nil {
 			s.temp_rows = nil
-			s.sp.sqlError("puller_group_track load query", err)
+			err = s.sp.sqlError("puller_group_track load query", err)
 			return
 		}
 	}

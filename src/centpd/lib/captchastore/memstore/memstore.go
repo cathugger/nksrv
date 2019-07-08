@@ -28,7 +28,9 @@ func NewMemStore() captchastore.CaptchaStore {
 	return ms
 }
 
-func (ms *MemStore) StoreSolved(obj []byte, expires, nowtime int64) (fresh bool, err error) {
+func (ms *MemStore) StoreSolved(
+	obj []byte, expires, nowtime int64) (fresh bool, err error) {
+
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 

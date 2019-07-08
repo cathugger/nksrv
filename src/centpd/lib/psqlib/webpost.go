@@ -624,7 +624,7 @@ ON
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 
@@ -878,7 +878,9 @@ func (sp *PSQLIB) IBDeleteBoard(
 		}
 		err = sp.sqlError("board delete query row scan", e)
 		code = http.StatusInternalServerError
+		return
 	}
+
 	return nil, 0
 }
 

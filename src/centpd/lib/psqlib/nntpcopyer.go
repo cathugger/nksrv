@@ -58,7 +58,10 @@ func (c *fullNNTPCopyer) CopyFrom(
 			c.gs.gpid = gpid
 		}
 
-		c.w.ResArticleFollows(bpid, msgid)
+		err = c.w.ResArticleFollows(bpid, msgid)
+		if err != nil {
+			return
+		}
 		c.dw = c.w.DotWriter()
 	}
 
@@ -137,7 +140,10 @@ func (c *headNNTPCopyer) CopyFrom(
 			c.gs.gpid = gpid
 		}
 
-		c.w.ResHeadFollows(bpid, msgid)
+		err = c.w.ResHeadFollows(bpid, msgid)
+		if err != nil {
+			return
+		}
 		c.dw = c.w.DotWriter()
 	}
 
@@ -246,7 +252,10 @@ func (c *bodyNNTPCopyer) CopyFrom(
 			c.gs.gpid = gpid
 		}
 
-		c.w.ResBodyFollows(bpid, msgid)
+		err = c.w.ResBodyFollows(bpid, msgid)
+		if err != nil {
+			return
+		}
 		c.dw = c.w.DotWriter()
 	}
 
@@ -330,7 +339,10 @@ func (c statNNTPCopyer) CopyFrom(
 	}
 
 	// interface abuse
-	c.w.ResArticleFound(bpid, msgid)
+	err = c.w.ResArticleFound(bpid, msgid)
+	if err != nil {
+		return
+	}
 	return 0, nil
 }
 

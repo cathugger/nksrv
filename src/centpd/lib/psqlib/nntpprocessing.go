@@ -453,7 +453,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 

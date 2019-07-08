@@ -204,7 +204,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 

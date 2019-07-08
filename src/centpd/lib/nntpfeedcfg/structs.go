@@ -31,10 +31,10 @@ type PrivCertCfg struct {
 }
 
 type ServerCommonCfg struct {
-	Enabled    bool        `toml:"enabled"`
-	Priv       string      `toml:"priv"`
-	TLSPriv    string      `toml:"tls_priv"`
-	CertFPAutoAuth        bool `toml:"certfp_autoauth"`
+	Enabled               bool        `toml:"enabled"`
+	Priv                  string      `toml:"priv"`
+	TLSPriv               string      `toml:"tls_priv"`
+	CertFPAutoAuth        bool        `toml:"certfp_autoauth"`
 	TLSCert               PrivCertCfg `toml:"tls_cert"`
 	UnsafePass            bool        `toml:"unsafe_pass"`
 	UnsafeEarlyUserReject bool        `toml:"unsafe_early_user_reject"`
@@ -42,8 +42,8 @@ type ServerCommonCfg struct {
 }
 
 var DefaultServerCommonCfg = ServerCommonCfg{
-	Enabled: true,
-	Priv:    "rw",
+	Enabled:        true,
+	Priv:           "rw",
 	CertFPAutoAuth: true,
 }
 

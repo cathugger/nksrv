@@ -97,8 +97,12 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		return nil, err
 	}
 	//p.nntpfs.RemoveDir(nntpIncomingTempDir)
-	p.nntpfs.MakeDir(nntpIncomingDir)
-	p.nntpfs.MakeDir(nntpPullerDir)
+	if err = p.nntpfs.MakeDir(nntpIncomingDir); err != nil {
+		return nil, err
+	}
+	if err = p.nntpfs.MakeDir(nntpPullerDir); err != nil {
+		return nil, err
+	}
 
 	if cfg.TBuilder != nil {
 

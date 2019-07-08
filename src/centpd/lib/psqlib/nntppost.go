@@ -24,10 +24,6 @@ func validMsgID(s FullMsgIDStr) bool {
 	return nntp.ValidMessageID(unsafeStrToBytes(string(s)))
 }
 
-func reservedMsgID(s FullMsgIDStr) bool {
-	return nntp.ReservedMessageID(unsafeStrToBytes(string(s)))
-}
-
 func cutMsgID(s FullMsgIDStr) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(
 		nntp.CutMessageID(unsafeStrToBytes(string(s)))))
@@ -301,18 +297,19 @@ func (sp *PSQLIB) nntpSendIncomingArticle(
 func (sp *PSQLIB) HandlePost(
 	w Responder, cs *ConnState, ro nntp.ReaderOpener) bool {
 
-	w.ResSendArticleToBePosted()
+	nntpAbortOnErr(w.ResSendArticleToBePosted())
 	r := ro.OpenReader()
 	err, unexpected := sp.netnewsHandleSubmissionDirectly(r, false)
 	if err != nil {
 		if !unexpected {
-			w.ResPostingFailed(err)
+			err = w.ResPostingFailed(err)
 		} else {
-			w.ResInternalError(err)
+			err = w.ResInternalError(err)
 		}
-		r.Discard(-1)
+		nntpAbortOnErr(err)
+		_, _ = r.Discard(-1)
 	} else {
-		w.ResPostingAccepted()
+		nntpAbortOnErr(w.ResPostingAccepted())
 	}
 	return true
 }
@@ -367,7 +364,7 @@ func (sp *PSQLIB) HandleIHave(
 	// check if we already have it
 	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
-		w.ResInternalError(err)
+		nntpAbortOnErr(w.ResInternalError(err))
 		return true
 	}
 	if exists {
@@ -375,25 +372,26 @@ func (sp *PSQLIB) HandleIHave(
 		return false
 	}
 
-	w.ResSendArticleToBeTransferred()
+	nntpAbortOnErr(w.ResSendArticleToBeTransferred())
 	r := ro.OpenReader()
 
 	info, newname, H, err, unexpected, _ :=
 		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir, false)
 	if err != nil {
 		if !unexpected {
-			w.ResTransferRejected(err)
+			err = w.ResTransferRejected(err)
 		} else {
-			w.ResInternalError(err)
+			err = w.ResInternalError(err)
 		}
-		r.Discard(-1)
+		nntpAbortOnErr(err)
+		_, _ = r.Discard(-1)
 		return true
 	}
 
 	sp.nntpSendIncomingArticle(newname, H, info)
 
 	// we're done there, signal success
-	w.ResTransferSuccess()
+	nntpAbortOnErr(w.ResTransferSuccess())
 	return true
 }
 
@@ -408,14 +406,14 @@ func (sp *PSQLIB) HandleCheck(
 	// check if we already have it
 	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
-		w.ResInternalError(err)
+		nntpAbortOnErr(w.ResInternalError(err))
 		return true
 	}
 	if exists {
 		// article exists, false for default message
 		return false
 	}
-	w.ResArticleWanted(msgid)
+	nntpAbortOnErr(w.ResArticleWanted(msgid))
 	return true
 }
 
@@ -429,8 +427,8 @@ func (sp *PSQLIB) HandleTakeThis(
 	// check if we already have it
 	exists, err := sp.nntpCheckArticleExistsOrBanned(unsafe_sid)
 	if err != nil {
-		w.ResInternalError(err)
-		r.Discard(-1)
+		nntpAbortOnErr(w.ResInternalError(err))
+		_, _ = r.Discard(-1)
 		return true
 	}
 	if exists {
@@ -442,18 +440,19 @@ func (sp *PSQLIB) HandleTakeThis(
 		sp.handleIncoming(r, unsafe_sid, "", nntpIncomingDir, false)
 	if err != nil {
 		if !unexpected {
-			w.ResArticleRejected(msgid, err)
+			err = w.ResArticleRejected(msgid, err)
 		} else {
-			w.ResInternalError(err)
+			err = w.ResInternalError(err)
 		}
-		r.Discard(-1)
+		nntpAbortOnErr(err)
+		_, _ = r.Discard(-1)
 		return true
 	}
 
 	sp.nntpSendIncomingArticle(newname, H, info)
 
 	// we're done there, signal success
-	w.ResArticleTransferedOK(msgid)
+	nntpAbortOnErr(w.ResArticleTransferedOK(msgid))
 	return true
 }
 

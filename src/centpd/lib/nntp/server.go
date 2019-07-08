@@ -211,7 +211,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	if !abortconn {
 		// let OS handle FIN signaling in background
-		c.SetLinger(-1)
+		_ = c.SetLinger(-1)
 		s.log.LogPrintf(NOTICE,
 			"closing %s on %s", c.RemoteAddr(), c.LocalAddr())
 	} else {
@@ -337,6 +337,13 @@ func (s *NNTPServer) Close() bool {
 
 // stolen idea from net/http
 var ErrAbortHandler = errors.New("nntp: abort Handler")
+
+func AbortOnErr(err error) {
+	if err != nil {
+		// TODO wrapping
+		panic(ErrAbortHandler)
+	}
+}
 
 func (c *ConnState) serveClient() bool {
 	defer func() {

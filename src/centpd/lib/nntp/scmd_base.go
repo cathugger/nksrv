@@ -261,14 +261,14 @@ func init() {
 
 func cmdVoid(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(rest) != 0 {
-		c.w.PrintfLine("501 command must not start with space")
+		AbortOnErr(c.w.PrintfLine("501 command must not start with space"))
 	}
 	// otherwise ignore
 	return true
 }
 
 func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("101 capability list follows")
+	AbortOnErr(c.w.PrintfLine("101 capability list follows"))
 
 	rCfg := c.srv.GetRunCfg()
 
@@ -323,7 +323,7 @@ func cmdCapabilities(c *ConnState, args [][]byte, rest []byte) bool {
 	// XXX maybe include backend identification
 	fmt.Fprintf(dw, "IMPLEMENTATION CNTPD\n")
 
-	dw.Close()
+	AbortOnErr(dw.Close())
 
 	return true
 }
@@ -335,32 +335,32 @@ func cmdMode(c *ConnState, args [][]byte, rest []byte) bool {
 
 	if smode == "READER" {
 		if !c.AllowReading {
-			c.w.ResAuthRequired()
+			AbortOnErr(c.w.ResAuthRequired())
 			return true
 		}
 		if c.AllowPosting {
-			c.w.PrintfLine("200 posting allowed")
+			AbortOnErr(c.w.PrintfLine("200 posting allowed"))
 		} else {
-			c.w.PrintfLine("201 posting forbidden")
+			AbortOnErr(c.w.PrintfLine("201 posting forbidden"))
 		}
 	} else if smode == "STREAM" {
 		if !c.prov.SupportsStream() {
-			c.w.PrintfLine("503 STREAMING unimplemented")
+			AbortOnErr(c.w.PrintfLine("503 STREAMING unimplemented"))
 			return true
 		}
 		if c.AllowPosting {
-			c.w.PrintfLine("203 streaming permitted")
+			AbortOnErr(c.w.PrintfLine("203 streaming permitted"))
 		} else {
-			c.w.ResAuthRequired()
+			AbortOnErr(c.w.ResAuthRequired())
 		}
 	} else {
-		c.w.PrintfLine("503 requested MODE not supported")
+		AbortOnErr(c.w.PrintfLine("503 requested MODE not supported"))
 	}
 	return true
 }
 
 func cmdHelp(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("100 here's manual")
+	AbortOnErr(c.w.PrintfLine("100 here's manual"))
 
 	dw := c.w.DotWriter()
 	defer dw.Close()
@@ -449,7 +449,7 @@ func cmdList(c *ConnState, args [][]byte, rest []byte) bool {
 
 	cmd, ok := listCommandMap[string(rest[:x])]
 	if !ok {
-		c.w.PrintfLine("501 unrecognised LIST keyword")
+		AbortOnErr(c.w.PrintfLine("501 unrecognised LIST keyword"))
 		return true
 	}
 
@@ -470,7 +470,7 @@ func cmdList(c *ConnState, args [][]byte, rest []byte) bool {
 		}
 		if len(args) >= cmd.maxargs {
 			if !cmd.allowextra {
-				c.w.PrintfLine("501 too much parameters")
+				AbortOnErr(c.w.PrintfLine("501 too much parameters"))
 			} else {
 				cmd.cmdfunc(c, args, rest[x:])
 			}
@@ -492,7 +492,7 @@ func cmdList(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 argsparsed:
 	if len(args) < cmd.minargs {
-		c.w.PrintfLine("501 not enough parameters")
+		AbortOnErr(c.w.PrintfLine("501 not enough parameters"))
 		return true
 	}
 	cmd.cmdfunc(c, args, nil)
@@ -500,7 +500,7 @@ argsparsed:
 }
 
 func cmdQuit(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("205 goodbye.")
+	_ = c.w.PrintfLine("205 goodbye.")
 	// will close gracefuly
 	return false
 }
@@ -511,27 +511,28 @@ func cmdDate(c *ConnState, args [][]byte, rest []byte) bool {
 	h, m, s := t.Clock()
 	// 111 YYYYMMDDhhmmss    Server date and time
 	// XXX will break format when year>9999
-	c.w.PrintfLine("111 %4d%2d%2d%2d%2d%2d YYYYMMDDhhmmss", Y, M, D, h, m, s)
+	AbortOnErr(c.w.PrintfLine(
+		"111 %4d%2d%2d%2d%2d%2d YYYYMMDDhhmmss", Y, M, D, h, m, s))
 	return true
 }
 
 func cmdSlave(c *ConnState, args [][]byte, rest []byte) bool {
-	c.w.PrintfLine("202 slave status noted") // :^)
+	AbortOnErr(c.w.PrintfLine("202 slave status noted")) // :^)
 	return true
 }
 
 func cmdStartTLS(c *ConnState, args [][]byte, rest []byte) bool {
 	rcfg := c.srv.GetRunCfg()
 	if rcfg.TLSConfig == nil {
-		c.w.PrintfLine("580 TLS not configured")
+		AbortOnErr(c.w.PrintfLine("580 TLS not configured"))
 		return true
 	}
 	if c.tlsStarted() {
-		c.w.PrintfLine("502 TLS already activated")
+		AbortOnErr(c.w.PrintfLine("502 TLS already activated"))
 		return true
 	}
 
-	c.w.PrintfLine("382 continue with TLS negotiation")
+	AbortOnErr(c.w.PrintfLine("382 continue with TLS negotiation"))
 	tlsc := tls.Client(c.conn, rcfg.TLSConfig)
 	err := tlsc.Handshake()
 	if err != nil {

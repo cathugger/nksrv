@@ -39,7 +39,7 @@ var setA = [_articleAmount]struct {
 
 func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return
 	}
 
@@ -49,7 +49,7 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 		if ValidMessageID(FullMsgID(id)) {
 			mid := FullMsgID(id)
 			if ReservedMessageID(mid) || !setA[kind].byMsgID(c, CutMessageID(mid)) {
-				c.w.ResNoArticleWithThatMsgID()
+				AbortOnErr(c.w.ResNoArticleWithThatMsgID())
 			}
 			return
 		}
@@ -57,42 +57,42 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 		num, e := strconv.ParseUint(unsafeBytesToStr(id), 10, 64)
 		if e == nil {
 			if c.CurrentGroup == nil {
-				c.w.ResNoNewsgroupSelected()
+				AbortOnErr(c.w.ResNoNewsgroupSelected())
 				return
 			}
 
 			if !validMessageNum(num) || !setA[kind].byNum(c, num) {
-				c.w.ResNoArticleWithThatNum()
+				AbortOnErr(c.w.ResNoArticleWithThatNum())
 			}
 			return
 		}
 
-		c.w.PrintfLine("501 unrecognised message identifier")
+		AbortOnErr(c.w.PrintfLine("501 unrecognised message identifier"))
 	} else {
 		if c.CurrentGroup == nil {
-			c.w.ResNoNewsgroupSelected()
+			AbortOnErr(c.w.ResNoNewsgroupSelected())
 			return
 		}
 
 		if !setA[kind].byCurr(c) {
-			c.w.ResCurrentArticleNumberIsInvalid()
+			AbortOnErr(c.w.ResCurrentArticleNumberIsInvalid())
 		}
 	}
 }
 
 func cmdGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	if !FullValidGroupSlice(args[0]) {
-		c.w.PrintfLine("501 invalid group name")
+		AbortOnErr(c.w.PrintfLine("501 invalid group name"))
 		return true
 	}
 
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
 	if !c.prov.SelectGroup(c.w, c, args[0]) {
-		c.w.ResNoSuchNewsgroup()
+		AbortOnErr(c.w.ResNoSuchNewsgroup())
 	}
 	return true
 }
@@ -101,13 +101,13 @@ func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	var group []byte
 	if len(args) > 0 {
 		if !FullValidGroupSlice(args[0]) {
-			c.w.PrintfLine("501 invalid group name")
+			AbortOnErr(c.w.PrintfLine("501 invalid group name"))
 			return true
 		}
 		group = args[0]
 	} else {
 		if c.CurrentGroup == nil {
-			c.w.ResNoNewsgroupSelected()
+			AbortOnErr(c.w.ResNoNewsgroupSelected())
 			return true
 		}
 	}
@@ -123,19 +123,19 @@ func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
 	if !c.prov.SelectAndListGroup(c.w, c, group, rmin, rmax) {
-		c.w.ResNoSuchNewsgroup()
+		AbortOnErr(c.w.ResNoSuchNewsgroup())
 	}
 	return true
 }
 
 func cmdNext(c *ConnState, args [][]byte, rest []byte) bool {
 	if c.CurrentGroup == nil {
-		c.w.ResNoNewsgroupSelected()
+		AbortOnErr(c.w.ResNoNewsgroupSelected())
 		return true
 	}
 
@@ -147,7 +147,7 @@ func cmdNext(c *ConnState, args [][]byte, rest []byte) bool {
 
 func cmdLast(c *ConnState, args [][]byte, rest []byte) bool {
 	if c.CurrentGroup == nil {
-		c.w.ResNoNewsgroupSelected()
+		AbortOnErr(c.w.ResNoNewsgroupSelected())
 		return true
 	}
 
@@ -193,7 +193,7 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
@@ -226,7 +226,7 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
@@ -237,7 +237,7 @@ func cmdNewGroups(c *ConnState, args [][]byte, rest []byte) bool {
 
 func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return
 	}
 
@@ -246,45 +246,45 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 
 		if ValidMessageID(FullMsgID(id)) {
 			if !c.prov.SupportsOverByMsgID() {
-				c.w.PrintfLine("503 OVER MSGID unimplemented")
+				AbortOnErr(c.w.PrintfLine("503 OVER MSGID unimplemented"))
 				return
 			}
 			mid := FullMsgID(id)
 			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, c, CutMessageID(mid)) {
-				c.w.ResNoArticleWithThatMsgID()
+				AbortOnErr(c.w.ResNoArticleWithThatMsgID())
 			}
 		} else {
 			if c.CurrentGroup == nil {
-				c.w.ResNoNewsgroupSelected()
+				AbortOnErr(c.w.ResNoNewsgroupSelected())
 				return
 			}
 
 			var rmin, rmax int64
 			var valid bool
 			if rmin, rmax, valid = parseRange(unsafeBytesToStr(id)); !valid {
-				c.w.PrintfLine("501 invalid range")
+				AbortOnErr(c.w.PrintfLine("501 invalid range"))
 				return
 			}
 
 			if over {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetOverByRange(c.w, c, rmin, rmax) {
-					c.w.ResNoArticlesInThatRange()
+					AbortOnErr(c.w.ResNoArticlesInThatRange())
 				}
 			} else {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXOverByRange(c.w, c, rmin, rmax) {
 					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
-					c.w.ResXNoArticles()
+					AbortOnErr(c.w.ResXNoArticles())
 				}
 			}
 		}
 	} else {
 		if c.CurrentGroup == nil {
-			c.w.ResNoNewsgroupSelected()
+			AbortOnErr(c.w.ResNoNewsgroupSelected())
 			return
 		}
 
 		if !c.prov.GetOverByCurr(c.w, c) {
-			c.w.ResCurrentArticleNumberIsInvalid()
+			AbortOnErr(c.w.ResCurrentArticleNumberIsInvalid())
 		}
 	}
 }
@@ -296,7 +296,7 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 	}
 
 	if !c.AllowReading {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return
 	}
 
@@ -321,35 +321,35 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 				}
 			}
 			if !ok {
-				c.w.ResNoArticleWithThatMsgID()
+				AbortOnErr(c.w.ResNoArticleWithThatMsgID())
 			}
 		} else {
 			if c.CurrentGroup == nil {
-				c.w.ResNoNewsgroupSelected()
+				AbortOnErr(c.w.ResNoNewsgroupSelected())
 				return
 			}
 
 			var rmin, rmax int64
 			var valid bool
 			if rmin, rmax, valid = parseRange(unsafeBytesToStr(id)); !valid {
-				c.w.PrintfLine("501 invalid range")
+				AbortOnErr(c.w.PrintfLine("501 invalid range"))
 				return
 			}
 
 			if hdr {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetHdrByRange(c.w, c, hq, rmin, rmax) {
-					c.w.ResNoArticlesInThatRange()
+					AbortOnErr(c.w.ResNoArticlesInThatRange())
 				}
 			} else {
 				if (rmax >= 0 && rmax < rmin) || !c.prov.GetXHdrByRange(c.w, c, hq, rmin, rmax) {
 					// {RFC 2980} If no articles are in the range specified, a 420 error response is returned by the server.
-					c.w.ResXNoArticles()
+					AbortOnErr(c.w.ResXNoArticles())
 				}
 			}
 		}
 	} else {
 		if c.CurrentGroup == nil {
-			c.w.ResNoNewsgroupSelected()
+			AbortOnErr(c.w.ResNoNewsgroupSelected())
 			return
 		}
 
@@ -360,7 +360,7 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 			ok = c.prov.GetXHdrByCurr(c.w, c, hq)
 		}
 		if !ok {
-			c.w.ResCurrentArticleNumberIsInvalid()
+			AbortOnErr(c.w.ResCurrentArticleNumberIsInvalid())
 		}
 	}
 }

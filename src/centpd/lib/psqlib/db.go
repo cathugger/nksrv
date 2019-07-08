@@ -31,7 +31,7 @@ func (sp *PSQLIB) doDbIbit() (err error) {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 

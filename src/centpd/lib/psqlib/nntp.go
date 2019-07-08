@@ -18,6 +18,13 @@ import (
 	"centpd/lib/nntp"
 )
 
+func nntpAbortOnErr(err error) {
+	if err != nil {
+		// TODO wrapping
+		panic(nntp.ErrAbortHandler)
+	}
+}
+
 var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 
 type groupState struct {
@@ -99,9 +106,9 @@ func (sp *PSQLIB) handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 	if notexist {
 		return false // this is pretty convenient
 	} else if e == errNoBoardSelected {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 	} else {
-		w.ResInternalError(e)
+		nntpAbortOnErr(w.ResInternalError(e))
 	}
 	return true
 }
@@ -206,7 +213,8 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 		if err == sql.ErrNoRows {
 			return false
 		}
-		w.ResInternalError(sp.sqlError("board-posts row query scan", err))
+		nntpAbortOnErr(w.ResInternalError(
+			sp.sqlError("board-posts row query scan", err)))
 		return true
 	}
 
@@ -227,10 +235,10 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 		if hi.Int64 < lo.Int64 {
 			hi = lo // paranoia
 		}
-		w.ResGroupSuccessfullySelected(
-			cnt, uint64(lo.Int64), uint64(hi.Int64), sgroup)
+		nntpAbortOnErr(w.ResGroupSuccessfullySelected(
+			cnt, uint64(lo.Int64), uint64(hi.Int64), sgroup))
 	} else {
-		w.ResGroupSuccessfullySelected(0, 0, 0, sgroup)
+		nntpAbortOnErr(w.ResGroupSuccessfullySelected(0, 0, 0, sgroup))
 	}
 
 	return true
@@ -241,7 +249,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		if len(group) == 0 {
-			w.ResNoNewsgroupSelected()
+			nntpAbortOnErr(w.ResNoNewsgroupSelected())
 			return true
 		}
 		if gs == nil {
@@ -260,7 +268,8 @@ func (sp *PSQLIB) SelectAndListGroup(
 	rows, err := sp.st_prep[st_NNTP_SelectAndListGroup].
 		Query(sgroup, rmin, rmax)
 	if err != nil {
-		w.ResInternalError(sp.sqlError("board-posts query", err))
+		nntpAbortOnErr(w.ResInternalError(
+			sp.sqlError("board-posts query", err)))
 		return true
 	}
 
@@ -273,7 +282,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 			rows.Close()
 			err = sp.sqlError("board-post query rows scan", err)
 			if dw == nil {
-				w.ResInternalError(err)
+				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
 				w.Abort()
 			}
@@ -293,11 +302,11 @@ func (sp *PSQLIB) SelectAndListGroup(
 				if uint64(hi.Int64) < uint64(lo.Int64) {
 					hi = lo // paranoia
 				}
-				w.ResArticleNumbersFollow(
+				nntpAbortOnErr(w.ResArticleNumbersFollow(
 					uint64(pcnt.Int64),
-					uint64(lo.Int64), uint64(hi.Int64), sgroup)
+					uint64(lo.Int64), uint64(hi.Int64), sgroup))
 			} else {
-				w.ResArticleNumbersFollow(0, 0, 0, sgroup)
+				nntpAbortOnErr(w.ResArticleNumbersFollow(0, 0, 0, sgroup))
 			}
 
 			dw = w.DotWriter()
@@ -311,7 +320,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 		rows.Close()
 		err = sp.sqlError("board-post query rows iteration", err)
 		if dw == nil {
-			w.ResInternalError(err)
+			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
 			w.Abort()
 		}
@@ -328,11 +337,11 @@ func (sp *PSQLIB) SelectAndListGroup(
 func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return
 	}
 	if gs.bpid == 0 {
-		w.ResCurrentArticleNumberIsInvalid()
+		nntpAbortOnErr(w.ResCurrentArticleNumberIsInvalid())
 		return
 	}
 
@@ -345,26 +354,26 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			w.ResNoNextArticleInThisGroup()
+			nntpAbortOnErr(w.ResNoNextArticleInThisGroup())
 			return
 		}
-		w.ResInternalError(sp.sqlError("posts row query scan", err))
+		nntpAbortOnErr(w.ResInternalError(
+			sp.sqlError("posts row query scan", err)))
 		return
 	}
 
 	gs.bpid = nbpid
 	gs.gpid = ngpid
-	w.ResArticleFound(nbpid, msgid)
-	return
+	nntpAbortOnErr(w.ResArticleFound(nbpid, msgid))
 }
 func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return
 	}
 	if gs.bpid == 0 {
-		w.ResCurrentArticleNumberIsInvalid()
+		nntpAbortOnErr(w.ResCurrentArticleNumberIsInvalid())
 		return
 	}
 
@@ -377,17 +386,17 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			w.ResNoPrevArticleInThisGroup()
+			nntpAbortOnErr(w.ResNoPrevArticleInThisGroup())
 			return
 		}
-		w.ResInternalError(sp.sqlError("posts row query scan", err))
+		nntpAbortOnErr(w.ResInternalError(
+			sp.sqlError("posts row query scan", err)))
 		return
 	}
 
 	gs.bpid = nbpid
 	gs.gpid = ngpid
-	w.ResArticleFound(nbpid, msgid)
-	return
+	nntpAbortOnErr(w.ResArticleFound(nbpid, msgid))
 }
 
 func emptyWildmat(w []byte) bool {
@@ -412,7 +421,8 @@ func (sp *PSQLIB) ListNewNews(
 			rows, err = sp.st_prep[st_NNTP_ListNewNews_one].Query(qt, swildmat)
 		}
 		if err != nil {
-			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
+			nntpAbortOnErr(aw.GetResponder().ResInternalError(
+				sp.sqlError("newnews query", err)))
 			return
 		}
 
@@ -423,7 +433,7 @@ func (sp *PSQLIB) ListNewNews(
 			err = rows.Scan(&msgid)
 			if err != nil {
 				rows.Close()
-				sp.sqlError("newnews query rows scan", err)
+				_ = sp.sqlError("newnews query rows scan", err)
 				aw.Abort()
 				return
 			}
@@ -437,7 +447,8 @@ func (sp *PSQLIB) ListNewNews(
 
 		rows, err = sp.st_prep[st_NNTP_ListNewNews_all_group].Query(qt)
 		if err != nil {
-			aw.GetResponder().ResInternalError(sp.sqlError("newnews query", err))
+			nntpAbortOnErr(aw.GetResponder().ResInternalError(
+				sp.sqlError("newnews query", err)))
 			return
 		}
 
@@ -450,7 +461,7 @@ func (sp *PSQLIB) ListNewNews(
 			err = rows.Scan(&msgid, &bname)
 			if err != nil {
 				rows.Close()
-				sp.sqlError("newnews query rows scan", err)
+				_ = sp.sqlError("newnews query rows scan", err)
 				aw.Abort()
 				return
 			}
@@ -468,7 +479,7 @@ func (sp *PSQLIB) ListNewNews(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		sp.sqlError("newnews query rows iteration", err)
+		_ = sp.sqlError("newnews query rows iteration", err)
 		aw.Abort()
 		return
 	}
@@ -483,7 +494,8 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	// TODO put something else in status when needed
 	rows, err := sp.st_prep[st_NNTP_ListNewGroups].Query(qt)
 	if err != nil {
-		aw.GetResponder().ResInternalError(sp.sqlError("newgroups query", err))
+		nntpAbortOnErr(aw.GetResponder().ResInternalError(
+			sp.sqlError("newgroups query", err)))
 		return
 	}
 
@@ -495,7 +507,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
 			rows.Close()
-			sp.sqlError("newgroups query rows scan", err)
+			_ = sp.sqlError("newgroups query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -509,7 +521,7 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		sp.sqlError("newgroups query rows iteration", err)
+		_ = sp.sqlError("newgroups query rows iteration", err)
 		aw.Abort()
 		return
 	}
@@ -539,7 +551,8 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 		rows, err = sp.st_prep[st_NNTP_ListActiveGroups_one].Query(wildmat)
 	}
 	if err != nil {
-		aw.GetResponder().ResInternalError(sp.sqlError("list active query", err))
+		nntpAbortOnErr(aw.GetResponder().ResInternalError(
+			sp.sqlError("list active query", err)))
 		return
 	}
 
@@ -551,7 +564,7 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
 			rows.Close()
-			sp.sqlError("list active query rows scan", err)
+			_ = sp.sqlError("list active query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -569,7 +582,7 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		sp.sqlError("list active query rows iteration", err)
+		_ = sp.sqlError("list active query rows iteration", err)
 		aw.Abort()
 		return
 	}
@@ -599,8 +612,8 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 		rows, err = sp.db.DB.Query(q, wildmat)
 	}
 	if err != nil {
-		aw.GetResponder().
-			ResInternalError(sp.sqlError("list newsgroups query", err))
+		nntpAbortOnErr(aw.GetResponder().ResInternalError(
+			sp.sqlError("list newsgroups query", err)))
 		return
 	}
 
@@ -611,7 +624,7 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 		err = rows.Scan(&bname, &bdesc)
 		if err != nil {
 			rows.Close()
-			sp.sqlError("list newsgroups query rows scan", err)
+			_ = sp.sqlError("list newsgroups query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -630,7 +643,7 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		sp.sqlError("list active newsgroups rows iteration", err)
+		_ = sp.sqlError("list active newsgroups rows iteration", err)
 		aw.Abort()
 		return
 	}
@@ -720,7 +733,7 @@ func (sp *PSQLIB) GetOverByMsgID(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		w.ResInternalError(sp.sqlError("overview query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
 		return true
 	}
 	if isbanned {
@@ -731,7 +744,7 @@ func (sp *PSQLIB) GetOverByMsgID(
 		hsubject.String = title
 	}
 
-	w.ResOverviewInformationFollows()
+	nntpAbortOnErr(w.ResOverviewInformationFollows())
 	dw := w.DotWriter()
 	sp.printOver(dw, artnumInGroups(cs, bids, bpids), smsgid,
 		hsubject.String, hfrom.String, hdate.String, hrefs.String,
@@ -745,7 +758,7 @@ func (sp *PSQLIB) GetOverByRange(
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return true
 	}
 
@@ -754,7 +767,7 @@ func (sp *PSQLIB) GetOverByRange(
 	rows, err := sp.st_prep[st_NNTP_GetOverByRange].
 		Query(gs.bid, rmin, rmax)
 	if err != nil {
-		w.ResInternalError(sp.sqlError("overview query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
 		return true
 	}
 
@@ -785,7 +798,7 @@ func (sp *PSQLIB) GetOverByRange(
 			rows.Close()
 			err = sp.sqlError("overview query rows scan", err)
 			if dw == nil {
-				w.ResInternalError(err)
+				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
 				w.Abort()
 			}
@@ -796,7 +809,7 @@ func (sp *PSQLIB) GetOverByRange(
 		}
 
 		if dw == nil {
-			w.ResOverviewInformationFollows()
+			nntpAbortOnErr(w.ResOverviewInformationFollows())
 			dw = w.DotWriter()
 		}
 
@@ -808,7 +821,7 @@ func (sp *PSQLIB) GetOverByRange(
 		rows.Close()
 		err = sp.sqlError("overview query rows iteration", err)
 		if dw == nil {
-			w.ResInternalError(err)
+			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
 			w.Abort()
 		}
@@ -816,7 +829,7 @@ func (sp *PSQLIB) GetOverByRange(
 	}
 
 	if dw != nil {
-		dw.Close()
+		nntpAbortOnErr(dw.Close())
 		return true
 	} else {
 		return false
@@ -830,7 +843,7 @@ func (sp *PSQLIB) GetXOverByRange(
 func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return true
 	}
 	if gs.gpid == 0 {
@@ -863,19 +876,19 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		if err == sql.ErrNoRows {
 			return false
 		}
-		w.ResInternalError(sp.sqlError("overview query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
 		return true
 	}
 	if !hsubject.Valid {
 		hsubject.String = title
 	}
 
-	w.ResOverviewInformationFollows()
+	nntpAbortOnErr(w.ResOverviewInformationFollows())
 	dw := w.DotWriter()
 	sp.printOver(dw, gs.bpid, msgid,
 		hsubject.String, hfrom.String, hdate.String, hrefs.String,
 		bnames, bpids)
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 	return true
 }
 
@@ -931,11 +944,11 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else if shdr == "Lines" || shdr == ":lines" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else {
 
@@ -948,7 +961,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		w.ResInternalError(sp.sqlError("hdr query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
 		return true
 	}
 	if isbanned {
@@ -957,16 +970,16 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 	}
 
 	if rfc {
-		w.ResHdrFollow()
+		nntpAbortOnErr(w.ResHdrFollow())
 		dw := w.DotWriter()
 		fmt.Fprintf(dw, "%d %s\n",
 			bpidIfGroupEq(cbid, bid, bpid), safeHeader(h.String))
-		dw.Close()
+		nntpAbortOnErr(dw.Close())
 	} else {
-		w.ResXHdrFollow()
+		nntpAbortOnErr(w.ResXHdrFollow())
 		dw := w.DotWriter()
 		fmt.Fprintf(dw, "<%s> %s\n", sid, safeHeader(h.String))
-		dw.Close()
+		nntpAbortOnErr(dw.Close())
 	}
 
 	return true
@@ -976,7 +989,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return true
 	}
 
@@ -1010,11 +1023,11 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else if shdr == "Lines" || shdr == ":lines" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else {
 
@@ -1023,7 +1036,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	}
 	if err != nil {
-		w.ResInternalError(sp.sqlError("hdr query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
 		return true
 	}
 
@@ -1038,7 +1051,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 			rows.Close()
 			err = sp.sqlError("hdr query rows scan", err)
 			if dw == nil {
-				w.ResInternalError(err)
+				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
 				w.Abort()
 			}
@@ -1047,9 +1060,9 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 		if dw == nil {
 			if rfc {
-				w.ResHdrFollow()
+				nntpAbortOnErr(w.ResHdrFollow())
 			} else {
-				w.ResXHdrFollow()
+				nntpAbortOnErr(w.ResXHdrFollow())
 			}
 			dw = w.DotWriter()
 		}
@@ -1060,7 +1073,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		rows.Close()
 		err = sp.sqlError("hdr query rows iteration", err)
 		if dw == nil {
-			w.ResInternalError(err)
+			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
 			w.Abort()
 		}
@@ -1079,7 +1092,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
-		w.ResNoNewsgroupSelected()
+		nntpAbortOnErr(w.ResNoNewsgroupSelected())
 		return true
 	}
 	if gs.gpid == 0 {
@@ -1115,11 +1128,11 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	} else if shdr == "Bytes" || shdr == ":bytes" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else if shdr == "Lines" || shdr == ":lines" {
 		// TODO
-		w.PrintfLine("503 %q header unsupported", shdr)
+		nntpAbortOnErr(w.PrintfLine("503 %q header unsupported", shdr))
 		return true
 	} else {
 
@@ -1131,19 +1144,19 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		w.ResInternalError(sp.sqlError("hdr query", err))
+		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
 		return true
 	}
 
 	if rfc {
-		w.ResHdrFollow()
+		nntpAbortOnErr(w.ResHdrFollow())
 	} else {
-		w.ResXHdrFollow()
+		nntpAbortOnErr(w.ResXHdrFollow())
 	}
 
 	dw := w.DotWriter()
 	fmt.Fprintf(dw, "%d %s\n", gs.bpid, safeHeader(h.String))
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 
 	return true
 }

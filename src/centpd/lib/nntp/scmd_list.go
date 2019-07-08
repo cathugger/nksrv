@@ -26,7 +26,7 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if !c.AllowReading && !c.AllowPosting {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 
@@ -46,7 +46,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 
 	if !c.AllowReading && !c.AllowPosting {
-		c.w.ResAuthRequired()
+		AbortOnErr(c.w.ResAuthRequired())
 		return true
 	}
 

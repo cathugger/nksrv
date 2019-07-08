@@ -19,16 +19,16 @@ const postRQMsgArgCount = 17
 const postRQFileArgCount = 7
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
-	sp.ntMutex.RLock()
+	sp.npMutex.RLock()
 	s = sp.npStmts[t]
-	sp.ntMutex.RUnlock()
+	sp.npMutex.RUnlock()
 
 	if s != nil {
 		return
 	}
 
-	sp.ntMutex.Lock()
-	defer sp.ntMutex.Unlock()
+	sp.npMutex.Lock()
+	defer sp.npMutex.Unlock()
 
 	// there couldve been race so re-examine situation
 	s = sp.npStmts[t]

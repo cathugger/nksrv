@@ -62,11 +62,6 @@ var defaultThreadOptions = threadOptions{
 	//FileLimit: 150,
 }
 
-type threadAttributes struct {
-}
-
-var defaultThreadAttributes = threadAttributes{}
-
 type postAttributes struct {
 	References []ib0.IBMessageReference `json:"refs,omitempty"`
 }

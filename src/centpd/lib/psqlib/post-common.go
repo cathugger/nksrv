@@ -62,30 +62,34 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 
 	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
+
 	offset := uint64(0)
+
+	type idt struct {
+		bid  boardID
+		bpid postID
+	}
+	type postinfo struct {
+		gpid    postID
+		xid     idt
+		bname   string
+		msgid   string
+		ref     string
+		title   string
+		date    time.Time
+		message string
+		txtidx  uint32
+		files   []string
+	}
+	var posts []postinfo
+	lastx := idt{0, 0}
+
 	for {
 		rows, err := xst.Query(modid, offset)
 		if err != nil {
 			return sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
 		}
-		type idt struct {
-			bid  boardID
-			bpid postID
-		}
-		lastx := idt{0, 0}
-		type postinfo struct {
-			gpid    postID
-			xid     idt
-			bname   string
-			msgid   string
-			ref     string
-			title   string
-			date    time.Time
-			message string
-			txtidx  uint32
-			files   []string
-		}
-		var posts []postinfo
+
 		for rows.Next() {
 			/*
 				zbp.g_p_id,
@@ -187,7 +191,7 @@ func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 
