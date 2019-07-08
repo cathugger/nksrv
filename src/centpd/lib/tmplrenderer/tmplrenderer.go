@@ -234,7 +234,11 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		delete(tt, pnames[i])
 	}
 	for i := range rnames {
-		t, ct, e := doFullTemplate("", rnames[i])
+		base := ""
+		if i == rtmplCreatedThread || i == rtmplCreatedPost {
+			base = "html"
+		}
+		t, ct, e := doFullTemplate(base, rnames[i])
 		if e != nil {
 			return e
 		}
