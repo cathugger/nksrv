@@ -6,6 +6,10 @@ import (
 	ib0 "centpd/lib/webib0"
 )
 
+func setCacheControl(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "max-age=1")
+}
+
 func (tr *TmplRenderer) ServeBoardList(
 	w http.ResponseWriter, r *http.Request) {
 
@@ -30,6 +34,7 @@ func (tr *TmplRenderer) ServeBoardList(
 		tr.outTmplP(w, ptmplBoardListErr, code, ctx)
 		return
 	}
+	setCacheControl(w)
 	tr.outTmplP(w, ptmplBoardList, 200, l)
 }
 
@@ -63,6 +68,7 @@ func (tr *TmplRenderer) ServeThreadListPage(
 		return
 	}
 
+	setCacheControl(w)
 	l.C = tr.newCaptchaKey(w)
 
 	if !l.D.HasBackRefs {
@@ -101,6 +107,7 @@ func (tr *TmplRenderer) ServeOverboardPage(
 		tr.outTmplP(w, ptmplOverboardPageErr, code, ctx)
 		return
 	}
+	setCacheControl(w)
 	if !l.D.HasBackRefs {
 		for i := range l.D.Threads {
 			ib0.ProcessBackReferences(
@@ -141,6 +148,7 @@ func (tr *TmplRenderer) ServeThread(
 		return
 	}
 
+	setCacheControl(w)
 	l.C = tr.newCaptchaKey(w)
 
 	if !l.D.HasBackRefs {
@@ -177,5 +185,6 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 		tr.outTmplP(w, ptmplThreadCatalogErr, code, ctx)
 		return
 	}
+	setCacheControl(w)
 	tr.outTmplP(w, ptmplThreadCatalog, 200, l)
 }
