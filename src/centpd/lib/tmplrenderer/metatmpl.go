@@ -33,7 +33,7 @@ import (
 type metaContext struct {
 	dir         string
 	captchamode string
-	env         interface{}
+	env         *NodeInfo
 	staticdir   string
 }
 
@@ -118,8 +118,8 @@ func wrapMCEnv(mc metaContext) func() interface{} {
 	return func() interface{} { return mc.env }
 }
 
-func hashStaticFile(dir, name string) (string, error) {
-	fname := dir + name
+func hashStaticFile(mc metaContext, name string) (string, error) {
+	fname := mc.staticdir + name
 	f, e := os.Open(fname)
 	if e != nil {
 		return "", fmt.Errorf("error opening %q: %v", fname, e)
@@ -140,12 +140,12 @@ func hashStaticFile(dir, name string) (string, error) {
 	var sum [hashlen]byte
 	b.Sum(sum[:0])
 
-	return name + "?v=" + hex.EncodeToString(sum[:]), nil
+	return mc.env.Root + "/_static/" + name + "?v=" + hex.EncodeToString(sum[:]), nil
 }
 
 func wrapMCStatic(mc metaContext) func(string) (string, error) {
 	return func(name string) (string, error) {
-		return hashStaticFile(mc.staticdir, name)
+		return hashStaticFile(mc, name)
 	}
 }
 
