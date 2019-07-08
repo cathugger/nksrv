@@ -7,7 +7,7 @@ import (
 )
 
 func setCacheControl(w http.ResponseWriter) {
-	w.Header().Set("Cache-Control", "max-age=1")
+	w.Header().Set("Cache-Control", "max-age=1, must-revalidate")
 }
 
 func (tr *TmplRenderer) ServeBoardList(
