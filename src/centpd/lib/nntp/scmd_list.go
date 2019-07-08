@@ -6,9 +6,12 @@ type listCmdListOpener struct {
 	Responder
 }
 
-func (o listCmdListOpener) OpenDotWriter() io.WriteCloser {
-	o.Responder.ResListFollows()
-	return o.Responder.DotWriter()
+func (o listCmdListOpener) OpenDotWriter() (_ io.WriteCloser, err error) {
+	err = o.Responder.ResListFollows()
+	if err != nil {
+		return
+	}
+	return o.Responder.DotWriter(), nil
 }
 
 func (o listCmdListOpener) GetResponder() Responder {
@@ -20,7 +23,7 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(args) != 0 {
 		wildmat = args[0]
 		if !validWildmat(wildmat) {
-			c.w.PrintfLine("501 invalid wildmat")
+			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}
 	}
@@ -40,7 +43,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(args) > 0 {
 		wildmat = args[0]
 		if !validWildmat(wildmat) {
-			c.w.PrintfLine("501 invalid wildmat")
+			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}
 	}
@@ -59,9 +62,12 @@ type cmdXGTitleOpener struct {
 	Responder
 }
 
-func (o cmdXGTitleOpener) OpenDotWriter() io.WriteCloser {
-	o.Responder.PrintfLine("282 data follows")
-	return o.Responder.DotWriter()
+func (o cmdXGTitleOpener) OpenDotWriter() (_ io.WriteCloser, err error) {
+	err = o.Responder.PrintfLine("282 data follows")
+	if err != nil {
+		return
+	}
+	return o.Responder.DotWriter(), nil
 }
 
 func (o cmdXGTitleOpener) GetResponder() Responder {

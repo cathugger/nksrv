@@ -30,9 +30,9 @@ type PullerDatabase interface {
 
 	// to keep list of received newsgroups
 	StartTempGroups() error              // before we start adding
-	CancelTempGroups()                   // if we fail in middle of adding
+	CancelTempGroups() error             // if we fail in middle of adding
 	FinishTempGroups(partial bool) error // after all list is added
-	DoneTempGroups()                     // after we finished using them
+	DoneTempGroups() error               // after we finished using them
 	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
 	StoreTempGroup(group []byte, old_id uint64) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
@@ -89,18 +89,21 @@ func (c *NNTPPuller) doActiveList() (err error, fatal bool) {
 	dr := c.openDotReader()
 	defer func() {
 		if err != nil {
-			dr.Discard(-1)
+			_, _ = dr.Discard(-1)
 		}
 	}()
 
-	e := c.db.StartTempGroups()
-	if e != nil {
-		err = fmt.Errorf("StartTempGroups() failed: %v", e)
+	err = c.db.StartTempGroups()
+	if err != nil {
+		err = fmt.Errorf("StartTempGroups() failed: %v", err)
 		return
 	}
 	defer func() {
 		if err == nil {
-			c.db.FinishTempGroups(false)
+			err = c.db.FinishTempGroups(false)
+			if err != nil {
+				err = fmt.Errorf("FinishTempGroups() failed: %v", err)
+			}
 		} else {
 			c.db.CancelTempGroups()
 		}
@@ -184,18 +187,21 @@ func (c *NNTPPuller) doNewsgroupsList() (err error, fatal bool) {
 	dr := c.openDotReader()
 	defer func() {
 		if err != nil {
-			dr.Discard(-1)
+			_, _ = dr.Discard(-1)
 		}
 	}()
 
-	e := c.db.StartTempGroups()
-	if e != nil {
-		err = fmt.Errorf("StartTempGroups() failed: %v", e)
+	err = c.db.StartTempGroups()
+	if err != nil {
+		err = fmt.Errorf("StartTempGroups() failed: %v", err)
 		return
 	}
 	defer func() {
 		if err == nil {
-			c.db.FinishTempGroups(false)
+			err = c.db.FinishTempGroups(false)
+			if err != nil {
+				err = fmt.Errorf("FinishTempGroups() failed: %v", err)
+			}
 		} else {
 			c.db.CancelTempGroups()
 		}
@@ -253,7 +259,7 @@ func (c *NNTPPuller) doCapabilities() (err error, fatal bool) {
 	dr := c.openDotReader()
 	defer func() {
 		if err != nil {
-			dr.Discard(-1)
+			_, _ = dr.Discard(-1)
 		}
 	}()
 	for {
@@ -554,7 +560,7 @@ func (c *NNTPPuller) processTODOList(
 	for i := range c.todoList {
 
 		select {
-		case e, _ := <-finishchan:
+		case e := <-finishchan:
 			handleFinishCase(e)
 			return
 		default:
@@ -592,7 +598,7 @@ func (c *NNTPPuller) processTODOList(
 			c.todoList[i].id, c.todoList[i].msgid)
 
 		select {
-		case e, _ := <-finishchan:
+		case e := <-finishchan:
 			handleFinishCase(e)
 			return
 		default:
@@ -614,7 +620,7 @@ func (c *NNTPPuller) processTODOList(
 			}
 
 			select {
-			case e, _ := <-finishchan:
+			case e := <-finishchan:
 				handleFinishCase(e)
 				return
 			default:
@@ -637,7 +643,7 @@ func (c *NNTPPuller) processTODOList(
 		select {
 		case todochan <- tla:
 			// queued
-		case e, _ := <-finishchan:
+		case e := <-finishchan:
 			handleFinishCase(e)
 			return
 		}
@@ -646,7 +652,7 @@ func (c *NNTPPuller) processTODOList(
 
 	close(todochan)
 	c.log.LogPrintf(DEBUG, "waiting for worker to quit")
-	e, _ := <-finishchan
+	e := <-finishchan
 	if e == nil {
 		c.log.LogPrintf(DEBUG, "worker quit cleanly")
 	} else {

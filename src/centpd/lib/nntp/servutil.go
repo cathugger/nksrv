@@ -201,12 +201,12 @@ func parseDateTime(w Responder, ds, ts []byte) (t time.Time, v bool) {
 	var Y, M, D, h, m, s int
 
 	if Y, M, D, v = parseDateSlice(ds); !v {
-		w.PrintfLine("501 invalid date")
+		AbortOnErr(w.PrintfLine("501 invalid date"))
 		return
 	}
 
 	if h, m, s, v = parseTimeSlice(ts); !v {
-		w.PrintfLine("501 invalid time")
+		AbortOnErr(w.PrintfLine("501 invalid time"))
 		return
 	}
 

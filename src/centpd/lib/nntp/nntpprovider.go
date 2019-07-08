@@ -19,7 +19,7 @@ type ReaderOpener interface {
 }
 
 type AbstractResponder interface {
-	OpenDotWriter() io.WriteCloser
+	OpenDotWriter() (io.WriteCloser, error)
 	GetResponder() Responder
 	Abort()
 }

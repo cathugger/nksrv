@@ -183,8 +183,9 @@ func (s *PullerDB) StartTempGroups() error {
 	s.nextNonce()
 	return nil
 }
-func (s *PullerDB) CancelTempGroups() {
+func (s *PullerDB) CancelTempGroups() error {
 	// nothing :^)
+	return nil
 }
 func (s *PullerDB) FinishTempGroups(partial bool) (err error) {
 	// there, if partial == false, we can clean up old
@@ -199,8 +200,9 @@ WHERE sid = $1 AND last_use <> $2`
 	}
 	return
 }
-func (s *PullerDB) DoneTempGroups() {
+func (s *PullerDB) DoneTempGroups() error {
 	// we would clean something up if we cared
+	return nil
 }
 func (s *PullerDB) StoreTempGroupID(
 	group []byte, new_id uint64, old_id uint64) error {

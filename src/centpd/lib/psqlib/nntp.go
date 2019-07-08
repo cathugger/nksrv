@@ -426,7 +426,11 @@ func (sp *PSQLIB) ListNewNews(
 			return
 		}
 
-		dw = aw.OpenDotWriter()
+		dw, err = aw.OpenDotWriter()
+		if err != nil {
+			rows.Close()
+			nntpAbortOnErr(err)
+		}
 		for rows.Next() {
 			var msgid string
 
@@ -452,7 +456,11 @@ func (sp *PSQLIB) ListNewNews(
 			return
 		}
 
-		dw = aw.OpenDotWriter()
+		dw, err = aw.OpenDotWriter()
+		if err != nil {
+			rows.Close()
+			nntpAbortOnErr(err)
+		}
 		last_msgid := ""
 		for rows.Next() {
 			var msgid string
@@ -499,7 +507,11 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 		return
 	}
 
-	dw := aw.OpenDotWriter()
+	dw, err := aw.OpenDotWriter()
+	if err != nil {
+		rows.Close()
+		nntpAbortOnErr(err)
+	}
 	for rows.Next() {
 		var bname []byte
 		var lo, hi sql.NullInt64
@@ -556,7 +568,11 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 		return
 	}
 
-	dw := aw.OpenDotWriter()
+	dw, err := aw.OpenDotWriter()
+	if err != nil {
+		rows.Close()
+		nntpAbortOnErr(err)
+	}
 	for rows.Next() {
 		var bname []byte
 		var lo, hi sql.NullInt64
@@ -617,7 +633,11 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 		return
 	}
 
-	dw := aw.OpenDotWriter()
+	dw, err := aw.OpenDotWriter()
+	if err != nil {
+		rows.Close()
+		nntpAbortOnErr(err)
+	}
 	for rows.Next() {
 		var bname, bdesc string
 

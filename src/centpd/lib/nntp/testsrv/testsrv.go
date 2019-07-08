@@ -385,7 +385,10 @@ func (p *TestSrv) SelectPrevArticle(w Responder, cs *ConnState) {
 }
 
 func (p *TestSrv) ListNewGroups(r AbstractResponder, qt time.Time) {
-	w := r.OpenDotWriter()
+	w, e := r.OpenDotWriter()
+	if e != nil {
+		panic(nntp.ErrAbortHandler)
+	}
 	defer w.Close()
 
 	for _, gn := range s1.groupsSort {
@@ -402,7 +405,10 @@ func emptyWildmat(w []byte) bool {
 }
 
 func (p *TestSrv) ListNewNews(r AbstractResponder, wildmat []byte, qt time.Time) {
-	w := r.OpenDotWriter()
+	w, e := r.OpenDotWriter()
+	if e != nil {
+		panic(nntp.ErrAbortHandler)
+	}
 	defer w.Close()
 
 	var chk func(string) bool
@@ -426,7 +432,10 @@ func (p *TestSrv) ListNewNews(r AbstractResponder, wildmat []byte, qt time.Time)
 }
 
 func (p *TestSrv) ListActiveGroups(r AbstractResponder, wildmat []byte) {
-	w := r.OpenDotWriter()
+	w, e := r.OpenDotWriter()
+	if e != nil {
+		panic(nntp.ErrAbortHandler)
+	}
 	defer w.Close()
 
 	var chk func(string) bool
@@ -452,7 +461,10 @@ func (p *TestSrv) ListActiveGroups(r AbstractResponder, wildmat []byte) {
 }
 
 func (p *TestSrv) ListNewsgroups(r AbstractResponder, wildmat []byte) {
-	w := r.OpenDotWriter()
+	w, e := r.OpenDotWriter()
+	if e != nil {
+		panic(nntp.ErrAbortHandler)
+	}
 	defer w.Close()
 
 	var chk func(string) bool

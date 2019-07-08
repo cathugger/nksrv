@@ -89,12 +89,12 @@ var _ ListenerCW = tcpListenerWrapper{}
 func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 	c, err := w.AcceptTCP()
 	if err == nil {
-		c.SetLinger(0)
+		_ = c.SetLinger(0)
 		if w.keepAlive != 0 {
-			c.SetKeepAlive(true)
-			c.SetKeepAlivePeriod(w.keepAlive)
+			_ = c.SetKeepAlive(true)
+			_ = c.SetKeepAlivePeriod(w.keepAlive)
 		} else {
-			c.SetKeepAlive(false)
+			_ = c.SetKeepAlive(false)
 		}
 	}
 	// XXX incase c == nil, returns not nil interface,
@@ -184,7 +184,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 			s.log.LogPrintf(WARN,
 				"closing %s on %s because TLS Handshake error: %v",
 				c.RemoteAddr(), c.LocalAddr(), err)
-			c.SetLinger(-1)
+			_ = c.SetLinger(-1)
 			tlsc.Close()
 			goto cleanup
 		}
@@ -200,12 +200,6 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 
 	cs.r = bufreader.NewBufReader(fc)
 	cs.w = Responder{tp.NewWriter(bufio.NewWriter(fc))}
-
-	if cs.AllowPosting {
-		cs.w.PrintfLine("200 welcome! posting allowed.")
-	} else {
-		cs.w.PrintfLine("201 welcome! posting forbidden.")
-	}
 
 	abortconn = cs.serveClient()
 
@@ -350,11 +344,17 @@ func (c *ConnState) serveClient() bool {
 		if r := recover(); r != nil && r != ErrAbortHandler {
 			c.log.LogPrintf(ERROR, "panic in handler: %v", r)
 			if c.log.LockWrite(ERROR) {
-				c.log.Write(debug.Stack())
+				_, _ = c.log.Write(debug.Stack())
 				c.log.Close()
 			}
 		}
 	}()
+
+	if c.AllowPosting {
+		AbortOnErr(c.w.PrintfLine("200 welcome! posting allowed."))
+	} else {
+		AbortOnErr(c.w.PrintfLine("201 welcome! posting forbidden."))
+	}
 
 	args := make([][]byte, 0)
 
@@ -373,7 +373,7 @@ func (c *ConnState) serveClient() bool {
 					// socket error while draining
 					return e != io.EOF
 				}
-				c.w.PrintfLine("501 command too long")
+				AbortOnErr(c.w.PrintfLine("501 command too long"))
 				continue
 			} else {
 				return e != io.EOF
@@ -388,7 +388,7 @@ func (c *ConnState) serveClient() bool {
 		}
 		for _, ch := range incmd {
 			if ch == '\000' || ch == '\r' {
-				c.w.PrintfLine("501 command contains illegal characters")
+				AbortOnErr(c.w.PrintfLine("501 command contains illegal characters"))
 				continue
 			}
 		}
@@ -398,7 +398,7 @@ func (c *ConnState) serveClient() bool {
 		x := parseKeyword(incmd)
 		cmd, ok := commandMap[string(incmd[:x])]
 		if !ok {
-			c.w.PrintfLine("500 sir I do not understand")
+			AbortOnErr(c.w.PrintfLine("500 sir I do not understand"))
 			c.log.LogPrintf(WARN, "unrecognised command %q", incmd[:x])
 			continue
 		}
@@ -423,7 +423,7 @@ func (c *ConnState) serveClient() bool {
 			}
 			if len(args) >= cmd.maxargs {
 				if !cmd.allowextra {
-					c.w.PrintfLine("501 too much parameters")
+					AbortOnErr(c.w.PrintfLine("501 too much parameters"))
 					c.log.LogPrintf(WARN, "too much parameters")
 				} else {
 					if !cmd.cmdfunc(c, args, incmd[x:]) {
@@ -448,7 +448,7 @@ func (c *ConnState) serveClient() bool {
 		}
 	argsparsed:
 		if len(args) < cmd.minargs {
-			c.w.PrintfLine("501 not enough parameters")
+			AbortOnErr(c.w.PrintfLine("501 not enough parameters"))
 			c.log.LogPrintf(WARN, "not enough parameters")
 			goto nextcommand
 		}

@@ -117,7 +117,7 @@ func cmdListGroup(c *ConnState, args [][]byte, rest []byte) bool {
 	if len(args) > 1 {
 		var valid bool
 		if rmin, rmax, valid = parseRange(unsafeBytesToStr(args[1])); !valid {
-			c.w.PrintfLine("501 invalid range")
+			AbortOnErr(c.w.PrintfLine("501 invalid range"))
 			return true
 		}
 	}
@@ -161,9 +161,12 @@ type cmdNewNewsOpener struct {
 	Responder
 }
 
-func (o cmdNewNewsOpener) OpenDotWriter() io.WriteCloser {
-	o.Responder.ResListOfNewArticlesFollows()
-	return o.Responder.DotWriter()
+func (o cmdNewNewsOpener) OpenDotWriter() (_ io.WriteCloser, err error) {
+	err = o.Responder.ResListOfNewArticlesFollows()
+	if err != nil {
+		return
+	}
+	return o.Responder.DotWriter(), nil
 }
 
 func (o cmdNewNewsOpener) GetResponder() Responder {
@@ -172,7 +175,7 @@ func (o cmdNewNewsOpener) GetResponder() Responder {
 
 func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	if !c.prov.SupportsNewNews() {
-		c.w.PrintfLine("503 unimplemented")
+		AbortOnErr(c.w.PrintfLine("503 unimplemented"))
 		return true
 	}
 
@@ -182,7 +185,7 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 
 	wildmat := args[0]
 	if !validWildmat(wildmat) {
-		c.w.PrintfLine("501 invalid wildmat")
+		AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 		return true
 	}
 
@@ -206,9 +209,12 @@ type cmdNewGroupsOpener struct {
 	Responder
 }
 
-func (o cmdNewGroupsOpener) OpenDotWriter() io.WriteCloser {
-	o.Responder.ResListOfNewNewsgroupsFollows()
-	return o.Responder.DotWriter()
+func (o cmdNewGroupsOpener) OpenDotWriter() (_ io.WriteCloser, err error) {
+	err = o.Responder.ResListOfNewNewsgroupsFollows()
+	if err != nil {
+		return
+	}
+	return o.Responder.DotWriter(), nil
 }
 
 func (o cmdNewGroupsOpener) GetResponder() Responder {
@@ -291,7 +297,7 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 
 func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 	if !c.prov.SupportsHdr() {
-		c.w.PrintfLine("503 (X)HDR unimplemented")
+		AbortOnErr(c.w.PrintfLine("503 (X)HDR unimplemented"))
 		return
 	}
 
@@ -303,7 +309,7 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 	hq := args[0]
 	ToLowerASCII(hq)
 	if !validHeaderQuery(hq) {
-		c.w.PrintfLine("501 invalid header query")
+		AbortOnErr(c.w.PrintfLine("501 invalid header query"))
 		return
 	}
 
