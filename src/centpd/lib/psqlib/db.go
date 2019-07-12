@@ -10,16 +10,16 @@ import (
 	"centpd/lib/sqlbucket"
 )
 
-const currIb0Version = "demo6"
+const currIB0Version = "demo6"
 
-func (sp *PSQLIB) doDbIbit() (err error) {
+func (sp *PSQLIB) doDbInit() (err error) {
 	stmts, err := sqlbucket.LoadFromFile("aux/psqlib/init.sql")
 	if err != nil {
 		return fmt.Errorf("err on sql loading: %v", err)
 	}
-	if stmts["version"][0] != currIb0Version {
+	if stmts["version"][0] != currIB0Version {
 		return fmt.Errorf("wrong sql file version %v want %v",
-			stmts["version"][0], currIb0Version)
+			stmts["version"][0], currIB0Version)
 	}
 
 	tx, err := sp.db.DB.BeginTx(context.Background(), &sql.TxOptions{
@@ -50,14 +50,14 @@ func (sp *PSQLIB) doDbIbit() (err error) {
 	return
 }
 
-func (sp *PSQLIB) InitIb0() {
-	e := sp.doDbIbit()
+func (sp *PSQLIB) InitIB0() {
+	e := sp.doDbInit()
 	if e != nil {
 		panic(e)
 	}
 }
 
-func (sp *PSQLIB) CheckIb0() (initialised bool, versionerror error) {
+func (sp *PSQLIB) CheckIB0() (initialised bool, versionerror error) {
 	q := "SHOW server_version_num"
 	var vernum int64
 	err := sp.db.DB.QueryRow(q).Scan(&vernum)
@@ -79,8 +79,8 @@ func (sp *PSQLIB) CheckIb0() (initialised bool, versionerror error) {
 		return false, sp.sqlError("version row query", err)
 	}
 
-	if ver != currIb0Version {
-		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currIb0Version)
+	if ver != currIB0Version {
+		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currIB0Version)
 	}
 
 	return true, nil

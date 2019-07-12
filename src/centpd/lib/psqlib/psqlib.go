@@ -165,7 +165,7 @@ func (sp *PSQLIB) Prepare() (err error) {
 }
 
 func (dbib *PSQLIB) InitAndPrepare() (err error) {
-	valid, err := dbib.CheckIb0()
+	valid, err := dbib.CheckIB0()
 	if err != nil {
 		err = fmt.Errorf("error checking: %v", err)
 		return
@@ -174,9 +174,9 @@ func (dbib *PSQLIB) InitAndPrepare() (err error) {
 		dbib.log.LogPrint(NOTICE,
 			"uninitialized PSQLIB db, attempting to initialize")
 
-		dbib.InitIb0()
+		dbib.InitIB0()
 
-		valid, err = dbib.CheckIb0()
+		valid, err = dbib.CheckIB0()
 		if err != nil {
 			err = fmt.Errorf("error checking (2): %v", err)
 			return
