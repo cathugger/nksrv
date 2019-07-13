@@ -19,15 +19,16 @@ var dbInitStatements = []string{
 }
 
 func (sp PSQL) InitDB() {
-	var charset string
+	var gotcs string
 	q := `SELECT character_set_name FROM information_schema.character_sets`
-	err := sp.DB.QueryRow(q).Scan(&charset)
+	err := sp.DB.QueryRow(q).Scan(&gotcs)
 	if err != nil {
 		panic(err)
 	}
-	if !strings.EqualFold(charset, "UTF8") {
+	const wantcs = "UTF8"
+	if !strings.EqualFold(gotcs, wantcs) {
 		panic(fmt.Errorf(
-			`bad database charset: expected "UTF8" got %q`, charset))
+			`bad database charset: expected %q got %q`, wantcs, gotcs))
 	}
 
 	for i := range dbInitStatements {
