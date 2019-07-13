@@ -13,7 +13,7 @@ export GOPATH=`pwd`
 
 if [ x"$1" = x"-all" ]
 then
-	exec goimports -local 'centpd/' -w src/centpd
+	exec goimports -local 'nksrv/' -w src/nksrv
 fi
 
 if [ "$#" -lt 1 ]
@@ -22,4 +22,4 @@ then
 	exit 1
 fi
 
-exec goimports -local 'centpd/' -w "$@"
+exec goimports -local 'nksrv/' -w "$@"
