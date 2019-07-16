@@ -23,7 +23,7 @@ func (p PSQLStore) InitDb() (err error) {
 	stmts := [...]string{
 		`CREATE SCHEMA captcha`,
 		`CREATE TABLE captcha.keks (
-	kek_order    BIGINT  GENERATED ALWAYS AS IDENTITY,
+	kek_order    INTEGER GENERATED ALWAYS AS IDENTITY,
 	kek_id       BIGINT  NOT NULL,
 	kek_data     BYTEA   NOT NULL,
 	kek_disabled BOOLEAN NOT NULL DEFAULT FALSE,
