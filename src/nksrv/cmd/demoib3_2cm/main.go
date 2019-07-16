@@ -34,7 +34,7 @@ func main() {
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
 	readonly := flag.Bool("readonly", false, "read-only mode")
 	captchamode := flag.String("captchamode", "simple", "[simple, cookie, ssi, esi]")
-	usepsqlstore := flag.Bool("psqlstore", false, "use psqlstore instead of memstore")
+	usememstore := flag.Bool("memstore", false, "use memstore instead of psqlstore")
 
 	flag.Parse()
 
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	var cs captchastore.CaptchaStore
-	if *usepsqlstore {
+	if !*usememstore {
 		cs, err = psqlstore.NewInitAndPrepare(&db, lgr)
 		if err != nil {
 			mlg.LogPrintln(logx.CRITICAL, "psqlstore.NewInitAndPrepare error:", err)
