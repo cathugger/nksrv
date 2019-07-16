@@ -171,7 +171,7 @@ func (dbib *PSQLIB) InitAndPrepare() (err error) {
 	}
 	if !valid {
 		dbib.log.LogPrint(NOTICE,
-			"uninitialized PSQLIB db, attempting to initialize")
+			"uninitialized db, attempting to initialize")
 
 		err = dbib.InitDb()
 		if err != nil {

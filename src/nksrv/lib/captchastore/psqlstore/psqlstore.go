@@ -21,6 +21,7 @@ type PSQLStore struct {
 
 func (p PSQLStore) InitDb() (err error) {
 	stmts := [...]string{
+		"INSERT INTO capabilities(component,version) VALUES ('captcha','" + currDbVersion + "')",
 		`CREATE SCHEMA captcha`,
 		`CREATE TABLE captcha.keks (
 	kek_order    INTEGER GENERATED ALWAYS AS IDENTITY,
@@ -81,7 +82,7 @@ func (p PSQLStore) CheckDb() (initialised bool, err error) {
 	}
 
 	if ver != currDbVersion {
-		return true, fmt.Errorf("incorrect ib0 schema version: %q (our: %q)", ver, currDbVersion)
+		return true, fmt.Errorf("incorrect schema version: %q (our: %q)", ver, currDbVersion)
 	}
 
 	return true, nil
@@ -99,7 +100,7 @@ func (p PSQLStore) InitAndPrepare() (err error) {
 	}
 	if !valid {
 		p.log.LogPrint(NOTICE,
-			"uninitialized PSQLIB db, attempting to initialize")
+			"uninitialized db, attempting to initialize")
 
 		err = p.InitDb()
 		if err != nil {
