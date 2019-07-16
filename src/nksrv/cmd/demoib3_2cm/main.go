@@ -10,7 +10,9 @@ import (
 	"syscall"
 
 	ar "nksrv/lib/apirouter"
+	"nksrv/lib/captchastore"
 	"nksrv/lib/captchastore/memstore"
+	"nksrv/lib/captchastore/psqlstore"
 	"nksrv/lib/democonfigs"
 	di "nksrv/lib/demoib"
 	"nksrv/lib/emime"
@@ -32,6 +34,7 @@ func main() {
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
 	readonly := flag.Bool("readonly", false, "read-only mode")
 	captchamode := flag.String("captchamode", "simple", "[simple, cookie, ssi, esi]")
+	usepsqlstore := flag.Bool("psqlstore", false, "use psqlstore instead of memstore")
 
 	flag.Parse()
 
@@ -77,7 +80,19 @@ func main() {
 			panic("unknown captchamode")
 		}
 	}
-	webcap, err := wc.NewWebCaptcha(memstore.NewMemStore(), usecookies)
+
+	var cs captchastore.CaptchaStore
+	if *usepsqlstore {
+		cs, err = psqlstore.NewInitAndPrepare(&db, lgr)
+		if err != nil {
+			mlg.LogPrintln(logx.CRITICAL, "psqlstore.NewInitAndPrepare error:", err)
+			return
+		}
+	} else {
+		cs = memstore.NewMemStore()
+	}
+
+	webcap, err := wc.NewWebCaptcha(cs, usecookies)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return

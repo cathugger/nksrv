@@ -3,6 +3,7 @@ package psqlstore
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"nksrv/lib/captchastore"
@@ -18,7 +19,7 @@ type PSQLStore struct {
 	log Logger
 }
 
-func (p PSQLStore) doDbInit() (err error) {
+func (p PSQLStore) InitDb() (err error) {
 	stmts := [...]string{
 		`CREATE SCHEMA captcha`,
 		`CREATE TABLE captcha.keks (
@@ -68,13 +69,6 @@ func (p PSQLStore) doDbInit() (err error) {
 	return
 }
 
-func (p PSQLStore) InitPSQLStore() {
-	e := p.doDbInit()
-	if e != nil {
-		panic(e)
-	}
-}
-
 func (p PSQLStore) CheckDb() (initialised bool, err error) {
 	q := `SELECT version FROM capabilities WHERE component = 'captcha' LIMIT 1`
 	var ver string
@@ -96,6 +90,43 @@ func (p PSQLStore) CheckDb() (initialised bool, err error) {
 func NewPSQLStore(db *psql.PSQL, l LoggerX) PSQLStore {
 	log := NewLogToX(l, fmt.Sprintf("captchastore/psqlstore.%p", db))
 	return PSQLStore{db: db, log: log}
+}
+
+func (p PSQLStore) InitAndPrepare() (err error) {
+	valid, err := p.CheckDb()
+	if err != nil {
+		return fmt.Errorf("error checking: %v", err)
+	}
+	if !valid {
+		p.log.LogPrint(NOTICE,
+			"uninitialized PSQLIB db, attempting to initialize")
+
+		err = p.InitDb()
+		if err != nil {
+			return fmt.Errorf("error initializing: %v", err)
+		}
+
+		valid, err = p.CheckDb()
+		if err != nil {
+			return fmt.Errorf("error checking (2): %v", err)
+		}
+		if !valid {
+			return errors.New("database still not valid after initialization")
+		}
+	}
+
+	return
+}
+
+func NewInitAndPrepare(db *psql.PSQL, l LoggerX) (p PSQLStore, err error) {
+	p = NewPSQLStore(db, l)
+
+	err = p.InitAndPrepare()
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 func (p PSQLStore) StoreSolved(

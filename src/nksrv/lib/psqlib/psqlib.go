@@ -165,25 +165,25 @@ func (sp *PSQLIB) Prepare() (err error) {
 }
 
 func (dbib *PSQLIB) InitAndPrepare() (err error) {
-	valid, err := dbib.CheckIB0()
+	valid, err := dbib.CheckDb()
 	if err != nil {
-		err = fmt.Errorf("error checking: %v", err)
-		return
+		return fmt.Errorf("error checking: %v", err)
 	}
 	if !valid {
 		dbib.log.LogPrint(NOTICE,
 			"uninitialized PSQLIB db, attempting to initialize")
 
-		dbib.InitIB0()
-
-		valid, err = dbib.CheckIB0()
+		err = dbib.InitDb()
 		if err != nil {
-			err = fmt.Errorf("error checking (2): %v", err)
-			return
+			return fmt.Errorf("error initializing: %v", err)
+		}
+
+		valid, err = dbib.CheckDb()
+		if err != nil {
+			return fmt.Errorf("error checking (2): %v", err)
 		}
 		if !valid {
-			err = errors.New("database still not valid after initialization")
-			return
+			return errors.New("database still not valid after initialization")
 		}
 	}
 
