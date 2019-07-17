@@ -24,6 +24,7 @@ func main() {
 	var err error
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
+	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
 
@@ -56,6 +57,7 @@ func main() {
 	psqlibcfg := democonfigs.CfgPSQLIB
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
+	psqlibcfg.NodeName = *nodename
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {

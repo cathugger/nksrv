@@ -27,6 +27,7 @@ func main() {
 	socks := flag.String("socks", "", "socks proxy address")
 	pullkey := flag.String("pullkey", "test", "puller identifier used to store state")
 	notrace := flag.Bool("notrace", false, "disable NNTP Path trace")
+	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
 
@@ -65,6 +66,7 @@ func main() {
 	psqlibcfg := democonfigs.CfgPSQLIB
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
+	psqlibcfg.NodeName = *nodename
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {

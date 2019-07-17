@@ -29,6 +29,7 @@ func main() {
 	httpbind := flag.String("httpbind", "127.0.0.1:1234", "http bind address")
 	tmpldir := flag.String("tmpldir", "_demo/tmpl", "template directory")
 	readonly := flag.Bool("readonly", false, "read-only mode")
+	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
 
@@ -66,6 +67,7 @@ func main() {
 	psqlibcfg := democonfigs.CfgPSQLIB
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
+	psqlibcfg.NodeName = *nodename
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {

@@ -35,6 +35,7 @@ func main() {
 	readonly := flag.Bool("readonly", false, "read-only mode")
 	captchamode := flag.String("captchamode", "simple", "[simple, cookie, ssi, esi]")
 	usememstore := flag.Bool("memstore", false, "use memstore instead of psqlstore")
+	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
 
@@ -102,6 +103,7 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.WebCaptcha = webcap
+	psqlibcfg.NodeName = *nodename
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {
