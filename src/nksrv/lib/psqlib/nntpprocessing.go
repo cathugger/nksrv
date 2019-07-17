@@ -470,19 +470,26 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	var gpid, bpid postID
+	var duplicate bool
 	// perform insert
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, bpid, err = sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
+		gpid, bpid, duplicate, err =
+			sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		gpid, bpid, err = sp.insertNewReply(tx,
-			replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
-			pi, modid)
+		gpid, bpid, duplicate, err =
+			sp.insertNewReply(
+				tx, replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
+				pi, modid)
 	}
 	if err != nil {
 		err = fmt.Errorf("post insertion failed: %v", err)
 		unexpected = true
+		return
+	}
+	if duplicate {
+		err = errDuplicateArticle
 		return
 	}
 

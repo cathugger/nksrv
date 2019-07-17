@@ -15,4 +15,5 @@ var (
 	errTooLongTitle          = errors.New("too long title")
 	errTooLongName           = errors.New("too long name")
 	errTooLongMessage        = errors.New("too long message")
+	errDuplicateArticle      = errors.New("article with this ID already exists")
 )

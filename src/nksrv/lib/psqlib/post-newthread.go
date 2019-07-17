@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lib/pq"
+
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
 )
@@ -38,8 +40,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	ugp AS (
 		INSERT INTO
 			ib0.posts (
-				pdate, padded, -- 1, NOW()
-				sage,          -- _
+				pdate,         -- 1
+				padded,        -- NOW()
+				sage,          -- FALSE
 				f_count,       -- 2
 				msgid,         -- 3
 				title,         -- 4
@@ -53,7 +56,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			)
 		VALUES
 			(
-				$1, NOW(), -- pdate, padded
+				$1,        -- pdate
+				NOW(),     -- padded
 				FALSE,     -- sage
 				$2,        -- f_count
 				$3,        -- msgid
@@ -203,7 +207,7 @@ FROM
 
 func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 	bid boardID, pInfo mailib.PostInfo, skipover bool, modid int64) (
-	gpid postID, bpid postID, err error) {
+	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -301,7 +305,12 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 	}
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
-		return 0, 0, sp.sqlError("newthread insert query scan", err)
+		if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == "23505" {
+			// duplicate
+			return 0, 0, true, nil
+		}
+		err = sp.sqlError("newthread insert query scan", err)
+		return
 	}
 
 	// done

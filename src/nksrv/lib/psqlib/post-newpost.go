@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lib/pq"
+
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
 )
@@ -45,7 +47,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	ugp AS (
 		INSERT INTO
 			ib0.posts (
-				pdate, padded, -- 1
+				pdate,         -- 1
+				padded,        -- NOW()
 				sage,          -- 2
 				f_count,       -- 3
 				msgid,         -- 4
@@ -60,7 +63,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			)
 		VALUES
 			(
-				$1, NOW(), -- pdate, padded
+				$1,        -- pdate
+				NOW(),     -- padded
 				$2,        -- sage
 				$3,        -- f_count
 				$4,        -- msgid
@@ -266,7 +270,7 @@ type replyTargetInfo struct {
 
 func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (
-	gpid postID, bpid postID, err error) {
+	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
@@ -370,7 +374,12 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 	}
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
-		return 0, 0, sp.sqlError("newreply insert query scan", err)
+		if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == "23505" {
+			// duplicate
+			return 0, 0, true, nil
+		}
+		err = sp.sqlError("newreply insert query scan", err)
+		return
 	}
 
 	// done

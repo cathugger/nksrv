@@ -638,17 +638,25 @@ ON
 	}
 
 	var gpid, bpid postID
+	var duplicate bool
 	// perform insert
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, bpid, err = sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
+		gpid, bpid, duplicate, err =
+			sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		gpid, bpid, err = sp.insertNewReply(tx,
-			replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
-			pInfo, modid)
+		gpid, bpid, duplicate, err =
+			sp.insertNewReply(
+				tx, replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
+				pInfo, modid)
 	}
 	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+	if duplicate {
+		// shouldn't really happen there
+		err = errDuplicateArticle
 		return rInfo, err, http.StatusInternalServerError
 	}
 
