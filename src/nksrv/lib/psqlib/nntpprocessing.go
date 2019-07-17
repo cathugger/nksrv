@@ -248,7 +248,8 @@ func isSubjectVoid(x string) bool {
 		x = au.TrimWSString(x[1 : len(x)-1])
 	}
 	// content-less subjects some shitty nodes like spamming
-	return x == "" || au.EqualFoldString(x, "None") ||
+	return x == "" ||
+		au.EqualFoldString(x, "None") ||
 		au.EqualFoldString(x, "no subject")
 }
 

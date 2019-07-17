@@ -54,6 +54,7 @@ type PSQLIB struct {
 type Config struct {
 	DB                 *psql.PSQL
 	Logger             *LoggerX
+	NodeName           string
 	SrcCfg             *fstore.Config
 	ThmCfg             *fstore.Config
 	NNTPFSCfg          *fstore.Config
@@ -64,9 +65,17 @@ type Config struct {
 	AltThumber         *altthumber.AltThumber
 	WebCaptcha         *webcaptcha.WebCaptcha
 	AddBoardOnNNTPPost bool
+
 }
 
 // readonly for now
+
+func nonEmptyStrOrPanic(s string) string {
+	if s == "" {
+		panic("empty string")
+	}
+	return s
+}
 
 func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p = new(PSQLIB)
@@ -138,11 +147,13 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.ffo = formFileOpener{&p.src}
 
+	p.instance = nonEmptyStrOrPanic(cfg.NodeName)
+
 	p.fpp = form.DefaultParserParams
 	// TODO make configurable
 	p.fpp.MaxFileCount = 100
 	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
-	p.instance = "nekochan"          // TODO config
+
 	p.maxArticleBodySize = 256 << 20 // TODO config
 
 	p.webcaptcha = cfg.WebCaptcha
