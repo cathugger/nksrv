@@ -65,7 +65,6 @@ type Config struct {
 	AltThumber         *altthumber.AltThumber
 	WebCaptcha         *webcaptcha.WebCaptcha
 	AddBoardOnNNTPPost bool
-
 }
 
 // readonly for now
@@ -151,10 +150,10 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.fpp = form.DefaultParserParams
 	// TODO make configurable
-	p.fpp.MaxFileCount = 100
-	p.fpp.MaxFileAllSize = 64 * 1024 * 1024
+	p.fpp.MaxFileCount = 1000
+	p.fpp.MaxFileAllSize = 1 << 30
 
-	p.maxArticleBodySize = 256 << 20 // TODO config
+	p.maxArticleBodySize = (2 << 30) - 1 // TODO config
 
 	p.webcaptcha = cfg.WebCaptcha
 

@@ -448,6 +448,17 @@ ON
 		sp.applyInstanceThreadOptions(&threadOpts, board)
 	}
 
+	ok, postOpts := parsePostOptions(optimiseFormLine(xfoptions))
+	if !ok {
+		return rInfo, errors.New("invalid options"), http.StatusBadRequest
+	}
+
+	if postOpts.nolimit {
+		// TODO check whether poster is privileged or something
+		// set empty
+		postLimits = submissionLimits{}
+	}
+
 	// apply instance-specific limit tweaks
 	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board)
 
@@ -479,11 +490,6 @@ ON
 	sp.log.LogPrintf(DEBUG,
 		"form fields after processing: Title(%q) Message(%q)",
 		pInfo.MI.Title, pInfo.MI.Message)
-
-	ok, postOpts := parsePostOptions(optimiseFormLine(xfoptions))
-	if !ok {
-		return rInfo, errors.New("invalid options"), http.StatusBadRequest
-	}
 
 	pInfo.MI.Sage = isReply &&
 		(postOpts.sage || strings.ToLower(pInfo.MI.Title) == "sage")

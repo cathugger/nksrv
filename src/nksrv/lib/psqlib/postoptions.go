@@ -3,7 +3,8 @@ package psqlib
 import "strings"
 
 type PostOptions struct {
-	sage bool
+	sage    bool
+	nolimit bool
 }
 
 func parsePostOptions(opts string) (ok bool, popts PostOptions) {
@@ -13,12 +14,14 @@ func parsePostOptions(opts string) (ok bool, popts PostOptions) {
 		switch topt {
 		case "sage":
 			popts.sage = true
+		case "nolimit":
+			popts.nolimit = true
 		case "":
 			if i != len(sopts)-1 {
 				return
 			}
 		default:
-			// idk this opt
+			// idk this opt, not ok
 			return
 		}
 	}
