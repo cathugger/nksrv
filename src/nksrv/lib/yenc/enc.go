@@ -17,6 +17,11 @@ func (e *YEncoder) Write(b []byte) (n int, err error) {
 			nn, err = e.w.Write(e.buf[:e.bufi])
 			if err != nil {
 				// sorta resumable?
+				// not really if nn!=0
+				if nn > 0 {
+					copy(e.buf[:], e.buf[nn:e.bufi])
+					e.bufi -= nn
+				}
 				n = i
 				return
 			}
@@ -49,14 +54,17 @@ func (e *YEncoder) Write(b []byte) (n int, err error) {
 
 func (e *YEncoder) Close() (err error) {
 	if e.bufi != 0 {
-		if e.bufi < lineLength {
+		if e.buf[e.bufi-1] != '\n' {
 			e.buf[e.bufi], e.buf[e.bufi+1] = '\r', '\n'
 			e.bufi += 2
 		}
 		var nn int
 		nn, err = e.w.Write(e.buf[:e.bufi])
 		if err != nil {
-			e.bufi = 0
+			if nn > 0 {
+				copy(e.buf[:], e.buf[nn:e.bufi])
+				e.bufi -= nn
+			}
 			return
 		}
 		if nn != e.bufi {
