@@ -117,9 +117,15 @@ func GenerateMessage(
 		}
 	}
 	if pi.H != nil {
-		mail.WriteHeaders(xw, pi.H, true)
+		err = mail.WriteHeaders(xw, pi.H, true)
+		if err != nil {
+			return
+		}
 	}
-	fmt.Fprintf(xw, "\n")
+	_, err = fmt.Fprintf(xw, "\n")
+	if err != nil {
+		return
+	}
 
 	generateBody := func(
 		w io.Writer, binary bool, poi PostObjectIndex) (err error) {

@@ -159,11 +159,7 @@ func (cfg *MailProcessorConfig) processMessageText(
 					rstr = tu.NormalizeTextMessage(dstr)
 					preservemsgattachment = true
 					// proceed with processing as attachment
-				} else {
-					// ignore
 				}
-			} else {
-				// ignore
 			}
 		}
 
@@ -618,6 +614,10 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		rpinfo.Body, rpinfo.HasNull, rpinfo.Has8Bit, err =
 			trackedGuttleBody(xr, XH, xct_t, xct_par, xbinary)
+		if err != nil {
+			err = fmt.Errorf("trackedGuttleBody: %v", err)
+			return
+		}
 
 		// process face-like headers if any
 		ffn, ffi, err := extractMessageFace(XH, src)
@@ -682,7 +682,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 			// keep on consuming to avoid deadlock incase worker is one who failed
 			if werr != nil {
-				io.Copy(ioutil.Discard, pir)
+				_, _ = io.Copy(ioutil.Discard, pir)
 			}
 
 			wg.Done()

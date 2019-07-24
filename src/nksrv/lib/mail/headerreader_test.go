@@ -9,7 +9,7 @@ import (
 
 type hr_testcase struct {
 	msg   []byte
-	limit int64
+	limit int
 	hdrs  Headers
 }
 

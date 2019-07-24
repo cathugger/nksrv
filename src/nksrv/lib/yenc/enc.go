@@ -16,8 +16,6 @@ func (e *YEncoder) Write(b []byte) (n int, err error) {
 			var nn int
 			nn, err = e.w.Write(e.buf[:e.bufi])
 			if err != nil {
-				// sorta resumable?
-				// not really if nn!=0
 				if nn > 0 {
 					copy(e.buf[:], e.buf[nn:e.bufi])
 					e.bufi -= nn
