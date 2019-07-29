@@ -64,6 +64,10 @@ html {
 .imgthumb {
 }
 
+.imgexp {
+	max-width: 100%;
+}
+
 .opinfo, .rinfo {
 	margin: 2px 4px 2px 4px;
 	/* background-color: #FFCCCC; */
