@@ -33,7 +33,7 @@ var SBase64Enc = base64.
 // MakeFileHash returns textural representation of file hash.
 // It expects file to be seeked at 0.
 func MakeFileHash(r io.Reader) (s string, hs string, e error) {
-	h, e := blake2b.New256(nil)
+	h, e := blake2b.New(28, nil)
 	if e != nil {
 		return
 	}
@@ -43,7 +43,7 @@ func MakeFileHash(r io.Reader) (s string, hs string, e error) {
 		return
 	}
 
-	var b [32]byte
+	var b [28]byte
 	sum := h.Sum(b[:0])
 	s = LowerBase32Enc.EncodeToString(sum)
 	hs = "b2b"
