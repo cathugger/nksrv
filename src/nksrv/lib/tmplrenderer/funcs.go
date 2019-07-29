@@ -11,7 +11,7 @@ import (
 	"nksrv/lib/date"
 	"nksrv/lib/srndtrip"
 	tu "nksrv/lib/textutils"
-	"nksrv/lib/webib0"
+	ib0 "nksrv/lib/webib0"
 )
 
 func f_list(args ...interface{}) []interface{} {
@@ -54,10 +54,10 @@ var funcs = map[string]interface{}{
 		return a + b
 	},
 	// hacks
-	"threadptr": func(x *webib0.IBCommonThread) *webib0.IBCommonThread {
+	"threadptr": func(x *ib0.IBCommonThread) *ib0.IBCommonThread {
 		return x
 	},
-	"postptr": func(x *webib0.IBPostInfo) *webib0.IBPostInfo {
+	"postptr": func(x *ib0.IBPostInfo) *ib0.IBPostInfo {
 		return x
 	},
 	// stuff
@@ -65,6 +65,8 @@ var funcs = map[string]interface{}{
 	"escboard":   escBoard,
 	"truncatefn": truncatefn,
 	"filesize":   filesize,
+	"fileinfo":   fileinfo,
+	"filedata":   filedata,
 	// normal display style, kinda inspired by RFC 3339
 	"date": func(u int64) string {
 		t := date.UnixTime(u)
@@ -173,4 +175,30 @@ func filesize(s int64) string {
 		return fmt.Sprintf("%.3f GiB", fs/(1<<30))
 	}
 	return fmt.Sprintf("%.6f TiB", fs/(1<<40))
+}
+
+func fileinfo(fi *ib0.IBFileInfo) string {
+	// width x height
+	wf, wok := fi.Options["width"].(float64)
+	hf, hok := fi.Options["height"].(float64)
+	if wok && hok {
+		return fmt.Sprintf("%dx%d, %s", int(wf), int(hf), filesize(fi.Size))
+	}
+
+	return filesize(fi.Size)
+}
+
+func filedata(fi *ib0.IBFileInfo) string {
+	b := &strings.Builder{}
+	fmt.Fprintf(b, `data-type="%s"`, fi.Type)
+	// XXX maybe we should just pass-thru these?
+	if fi.Type == "image" {
+		wf, wok := fi.Options["width"].(float64)
+		hf, hok := fi.Options["height"].(float64)
+		if wok && hok {
+			fmt.Fprintf(b, ` data-width="%d"`, int(wf))
+			fmt.Fprintf(b, ` data-height="%d"`, int(hf))
+		}
+	}
+	return b.String()
 }

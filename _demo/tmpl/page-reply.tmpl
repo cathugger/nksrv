@@ -105,8 +105,7 @@ arguments list:
       rel="noopener"
      >{{html (truncatefn .Original 24)}}</a>
 
-     {{/* TODO: should print more info about file */ -}}
-     (<span title="{{.Size}} bytes">{{filesize .Size}}</span>)
+     ({{fileinfo .}})
     </p>
 
     <a
@@ -114,6 +113,7 @@ arguments list:
      href="{% (env).FRoot %}/_src/{{urlpath .ID}}"
      target="_blank"
      rel="noopener"
+     {{filedata . -}}
     >
      {{- if .Thumb.ID -}}
       <img
