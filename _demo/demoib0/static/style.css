@@ -71,6 +71,10 @@ html {
 	max-width: 100%;
 }
 
+.imglink {
+	display: inline;
+}
+
 .opinfo, .rinfo {
 	margin: 2px 4px 2px 4px;
 	/* background-color: #FFCCCC; */
