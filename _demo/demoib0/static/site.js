@@ -7,6 +7,9 @@ function finishimgexpansion(lnk, exp, thm) {
 	delete thm.dataset.loadingexp;
 	// remove expimg from DOM before modification
 	lnk.removeChild(exp);
+	// configure width and height
+	exp.width  = lnk.dataset.width;
+	exp.height = lnk.dataset.height;
 	// un-hide
 	exp.style.removeProperty('display');
 	// perform replace thumb with expanded img
@@ -79,8 +82,6 @@ function expandimg(lnk, thm) {
 		exp = new Image();
 		exp.addEventListener('error', expandingimgerror);
 		exp.src = lnk.href;
-		exp.width  = lnk.dataset.width;
-		exp.height = lnk.dataset.height;
 		exp.className = 'imgexp';
 		exp.style.display = 'none';
 		lnk.appendChild(exp); // add to DOM
