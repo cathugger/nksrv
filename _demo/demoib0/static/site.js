@@ -2,6 +2,9 @@
 
 function onglobalclick(e) {
 	e = e || window.event;
+	if (e.button != 0) {
+		return;
+	}
 	var tgt = e.target;
 	if (tgt.className == "imgthumb") {
 		var lnk = tgt.parentElement;
