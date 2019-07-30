@@ -40,7 +40,7 @@ function checkexpandimg(exp, thm) {
 		return;
 	}
 	// is img element ready?
-	if (!exp.naturalWidth) {
+	if (!exp.naturalWidth || !exp.naturalHeight) {
 		// no - rethrow
 		thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
 		return;
@@ -85,12 +85,8 @@ function expandimg(lnk, thm) {
 		exp.style.display = 'none';
 		lnk.appendChild(exp); // add to DOM
 
-		if (exp.naturalWidth)
-			finishimgexpansion(lnk, exp, thm);
-		else {
-			thm.style.opacity = 0.75;
-			thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
-		}
+		thm.style.opacity = 0.75;
+		thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
 	}
 }
 
@@ -111,13 +107,13 @@ function unexpandimg(lnk, thm, exp) {
 	// current position from top
 	var currpos = document.documentElement.scrollTop || document.body.scrollTop;
 	// console.log("currpos: " + currpos);
-	// current element top RELATIVE TO currpos, minus some additional stuff to feel more natural
-	var filetop = lnk.parentElement.getBoundingClientRect().top - 18;
+	// current element top RELATIVE TO currpos
+	var filetop = lnk.parentElement.getBoundingClientRect().top;
 	// if we're beyond thumbnail image
 	// NOTE: NOT whole post but just specific thumbnail
 	if (filetop < 0) {
-		// scroll to it
-		var newpos = currpos + filetop;
+		// scroll to it. -18 to cover a bit of content above
+		var newpos = currpos + filetop - 18;
 		document.documentElement.scrollTop = newpos;
 		document.body.scrollTop            = newpos;
 	}
