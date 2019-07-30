@@ -1,15 +1,15 @@
 // console.log("ohayo!");
 
-function onimglinkclick(e) {
+function onglobalclick(e) {
+	e = e || window.event;
 	var tgt = e.target;
 	if (tgt.className == "imgthumb") {
 		var lnk = tgt.parentElement;
 		var typ = lnk.dataset.type;
-		console.log(">image thumb clicked, type=" + typ);
+		//console.log(">image thumb clicked, type=" + typ);
 		if (typ == 'image') {
 			// atomic replace will need full copy as we gonna modify child elements
 			var newlnk = lnk.cloneNode(true);
-			newlnk.addEventListener("click", onimglinkclick);
 			newlnk.getElementsByClassName('imgthumb')[0].style.display = 'none';
 			var exps = newlnk.getElementsByClassName("imgexp");
 			if (exps.length > 0) {
@@ -36,7 +36,6 @@ function onimglinkclick(e) {
 		// if we encounter this type then we already know that this is image
 		var lnk = tgt.parentElement;
 		var newlnk = lnk.cloneNode(true);
-		newlnk.addEventListener("click", onimglinkclick);
 		newlnk.getElementsByClassName('imgthumb')[0].style.removeProperty('display');
 		newlnk.getElementsByClassName('imgexp')[0].style.display = 'none';
 		var lp = lnk.parentElement;
@@ -61,19 +60,4 @@ function onimglinkclick(e) {
 	}
 }
 
-function ondomload() {
-	// DOM loaded, patch document
-	console.log(">on DOM load");
-	var links = document.getElementsByClassName("imglink");
-	for (var i = 0; i < links.length; i++) {
-		links[i].addEventListener("click", onimglinkclick);
-	}
-}
-
-if (document.readyState == 'loading') {
-	// it's still loading so add listener
-	document.addEventListener('DOMContentLoaded', ondomload);
-} else {
-	// DOM already done loader so DOMContentLoaded would never come, do work now
-	ondomload();
-}
+document.addEventListener("click", onglobalclick);
