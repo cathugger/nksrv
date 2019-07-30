@@ -19,11 +19,8 @@ function onglobalclick(e) {
 				// new expansion
 				var exp = document.createElement('img');
 				exp.src = lnk.href;
-				// img ones are to hint browser real size
-				// style ones are because max-width otherwise axes ratio
 				exp.width  = lnk.dataset.width;
 				exp.height = lnk.dataset.height;
-				exp.style.width = exp.style.height = "auto";
 				exp.className = 'imgexp';
 				newlnk.appendChild(exp);
 			}
