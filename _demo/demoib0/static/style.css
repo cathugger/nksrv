@@ -72,7 +72,7 @@ html {
 }
 
 .imglink {
-	display: inline;
+	display: inline-block;
 }
 
 .opinfo, .rinfo {
