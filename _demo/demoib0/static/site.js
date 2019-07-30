@@ -1,28 +1,97 @@
 // console.log("ohayo!");
 
+/* image expansion functionality */
+
+function finishimgexpansion(lnk, exp, thm) {
+	// mark as no longer loading
+	delete thm.dataset.loadingexp;
+	// remove expimg from DOM before modification
+	lnk.removeChild(exp);
+	// un-hide
+	exp.style.removeProperty('display');
+	// perform replace thumb with expanded img
+	lnk.replaceChild(exp, thm);
+	// un-set loading indicator
+	thm.style.removeProperty('opacity');
+	// hide thumb
+	thm.style.display = 'none';
+	// reinject into DOM
+	lnk.insertBefore(thm, exp);
+}
+
+function expandingimgerror(e) {
+	var exp = e.target;
+	var lnk = exp.parentElement;
+	var thm = lnk.getElementsByClassName('imgthumb')[0];
+	// mark as failed
+	exp.dataset.failed = 1;
+	// if it was waiting display
+	if (thm.dataset.loadingexp) {
+		// don't wait anymore
+		clearTimeout(thm.dataset.loadingexp);
+		// show it
+		finishimgexpansion(lnk, exp, thm);
+	}
+}
+
+function checkexpandimg(exp, thm) {
+	if (!thm.dataset.loadingexp) {
+		// no longer loading (canceled? errored out?)
+		return;
+	}
+	// is img element ready?
+	if (!exp.naturalWidth) {
+		// no - rethrow
+		thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
+		return;
+	}
+
+	// img element ready to show
+	finishimgexpansion(exp.parentElement, exp, thm);
+}
+
 function expandimg(lnk, thm) {
+	// if already loading don't mess it up
+	if (thm.dataset.loadingexp)
+		return;
+
 	var exp;
 	var exps = lnk.getElementsByClassName("imgexp");
 	if (exps.length > 0) {
 		// expanded img element already exists - reuse
 		exp = exps[0];
+
+		// note that because of previous loadingexp check
+		// this should only happen with already fully loaded imgs
+		// so don't bother with attribute polling
+
 		// before un-hiding, remove from DOM
 		lnk.removeChild(exp);
 		// un-hide
 		exp.style.removeProperty('display');
+		// swap expanded image with thumbnail
+		lnk.replaceChild(exp, thm);
+		// now thm is out of DOM, hide it and put it back
+		thm.style.display = 'none';
+		lnk.insertBefore(thm, exp);
 	} else {
 		// make new expanded img element
 		exp = new Image();
+		exp.addEventListener('error', expandingimgerror);
 		exp.src = lnk.href;
 		exp.width  = lnk.dataset.width;
 		exp.height = lnk.dataset.height;
 		exp.className = 'imgexp';
+		exp.style.display = 'none';
+		lnk.appendChild(exp); // add to DOM
+
+		if (exp.naturalWidth)
+			finishimgexpansion(lnk, exp, thm);
+		else {
+			thm.style.opacity = 0.75;
+			thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
+		}
 	}
-	// swap expanded image with thumbnail
-	lnk.replaceChild(exp, thm);
-	// now thm is out of DOM, hide it and put it back
-	thm.style.display = 'none';
-	lnk.insertBefore(thm, exp);
 }
 
 function unexpandimg(lnk, thm, exp) {
@@ -34,8 +103,9 @@ function unexpandimg(lnk, thm, exp) {
 	lnk.replaceChild(thm, exp);
 	// hide exp
 	exp.style.display = 'none';
-	// add hidden
-	lnk.appendChild(exp);
+	// add hidden (if it didn't fail before)
+	if (!exp.dataset.failed)
+		lnk.appendChild(exp);
 
 	// (attempt to) fix scroll position
 	// current position from top
