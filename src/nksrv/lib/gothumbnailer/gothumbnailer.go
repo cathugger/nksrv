@@ -182,6 +182,9 @@ func (t *GoThumbnailer) ThumbProcess(
 		(t.cfg.MaxPixels > 0 && imgcfg.Width*imgcfg.Height > t.cfg.MaxPixels) {
 
 		close_err()
+
+		// TODO we could still mark this as image and store config
+
 		return
 	}
 
