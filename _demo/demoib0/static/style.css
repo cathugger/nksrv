@@ -83,11 +83,11 @@ html {
 .opimg, .rimg {
 	float: left;
 	/* background-color: #DDFFCC; */
-	margin: 2px 8px 8px 12px;
+	margin: 2px 12px 8px 12px;
 }
 
 .imginfo {
-	margin: 0px 8px 2px 0px;
+	margin: 0px 4px 2px 0px;
 	/* background-color: #CCCCFF; */
 }
 
