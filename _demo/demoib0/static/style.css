@@ -6,7 +6,7 @@
 	src:
 		local("DejaVu Sans"),
 		url("fonts/dejavu-2.37/DejaVuSans.woff2") format("woff2"),
-		url("fonts/dejavu-2.37/DejaVuSans.woff") format("woff");
+		url("fonts/dejavu-2.37/DejaVuSans.woff")  format("woff");
 	font-display: swap;
 }
 
@@ -17,7 +17,7 @@
 	src:
 		local("DejaVu Sans"),
 		url("fonts/dejavu-2.37/DejaVuSans-Bold.woff2") format("woff2"),
-		url("fonts/dejavu-2.37/DejaVuSans-Bold.woff") format("woff");
+		url("fonts/dejavu-2.37/DejaVuSans-Bold.woff")  format("woff");
 	font-display: swap;
 }
 
@@ -31,10 +31,10 @@ html {
 .cat_div {
 	float: left;
 	text-align: center;
-	width: 180px;
+	width:  180px;
 	height: 250px;
 	/* background-color: #EEFFDD; */
-	margin: 2px 2px 2px 2px;
+	margin:  2px 2px 2px 2px;
 	padding: 4px 2px 4px 2px;
 	/* border: 1px solid #EE6666; */
 	overflow: hidden;
@@ -55,9 +55,9 @@ html {
 .cat_img {
 	width: auto;
 	height: auto;
-	min-width: 40px;
+	min-width:  40px;
 	min-height: 40px;
-	max-width: 170px;
+	max-width:  170px;
 	max-height: 170px;
 }
 
@@ -98,9 +98,9 @@ html {
 	display: inline-block;
 	overflow: hidden;
 
-	-moz-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
 	-webkit-box-sizing: border-box;
-	box-sizing: border-box;
+	        box-sizing: border-box;
 }
 
 .t_skipped {
@@ -186,7 +186,7 @@ a.name {
 
 #captcha_img {
 	display: block;
-	margin-left: auto;
+	margin-left:  auto;
 	margin-right: auto;
 }
 
@@ -208,7 +208,7 @@ a.name {
 		width: 100%;
 	}
 	.reply-outer {
-		padding-left: 0px;
+		padding-left:  0px;
 		padding-right: 0px;
 	}
 }
@@ -218,9 +218,9 @@ a.name {
 }
 
 .poi_activator {
-	margin-top: 0px;
+	margin-top:    0px;
 	margin-bottom: 0px;
-	margin-right: 0px;
+	margin-right:  0px;
 	float: right;
 }
 
@@ -230,7 +230,7 @@ a.name {
 
 .poi_hr {
 	color: green;
-	margin-top: 2px;
+	margin-top:    2px;
 	margin-bottom: 2px;
 }
 
