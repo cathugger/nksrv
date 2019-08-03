@@ -125,12 +125,15 @@ function unexpandimg(lnk, thm, exp) {
 function expandaudio(lnk, thm) {
 	var adiv = document.createElement('div');
 	adiv.className = 'audioembed';
-	adiv.style.background = 'url("' + thm.src + '")';
-	adiv.appendChild(new Audio(lnk.href));
+	adiv.style.backgroundImage = 'url("' + thm.src + '")';
+	var audio = new Audio(lnk.href);
+	audio.controls = true;
+	adiv.appendChild(audio);
 	var lpar = lnk.parentElement;
 	lpar.replaceChild(adiv, lnk);
 	lnk.style.display = 'none';
 	lpar.insertBefore(lnk, adiv);
+	audio.play();
 }
 
 function dothumbclick(e, lnk, thm) {
