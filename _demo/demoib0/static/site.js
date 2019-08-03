@@ -122,6 +122,17 @@ function unexpandimg(lnk, thm, exp) {
 	}
 }
 
+function expandaudio(lnk, thm) {
+	var adiv = document.createElement('div');
+	adiv.className = 'audioembed';
+	adiv.style.background = 'url("' + thm.src + '")';
+	adiv.appendChild(new Audio(lnk.href));
+	var lpar = lnk.parentElement;
+	lpar.replaceChild(adiv, lnk);
+	lnk.style.display = 'none';
+	lpar.insertBefore(lnk, adiv);
+}
+
 function dothumbclick(e, lnk, thm) {
 	var typ = lnk.dataset.type;
 	//console.log(">image thumb clicked, type=" + typ);
@@ -130,36 +141,46 @@ function dothumbclick(e, lnk, thm) {
 		expandimg(lnk, thm);
 		// don't actually open link
 		e.preventDefault();
+	} else if (typ == 'audio') {
+		// do expansion
+		expandaudio(lnk);
+		// don't actually open link
+		e.preventDefault();
 	}
 }
 
 function onglobalclick(e) {
 	var tgt = e.target;
-	if (tgt.className == "imgthumb") {
-		var lnk = tgt.parentElement;
-
-		dothumbclick(e, lnk, tgt);
-	} else if (tgt.className == "imgexp") {
-		// if we encounter this type then we already know that this is image
-		var lnk = tgt.parentElement;
-		var thm = lnk.getElementsByClassName('imgthumb')[0];
-		unexpandimg(lnk, thm, tgt);
-
-		// don't actually open link
-		e.preventDefault();
-	} else if (tgt.className == "imglink") {
-		// paranoia
-		var thm = tgt.getElementsByClassName('imgthumb')[0];
-		if (thm.style.display) {
-			// display set (probably to none), this means we have expanded
-			var exps = tgt.getElementsByClassName("imgexp");
-			if (exps.length > 0) {
-				unexpandimg(tgt, thm, exps[0]);
-				e.preventDefault();
+	switch (tgt.className) {
+		case 'imgthumb':
+			dothumbclick(e, tgt.parentElement, tgt);
+			break;
+		case 'imgexp':
+		{
+			// if we encounter this type then we already know that this is image
+			var lnk = tgt.parentElement;
+			var thm = lnk.getElementsByClassName('imgthumb')[0];
+			unexpandimg(lnk, thm, tgt);
+			// don't actually open link
+			e.preventDefault();
+			break;
+		}
+		case 'imglink':
+		{
+			// paranoia
+			var thm = tgt.getElementsByClassName('imgthumb')[0];
+			if (thm.style.display) {
+				// display set (probably to none), this means we have expanded
+				var exps = tgt.getElementsByClassName("imgexp");
+				if (exps.length > 0) {
+					unexpandimg(tgt, thm, exps[0]);
+					e.preventDefault();
+				}
+				// else something weird happened ¯\_(ツ)_/¯
+			} else {
+				dothumbclick(e, tgt, thm);
 			}
-			// else something weird happened ¯\_(ツ)_/¯
-		} else {
-			dothumbclick(e, tgt, thm);
+			break;
 		}
 	}
 }

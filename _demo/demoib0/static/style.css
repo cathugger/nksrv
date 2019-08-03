@@ -75,6 +75,26 @@ html {
 	display: inline-block;
 }
 
+.audioembed {
+	background-size: cover;
+	width:  350px;
+	height: 350px;
+	position: relative;
+}
+
+.audioembed audio {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	max-height: 40%;
+	opacity: 0.0;
+	transition: all 75ms ease-out;
+}
+
+.audioembed:hover audio {
+	opacity: 1.0;
+}
+
 .opinfo, .rinfo {
 	margin: 2px 4px 2px 4px;
 	/* background-color: #FFCCCC; */
