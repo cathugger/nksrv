@@ -232,6 +232,7 @@ function onglobalclick(e) {
 					imginfo.removeChild(cspan);
 				}
 			}
+			break;
 		}
 		case 'audioembed':
 		{
@@ -242,6 +243,7 @@ function onglobalclick(e) {
 			else
 				audio.pause();
 			e.preventDefault();
+			break;
 		}
 	}
 }
