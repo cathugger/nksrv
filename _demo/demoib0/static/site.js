@@ -233,6 +233,15 @@ function onglobalclick(e) {
 				}
 			}
 		}
+		case 'audioembed':
+		{
+			// toggle play/pause if clicked on background
+			var audio = tgt.childNodes[0];
+			if (audio.paused)
+				audio.play();
+			else
+				audio.pause();
+		}
 	}
 }
 
