@@ -241,6 +241,7 @@ function onglobalclick(e) {
 				audio.play();
 			else
 				audio.pause();
+			e.preventDefault();
 		}
 	}
 }
