@@ -133,6 +133,7 @@ function expandaudio(lnk, thm) {
 	var cspan = document.createElement('span');
 	cspan.appendChild(document.createTextNode(' ['));
 	clink = document.createElement('a');
+		clink.href = "";
 		clink.className = 'embedclose';
 		clink.appendChild(document.createTextNode('Close'));
 	cspan.appendChild(clink);
