@@ -98,7 +98,7 @@ function unexpandimg(lnk, thm, exp) {
 	lnk.removeChild(thm);
 	// un-hide
 	thm.style.removeProperty('display');
-	// swap
+	// swap exp -> thm
 	lnk.replaceChild(thm, exp);
 	// hide exp
 	exp.style.display = 'none';
@@ -129,10 +129,24 @@ function expandaudio(lnk, thm) {
 	var audio = new Audio(lnk.href);
 	audio.controls = true;
 	adiv.appendChild(audio);
+
+	var cspan = document.createElement('span');
+	cspan.appendChild(document.createTextNode(' ['));
+	clink = document.createElement('a');
+		clink.className = 'embedclose';
+		clink.appendChild(document.createTextNode('Close'));
+	cspan.appendChild(clink);
+	cspan.appendChild(document.createTextNode(']'));
+
 	var lpar = lnk.parentElement;
 	lpar.replaceChild(adiv, lnk);
 	lnk.style.display = 'none';
 	lpar.insertBefore(lnk, adiv);
+
+	// yeh this aint atomic but very likely won't be noticed
+	var imginfo = lpar.getElementsByClassName("imginfo")[0];
+	imginfo.appendChild(cspan);
+
 	audio.play();
 }
 
@@ -184,6 +198,39 @@ function onglobalclick(e) {
 				dothumbclick(e, tgt, thm);
 			}
 			break;
+		}
+		case 'embedclose':
+		{
+			// do this upfront to not forget
+			e.preventDefault();
+			// parent is span
+			// parent of that is imginfo
+			// parent of that is either opimg or rimg doesnt matter
+			// it should have some sort of embed inside
+			// what sort depends on hidden imglink element [which we'll need to unhide]
+			var cspan = tgt.parentElement;
+			var imginfo = cspan.parentElement;
+			var pcont = imginfo.parentElement;
+			var lnk = pcont.getElementsByClassName('imglink')[0];
+			var typ = lnk.dataset.type;
+			if (typ == 'audio') {
+				var embs = pcont.getElementsByClassName('audioembed');
+				if (embs.length > 0) {
+					var emb = embs[0];
+					// pause playback
+					emb.childNodes[0].pause();
+					// before unhiding remove from DOM
+					pcont.removeChild(lnk);
+					// unhide
+					lnk.style.removeProperty('display');
+					// replace current embed element with it
+					pcont.replaceChild(lnk, emb);
+					// don't reinsert emb just let it get eaten by GC
+
+					// ohyeah also delet close button
+					imginfo.removeChild(cspan);
+				}
+			}
 		}
 	}
 }
