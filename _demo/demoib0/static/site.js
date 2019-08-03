@@ -143,7 +143,7 @@ function dothumbclick(e, lnk, thm) {
 		e.preventDefault();
 	} else if (typ == 'audio') {
 		// do expansion
-		expandaudio(lnk);
+		expandaudio(lnk, thm);
 		// don't actually open link
 		e.preventDefault();
 	}
