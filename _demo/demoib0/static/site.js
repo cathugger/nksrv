@@ -65,7 +65,7 @@ function expandimg(lnk, thm) {
 		exp = exps[0];
 
 		// note that because of previous loadingexp check
-		// this should only happen with already fully loaded imgs
+		// this should only happen with already loaded imgs
 		// so don't bother with attribute polling
 
 		// before un-hiding, remove from DOM
@@ -84,8 +84,10 @@ function expandimg(lnk, thm) {
 		exp.src = lnk.href;
 		exp.className = 'imgexp';
 		exp.style.display = 'none';
-		lnk.appendChild(exp); // add to DOM
+		// add to DOM
+		lnk.appendChild(exp);
 
+		// mark as expanding and start polling
 		thm.style.opacity = 0.75;
 		thm.dataset.loadingexp = setTimeout(checkexpandimg, 15, exp, thm);
 	}
@@ -120,19 +122,23 @@ function unexpandimg(lnk, thm, exp) {
 	}
 }
 
+function dothumbclick(e, lnk, thm) {
+	var typ = lnk.dataset.type;
+	//console.log(">image thumb clicked, type=" + typ);
+	if (typ == 'image') {
+		// do expansion
+		expandimg(lnk, thm);
+		// don't actually open link
+		e.preventDefault();
+	}
+}
+
 function onglobalclick(e) {
 	var tgt = e.target;
 	if (tgt.className == "imgthumb") {
 		var lnk = tgt.parentElement;
-		var typ = lnk.dataset.type;
-		//console.log(">image thumb clicked, type=" + typ);
-		if (typ == 'image') {
-			// perform atomic swap of expanded img and thumbnail
-			expandimg(lnk, tgt);
 
-			// don't actually open link
-			e.preventDefault();
-		}
+		dothumbclick(e, lnk, tgt);
 	} else if (tgt.className == "imgexp") {
 		// if we encounter this type then we already know that this is image
 		var lnk = tgt.parentElement;
@@ -141,6 +147,20 @@ function onglobalclick(e) {
 
 		// don't actually open link
 		e.preventDefault();
+	} else if (tgt.className == "imglink") {
+		// paranoia
+		var thm = tgt.getElementsByClassName('imgthumb')[0];
+		if (thm.style.display) {
+			// display set (probably to none), this means we have expanded
+			var exps = tgt.getElementsByClassName("imgexp");
+			if (exps.length > 0) {
+				unexpandimg(tgt, thm, exps[0]);
+				e.preventDefault();
+			}
+			// else something weird happened ¯\_(ツ)_/¯
+		} else {
+			dothumbclick(e, tgt, thm);
+		}
 	}
 }
 
