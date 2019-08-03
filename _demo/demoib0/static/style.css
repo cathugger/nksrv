@@ -80,6 +80,14 @@ html {
 	width:  350px;
 	height: 350px;
 	position: relative;
+
+	/* disable selection on doubleclick */
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	 -khtml-user-select: none;
+	    -ms-user-select: none;
+	        user-select: none;
+
 }
 
 .audioembed audio {
