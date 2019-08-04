@@ -166,6 +166,7 @@ function expandvideo(lnk, thm) {
 
 	var cspan = newembedclose();
 
+	// TODO maybe wait for loadedmetadata event before showing
 	var lpar = lnk.parentElement;
 	lpar.replaceChild(video, lnk);
 	lnk.style.display = 'none';
