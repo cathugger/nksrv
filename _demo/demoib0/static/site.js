@@ -8,8 +8,10 @@ function finishimgexpansion(lnk, exp, thm) {
 	// remove expimg from DOM before modification
 	lnk.removeChild(exp);
 	// configure width and height
-	exp.width  = lnk.dataset.width;
-	exp.height = lnk.dataset.height;
+	if (lnk.dataset.width)
+		exp.width  = lnk.dataset.width;
+	if (lnk.dataset.height)
+		exp.height = lnk.dataset.height;
 	// un-hide
 	exp.style.removeProperty('display');
 	// perform replace thumb with expanded img
@@ -122,6 +124,18 @@ function unexpandimg(lnk, thm, exp) {
 	}
 }
 
+function newembedclose() {
+	var cspan = document.createElement('span');
+	cspan.appendChild(document.createTextNode(' ['));
+	var clink = document.createElement('a');
+		clink.href = "";
+		clink.className = 'embedclose';
+		clink.appendChild(document.createTextNode('Close'));
+	cspan.appendChild(clink);
+	cspan.appendChild(document.createTextNode(']'));
+	return cspan;
+}
+
 function expandaudio(lnk, thm) {
 	var adiv = document.createElement('div');
 	adiv.className = 'audioembed';
@@ -130,14 +144,7 @@ function expandaudio(lnk, thm) {
 	audio.controls = true;
 	adiv.appendChild(audio);
 
-	var cspan = document.createElement('span');
-	cspan.appendChild(document.createTextNode(' ['));
-	clink = document.createElement('a');
-		clink.href = "";
-		clink.className = 'embedclose';
-		clink.appendChild(document.createTextNode('Close'));
-	cspan.appendChild(clink);
-	cspan.appendChild(document.createTextNode(']'));
+	var cspan = newembedclose();
 
 	var lpar = lnk.parentElement;
 	lpar.replaceChild(adiv, lnk);
@@ -151,20 +158,48 @@ function expandaudio(lnk, thm) {
 	audio.play();
 }
 
+function expandvideo(lnk, thm) {
+	var video = document.createElement('video');
+	video.src = lnk.href;
+	video.className = 'videoembed';
+	video.controls = true;
+
+	var cspan = newembedclose();
+
+	var lpar = lnk.parentElement;
+	lpar.replaceChild(video, lnk);
+	lnk.style.display = 'none';
+	lpar.insertBefore(lnk, video);
+
+	// yeh this aint atomic but very likely won't be noticed
+	var imginfo = lpar.getElementsByClassName("imginfo")[0];
+	imginfo.appendChild(cspan);
+
+	video.play();
+}
+
+
 function dothumbclick(e, lnk, thm) {
 	var typ = lnk.dataset.type;
 	//console.log(">image thumb clicked, type=" + typ);
-	if (typ == 'image') {
-		// do expansion
-		expandimg(lnk, thm);
-		// don't actually open link
-		e.preventDefault();
-	} else if (typ == 'audio') {
-		// do expansion
-		expandaudio(lnk, thm);
-		// don't actually open link
-		e.preventDefault();
+	switch (typ) {
+		case 'image':
+			// do expansion
+			expandimg(lnk, thm);
+			break;
+		case 'audio':
+			// do expansion
+			expandaudio(lnk, thm);
+			break;
+		case 'video':
+			// do expansion
+			expandvideo(lnk, thm);
+			break;
+		default:
+			return;
 	}
+	// don't actually open link
+	e.preventDefault();
 }
 
 function onglobalclick(e) {
@@ -214,23 +249,33 @@ function onglobalclick(e) {
 			var pcont = imginfo.parentElement;
 			var lnk = pcont.getElementsByClassName('imglink')[0];
 			var typ = lnk.dataset.type;
+			var emb;
 			if (typ == 'audio') {
 				var embs = pcont.getElementsByClassName('audioembed');
 				if (embs.length > 0) {
-					var emb = embs[0];
+					emb = embs[0];
 					// pause playback
 					emb.childNodes[0].pause();
-					// before unhiding remove from DOM
-					pcont.removeChild(lnk);
-					// unhide
-					lnk.style.removeProperty('display');
-					// replace current embed element with it
-					pcont.replaceChild(lnk, emb);
-					// don't reinsert emb just let it get eaten by GC
-
-					// ohyeah also delet close button
-					imginfo.removeChild(cspan);
 				}
+			} else if (typ == 'video') {
+				var embs = pcont.getElementsByClassName('videoembed');
+				if (embs.length > 0) {
+					emb = embs[0];
+					// pause playback
+					emb.pause();
+				}
+			}
+			if (emb) {
+				// before unhiding remove from DOM
+				pcont.removeChild(lnk);
+				// unhide
+				lnk.style.removeProperty('display');
+				// replace current embed element with it
+				pcont.replaceChild(lnk, emb);
+				// don't reinsert emb just let it get eaten by GC
+
+				// ohyeah also delet close button
+				imginfo.removeChild(cspan);
 			}
 			break;
 		}
