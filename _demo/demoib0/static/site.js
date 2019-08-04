@@ -124,14 +124,31 @@ function unexpandimg(lnk, thm, exp) {
 	}
 }
 
-function newembedclose() {
+function newembedcontrol(me) {
 	var cspan = document.createElement('span');
-	cspan.appendChild(document.createTextNode(' ['));
-	var clink = document.createElement('a');
+	cspan.appendChild(document.createTextNode('['));
+
+	// XXX it doesn't seem like media elements have event for loop var change
+	// so we can't do reliable back notification
+
+			var loopcb = document.createElement('input');
+			loopcb.type = 'checkbox';
+			loopcb.addEventListener('input', function(e){
+				me.loop = e.target.checked;
+			});
+		var cloop = document.createElement('label');
+		cloop.appendChild(loopcb);
+		cloop.appendChild(document.createTextNode('Loop'));
+	cspan.appendChild(cloop);
+
+	cspan.appendChild(document.createTextNode('] ['));
+
+		var clink = document.createElement('a');
 		clink.href = "";
 		clink.className = 'embedclose';
 		clink.appendChild(document.createTextNode('Close'));
 	cspan.appendChild(clink);
+
 	cspan.appendChild(document.createTextNode(']'));
 	return cspan;
 }
@@ -144,7 +161,7 @@ function expandaudio(lnk, thm) {
 	audio.controls = true;
 	adiv.appendChild(audio);
 
-	var cspan = newembedclose();
+	var cspan = newembedcontrol(audio);
 
 	var lpar = lnk.parentElement;
 	lpar.replaceChild(adiv, lnk);
@@ -164,7 +181,7 @@ function expandvideo(lnk, thm) {
 	video.className = 'videoembed';
 	video.controls = true;
 
-	var cspan = newembedclose();
+	var cspan = newembedcontrol(video);
 
 	// TODO maybe wait for loadedmetadata event before showing
 	var lpar = lnk.parentElement;
