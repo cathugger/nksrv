@@ -500,10 +500,15 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		if info.FRef != "" {
 			cref = cutMsgID(info.FRef)
 		}
+
+		// msgid deletion state
+		var delmsgids delMsgIDState
+		defer sp.cleanDeletedMsgIDs(delmsgids)
+
 		// we should execute it
-		err = sp.execModCmd(
+		delmsgids, err = sp.execModCmd(
 			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
-			pi.MessageID, cref)
+			pi.MessageID, cref, delmsgids)
 		if err != nil {
 			unexpected = true
 			return

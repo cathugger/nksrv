@@ -21,7 +21,9 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 	}
 }
 
-func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
+func (sp *PSQLIB) registeredMod(
+	tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
+
 	var privstr string
 	st := tx.Stmt(sp.st_prep[st_web_autoregister_mod])
 	x := 0
@@ -40,7 +42,12 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (modid int64, priv
 	}
 }
 
-func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err error) {
+func (sp *PSQLIB) setModPriv(
+	tx *sql.Tx, pubkeystr string, newpriv ModPriv, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
+
+	outdelmsgids = indelmsgids
+
 	ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
 	// do key update
 	var modid int64
@@ -52,9 +59,11 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 		if err == sql.ErrNoRows {
 			// we changed nothing so return now
 			sp.log.LogPrintf(DEBUG, "setmodpriv: %s priv unchanged", pubkeystr)
-			return nil
+			err = nil
+			return
 		}
-		return sp.sqlError("st_web_set_mod_priv queryrowscan", err)
+		err = sp.sqlError("st_web_set_mod_priv queryrowscan", err)
+		return
 	}
 
 	sp.log.LogPrintf(DEBUG,
@@ -85,9 +94,11 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 	lastx := idt{0, 0}
 
 	for {
-		rows, err := xst.Query(modid, offset)
+		var rows *sql.Rows
+		rows, err = xst.Query(modid, offset)
 		if err != nil {
-			return sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
+			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
+			return
 		}
 
 		for rows.Next() {
@@ -113,7 +124,8 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 				&p.title, &p.date, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
+				err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
+				return
 			}
 
 			if lastx != p.xid {
@@ -128,7 +140,8 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 			}
 		}
 		if err = rows.Err(); err != nil {
-			return sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
+			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
+			return
 		}
 
 		for i := range posts {
@@ -149,11 +162,12 @@ func (sp *PSQLIB) setModPriv(tx *sql.Tx, pubkeystr string, newpriv ModPriv) (err
 				"setmodpriv: executing <%s> from board[%s]",
 				posts[i].msgid, posts[i].bname)
 
-			err = sp.execModCmd(
+			outdelmsgids, err = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
-				newpriv, pi, posts[i].files, pi.MessageID, CoreMsgIDStr(posts[i].ref))
+				newpriv, pi, posts[i].files, pi.MessageID,
+				CoreMsgIDStr(posts[i].ref), outdelmsgids)
 			if err != nil {
-				return err
+				return
 			}
 		}
 
@@ -195,10 +209,13 @@ func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 		}
 	}()
 
+	var delmsgids delMsgIDState
+	defer sp.cleanDeletedMsgIDs(delmsgids)
+
 	for _, s := range mods {
 		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, newpriv.String())
 
-		err = sp.setModPriv(tx, s, newpriv)
+		delmsgids, err = sp.setModPriv(tx, s, newpriv, delmsgids)
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
 			return

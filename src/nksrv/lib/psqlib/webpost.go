@@ -670,8 +670,15 @@ ON
 	if priv > ModPrivNone {
 		// we should execute it
 		// we never put message in file when processing message
-		err = sp.execModCmd(
-			tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID, cref)
+
+		// msgid deletion state
+		var delmsgids delMsgIDState
+		defer sp.cleanDeletedMsgIDs(delmsgids)
+
+		delmsgids, err =
+			sp.execModCmd(
+				tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID,
+				cref, delmsgids)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}

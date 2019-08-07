@@ -427,6 +427,7 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 		// we have already existing, wait till it gets cleared
 		o.m.RLock()
 		for (o.n > 0 || o.f != nil) && o.e == nil {
+			// XXX can be v slow (DoS vector). should have timeout??
 			o.c.Wait()
 		}
 		o.m.RUnlock()

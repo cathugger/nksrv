@@ -14,7 +14,8 @@ import (
 func (sp *PSQLIB) modCmdDelete(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	pi mailib.PostInfo, selfid, ref CoreMsgIDStr,
-	cmd string, args []string) (err error) {
+	cmd string, args []string, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
 
 	if len(args) == 0 {
 		return
@@ -29,7 +30,8 @@ func (sp *PSQLIB) modCmdDelete(
 		return
 	}
 
-	err = sp.banByMsgID(tx, cmsgids, bid, bpid, pi.MI.Title)
+	outdelmsgids, err =
+		sp.banByMsgID(tx, cmsgids, bid, bpid, pi.MI.Title, indelmsgids)
 	if err != nil {
 		return
 	}
@@ -54,7 +56,8 @@ func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	modid int64, modpriv ModPriv,
 	pi mailib.PostInfo, filenames []string,
-	selfid, ref CoreMsgIDStr) (err error) {
+	selfid, ref CoreMsgIDStr, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
 
 	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
@@ -102,7 +105,9 @@ func (sp *PSQLIB) execModCmd(
 			case "delete":
 				if modpriv >= ModPrivMod {
 					// global delete by msgid
-					err = sp.modCmdDelete(tx, gpid, bid, bpid, pi, selfid, ref, cmd, args)
+					outdelmsgids, err =
+						sp.modCmdDelete(
+							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args, indelmsgids)
 				}
 			}
 			if err != nil {
@@ -116,5 +121,6 @@ func (sp *PSQLIB) execModCmd(
 		}
 	}
 
-	return nil
+	err = nil
+	return
 }

@@ -31,8 +31,13 @@ func (sp *PSQLIB) preDelete(tx *sql.Tx) (err error) {
 	return
 }
 
+type delMsgIDState struct {
+	delmsgids []string
+}
+
 func (sp *PSQLIB) deleteByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr) (err error) {
+	tx *sql.Tx, cmsgids CoreMsgIDStr, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
 
 	err = sp.preDelete(tx)
 	if err != nil {
@@ -46,13 +51,14 @@ func (sp *PSQLIB) deleteByMsgID(
 		return
 	}
 
-	err = sp.postDelete(tx, rows)
+	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
 	return
 }
 
 func (sp *PSQLIB) banByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr, banbid boardID, banbpid postID, reason string) (
-	err error) {
+	tx *sql.Tx, cmsgids CoreMsgIDStr,
+	banbid boardID, banbpid postID, reason string, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
 
 	err = sp.preDelete(tx)
 	if err != nil {
@@ -75,11 +81,15 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
-	err = sp.postDelete(tx, rows)
+	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
 	return
 }
 
-func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
+func (sp *PSQLIB) postDelete(
+	tx *sql.Tx, rows *sql.Rows, indelmsgids delMsgIDState) (
+	outdelmsgids delMsgIDState, err error) {
+
+	outdelmsgids = indelmsgids
 
 	type affThr struct {
 		b boardID
@@ -91,7 +101,8 @@ func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
 		var fname, tname string
 		var fnum, tnum int64
 		var xb_id, xt_id sql.NullInt64
-		err = rows.Scan(&fname, &fnum, &tname, &tnum, &xb_id, &xt_id)
+		var msgid sql.NullString
+		err = rows.Scan(&fname, &fnum, &tname, &tnum, &xb_id, &xt_id, &msgid)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("delete by msgid rows scan", err)
@@ -126,11 +137,20 @@ func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
 				return
 			}
 		}
+		// affected thread(s) which will need bump recalculated
 		if xb_id.Int64 != 0 && xt_id.Int64 != 0 {
+			// this won't grow large as crosspost aint so allowing
 			thr_aff = append(thr_aff, affThr{
 				b: boardID(xb_id.Int64),
 				t: postID(xt_id.Int64),
 			})
+		}
+		// message-ids which were delet'd, we need to delet them from cache too
+		if msgid.String != "" {
+			sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid.String)
+			sp.nntpce.RemoveItemStart(msgid.String)
+			// XXX can grow large (DoS vector?)
+			outdelmsgids.delmsgids = append(outdelmsgids.delmsgids, msgid.String)
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -183,7 +203,13 @@ func (sp *PSQLIB) postDelete(tx *sql.Tx, rows *sql.Rows) (err error) {
 		}
 	}
 
-	return nil
+	return
+}
+
+func (sp *PSQLIB) cleanDeletedMsgIDs(delmsgids delMsgIDState) {
+	for _, id := range delmsgids.delmsgids {
+		sp.nntpce.RemoveItemFinish(id)
+	}
 }
 
 func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
@@ -208,12 +234,18 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 		}
 	}()
 
+	var delmsgids delMsgIDState
+	defer sp.cleanDeletedMsgIDs(delmsgids)
+
 	for _, s := range msgids {
 		sp.log.LogPrintf(INFO, "deleting %s", s)
 		if banreason == "" {
-			err = sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)))
+			delmsgids, err =
+				sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)), delmsgids)
 		} else {
-			err = sp.banByMsgID(tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason)
+			delmsgids, err =
+				sp.banByMsgID(
+					tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason, delmsgids)
 		}
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
