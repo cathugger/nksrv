@@ -499,7 +499,8 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	}
 
 	eatMain := func(
-		xct_t string, xct_par map[string]string, xcte string, XH mail.Headers, xr io.Reader) (
+		xct_t string, xct_par map[string]string, xcte string,
+		XH mail.Headers, xr io.Reader) (
 		rpinfo PartInfo, err error) {
 
 		xismultipart := strings.HasPrefix(xct_t, "multipart/")
@@ -619,6 +620,19 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			return
 		}
 
+		return
+	}
+
+	eatMainAndHeaders := func(
+		xct_t string, xct_par map[string]string, xcte string,
+		XH mail.Headers, xr io.Reader) (
+		rpinfo PartInfo, err error) {
+
+		rpinfo, err = eatMain(xct_t, xct_par, xcte, XH, xr)
+		if err != nil {
+			return
+		}
+
 		// process face-like headers if any
 		ffn, ffi, err := extractMessageFace(XH, src)
 		if err != nil {
@@ -641,7 +655,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	if !eatinner {
 
 		// eat body
-		pi.L, zerr = eatMain(zct_t, zct_par, zcte, ZH, zr)
+		pi.L, zerr = eatMainAndHeaders(zct_t, zct_par, zcte, ZH, zr)
 
 	} else {
 		// special handling for message/* bodies
@@ -721,7 +735,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		// eat body
 		// yeh we discard its layout lol
-		_, zerr = eatMain(ict_t, ict_par, icte, IH, ir)
+		_, zerr = eatMainAndHeaders(ict_t, ict_par, icte, IH, ir)
 		if zerr != nil {
 			zerr = fmt.Errorf("err eatin inner body: %v", zerr)
 			cancelWorker(zerr)
