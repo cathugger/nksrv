@@ -258,7 +258,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		}
 
 		if x_fid != f_id.Int64 {
-			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
 				ta := defaultThumbAttributes
 
@@ -465,7 +465,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		}
 
 		if x_fid != f_id.Int64 {
-			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
 				ta := defaultThumbAttributes
 
@@ -606,23 +606,29 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 			t.Message = message
 
 			if f_id.Int64 != 0 {
-				ta := defaultThumbAttributes
+				if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
+					ta := defaultThumbAttributes
 
-				err = thumbcfg_j.Unmarshal(&ta)
-				if err != nil {
-					rows.Close()
-					return sp.sqlError("Web_catalog thumbcfg json unmarshal", err),
-						http.StatusInternalServerError
+					err = thumbcfg_j.Unmarshal(&ta)
+					if err != nil {
+						rows.Close()
+						return sp.sqlError("Web_catalog thumbcfg json unmarshal", err),
+							http.StatusInternalServerError
+					}
+
+					t.Thumb.ID = thumb.String
+					t.Thumb.Width = ta.Width
+					t.Thumb.Height = ta.Height
+
+					t.Thumb = sp.ensureThumb(t.Thumb, fname.String, ftype.String)
+
+					goto thumbnailed
 				}
-
-				t.Thumb.ID = thumb.String
-				t.Thumb.Width = ta.Width
-				t.Thumb.Height = ta.Height
-
-				t.Thumb = sp.ensureThumb(t.Thumb, fname.String, ftype.String)
-			} else {
-				t.Thumb = sp.ensureThumb(t.Thumb, "", "")
 			}
+			// fallback if not found thumbnail above
+			t.Thumb = sp.ensureThumb(t.Thumb, "", "")
+		thumbnailed:
+			// thumbnail done at this point
 
 			page.Threads = append(page.Threads, t)
 
@@ -813,7 +819,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 		}
 
 		if x_fid != f_id.Int64 {
-			if ft := ftypes.StringToFType(ftype.String); !ft.Hidden() {
+			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
 				ta := defaultThumbAttributes
 

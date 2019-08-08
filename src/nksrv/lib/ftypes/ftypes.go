@@ -40,10 +40,7 @@ func (t FTypeT) String() string {
 	return FTypeS[t]
 }
 
-func (t FTypeT) Hidden() bool {
-	return t == FTypeMsg
-}
-
+// vague term, but means that it's actual attachment, not some nksrv-internal thing
 func (t FTypeT) Normal() bool {
 	return t != FTypeMsg && t != FTypeFace
 }
