@@ -155,7 +155,7 @@ func (b *imagemagickBackend) doThumbnailing(
 		// XXX following would kill non-sRGB profiles
 		//args = append(args, "-strip")
 	}
-	// pipe to stdout
+	// output to tfn and print conversion info
 	args = append(args, "-verbose", tfn)
 
 	cmd := &exec.Cmd{
