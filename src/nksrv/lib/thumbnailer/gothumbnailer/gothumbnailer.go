@@ -7,18 +7,17 @@ import (
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
-	"io"
 	"os"
 	"strconv"
 
 	"github.com/disintegration/imaging"
-	"github.com/rwcarlsen/goexif/exif"
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/webp"
 
 	"nksrv/lib/fstore"
 	"nksrv/lib/ftypes"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/thumbnailer/internal/exifhelper"
 )
 
 type Config struct {
@@ -79,29 +78,6 @@ func decodeColor(c string) (color.NRGBA, error) {
 	}
 }
 
-func exifOrient(r io.Reader) int {
-	x, err := exif.Decode(r)
-	if err == nil && x != nil {
-		orient, err := x.Get(exif.Orientation)
-		if err == nil && orient != nil && orient.Count != 0 {
-			if i, err := orient.Int(0); err == nil {
-				return i
-			}
-		}
-	}
-	return 1
-}
-
-func rotwh(orient int, w, h int) (int, int) {
-	switch orient {
-	case 1, 2, 3, 4:
-		// nothing
-	case 5, 6, 7, 8:
-		w, h = h, w
-	}
-	return w, h
-}
-
 func rotimg(orient int, img *image.NRGBA) *image.NRGBA {
 	switch orient {
 	case 1:
@@ -158,9 +134,17 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
-	imgcfg, _, err := image.DecodeConfig(f)
+	imgcfg, cfgfmt, err := image.DecodeConfig(f)
 	if err != nil {
 		// bail out on any decoder failure
+		close_err()
+		return
+	}
+	switch cfgfmt {
+	case "jpeg", "png", "gif", "webp", "bmp":
+		// OK
+	default:
+		// NAK
 		close_err()
 		return
 	}
@@ -172,10 +156,11 @@ func (t *GoThumbnailer) ThumbProcess(
 	}
 
 	// get orientation
-	orient := exifOrient(f)
+	orient := exifhelper.ExifOrient(f)
 
 	// rotate limits
-	imgcfg.Width, imgcfg.Height = rotwh(orient, imgcfg.Width, imgcfg.Height)
+	imgcfg.Width, imgcfg.Height =
+		exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
 
 	if (t.cfg.MaxWidth > 0 && imgcfg.Width > t.cfg.MaxWidth) ||
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||
@@ -183,7 +168,12 @@ func (t *GoThumbnailer) ThumbProcess(
 
 		close_err()
 
-		// TODO we could still mark this as image and store config
+		// mark this as image and store config
+		fi.Kind = ftypes.FTypeImage
+		fi.DetectedType = "image/" + cfgfmt
+		fi.Attrib = make(map[string]interface{})
+		fi.Attrib["width"] = imgcfg.Width
+		fi.Attrib["height"] = imgcfg.Height
 
 		return
 	}
@@ -216,9 +206,9 @@ func (t *GoThumbnailer) ThumbProcess(
 	// width/height
 	ow := oimg.Bounds().Dx()
 	oh := oimg.Bounds().Dy()
-	ow, oh = rotwh(orient, ow, oh)
+	ow, oh = exifhelper.RotWH(orient, ow, oh)
 
-	cw, ch := rotwh(orient, cfg.Width, cfg.Height)
+	cw, ch := exifhelper.RotWH(orient, cfg.Width, cfg.Height)
 
 	// thumbnail
 	timg := imaging.Fit(oimg, cw, ch, t.cfg.Filter)
