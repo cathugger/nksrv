@@ -171,8 +171,18 @@ func (b *imagemagickBackend) doThumbnailing(
 		out, ex = cmd.CombinedOutput()
 	}
 	if ex != nil {
+		if ee, _ := ex.(*exec.ExitError); ee != nil {
+			if ee.ProcessState.ExitCode() == 1 {
+				// 1 is used for invalid input I think
+				// XXX should maybe do something extra??
+				return
+			}
+		}
 		// XXX should log
-		// process failed prolly because file's bad but we should know for sure
+		// if file was bad status shouldve been 1
+		// otherwise this was unexpected err
+		// (file wasn't bad or it was so bad it killed IM/GM)
+		err = ex
 		return
 	}
 
