@@ -270,6 +270,13 @@ func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 		if !au.StartsWithFoldString(s, "Re:") {
 			return false
 		}
+
+		// too much newsreaders doing Re: for posts they directly answer
+		// so consider everything starting with Re: empty regardless of content
+		return true
+
+		// dead code
+
 		if len(s) > 3 && (s[3] == ' ' || s[3] == '\t') {
 			s = s[4:]
 		} else {
