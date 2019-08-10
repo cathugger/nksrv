@@ -9,8 +9,8 @@ import (
 
 	"nksrv/lib/emime"
 	"nksrv/lib/fstore"
-	"nksrv/lib/gothumbnailer"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/thumbnailer/gothumbnailer"
 )
 
 func main() {

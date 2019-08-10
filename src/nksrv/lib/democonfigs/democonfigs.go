@@ -5,9 +5,9 @@ import (
 	"nksrv/lib/captchainfo"
 	"nksrv/lib/demoib"
 	"nksrv/lib/fstore"
-	"nksrv/lib/gothumbnailer"
 	"nksrv/lib/psqlib"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/thumbnailer/gothumbnailer"
 )
 
 // configs commonly used in demo executables
