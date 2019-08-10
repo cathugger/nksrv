@@ -14,15 +14,16 @@ import (
 	"nksrv/lib/thumbnailer/internal/exifhelper"
 )
 
-type imagemagickBackend struct {
-	t       *ExternalThumbnailer
-	binPath string
-	useGM   bool // tbh untested
+type magickBackend struct {
+	t              *ExternalThumbnailer
+	binPath        string
+	useGM          bool
+	forceJPEGLimit bool
 }
 
-var errOutputMisunderstod = errors.New("convert output not understod")
+var errMagickOutputMisunderstod = errors.New("convert output not understod")
 
-func (b *imagemagickBackend) doThumbnailing(
+func (b *magickBackend) doThumbnailing(
 	p tparams, f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
 
@@ -39,62 +40,67 @@ func (b *imagemagickBackend) doThumbnailing(
 		closed = true
 	}
 
-	/*
-	 * how this works:
-	 * first we query params about image using golang libs
-	 * if image params are OK we pass it to imagemagick
-	 * we don't need policy files this way
-	 * and we already know what type we need to force IM/GM to use
-	 * we still need to read output for resulting thumbnail dimensions tho
-	 * (anything else would be conceptually unclean)
-	 */
+	if true /* TODO: alt scanners? */ {
+		/*
+		 * how this works:
+		 * first we query params about image using golang libs
+		 * if image params are OK we pass it to imagemagick
+		 * we don't need policy files this way
+		 * and we already know what type we need to force IM/GM to use
+		 * we still need to read output for resulting thumbnail dimensions tho
+		 * (anything else would be conceptually unclean)
+		 */
 
-	_, err = f.Seek(0, 0)
-	if err != nil {
-		return
-	}
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			return
+		}
 
-	imgcfg, cfgfmt, err := image.DecodeConfig(f)
-	if err != nil {
-		// bail out on any decoder failure
-		close_err()
-		return
-	}
-	switch cfgfmt {
-	case "jpeg", "png", "gif", "webp", "bmp":
-		// OK
-	default:
-		// NAK
-		close_err()
-		return
-	}
+		imgcfg, cfgfmt, err := image.DecodeConfig(f)
+		if err != nil {
+			// bail out on any decoder failure
+			close_err()
+			return
+		}
+		switch cfgfmt {
+		case "jpeg", "png", "gif", "webp", "bmp":
+			// OK
+		default:
+			// NAK
+			close_err()
+			return
+		}
 
-	// seek to start
-	_, err = f.Seek(0, 0)
-	if err != nil {
-		return
-	}
+		// seek to start
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			return
+		}
 
-	// get orientation
-	orient := exifhelper.ExifOrient(f)
+		// get orientation
+		orient := exifhelper.ExifOrient(f)
 
-	// rotate limits
-	imgcfg.Width, imgcfg.Height = exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
+		// rotate limits
+		imgcfg.Width, imgcfg.Height =
+			exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
 
-	// mark this as image and store config
-	fi.Kind = ftypes.FTypeImage
-	fi.DetectedType = "image/" + cfgfmt
-	fi.Attrib = make(map[string]interface{})
-	fi.Attrib["width"] = imgcfg.Width
-	fi.Attrib["height"] = imgcfg.Height
+		// mark this as image and store config
+		fi.Kind = ftypes.FTypeImage
+		fi.DetectedType = "image/" + cfgfmt
+		fi.Attrib = make(map[string]interface{})
+		fi.Attrib["width"] = imgcfg.Width
+		fi.Attrib["height"] = imgcfg.Height
 
-	if (b.t.cfg.MaxWidth > 0 && imgcfg.Width > b.t.cfg.MaxWidth) ||
-		(b.t.cfg.MaxHeight > 0 && imgcfg.Height > b.t.cfg.MaxHeight) ||
-		(b.t.cfg.MaxPixels > 0 && imgcfg.Width*imgcfg.Height > b.t.cfg.MaxPixels) {
+		if (cfgfmt != "jpeg" || b.forceJPEGLimit) &&
+			((b.t.cfg.MaxWidth > 0 && imgcfg.Width > b.t.cfg.MaxWidth) ||
+				(b.t.cfg.MaxHeight > 0 && imgcfg.Height > b.t.cfg.MaxHeight) ||
+				(b.t.cfg.MaxPixels > 0 &&
+					imgcfg.Width*imgcfg.Height > b.t.cfg.MaxPixels)) {
 
-		close_err()
+			close_err()
 
-		return
+			return
+		}
 	}
 
 	fn := f.Name()
@@ -203,14 +209,14 @@ func (b *imagemagickBackend) doThumbnailing(
 	// fn.jpg=>tfn.jpg JPEG 1200x800=>500x333 500x333+0+0 8-bit sRGB 137060B 0.030u 0:00.013
 	// gm don't do second one and has +0+0 in first one
 	if len(details) < 3 {
-		err = errOutputMisunderstod
+		err = errMagickOutputMisunderstod
 		return
 	}
 	rsz := details[2]
 	if sep := strings.Index(rsz, "=>"); sep >= 0 {
 		rsz = rsz[sep+2:]
 	} else {
-		err = errOutputMisunderstod
+		err = errMagickOutputMisunderstod
 		return
 	}
 	if trash := strings.IndexByte(rsz, '+'); trash >= 0 {
@@ -221,14 +227,14 @@ func (b *imagemagickBackend) doThumbnailing(
 
 		x, err = strconv.ParseUint(rsz[:eeks], 10, 32)
 		if err != nil {
-			err = errOutputMisunderstod
+			err = errMagickOutputMisunderstod
 			return
 		}
 		res.Width = int(x)
 
 		x, err = strconv.ParseUint(rsz[eeks+1:], 10, 32)
 		if err != nil {
-			err = errOutputMisunderstod
+			err = errMagickOutputMisunderstod
 			return
 		}
 		res.Height = int(x)

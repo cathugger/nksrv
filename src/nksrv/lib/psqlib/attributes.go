@@ -15,10 +15,10 @@ type submissionLimits struct {
 	MaxMessageLength uint32 `json:"message_max_size,omitempty"`
 
 	// files count and sizes
-	FileMinNum        uint32 `json:"file_min_num,omitempty"`
-	FileMaxNum        uint32 `json:"file_max_num,omitempty"`    // 0 - unlimited
-	FileMaxSizeSingle uint64 `json:"file_max_single,omitempty"` // 0 - unlimited
-	FileMaxSizeAll    uint64 `json:"file_max_all,omitempty"`    // 0 - unlimited
+	FileMinNum        int32 `json:"file_min_num,omitempty"`    // <= 0 - no minimum
+	FileMaxNum        int32 `json:"file_max_num,omitempty"`    // <= 0 - don't allow attach (no upper limit makes no sense)
+	FileMaxSizeSingle int64 `json:"file_max_single,omitempty"` // <= 0 - unlimited
+	FileMaxSizeAll    int64 `json:"file_max_all,omitempty"`    // <= 0 - unlimited
 
 	// file extensions. these do NOT include dot. empty extension should match both "file" and "file."
 	ExtWhitelist bool     `json:"ext_whitelist,omitempty"` // list mode. defaults to false which means blacklist
@@ -29,7 +29,7 @@ type submissionLimits struct {
 var defaultReplySubmissionLimits = submissionLimits{
 	MaxTitleLength:   64,
 	MaxNameLength:    64,
-	MaxMessageLength: 2000,
+	MaxMessageLength: 8000,
 
 	FileMaxNum:     5,
 	FileMaxSizeAll: 8 * 1024 * 1024,

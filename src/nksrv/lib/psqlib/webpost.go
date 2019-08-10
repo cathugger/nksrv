@@ -85,52 +85,60 @@ func allowedFileName(fname string, slimits *submissionLimits, reply bool) bool {
 	return !iffound
 }
 
-func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (_ error, c int) {
-	var onesz, allsz uint64
+func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (err error, c int) {
+	var onesz, allsz int64
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		c += len(files)
-		if slimits.FileMaxNum != 0 && c > int(slimits.FileMaxNum) {
-			return errTooMuchFiles, 0
+		if c > int(slimits.FileMaxNum) {
+			err = errTooMuchFiles(slimits.FileMaxNum)
+			return
 		}
 		for i := range files {
-			onesz = uint64(files[i].Size)
-			if slimits.FileMaxSizeSingle != 0 &&
-				onesz > slimits.FileMaxSizeSingle {
-
-				return errTooBigFileSingle, 0
+			onesz = files[i].Size
+			if slimits.FileMaxSizeSingle > 0 && onesz > slimits.FileMaxSizeSingle {
+				err = errTooBigFileSingle(slimits.FileMaxSizeSingle)
+				return
 			}
 
 			allsz += onesz
-			if slimits.FileMaxSizeAll != 0 && allsz > slimits.FileMaxSizeAll {
-				return errTooBigFileAll, 0
+			if slimits.FileMaxSizeAll > 0 && allsz > slimits.FileMaxSizeAll {
+				err = errTooBigFileAll(slimits.FileMaxSizeAll)
+				return
 			}
 
 			if !allowedFileName(files[i].FileName, slimits, reply) {
-				return errFileTypeNotAllowed, 0
+				err = errFileTypeNotAllowed
+				return
 			}
 		}
+	}
+	if c < int(slimits.FileMinNum) {
+		err = errNotEnoughFiles(slimits.FileMinNum)
+		return
 	}
 	return
 }
 
 func checkSubmissionLimits(slimits *submissionLimits, reply bool,
-	f form.Form, mInfo mailib.MessageInfo) (_ error, c int) {
+	f form.Form, mInfo mailib.MessageInfo) (err error, c int) {
 
-	var e error
-	e, c = checkFileLimits(slimits, reply, f)
-	if e != nil {
-		return e, 0
+	err, c = checkFileLimits(slimits, reply, f)
+	if err != nil {
+		return
 	}
 
 	if len(mInfo.Title) > int(slimits.MaxTitleLength) {
-		return errTooLongTitle, 0
+		err = errTooLongTitle
+		return
 	}
 	if len(mInfo.Author) > int(slimits.MaxNameLength) {
-		return errTooLongName, 0
+		err = errTooLongName
+		return
 	}
 	if len(mInfo.Message) > int(slimits.MaxMessageLength) {
-		return errTooLongMessage, 0
+		err = errTooLongMessage(slimits.MaxMessageLength)
+		return
 	}
 
 	return

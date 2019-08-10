@@ -18,12 +18,15 @@ import (
  *   thumbnailer: {type, options},
  * }
  */
+
+// this whole thumbnailer specific config
 type Config struct {
 	MaxWidth, MaxHeight int
 	MaxPixels           int
 	MaxFileSize         int64
 }
 
+// defaults for above
 var DefaultConfig = Config{
 	MaxWidth:    8192,
 	MaxHeight:   8192,
@@ -47,7 +50,7 @@ type thmbackend interface {
 		res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error)
 }
 
-type ExtExec struct {
+type extExec struct {
 	// matching either by mime or ext or both
 	m_mime glob.Glob
 	m_ext  glob.Glob
@@ -60,7 +63,7 @@ type ExtExec struct {
 type ExternalThumbnailer struct {
 	cfg    Config
 	fs     *fstore.FStore
-	routes []ExtExec
+	routes []extExec
 }
 
 func (t *ExternalThumbnailer) ThumbProcess(
