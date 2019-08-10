@@ -81,6 +81,10 @@ CREATE TABLE ib0.boards (
 CREATE INDEX
 	ON ib0.boards (badded,b_id) -- NEWGROUPS
 
+/*
+ * TODO index for `b_name COLLATE "und-x-icu"`
+ */
+
 
 -- :next
 CREATE TABLE ib0.threads (

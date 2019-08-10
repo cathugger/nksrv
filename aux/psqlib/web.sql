@@ -4,7 +4,7 @@ SELECT
 FROM
 	ib0.boards
 ORDER BY
-	b_name
+	b_name COLLATE "und-x-icu"
 
 -- :name web_thread_list_page
 -- input: {b_name} {page num}
