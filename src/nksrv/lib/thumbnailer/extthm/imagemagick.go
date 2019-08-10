@@ -131,9 +131,15 @@ func (b *imagemagickBackend) doThumbnailing(
 
 	if cfgfmt == "jpeg" {
 		// special jpeg thing
-		args = append(
-			args, "-define",
-			fmt.Sprintf("jpeg:size=%dx%d", cfg.Width, cfg.Height))
+		if !useGM {
+			args = append(
+				args, "-define",
+				fmt.Sprintf("jpeg:size=%dx%d", cfg.Width, cfg.Height))
+		} else {
+			// GM uses old syntax
+			args = append(
+				args, "-size", fmt.Sprintf("%dx%d", cfg.Width, cfg.Height))
+		}
 	}
 
 	// [0] doesn't hurt

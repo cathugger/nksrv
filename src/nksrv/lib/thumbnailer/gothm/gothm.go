@@ -149,9 +149,12 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
-	// mark this as image
+	// mark this as image & store current config as we know it
 	fi.Kind = ftypes.FTypeImage
 	fi.Attrib = make(map[string]interface{})
+	fi.DetectedType = "image/" + cfgfmt
+	fi.Attrib["width"] = imgcfg.Width
+	fi.Attrib["height"] = imgcfg.Height
 
 	// seek to start
 	_, err = f.Seek(0, 0)
@@ -170,13 +173,8 @@ func (t *GoThumbnailer) ThumbProcess(
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||
 		(t.cfg.MaxPixels > 0 && imgcfg.Width*imgcfg.Height > t.cfg.MaxPixels) {
 
+		// too large, don't do decoding
 		close_err()
-
-		// store config even if we're not accepting it
-		fi.DetectedType = "image/" + cfgfmt
-		fi.Attrib["width"] = imgcfg.Width
-		fi.Attrib["height"] = imgcfg.Height
-
 		return
 	}
 
@@ -267,7 +265,7 @@ func (t *GoThumbnailer) ThumbProcess(
 	res.Width = tsz.X
 	res.Height = tsz.Y
 
-	// orig file info
+	// update original img info (it could differ from previous config?)
 	fi.DetectedType = "image/" + imgfmt // golang devs seem sane so far
 	fi.Attrib["width"] = ow
 	fi.Attrib["height"] = oh
