@@ -22,6 +22,9 @@ func errTooLongMessage(limit uint32) error {
 }
 
 func errTooMuchFiles(limit int32) error {
+	if limit < 0 {
+		limit = 0
+	}
 	return fmt.Errorf("too much files (limit: %d)", limit)
 }
 
