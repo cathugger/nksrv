@@ -45,7 +45,8 @@ func (b *imagemagickBackend) doThumbnailing(
 	 * if image params are OK we pass it to imagemagick
 	 * we don't need policy files this way
 	 * and we already know what type we need to force IM/GM to use
-	 * we still need to read output for
+	 * we still need to read output for resulting thumbnail dimensions tho
+	 * (anything else would be conceptually unclean)
 	 */
 
 	_, err = f.Seek(0, 0)
