@@ -10,7 +10,7 @@ import (
 	"nksrv/lib/emime"
 	"nksrv/lib/fstore"
 	"nksrv/lib/thumbnailer"
-	"nksrv/lib/thumbnailer/gothumbnailer"
+	"nksrv/lib/thumbnailer/gothm"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	thm, err := gothumbnailer.DefaultConfig.BuildThumbnailer(&fs)
+	thm, err := gothm.DefaultConfig.BuildThumbnailer(&fs)
 	if err != nil {
 		fmt.Printf("err building thumbnailer: %v\n", err)
 		return

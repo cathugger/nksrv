@@ -7,7 +7,7 @@ import (
 	"nksrv/lib/fstore"
 	"nksrv/lib/psqlib"
 	"nksrv/lib/thumbnailer"
-	"nksrv/lib/thumbnailer/gothumbnailer"
+	"nksrv/lib/thumbnailer/gothm"
 )
 
 // configs commonly used in demo executables
@@ -20,7 +20,7 @@ var CfgPSQLIB = psqlib.Config{
 	ThmCfg:     &fstore.Config{"_demo/demoib0/thm"},
 	NNTPFSCfg:  &fstore.Config{"_demo/demoib0/nntp"},
 	AltThumber: &CfgAltThm,
-	TBuilder:   gothumbnailer.DefaultConfig,
+	TBuilder:   gothm.DefaultConfig,
 	TCfgThread: &thumbnailer.ThumbConfig{
 		Width:  250,
 		Height: 250,

@@ -1,4 +1,4 @@
-package gothumbnailer
+package gothm
 
 import (
 	"errors"
@@ -149,6 +149,10 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
+	// mark this as image
+	fi.Kind = ftypes.FTypeImage
+	fi.Attrib = make(map[string]interface{})
+
 	// seek to start
 	_, err = f.Seek(0, 0)
 	if err != nil {
@@ -168,10 +172,8 @@ func (t *GoThumbnailer) ThumbProcess(
 
 		close_err()
 
-		// mark this as image and store config
-		fi.Kind = ftypes.FTypeImage
+		// store config even if we're not accepting it
 		fi.DetectedType = "image/" + cfgfmt
-		fi.Attrib = make(map[string]interface{})
 		fi.Attrib["width"] = imgcfg.Width
 		fi.Attrib["height"] = imgcfg.Height
 
@@ -259,15 +261,14 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
+	// thumbnail info
 	res.FileName = tfn
 	res.FileExt = "jpg"
 	res.Width = tsz.X
 	res.Height = tsz.Y
 
-	fi.Kind = ftypes.FTypeImage
+	// orig file info
 	fi.DetectedType = "image/" + imgfmt // golang devs seem sane so far
-
-	fi.Attrib = make(map[string]interface{})
 	fi.Attrib["width"] = ow
 	fi.Attrib["height"] = oh
 
