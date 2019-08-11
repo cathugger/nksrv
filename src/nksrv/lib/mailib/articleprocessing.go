@@ -344,12 +344,15 @@ func processMessageAttachment(
 		Original:    oname,
 	}
 
+	fi.Type = tfi.Kind
+	if tfi.DetectedType != "" {
+		fi.ContentType = tfi.DetectedType
+	}
 	if tres.FileName != "" {
 		tfile := iname + "." + thm.Name + "." + tres.FileExt
 		fi.Thumb = tfile
 		fi.ThumbAttrib.Width = uint32(tres.Width)
 		fi.ThumbAttrib.Height = uint32(tres.Height)
-		fi.Type = tfi.Kind
 		thmfn = tres.FileName
 	}
 	if len(tfi.Attrib) != 0 {

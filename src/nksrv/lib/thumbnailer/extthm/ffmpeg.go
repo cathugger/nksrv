@@ -26,6 +26,9 @@ type ffprobeStream struct {
 	BitRate        int     `json:"bit_rate,string"`
 	Width          int     `json:"width"`
 	Height         int     `json:"height"`
+	Profile        string  `json:"profile"`
+	Level          int     `json:"level"`
+	IsAVC          bool    `json:"is_avc,string"`
 
 	Disposition ffprobeDispotision `json:"disposition"`
 }
@@ -107,28 +110,31 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 	}
 
 	fmts := strings.Split(ffproberes.FormatName, ",")
-
-	if b.fmt == "" {
-		// do we actually want to deal with this?
-		for _, f := range fmts {
-			switch f {
-				case "webm", "mp4", "mp3", "ogg", "flac", "wav":
-					goto foundfmt
-			}
+	knownfmt := ""
+	for _, f := range fmts {
+		switch f {
+			case "webm", "mp4", "mp3", "ogg", "flac", "wav":
+				knownfmt = f
+				goto foundfmt
 		}
-		// didn't match any
-		return
-	foundfmt:
-		// matched
-		;
 	}
+	// format not known
+	return
+	///
+foundfmt:
+	// matched
+	;
 
 	gotPics := false
 	gotPicsID := 0
 	gotBadPics := false
 	gotVids := 0
+	gotVidsID := 0
 	gotBadVids := false
 	vidCodec := ""
+	gotAudio := false
+	gotBadAudio := false
+	audCodec := ""
 	// so okay, what we're dealing with
 	for i := range ffproberes.Streams {
 		ctype := ffproberes.Streams[i].CodecType
@@ -151,23 +157,61 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 				}
 			} else {
 				// video
-				switch cname {
+				switch {
 					// XXX h263, flv1?
-					case "h264", "theora", "vp8", "vp9", "av1":
+					case cname == "h264" && knownfmt == "mp4":
+						// gay
+						{
+							isavc := ffproberes.Streams[i].IsAVC
+							prof := ffproberes.Streams[i].Profile
+							lvl := ffproberes.Streams[i].Level
+							switch {
+								case isavc && prof == "Baseline":
+									cname = fmt.Sprintf("avc1.42E0%02X", lvl)
+								case isavc && prof == "Main":
+									cname = fmt.Sprintf("avc1.4D40%02X", lvl)
+								case isavc && prof == "High":
+									cname = fmt.Sprintf("avc1.6400%02X", lvl)
+								default:
+									cname = ""
+							}
+							if cname == "" {
+								gotBadVids = true
+								break
+							}
+						}
+
+						fallthrough
+					case cname == "theora" && knownfmt == "ogg",
+						cname == "vp8" && knownfmt != "ogg",
+						cname == "vp9" && knownfmt != "ogg",
+						cname == "av1" && knownfmt != "ogg":
+
+						// XXX AV1's format is even gayer than avc1 but don't bother yet
+						// https://aomediacodec.github.io/av1-isobmff/#codecsparam
 						// OK
 						gotVids++
 						if gotVids == 1 {
 							vidCodec = cname
+							gotVidsID = i
 						} else if vidCodec != cname {
 							vidCodec = ""
 						}
+
 					default:
 						gotBadVids = true
 				}
 			}
 		} else if ctype == "audio" {
-			switch cname {
-				case "mp3", "vorbis", "opus", "aac", "flac":
+			switch {
+				case cname == "aac" && knownfmt == "mp4":
+					cname = "mp4a.40.2" // gay
+					fallthrough
+				case cname == "mp3",
+					cname == "vorbis",
+					cname == "opus",
+					cname == "flac":
+
 					if !gotAudio {
 						gotAudio = true
 						audCodec = cname
@@ -175,6 +219,9 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 						// we no longer know
 						audCodec = ""
 					}
+
+					gotAudio = true
+					audCodec = ""
 				default:
 					if strings.StartsWith(f, "pcm_") {
 						gotAudio = true
@@ -190,23 +237,145 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 	}
 
 	// OK
+	wantcodec := false
+	switch knownfmt {
+		case "webm":
+			if gotBadVids || (gotVids != 0 && gotBadAudio) {
+				mimeType = "video/x-matroska"
+			} else if gotVids != 0 {
+				mimeType = "video/webm"
+				wantcodec = true
+			} else if gotBadAudio {
+				mimeType = "audio/x-matroska"
+			} else if gotAudio {
+				mimeType = "audio/webm"
+				wantcodec = true
+			} else {
+				// weird, quit
+				return
+			}
 
-	for _, f := range fmts {
-		switch f {
-			case "webm":
-				if gotVids != 0 || gotBadVids {
-					mimeType = "video/webm"
-				} else if gotAudio || gotBadAudio {
-					mimeType = "audio/webm"
-				} else {
-					// weird, quit
-					return
-				}
+		case "mp4":
+			if gotVids != 0 || gotBadVids {
+				mimeType = "video/mp4"
+				wantcodec = true
+			} else if gotAudio || gotBadAudio {
+				mimeType = "audio/mp4"
+				wantcodec = true
+			} else {
+				mimeType = "application/mp4"
+			}
 
-				"mp4", "mp3", "ogg", "flac", "wav":
+		case "ogg":
+			if gotVids != 0 || gotBadVids {
+				mimeType = "video/ogg"
+				wantcodec = true
+			} else if gotAudio || gotBadAudio {
+				mimeType = "audio/ogg"
+				wantcodec = true
+			} else {
+				mimeType = "application/ogg"
+			}
 
+		case "mp3":
+			mimeType = "audio/mpeg"
+		case "flac":
+			mimeType = "audio/flac"
+		case "wav":
+			mimeType = "audio/wave"
+	}
+
+	if wantcodec && !gotBadVideo && !gotBadAudio &&
+		(gotVideo == 0 || vidCodec != "") &&
+		(!gotAudio || audCodec != "") {
+
+		codecs := ""
+		if vidCodec != "" {
+			codecs += vidCodec
+		}
+		if audCodec != "" {
+			if codecs != "" {
+				codecs += ", "
+			}
+			codecs += audCodec
+		}
+
+		mimeType = mime.FormatMediaType(
+			mimeType, map[string]string{"codecs":codecs})
+	}
+
+	var tf *os.File
+	var tfn string
+	parktmp := func(){
+		// park file for convert output
+		tf, err = b.t.fs.TempFile("t-", ".jpg")
+		if err != nil {
+			return
+		}
+		tfn = tf.Name()
+		defer func() {
+			if err != nil {
+				os.Remove(tfn)
+			}
+		}()
+		err = tf.Close()
+		if err != nil {
+			return
 		}
 	}
 
+	// so what we gonna do with it?
+	fi.DetectedType = mimeType
+
+	if gotVideo > 1 || gotBadVideo {
+		// multiple videos... nah
+		return
+	}
+	if gotVideo > 0 {
+		// VIDEO
+		fi.Kind = ftypes.FTypeVideo
+
+		fi.Attrib = make(map[string]interface{})
+		vw := ffproberes.Streams[gotVidsID].Width
+		vh := ffproberes.Streams[gotVidsID].Height
+		fi.Attrib["width"]  = vw
+		fi.Attrib["height"] = vh
+		fi.Attrib["length"] = ffproberes.Format.Duration
+
+		if (b.t.cfg.MaxWidth > 0 && vw > b.t.cfg.MaxWidth) ||
+			(b.t.cfg.MaxHeight > 0 && vh > b.t.cfg.MaxHeight) ||
+			(b.t.cfg.MaxPixels > 0 && vw*vh > b.t.cfg.MaxPixels) {
+
+			return
+		}
+
+		parktmp()
+		if err != nil {
+			return
+		}
+
+		runffmpeg := b.ffmpegPath
+		args := []string{
+			runffmpeg,
+			"-v", "error",
+			"-f", knownfmt,
+			"-i", fn,
+			"-map", fmt.Sprintf("0:%d", gotVidsID),
+			"-an", "-sn", "-dn",
+			"-vf", fmt.Sprintf(
+				"scale=%d:%d:force_original_aspect_ratio=decrease",
+				cfg.Width, cfg.Height),
+			"-vframes", "1",
+			tfn,
+		}
+		cmd := &exec.Cmd{
+			Path: runfile,
+			Args: args,
+		}
+		out, ex := cmd.Output()
+		if ex != nil {
+
+		}
+	}
 
 }
