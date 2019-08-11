@@ -551,25 +551,29 @@ ON
 
 			// thumbnail and close file
 			var res thumbnailer.ThumbResult
-			var fi thumbnailer.FileInfo
-			res, fi, err = sp.thumbnailer.ThumbProcess(
+			var tfi thumbnailer.FileInfo
+			res, tfi, err = sp.thumbnailer.ThumbProcess(
 				files[i].F, ext, files[i].ContentType, tplan.ThumbConfig)
 			if err != nil {
 				return rInfo, fmt.Errorf("error thumbnailing file: %v", err),
 					http.StatusInternalServerError
 			}
 
+			pInfo.FI[x].Type = tfi.Kind
+			if tfi.DetectedType != "" {
+				pInfo.FI[x].ContentType = tfi.DetectedType
+				// XXX change
+			}
 			if res.FileName != "" {
 				tfile := pInfo.FI[x].ID + "." + tplan.Name + "." + res.FileExt
 				pInfo.FI[x].Thumb = tfile
 				pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
 				pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)
-				pInfo.FI[x].Type = fi.Kind
 				thumbMoves = append(thumbMoves,
 					thumbMove{from: res.FileName, to: thumbdir + tfile})
 			}
-			if len(fi.Attrib) != 0 {
-				pInfo.FI[x].FileAttrib = fi.Attrib
+			if len(tfi.Attrib) != 0 {
+				pInfo.FI[x].FileAttrib = tfi.Attrib
 			}
 
 			for xx := 0; xx < x; xx++ {
