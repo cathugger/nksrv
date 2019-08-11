@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync/atomic"
+	"unsafe"
 
 	"nksrv/lib/captchainfo"
 	fsd "nksrv/lib/fservedir"
@@ -58,7 +60,22 @@ func handlePageNum(
 	return
 }
 
-func NewIBRouter(cfg Cfg) http.Handler {
+type IBRouterCtl struct {
+	p_HTMLRenderer unsafe.Pointer
+}
+
+func (c *IBRouterCtl) SetHTMLRenderer(r renderer.Renderer) {
+	atomic.StorePointer(&c.p_HTMLRenderer, unsafe.Pointer(&r))
+}
+func (c *IBRouterCtl) GetHTMLRenderer() renderer.Renderer {
+	return *(*renderer.Renderer)(atomic.LoadPointer(&c.p_HTMLRenderer))
+}
+
+func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
+
+	c := new(IBRouterCtl)
+	c.SetHTMLRenderer(cfg.HTMLRenderer)
+
 	h_root := handler.NewCleanPath()
 
 	h := handler.NewSimplePath()
@@ -108,7 +125,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		h_html.Handle("GET", h_get)
 
 		h_get.Handle("/", false, http.HandlerFunc(
-			cfg.HTMLRenderer.ServeBoardList))
+			c.GetHTMLRenderer().ServeBoardList))
 
 		h_get.Handle("/_ukko", true,
 			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
@@ -120,7 +137,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 					if !ok {
 						return
 					}
-					cfg.HTMLRenderer.ServeOverboardPage(w, r, pni)
+					c.GetHTMLRenderer().ServeOverboardPage(w, r, pni)
 				})))
 
 		h_getr := handler.NewRegexPath()
@@ -139,12 +156,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 				if !ok {
 					return
 				}
-				cfg.HTMLRenderer.ServeThreadListPage(w, r, b, pni)
+				c.GetHTMLRenderer().ServeThreadListPage(w, r, b, pni)
 			}))
 		h_getbr.Handle("/catalog", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
-				cfg.HTMLRenderer.ServeThreadCatalog(w, r, b)
+				c.GetHTMLRenderer().ServeThreadCatalog(w, r, b)
 			}))
 
 		h_getbr.Handle("/thread/{{t}}(?:/[^/]*)?", false,
@@ -153,7 +170,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 				b := r.Context().Value("b").(string)
 				t := r.Context().Value("t").(string)
-				cfg.HTMLRenderer.ServeThread(w, r, b, t)
+				c.GetHTMLRenderer().ServeThread(w, r, b, t)
 			}))
 	}
 
@@ -212,12 +229,12 @@ func NewIBRouter(cfg Cfg) http.Handler {
 
 					rInfo, err, code =
 						cfg.WebPostProvider.IBPostNewThread(w, r, f, board)
-					cfg.HTMLRenderer.DressPostResult(
+					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, true, err, code)
 				} else {
 					rInfo, err, code = cfg.WebPostProvider.
 						IBPostNewReply(w, r, f, board, f.Values["thread"][0])
-					cfg.HTMLRenderer.DressPostResult(
+					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, false, err, code)
 				}
 			}))
@@ -245,7 +262,7 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		if !cfg.WebCaptcha.UseCookies && (cfg.SSI || cfg.ESI) {
 			h_captchaget.Handle("/include", false, http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
-					cfg.HTMLRenderer.WebCaptchaInclude(w, r)
+					c.GetHTMLRenderer().WebCaptchaInclude(w, r)
 				}))
 		}
 		h_captcha := handler.NewMethod().Handle("GET", h_captchaget)
@@ -256,5 +273,5 @@ func NewIBRouter(cfg Cfg) http.Handler {
 		}
 	}
 
-	return h_root
+	return h_root, c
 }

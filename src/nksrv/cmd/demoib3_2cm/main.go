@@ -111,7 +111,7 @@ func main() {
 		return
 	}
 
-	rend, err := rt.NewTmplRenderer(dbib, rt.TmplRendererCfg{
+	tmplrendcfg := rt.TmplRendererCfg{
 		TemplateDir: *tmpldir,
 		Logger:      lgr,
 		NodeInfo: rt.NodeInfo{
@@ -121,7 +121,9 @@ func main() {
 		SSI:        ssi,
 		ESI:        esi,
 		StaticDir:  di.StaticDir.Dir(),
-	})
+	}
+
+	rend, err := rt.NewTmplRenderer(dbib, tmplrendcfg)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
 		os.Exit(1)
@@ -150,24 +152,37 @@ func main() {
 	}
 	arh := ar.NewAPIRouter(arcfg)
 	ircfg.APIHandler = arh
-	irh := ir.NewIBRouter(ircfg)
+	irh, irh_ctl := ir.NewIBRouter(ircfg)
 
 	server := &http.Server{Addr: *httpbind, Handler: irh}
 
 	// graceful shutdown by signal
+	siglist := []os.Signal{os.Interrupt, syscall.SIGTERM, syscall.SIGHUP}
 	killc := make(chan os.Signal, 2)
-	signal.Notify(killc, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(killc, siglist...)
 	go func(c chan os.Signal) {
 		for {
 			s := <-c
 			switch s {
 			case os.Interrupt, syscall.SIGTERM:
-				signal.Reset(os.Interrupt, syscall.SIGTERM)
+				signal.Reset(siglist...)
 				fmt.Fprintf(os.Stderr, "killing server\n")
 				if server != nil {
 					server.Shutdown(context.Background())
 				}
 				return
+			case syscall.SIGHUP:
+				{
+					mlg.LogPrintln(logx.NOTICE, "got SIGHUP, will reload templates")
+					rend, err := rt.NewTmplRenderer(dbib, tmplrendcfg)
+					if err != nil {
+						mlg.LogPrintln(logx.ERROR, "rt.NewTmplRenderer error:", err)
+						mlg.LogPrintln(logx.NOTICE, "canceling reload because initialization failed")
+						break
+					}
+					irh_ctl.SetHTMLRenderer(rend)
+					mlg.LogPrintln(logx.NOTICE, "templates reloaded")
+				}
 			}
 		}
 	}(killc)
