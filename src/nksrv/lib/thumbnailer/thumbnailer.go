@@ -9,7 +9,13 @@ import (
 
 // config
 type ThumbConfig struct {
-	Width, Height int    // thumbnail box
+	// thumbnail box
+	Width  int
+	Height int
+	// special audio files cover thumbnailing
+	AudioWidth  int
+	AudioHeight int
+	// rest
 	Color         string // background color if needs to be hardcoded
 	Grayscale     bool   // makes images gray
 }

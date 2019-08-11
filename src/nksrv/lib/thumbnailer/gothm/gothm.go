@@ -134,8 +134,8 @@ func (t *GoThumbnailer) ThumbProcess(
 		return
 	}
 
-	imgcfg, cfgfmt, err := image.DecodeConfig(f)
-	if err != nil {
+	imgcfg, cfgfmt, ex := image.DecodeConfig(f)
+	if ex != nil {
 		// bail out on any decoder failure
 		close_err()
 		return

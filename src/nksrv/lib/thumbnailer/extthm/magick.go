@@ -6,8 +6,6 @@ import (
 	"image"
 	"os"
 	"os/exec"
-	"strconv"
-	"strings"
 
 	"nksrv/lib/ftypes"
 	"nksrv/lib/thumbnailer"
@@ -40,6 +38,9 @@ func (b *magickBackend) doThumbnailing(
 		closed = true
 	}
 
+	var imgcfg image.Config
+	var cfgfmt string
+
 	if true /* TODO: alt scanners? */ {
 		/*
 		 * how this works:
@@ -56,8 +57,9 @@ func (b *magickBackend) doThumbnailing(
 			return
 		}
 
-		imgcfg, cfgfmt, err := image.DecodeConfig(f)
-		if err != nil {
+		var ex error
+		imgcfg, cfgfmt, ex = image.DecodeConfig(f)
+		if ex != nil {
 			// bail out on any decoder failure
 			close_err()
 			return
@@ -168,26 +170,21 @@ func (b *magickBackend) doThumbnailing(
 		// XXX following would kill non-sRGB profiles
 		//args = append(args, "-strip")
 	}
-	// output to tfn and print conversion info
-	args = append(args, "-verbose", tfn)
+	// output to tfn
+	args = append(args, tfn)
 
 	cmd := &exec.Cmd{
 		Path: runfile,
 		Args: args,
 	}
 
-	var out []byte
-	var ex error
-	if !useGM {
-		out, ex = cmd.Output()
-	} else {
-		out, ex = cmd.CombinedOutput()
-	}
+	_, ex := cmd.Output()
 	if ex != nil {
 		if ee, _ := ex.(*exec.ExitError); ee != nil {
 			if ee.ProcessState.ExitCode() == 1 {
 				// 1 is used for invalid input I think
-				// XXX should maybe do something extra??
+				// XXX investigate err?
+				os.Remove(tfn)
 				return
 			}
 		}
@@ -199,47 +196,9 @@ func (b *magickBackend) doThumbnailing(
 		return
 	}
 
-	// parse stderr
-	outs := string(out)
-	if i := strings.IndexByte(outs, '\n'); i >= 0 {
-		outs = outs[:i]
-	}
-	outs = strings.TrimSpace(outs)
-	details := strings.Fields(outs)
-	// fn.jpg=>tfn.jpg JPEG 1200x800=>500x333 500x333+0+0 8-bit sRGB 137060B 0.030u 0:00.013
-	// gm don't do second one and has +0+0 in first one
-	if len(details) < 3 {
-		err = errMagickOutputMisunderstod
-		return
-	}
-	rsz := details[2]
-	if sep := strings.Index(rsz, "=>"); sep >= 0 {
-		rsz = rsz[sep+2:]
-	} else {
-		err = errMagickOutputMisunderstod
-		return
-	}
-	if trash := strings.IndexByte(rsz, '+'); trash >= 0 {
-		rsz = rsz[:trash]
-	}
-	if eeks := strings.IndexByte(rsz, 'x'); eeks >= 0 {
-		var x uint64
-
-		x, err = strconv.ParseUint(rsz[:eeks], 10, 32)
-		if err != nil {
-			err = errMagickOutputMisunderstod
-			return
-		}
-		res.Width = int(x)
-
-		x, err = strconv.ParseUint(rsz[eeks+1:], 10, 32)
-		if err != nil {
-			err = errMagickOutputMisunderstod
-			return
-		}
-		res.Height = int(x)
-	}
-
+	res.Width, res.Height =
+		calcDecreaseThumbSize(
+			imgcfg.Width, imgcfg.Height, cfg.Width, cfg.Height)
 	res.FileName = tfn
 	res.FileExt = "jpg"
 

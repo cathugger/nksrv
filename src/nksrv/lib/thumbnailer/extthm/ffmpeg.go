@@ -1,14 +1,26 @@
 package extthm
 
+import (
+	"encoding/json"
+	"fmt"
+	"mime"
+	"os"
+	"os/exec"
+	"strings"
+
+	"nksrv/lib/ftypes"
+	"nksrv/lib/thumbnailer"
+)
+
 //sect.Add("audio/*", "{{.ffmpeg}} -i {{.infile}} -an -vcodec copy {{.outfile}}")
 //sect.Add("video/*", "{{.ffmpeg}} -i {{.infile}} -vf scale=300:200 -vframes 1 {{.outfile}}")
 
 type ffmpegSoxBackend struct {
-	t           *ExternalThumbnailer
-	fmt         string // needs to be set properly or death will await
+	t   *ExternalThumbnailer
+	fmt string // needs to be set properly or death will await
 
 	ffprobePath string
-	ffmprgPath  string
+	ffmpegPath  string
 	soxPath     string
 }
 
@@ -19,16 +31,16 @@ type ffprobeDispotision struct {
 }
 
 type ffprobeStream struct {
-	CodecType      string  `json:"codec_type"`
-	CodecName      string  `json:"codec_name"`
-	CodecLongName  string  `json:"codec_long_name"`
-	Duration       float64 `json:"duration,string"`
-	BitRate        int     `json:"bit_rate,string"`
-	Width          int     `json:"width"`
-	Height         int     `json:"height"`
-	Profile        string  `json:"profile"`
-	Level          int     `json:"level"`
-	IsAVC          bool    `json:"is_avc,string"`
+	CodecType     string  `json:"codec_type"`
+	CodecName     string  `json:"codec_name"`
+	CodecLongName string  `json:"codec_long_name"`
+	Duration      float64 `json:"duration,string"`
+	BitRate       int     `json:"bit_rate,string"`
+	Width         int     `json:"width"`
+	Height        int     `json:"height"`
+	Profile       string  `json:"profile"`
+	Level         int     `json:"level"`
+	IsAVC         bool    `json:"is_avc,string"`
 
 	Disposition ffprobeDispotision `json:"disposition"`
 }
@@ -69,7 +81,6 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 		return
 	}
 
-
 	// we can't read into video/audio files from golang yet
 	// so invoke ffprobe with forced format & json output
 	runffprobe := b.ffprobePath
@@ -85,7 +96,7 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 	args = append(args, fn)
 
 	cmd := &exec.Cmd{
-		Path: runfile,
+		Path: runffprobe,
 		Args: args,
 	}
 	out, ex := cmd.Output()
@@ -99,7 +110,7 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 			}
 		}
 		// if it's something else
-		err = ee
+		err = ex
 		return
 	}
 
@@ -109,13 +120,13 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 		return
 	}
 
-	fmts := strings.Split(ffproberes.FormatName, ",")
+	fmts := strings.Split(ffproberes.Format.FormatName, ",")
 	knownfmt := ""
 	for _, f := range fmts {
 		switch f {
-			case "webm", "mp4", "mp3", "ogg", "flac", "wav":
-				knownfmt = f
-				goto foundfmt
+		case "webm", "mp4", "mp3", "ogg", "flac", "wav":
+			knownfmt = f
+			goto foundfmt
 		}
 	}
 	// format not known
@@ -133,6 +144,7 @@ foundfmt:
 	gotBadVids := false
 	vidCodec := ""
 	gotAudio := false
+	gotAudioID := 0
 	gotBadAudio := false
 	audCodec := ""
 	// so okay, what we're dealing with
@@ -146,88 +158,91 @@ foundfmt:
 				if !gotPics {
 					// check if we consider format of picture safe
 					switch cname {
-						case "jpeg", "mjpeg", "png", "gif", "webp", "bmp":
-							// yeah OK
-							gotPics = true
-							gotPicsID = i
-						default:
-							// mark unknown pics so it'd do conflict with vids anyway
-							gotBadPics = true
+					case "jpeg", "mjpeg", "png", "gif", "webp", "bmp":
+						// yeah OK
+						gotPics = true
+						gotPicsID = i
+					default:
+						// mark unknown pics so it'd do conflict with vids anyway
+						gotBadPics = true
 					}
 				}
 			} else {
 				// video
 				switch {
-					// XXX h263, flv1?
-					case cname == "h264" && knownfmt == "mp4":
-						// gay
-						{
-							isavc := ffproberes.Streams[i].IsAVC
-							prof := ffproberes.Streams[i].Profile
-							lvl := ffproberes.Streams[i].Level
-							switch {
-								case isavc && prof == "Baseline":
-									cname = fmt.Sprintf("avc1.42E0%02X", lvl)
-								case isavc && prof == "Main":
-									cname = fmt.Sprintf("avc1.4D40%02X", lvl)
-								case isavc && prof == "High":
-									cname = fmt.Sprintf("avc1.6400%02X", lvl)
-								default:
-									cname = ""
-							}
-							if cname == "" {
-								gotBadVids = true
-								break
-							}
+				// XXX h263, flv1?
+				case cname == "h264" && knownfmt == "mp4":
+					// gay
+					{
+						isavc := ffproberes.Streams[i].IsAVC
+						prof := ffproberes.Streams[i].Profile
+						lvl := ffproberes.Streams[i].Level
+						switch {
+						case isavc && prof == "Baseline":
+							cname = fmt.Sprintf("avc1.42E0%02X", lvl)
+						case isavc && prof == "Main":
+							cname = fmt.Sprintf("avc1.4D40%02X", lvl)
+						case isavc && prof == "High":
+							cname = fmt.Sprintf("avc1.6400%02X", lvl)
+						default:
+							cname = ""
 						}
-
-						fallthrough
-					case cname == "theora" && knownfmt == "ogg",
-						cname == "vp8" && knownfmt != "ogg",
-						cname == "vp9" && knownfmt != "ogg",
-						cname == "av1" && knownfmt != "ogg":
-
-						// XXX AV1's format is even gayer than avc1 but don't bother yet
-						// https://aomediacodec.github.io/av1-isobmff/#codecsparam
-						// OK
-						gotVids++
-						if gotVids == 1 {
-							vidCodec = cname
-							gotVidsID = i
-						} else if vidCodec != cname {
-							vidCodec = ""
+						if cname == "" {
+							gotBadVids = true
+							break
 						}
+					}
 
-					default:
-						gotBadVids = true
+					fallthrough
+				case cname == "theora" && knownfmt == "ogg",
+					cname == "vp8" && knownfmt != "ogg",
+					cname == "vp9" && knownfmt != "ogg":
+					/*cname == "av1" && knownfmt != "ogg":*/
+
+					// XXX AV1's format is even gayer than avc1 but don't bother yet
+					// https://aomediacodec.github.io/av1-isobmff/#codecsparam
+					// OK
+					gotVids++
+					if gotVids == 1 {
+						vidCodec = cname
+						gotVidsID = i
+					} else if vidCodec != cname {
+						vidCodec = ""
+					}
+
+				default:
+					gotBadVids = true
 				}
 			}
 		} else if ctype == "audio" {
 			switch {
-				case cname == "aac" && knownfmt == "mp4":
-					cname = "mp4a.40.2" // gay
-					fallthrough
-				case cname == "mp3",
-					cname == "vorbis",
-					cname == "opus",
-					cname == "flac":
+			case cname == "aac" && knownfmt == "mp4":
+				cname = "mp4a.40.2" // gay
+				fallthrough
+			case cname == "mp3",
+				cname == "vorbis",
+				cname == "opus",
+				cname == "flac":
 
+				if !gotAudio {
+					gotAudio = true
+					audCodec = cname
+					gotAudioID = i
+				} else if audCodec != cname {
+					// we no longer know
+					audCodec = ""
+				}
+
+			default:
+				if strings.HasPrefix(cname, "pcm_") {
 					if !gotAudio {
 						gotAudio = true
-						audCodec = cname
-					} else if audCodec != cname {
-						// we no longer know
-						audCodec = ""
+						gotAudioID = i
 					}
-
-					gotAudio = true
 					audCodec = ""
-				default:
-					if strings.StartsWith(f, "pcm_") {
-						gotAudio = true
-					} else {
-						gotBadAudio = true
-					}
+				} else {
+					gotBadAudio = true
+				}
 			}
 		} else {
 			// idk
@@ -239,54 +254,54 @@ foundfmt:
 	// OK
 	wantcodec := false
 	switch knownfmt {
-		case "webm":
-			if gotBadVids || (gotVids != 0 && gotBadAudio) {
-				mimeType = "video/x-matroska"
-			} else if gotVids != 0 {
-				mimeType = "video/webm"
-				wantcodec = true
-			} else if gotBadAudio {
-				mimeType = "audio/x-matroska"
-			} else if gotAudio {
-				mimeType = "audio/webm"
-				wantcodec = true
-			} else {
-				// weird, quit
-				return
-			}
+	case "webm":
+		if gotBadVids || (gotVids != 0 && gotBadAudio) {
+			mimeType = "video/x-matroska"
+		} else if gotVids != 0 {
+			mimeType = "video/webm"
+			wantcodec = true
+		} else if gotBadAudio {
+			mimeType = "audio/x-matroska"
+		} else if gotAudio {
+			mimeType = "audio/webm"
+			wantcodec = true
+		} else {
+			// weird, quit
+			return
+		}
 
-		case "mp4":
-			if gotVids != 0 || gotBadVids {
-				mimeType = "video/mp4"
-				wantcodec = true
-			} else if gotAudio || gotBadAudio {
-				mimeType = "audio/mp4"
-				wantcodec = true
-			} else {
-				mimeType = "application/mp4"
-			}
+	case "mp4":
+		if gotVids != 0 || gotBadVids {
+			mimeType = "video/mp4"
+			wantcodec = true
+		} else if gotAudio || gotBadAudio {
+			mimeType = "audio/mp4"
+			wantcodec = true
+		} else {
+			mimeType = "application/mp4"
+		}
 
-		case "ogg":
-			if gotVids != 0 || gotBadVids {
-				mimeType = "video/ogg"
-				wantcodec = true
-			} else if gotAudio || gotBadAudio {
-				mimeType = "audio/ogg"
-				wantcodec = true
-			} else {
-				mimeType = "application/ogg"
-			}
+	case "ogg":
+		if gotVids != 0 || gotBadVids {
+			mimeType = "video/ogg"
+			wantcodec = true
+		} else if gotAudio || gotBadAudio {
+			mimeType = "audio/ogg"
+			wantcodec = true
+		} else {
+			mimeType = "application/ogg"
+		}
 
-		case "mp3":
-			mimeType = "audio/mpeg"
-		case "flac":
-			mimeType = "audio/flac"
-		case "wav":
-			mimeType = "audio/wave"
+	case "mp3":
+		mimeType = "audio/mpeg"
+	case "flac":
+		mimeType = "audio/flac"
+	case "wav":
+		mimeType = "audio/wave"
 	}
 
-	if wantcodec && !gotBadVideo && !gotBadAudio &&
-		(gotVideo == 0 || vidCodec != "") &&
+	if wantcodec && !gotBadVids && !gotBadAudio &&
+		(gotVids == 0 || vidCodec != "") &&
 		(!gotAudio || audCodec != "") {
 
 		codecs := ""
@@ -301,14 +316,14 @@ foundfmt:
 		}
 
 		mimeType = mime.FormatMediaType(
-			mimeType, map[string]string{"codecs":codecs})
+			mimeType, map[string]string{"codecs": codecs})
 	}
 
 	var tf *os.File
 	var tfn string
-	parktmp := func(){
+	parktmp := func(ending string) {
 		// park file for convert output
-		tf, err = b.t.fs.TempFile("t-", ".jpg")
+		tf, err = b.t.fs.TempFile("t-", ending)
 		if err != nil {
 			return
 		}
@@ -327,18 +342,21 @@ foundfmt:
 	// so what we gonna do with it?
 	fi.DetectedType = mimeType
 
-	if gotVideo > 1 || gotBadVideo {
+	if gotVids > 1 || gotBadVids {
 		// multiple videos... nah
 		return
 	}
-	if gotVideo > 0 {
+
+	runffmpeg := b.ffmpegPath
+
+	if gotVids > 0 {
 		// VIDEO
 		fi.Kind = ftypes.FTypeVideo
 
 		fi.Attrib = make(map[string]interface{})
 		vw := ffproberes.Streams[gotVidsID].Width
 		vh := ffproberes.Streams[gotVidsID].Height
-		fi.Attrib["width"]  = vw
+		fi.Attrib["width"] = vw
 		fi.Attrib["height"] = vh
 		fi.Attrib["length"] = ffproberes.Format.Duration
 
@@ -349,33 +367,153 @@ foundfmt:
 			return
 		}
 
-		parktmp()
+		parktmp(".jpg")
 		if err != nil {
 			return
 		}
 
-		runffmpeg := b.ffmpegPath
+		vfilter :=
+			fmt.Sprintf(
+				"scale=%d:%d:force_original_aspect_ratio=decrease",
+				cfg.Width, cfg.Height)
+		if cfg.Grayscale {
+			vfilter += ",hue=s=0"
+		}
+
 		args := []string{
 			runffmpeg,
 			"-v", "error",
+			"-an", "-sn", "-dn",
 			"-f", knownfmt,
 			"-i", fn,
 			"-map", fmt.Sprintf("0:%d", gotVidsID),
-			"-an", "-sn", "-dn",
-			"-vf", fmt.Sprintf(
-				"scale=%d:%d:force_original_aspect_ratio=decrease",
-				cfg.Width, cfg.Height),
 			"-vframes", "1",
-			tfn,
+			"-vf", vfilter,
+			"-y", tfn,
 		}
 		cmd := &exec.Cmd{
-			Path: runfile,
+			Path: runffmpeg,
 			Args: args,
 		}
-		out, ex := cmd.Output()
+		_, ex := cmd.Output()
 		if ex != nil {
-
+			if ee, _ := ex.(*exec.ExitError); ee != nil {
+				if ee.ProcessState.ExitCode() > 0 {
+					// 1 is used for invalid input I think
+					// XXX investigate err?
+					os.Remove(tfn)
+					return
+				}
+			}
+			// XXX should log
+			// if file was bad status shouldve been 1
+			// otherwise this was unexpected err
+			// (file wasn't bad or it was so bad it killed IM/GM)
+			err = ex
+			return
 		}
+
+		// succeeded
+		res.Width, res.Height =
+			calcDecreaseThumbSize(vw, vh, cfg.Width, cfg.Height)
+		res.FileName = tfn
+		res.FileExt = "jpg"
+		return
 	}
 
+	// audio file
+	if gotAudio {
+
+		// AUDIO
+		fi.Kind = ftypes.FTypeAudio
+		fi.Attrib = make(map[string]interface{})
+		if ffproberes.Streams[gotAudioID].Duration > 0 {
+			fi.Attrib["length"] = ffproberes.Streams[gotAudioID].Duration
+		} else {
+			fi.Attrib["length"] = ffproberes.Format.Duration
+		}
+
+		if gotPics {
+			// XXX
+			_ = gotBadPics
+
+			fi.Attrib["width"] = cfg.AudioWidth
+			fi.Attrib["height"] = cfg.AudioHeight
+
+			vw := ffproberes.Streams[gotPicsID].Width
+			vh := ffproberes.Streams[gotPicsID].Height
+
+			if (b.t.cfg.MaxWidth > 0 && vw > b.t.cfg.MaxWidth) ||
+				(b.t.cfg.MaxHeight > 0 && vh > b.t.cfg.MaxHeight) ||
+				(b.t.cfg.MaxPixels > 0 && vw*vh > b.t.cfg.MaxPixels) {
+
+				return
+			}
+
+			parktmp(".jpg")
+			if err != nil {
+				return
+			}
+
+			vfilter :=
+				fmt.Sprintf(
+					"scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
+					cfg.AudioWidth, cfg.AudioHeight,
+					cfg.AudioWidth, cfg.AudioHeight)
+			if cfg.Grayscale {
+				vfilter += ",hue=s=0"
+			}
+
+			args := []string{
+				runffmpeg,
+				"-v", "error",
+				"-an", "-sn", "-dn",
+				"-f", knownfmt,
+				"-i", fn,
+				"-map", fmt.Sprintf("0:%d", gotPicsID),
+				"-vframes", "1",
+				"-vf", vfilter,
+				"-y", tfn,
+			}
+			cmd := &exec.Cmd{
+				Path: runffmpeg,
+				Args: args,
+			}
+			_, ex := cmd.Output()
+			if ex != nil {
+				if ee, _ := ex.(*exec.ExitError); ee != nil {
+					if ee.ProcessState.ExitCode() > 0 {
+						// 1 is used for invalid input I think
+						// XXX investigate err?
+						os.Remove(tfn)
+						return
+					}
+				}
+				// XXX should log
+				// if file was bad status shouldve been 1
+				// otherwise this was unexpected err
+				// (file wasn't bad or it was so bad it killed IM/GM)
+				err = ex
+				return
+			}
+
+			// succeeded
+			res.Width, res.Height =
+				calcDecreaseThumbSize(
+					cfg.AudioWidth, cfg.AudioHeight, cfg.Width, cfg.Height)
+			res.FileName = tfn
+			res.FileExt = "jpg"
+			return
+		}
+
+		// ok we've got no pics, if we have bad audio streams don't do anything else
+		if gotBadAudio {
+			return
+		}
+
+		// TODO use sox to thumbnail
+		return
+	}
+
+	return
 }
