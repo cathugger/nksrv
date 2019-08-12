@@ -22,14 +22,18 @@ var CfgPSQLIB = psqlib.Config{
 	AltThumber: &CfgAltThm,
 	TBuilder:   gothm.DefaultConfig,
 	TCfgThread: &thumbnailer.ThumbConfig{
-		Width:  250,
-		Height: 250,
-		Color:  "#C5EFCF",
+		Width:       250,
+		Height:      250,
+		AudioWidth:  350,
+		AudioHeight: 350,
+		Color:       "#cfefc6",
 	},
 	TCfgReply: &thumbnailer.ThumbConfig{
-		Width:  200,
-		Height: 200,
-		Color:  "#DDFFDD",
+		Width:       200,
+		Height:      200,
+		AudioWidth:  350,
+		AudioHeight: 350,
+		Color:       "#DDFFDD",
 	},
 }
 

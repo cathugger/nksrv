@@ -437,8 +437,21 @@ foundfmt:
 			// XXX
 			_ = gotBadPics
 
-			fi.Attrib["width"] = cfg.AudioWidth
-			fi.Attrib["height"] = cfg.AudioHeight
+			// go is gay
+			var aw, ah int
+			if cfg.AudioWidth > 0 {
+				aw = cfg.AudioWidth
+			} else {
+				aw = cfg.Width
+			}
+			if cfg.AudioHeight > 0 {
+				ah = cfg.AudioHeight
+			} else {
+				ah = cfg.Height
+			}
+
+			fi.Attrib["width"] = aw
+			fi.Attrib["height"] = ah
 
 			vw := ffproberes.Streams[gotPicsID].Width
 			vh := ffproberes.Streams[gotPicsID].Height
@@ -458,8 +471,7 @@ foundfmt:
 			vfilter :=
 				fmt.Sprintf(
 					"scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
-					cfg.AudioWidth, cfg.AudioHeight,
-					cfg.AudioWidth, cfg.AudioHeight)
+					aw, ah, aw, ah)
 			if cfg.Grayscale {
 				vfilter += ",hue=s=0"
 			}
@@ -499,8 +511,7 @@ foundfmt:
 
 			// succeeded
 			res.Width, res.Height =
-				calcDecreaseThumbSize(
-					cfg.AudioWidth, cfg.AudioHeight, cfg.Width, cfg.Height)
+				calcDecreaseThumbSize(aw, ah, cfg.Width, cfg.Height)
 			res.FileName = tfn
 			res.FileExt = "jpg"
 			return
