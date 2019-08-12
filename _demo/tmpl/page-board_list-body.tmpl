@@ -1,5 +1,5 @@
-  <table border="1">
-   <thead>
+  <table class="blist">
+   <thead class="blist">
     <tr>
      <th>Name</th>
      <th>Posts</th>
@@ -8,9 +8,9 @@
      <th>Tags</th>
     </tr>
    </thead>
-   <tbody>
+   <tbody class="blist">
     {{range $.D.Boards -}}
-     <tr>
+     <tr class="blist">
       <td><a href="{{$.N.Root}}/{{escboard .Name}}/">{{html .Name}}</a></td>
       <td>{{.NumPosts}}</td>
       <td>{{.NumThreads}}</td>
