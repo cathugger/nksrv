@@ -53,6 +53,8 @@ const (
 
 	st_web_thread_catalog
 
+	st_web_overboard_catalog
+
 	st_web_thread
 
 	st_web_failref_write
@@ -124,6 +126,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "web_overboard_page"},
 
 	st_reference{"web", "web_thread_catalog"},
+
+	st_reference{"web", "web_overboard_catalog"},
 
 	st_reference{"web", "web_thread"},
 

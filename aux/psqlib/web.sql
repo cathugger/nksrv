@@ -369,6 +369,81 @@ ON
 WHERE
 	xb.b_name = $1
 
+-- :name web_overboard_catalog
+-- input: {thread_count}
+SELECT
+	xt.b_id,
+	xt.b_name,
+	xt.t_id,
+	xt.t_name,
+	xt.p_count,
+	xt.f_count AS xt_f_count,
+	xt.bump,
+	xbp.b_p_id,
+	xp.pdate,
+	xp.f_count AS xp_f_count,
+	xp.author,
+	xp.trip,
+	xp.title,
+	xp.message,
+	xf.f_id,
+	xf.fname,
+	xf.ftype,
+	xf.thumb,
+	xf.thumbcfg
+FROM
+	(
+		SELECT
+			zt.b_id,
+			zb.b_name,
+			zt.t_id,
+			zt.t_name,
+			zt.bump,
+			zt.p_count,
+			zt.f_count
+		FROM
+			ib0.threads AS zt
+		JOIN
+			ib0.boards AS zb
+		ON
+			zt.b_id = zb.b_id
+		WHERE
+			zt.skip_over IS NOT TRUE
+		ORDER BY
+			zt.bump DESC,
+			zt.g_t_id ASC,
+			zt.b_id ASC
+		LIMIT
+			$1
+	) AS xt
+LEFT JOIN
+	ib0.bposts xbp
+ON
+	xt.b_id = xbp.b_id AND xt.t_id = xbp.b_p_id
+LEFT JOIN
+	ib0.posts xp
+ON
+	xbp.g_p_id = xp.g_p_id
+LEFT JOIN
+	LATERAL (
+		SELECT
+			zf.f_id,
+			zf.fname,
+			zf.ftype,
+			zf.thumb,
+			zf.thumbcfg
+		FROM
+			ib0.files AS zf
+		WHERE
+			xp.g_p_id = zf.g_p_id AND zf.ftype != 'msg'
+		ORDER BY
+			zf.f_id
+		LIMIT
+			1
+	) AS xf
+ON
+	TRUE
+
 -- :name web_thread
 -- input: {b_name} {t_name}
 SELECT
