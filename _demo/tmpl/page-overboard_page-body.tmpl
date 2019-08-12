@@ -6,7 +6,7 @@
 
   {{range $T := $.D.Threads -}}
    <div><a href="{{$.N.Root}}/{{escboard $T.BoardName}}/">/{{html $T.BoardName}}/</a></div>
-   {{template "op" list $ $T.BoardName (threadptr $T.IBCommonThread) (postptr $T.OP) 1 4 0 -}}
+   {{template "op" list $ $T.BoardName (threadptr $T.IBCommonThread) (postptr $T.OP) 1 10 200 -}}
    {{if $T.SkippedReplies -}}
     <div><strong class="t_skipped">{{$T.SkippedReplies}}
     {{if ne $T.SkippedReplies 1}}replies{{else}}reply{{end}}
@@ -16,7 +16,7 @@
     not shown.</strong></div>
    {{- end -}}
    {{range $i, $v := $T.Replies -}}
-    {{template "reply" list $ $T.BoardName (threadptr $T.IBCommonThread) (postptr $v) 1 4 0 -}}
+    {{template "reply" list $ $T.BoardName (threadptr $T.IBCommonThread) (postptr $v) 1 10 200 -}}
    {{end -}}
    <div style="clear:both"></div>
    <hr />

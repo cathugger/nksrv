@@ -28,6 +28,10 @@ html {
 	word-wrap: break-word;
 }
 
+a:link, a:visited {
+	color: #1133BB;
+}
+
 .cat_div {
 	float: left;
 	text-align: center;
@@ -141,15 +145,15 @@ html {
 	padding: 0px 12px 4px 16px;
 }
 
-.quote {
+a.quote:link, a.quote:visited {
 	color: #407F10;
 }
 
-.ref {
+a.ref:link, a.ref:visited {
 	color: #EF1000;
 }
 
-.bref {
+a.bref:link, a.bref:visited {
 	color: #004070;
 	font-size: 11px;
 }
@@ -202,6 +206,10 @@ a.name {
 .trunc {
 	/* background-color: #CCEEBB; */
 	color: gray;
+}
+
+div.nav {
+	font-size: larger;
 }
 
 .thread_stats {
