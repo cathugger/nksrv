@@ -1,0 +1,12 @@
+
+idea:
+
+when new thread gets made, recheck against current view which is <= Date hdr of $current_article
+if article gets reply to existing thread which isn't marked as `should_prune`, just normally bump.
+if article gets reply to existing thread which is marked as `should_prune`, it should check that article's date is between thread's `last_normal_bump` and `prunelimit`.
+`prunelimit` is date-like variable describing before which date insert could save thread from getting pruned.
+after `prunelimit`, thread would be already slided off and couldn't be bumped anymore.
+on post delete, recheck thread against view of <=deleted_post_date, then if its to be pruned, recalc bump time, reassign `prunelimit` var
+
+invisible thread handling:
+TODO
