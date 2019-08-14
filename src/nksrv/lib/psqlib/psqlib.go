@@ -4,6 +4,7 @@ package psqlib
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -58,6 +59,7 @@ type Config struct {
 	DB                 *psql.PSQL
 	Logger             *LoggerX
 	NodeName           string
+	WebFrontendKey     string
 	SrcCfg             *fstore.Config
 	ThmCfg             *fstore.Config
 	NNTPFSCfg          *fstore.Config
@@ -150,6 +152,13 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.ffo = formFileOpener{&p.src}
 
 	p.instance = nonEmptyStrOrPanic(cfg.NodeName)
+	if cfg.WebFrontendKey != "" {
+		seed, e := hex.DecodeString(cfg.WebFrontendKey)
+		if e != nil {
+			panic("bad web frontend key")
+		}
+		p.webFrontendKey = ed25519.NewKeyFromSeed(seed)
+	}
 
 	p.fpp = form.DefaultParserParams
 	// TODO make configurable
