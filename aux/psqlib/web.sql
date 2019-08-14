@@ -953,7 +953,7 @@ WITH
 				layout  = excluded.layout,
 				extras  = excluded.extras
 		RETURNING
-			g_p_id,f_count
+			g_p_id,f_count,msgid
 	),
 	delbp AS (
 		-- delete all board posts of that
@@ -967,7 +967,7 @@ WITH
 			xbp.b_id,xbp.t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
 	),
 	delbt AS (
-		-- delete incase we nuked OP(s)
+		-- delete thread(s) incase we nuked OP(s)
 		DELETE FROM
 			ib0.threads xt
 		USING
@@ -978,7 +978,7 @@ WITH
 			xt.b_id,xt.t_id
 	),
 	updbt AS (
-		-- update incase we haven't deleted thread earlier
+		-- update thread(s) counters incase we haven't deleted thread(s) earlier
 		-- un-bump is done adhoc
 		UPDATE
 			ib0.threads xt
@@ -991,7 +991,7 @@ WITH
 			delbp.b_id = xt.b_id AND delbp.t_id = xt.t_id
 	),
 	delbcp AS (
-		-- delete board child posts
+		-- delete board child posts incase we nuked thread(s)
 		DELETE FROM
 			ib0.bposts xbp
 		USING
@@ -1002,7 +1002,7 @@ WITH
 			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
 	),
 	delgcp AS (
-		-- delete global child posts
+		-- delete global child posts (from above)
 		DELETE FROM
 			ib0.posts xp
 		USING
@@ -1022,10 +1022,10 @@ WITH
 		WHERE
 			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
 		RETURNING
-			xp.g_p_id
+			xp.g_p_id,xp.msgid
 	),
 	clean_mods AS (
-		-- garbage collect moderator list
+		-- garbage collect moderator list (maybe we nuked mod post(s))
 		DELETE FROM
 			ib0.modlist mods
 		USING
@@ -1103,7 +1103,7 @@ WITH
 			xf.f_id,xf.fname,xf.thumb
 	)
 SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -1136,11 +1136,21 @@ ON
 	leftf.fname = leftt.fname
 UNION ALL
 SELECT
-	'',0,'',0,b_id,t_id
+	'',0,'',0,b_id,t_id,NULL
 FROM
 	delbp
 WHERE
 	t_id != b_p_id
+UNION ALL
+SELECT
+	'',0,'',0,NULL,NULL,msgid
+FROM
+	delgp
+UNION ALL
+SELECT
+	'',0,'',0,NULL,NULL,msgid
+FROM
+	delgcp
 
 
 -- :name bname_topts_by_tid
