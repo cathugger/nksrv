@@ -21,6 +21,7 @@ import (
 	"nksrv/lib/fstore"
 	ht "nksrv/lib/hashtools"
 	. "nksrv/lib/logx"
+	"nksrv/lib/mail"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
 	tu "nksrv/lib/textutils"
@@ -626,6 +627,21 @@ ON
 		// lets think of Message-ID there
 		fmsgids = mailib.NewRandomMessageID(tu, sp.instance)
 	}
+
+	// frontend sign
+	if sp.webFrontendKey != nil {
+		pInfo.H["X-Frontend-PubKey"] =
+			mail.OneHeaderVal(
+				hex.EncodeToString(sp.webFrontendKey[32:]))
+		signature :=
+			ed25519.Sign(
+				sp.webFrontendKey, unsafeStrToBytes(string(fmsgids)))
+		pInfo.H["X-Frontend-Signature"] =
+			mail.OneHeaderVal(
+				hex.EncodeToString(signature))
+		// XXX store key
+	}
+
 	pInfo.MessageID = cutMsgID(fmsgids)
 
 	// Post ID

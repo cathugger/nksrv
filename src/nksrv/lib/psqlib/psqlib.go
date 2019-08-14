@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sync"
 
+	"golang.org/x/crypto/ed25519"
+
 	"nksrv/lib/altthumber"
 	"nksrv/lib/cacheengine"
 	"nksrv/lib/fstore"
@@ -37,6 +39,7 @@ type PSQLIB struct {
 	maxArticleBodySize   int64
 	autoAddNNTPPostGroup bool
 	webcaptcha           *webcaptcha.WebCaptcha
+	webFrontendKey       ed25519.PrivateKey
 
 	st_prep [st_max]*sql.Stmt
 
