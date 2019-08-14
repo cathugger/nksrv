@@ -267,6 +267,43 @@ var (
 			},
 		},
 	}
+	testOverboardCatalog = webib0.IBOverboardCatalog{
+		Threads: []webib0.IBOverboardCatalogThread{
+			{
+				BoardName: "test",
+				IBThreadCatalogThread: webib0.IBThreadCatalogThread{
+					ID:           "0123456789ABCDEF0123456789ABCDEF",
+					Thumb:        testThumb1,
+					TotalReplies: 0,
+					TotalFiles:   0,
+					Subject:      "test1",
+					Message:      []byte("test message 1"),
+				},
+			},
+			{
+				BoardName: "test",
+				IBThreadCatalogThread: webib0.IBThreadCatalogThread{
+					ID:           "00112233445566770011223344556677",
+					Thumb:        testThumb2,
+					TotalReplies: 2,
+					TotalFiles:   0,
+					Subject:      "test2",
+					Message:      []byte(""),
+				},
+			},
+			{
+				BoardName: "test2",
+				IBThreadCatalogThread: webib0.IBThreadCatalogThread{
+					ID:           "8899AABBCCDDEEFF8899AABBCCDDEEFF",
+					Thumb:        testThumb3,
+					TotalReplies: 5,
+					TotalFiles:   3,
+					Subject:      "",
+					Message:      []byte("test message 3"),
+				},
+			},
+		},
+	}
 )
 
 func (IBProviderDemo) IBGetBoardList(bl *webib0.IBBoardList) (error, int) {
@@ -274,7 +311,9 @@ func (IBProviderDemo) IBGetBoardList(bl *webib0.IBBoardList) (error, int) {
 	return nil, 0
 }
 
-func (IBProviderDemo) IBGetThreadListPage(page *webib0.IBThreadListPage, board string, num uint32) (error, int) {
+func (IBProviderDemo) IBGetThreadListPage(
+	page *webib0.IBThreadListPage, board string, num uint32) (error, int) {
+
 	if board != "test" {
 		return errors.New("board does not exist"), http.StatusNotFound
 	}
@@ -286,7 +325,9 @@ func (IBProviderDemo) IBGetThreadListPage(page *webib0.IBThreadListPage, board s
 	return nil, 0
 }
 
-func (IBProviderDemo) IBGetOverboardPage(page *webib0.IBOverboardPage, num uint32) (error, int) {
+func (IBProviderDemo) IBGetOverboardPage(
+	page *webib0.IBOverboardPage, num uint32) (error, int) {
+
 	if num > 1 {
 		return errors.New("page does not exist"), http.StatusNotFound
 	}
@@ -294,7 +335,9 @@ func (IBProviderDemo) IBGetOverboardPage(page *webib0.IBOverboardPage, num uint3
 	return nil, 0
 }
 
-func (IBProviderDemo) IBGetThreadCatalog(catalog *webib0.IBThreadCatalog, board string) (error, int) {
+func (IBProviderDemo) IBGetThreadCatalog(
+	catalog *webib0.IBThreadCatalog, board string) (error, int) {
+
 	if board != "test" {
 		return errors.New("board does not exist"), http.StatusNotFound
 	}
@@ -302,7 +345,16 @@ func (IBProviderDemo) IBGetThreadCatalog(catalog *webib0.IBThreadCatalog, board 
 	return nil, 0
 }
 
-func (IBProviderDemo) IBGetThread(thread *webib0.IBThreadPage, board string, threadid string) (error, int) {
+func (IBProviderDemo) IBGetOverboardCatalog(
+	page *webib0.IBOverboardCatalog) (error, int) {
+
+	*page = testOverboardCatalog
+	return nil, 0
+}
+
+func (IBProviderDemo) IBGetThread(
+	thread *webib0.IBThreadPage, board string, threadid string) (error, int) {
+
 	if board != "test" {
 		return errors.New("board does not exist"), http.StatusNotFound
 	}

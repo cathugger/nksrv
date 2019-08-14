@@ -7,4 +7,5 @@ type IBProvider interface {
 	IBGetOverboardPage(*IBOverboardPage, uint32) (error, int)
 	IBGetThread(*IBThreadPage, string, string) (error, int)
 	IBGetThreadCatalog(*IBThreadCatalog, string) (error, int)
+	IBGetOverboardCatalog(*IBOverboardCatalog) (error, int)
 }

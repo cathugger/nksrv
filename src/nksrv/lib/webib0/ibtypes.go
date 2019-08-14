@@ -166,3 +166,13 @@ type IBThreadCatalog struct {
 	Board   IBBoardInfo             `json:"board"`             // info about this baord
 	Threads []IBThreadCatalogThread `json:"threads,omitempty"` // threads
 }
+
+type IBOverboardCatalogThread struct {
+	BoardName string `json:"bname"`
+
+	IBThreadCatalogThread
+}
+
+type IBOverboardCatalog struct {
+	Threads []IBOverboardCatalogThread `json:"threads,omitempty"` // threads
+}
