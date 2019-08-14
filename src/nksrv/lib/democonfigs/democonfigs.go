@@ -26,14 +26,14 @@ var CfgPSQLIB = psqlib.Config{
 		Height:      250,
 		AudioWidth:  350,
 		AudioHeight: 350,
-		Color:       "#cfefc6",
+		Color:       "#EEF2FF",
 	},
 	TCfgReply: &thumbnailer.ThumbConfig{
 		Width:       200,
 		Height:      200,
 		AudioWidth:  350,
 		AudioHeight: 350,
-		Color:       "#DDFFDD",
+		Color:       "#D6DAF0",
 	},
 }
 

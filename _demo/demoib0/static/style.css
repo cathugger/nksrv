@@ -24,7 +24,7 @@
 html {
 	font-family: Arial, Helvetica, sans-serif, 'DejaVu Sans';
 	font-size: 13px;
-	background-color: #cfefc6;
+	background-color: #EEF2FF;
 	word-wrap: break-word;
 }
 
@@ -70,7 +70,7 @@ a:link, a:visited {
 }
 
 tr.blist:hover td {
-	background-color: #afcfa6;
+	background-color: #BED2E8;
 }
 
 .imgthumb {
@@ -121,7 +121,7 @@ tr.blist:hover td {
 }
 
 .opinfo, .rinfo {
-	margin: 2px 4px 2px 4px;
+	margin: 2px 2px 2px 4px;
 	/* background-color: #FFCCCC; */
 }
 
@@ -172,8 +172,8 @@ a.bref:link, a.bref:visited {
 
 .reply {
 	display: inline-block;
-	background-color: #DDFFDD;
-	border: 1px solid #99EEBB;
+	background-color: #D6DAF0;
+	border: 1px solid #BCBCE6;
 	padding: 0px 0px 0px 0px;
 	max-width: 100%;
 }
