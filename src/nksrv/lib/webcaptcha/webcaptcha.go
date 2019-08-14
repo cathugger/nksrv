@@ -23,12 +23,12 @@ type captchaKey struct {
 }
 
 type WebCaptcha struct {
-	keks          map[uint64]captchaKey
-	prim          uint64
-	primkek       cipher.AEAD
-	store         captchastore.CaptchaStore
-	length        int
-	validduration int64
+	keks      map[uint64]captchaKey
+	prim      uint64
+	primkek   cipher.AEAD
+	store     captchastore.CaptchaStore
+	length    int
+	vduration int64
 
 	UseCookies bool
 }
@@ -39,7 +39,8 @@ var errInvalidMissing = errors.New(
 var keyenc = hashtools.LowerBase32Enc
 
 func NewWebCaptcha(
-	store captchastore.CaptchaStore, usecookies bool) (*WebCaptcha, error) {
+	store captchastore.CaptchaStore, usecookies bool, vdur int64) (
+	*WebCaptcha, error) {
 
 	lkeks, err := store.LoadKEKs(captcha.RandomKEK)
 	if err != nil {
@@ -61,11 +62,15 @@ func NewWebCaptcha(
 			primkek = pkek
 		}
 	}
+	if vdur <= 0 {
+		vdur = 15 * 60
+	}
 	return &WebCaptcha{
 		keks:       keks,
 		prim:       uint64(prim),
 		primkek:    primkek,
 		store:      store,
+		vduration:  vdur,
 		UseCookies: usecookies,
 	}, nil
 }
@@ -234,7 +239,7 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 	} else {
 		chal, seed = captcha.RandomChallenge(wc.length)
 		ek, _, _ := captcha.EncryptChallenge(
-			wc.primkek, wc.prim, 0, wc.validduration, chal, seed)
+			wc.primkek, wc.prim, 0, wc.vduration, chal, seed)
 		// XXX think of better attribs for cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:  ib0.IBWebFormTextCaptchaKey,
@@ -262,6 +267,6 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 func (wc *WebCaptcha) NewKey() string {
 	chal, seed := captcha.RandomChallenge(wc.length)
 	ek, _, _ := captcha.EncryptChallenge(
-		wc.primkek, wc.prim, 0, wc.validduration, chal, seed)
+		wc.primkek, wc.prim, 0, wc.vduration, chal, seed)
 	return keyenc.EncodeToString(ek)
 }

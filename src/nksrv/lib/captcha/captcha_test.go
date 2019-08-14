@@ -11,7 +11,7 @@ func TestCaptcha(t *testing.T) {
 
 	chal, seed := RandomChallenge(0)
 
-	enckey, _, _ := EncryptChallenge(pkek, id, 0, 0, chal, seed)
+	enckey, _, _ := EncryptChallenge(pkek, id, 0, 60*15, chal, seed)
 
 	deckey, err := DecryptKey(pkek, enckey)
 	if err != nil {

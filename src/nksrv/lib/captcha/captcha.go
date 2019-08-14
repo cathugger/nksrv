@@ -29,7 +29,6 @@ const MaxChalLen = 12
 const KeyDataLen = 32
 const EncKeyLen = 80
 const DefaultChalLen = 8
-const DefaultExpireSecs = 60 * 15 // 15 mins
 
 func EncryptKey(kek cipher.AEAD, keyid uint64, k []byte, t int64) (ek []byte) {
 	if kek.Overhead() != MACOverhead {
@@ -160,7 +159,7 @@ func EncryptChallenge(
 	ek []byte, _, exp int64) {
 
 	if dur <= 0 {
-		dur = DefaultExpireSecs
+		panic("invalid duration")
 	}
 
 	t := time.Now().Unix()

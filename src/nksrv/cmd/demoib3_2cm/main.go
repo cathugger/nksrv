@@ -93,7 +93,7 @@ func main() {
 		cs = memstore.NewMemStore()
 	}
 
-	webcap, err := wc.NewWebCaptcha(cs, usecookies)
+	webcap, err := wc.NewWebCaptcha(cs, usecookies, 60*60)
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "psqlib.NewInitAndPrepare error:", err)
 		return
