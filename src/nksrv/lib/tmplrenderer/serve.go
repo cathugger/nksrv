@@ -188,3 +188,9 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 	setCacheControl(w)
 	tr.outTmplP(w, ptmplThreadCatalog, 200, l)
 }
+
+func (tr *TmplRenderer) ServeOverboardCatalog(
+	w http.ResponseWriter, r *http.Request) {
+
+	// TODO
+}

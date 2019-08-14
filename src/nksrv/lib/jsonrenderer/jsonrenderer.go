@@ -110,6 +110,19 @@ func (j *JSONRenderer) ServeThreadCatalog(
 	e.Encode(&pag)
 }
 
+func (j *JSONRenderer) ServeOverboardCatalog(
+	w http.ResponseWriter, r *http.Request) {
+
+	e := j.prepareEncoder(w, 0)
+	var pag ib0.IBOverboardCatalog
+	err, code := j.p.IBGetOverboardCatalog(&pag)
+	if err != nil {
+		returnError(w, e, err, code)
+		return
+	}
+	e.Encode(&pag)
+}
+
 func (j *JSONRenderer) ServeThread(
 	w http.ResponseWriter, r *http.Request, board, thread string) {
 

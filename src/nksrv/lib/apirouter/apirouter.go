@@ -233,19 +233,23 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 
 	h_overboard := handler.NewRegexPath()
 
-	h_overboard.Handle("/pages/{{n:[0-9]+}}", false,
-		handler.NewMethod().Handle("GET", http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				sn := r.Context().Value("n").(string)
-				n, e := strconv.ParseUint(sn, 10, 32)
-				if e != nil {
-					httpErrorBadRequest(w, r)
-					return
-				}
-				cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
-			})))
+	h_overboard.Handle("/pages/{{n:[0-9]+}}", false, http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			sn := r.Context().Value("n").(string)
+			n, e := strconv.ParseUint(sn, 10, 32)
+			if e != nil {
+				httpErrorBadRequest(w, r)
+				return
+			}
+			cfg.Renderer.ServeOverboardPage(w, r, uint32(n))
+		}))
+	h_overboard.Handle("/catalog", false, http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			cfg.Renderer.ServeOverboardCatalog(w, r)
+		}))
 
-	h.Handle("/overboard", true, h_overboard)
+	h.Handle("/overboard", true,
+		handler.NewMethod().Handle("GET", h_overboard))
 
 	if cfg.Auth != nil {
 		h.Handle("/auth/login", false, http.HandlerFunc(
