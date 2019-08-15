@@ -33,6 +33,8 @@ const (
 	ptmplOverboardPageErr
 	ptmplThreadCatalog
 	ptmplThreadCatalogErr
+	ptmplOverboardCatalog
+	ptmplOverboardCatalogErr
 	ptmplThread
 	ptmplThreadErr
 
@@ -61,6 +63,8 @@ var pnames = [ptmplMax]string{
 	"overboard_page_err",
 	"thread_catalog",
 	"thread_catalog_err",
+	"overboard_catalog",
+	"overboard_catalog_err",
 	"thread",
 	"thread_err",
 }

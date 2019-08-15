@@ -192,5 +192,29 @@ func (tr *TmplRenderer) ServeThreadCatalog(
 func (tr *TmplRenderer) ServeOverboardCatalog(
 	w http.ResponseWriter, r *http.Request) {
 
-	// TODO
+	l := &struct {
+		D ib0.IBOverboardCatalog
+		N *NodeInfo
+		R *TmplRenderer
+	}{
+		N: &tr.ni,
+		R: tr,
+	}
+
+	err, code := tr.p.IBGetOverboardCatalog(&l.D)
+	if err != nil {
+		ctx := struct {
+			Code int
+			Err  error
+			Page uint32
+		}{
+			code,
+			err,
+			page,
+		}
+		tr.outTmplP(w, ptmplOverboardCatalogErr, code, ctx)
+		return
+	}
+	setCacheControl(w)
+	tr.outTmplP(w, ptmplOverboardCatalog, 200, l)
 }
