@@ -206,11 +206,9 @@ func (tr *TmplRenderer) ServeOverboardCatalog(
 		ctx := struct {
 			Code int
 			Err  error
-			Page uint32
 		}{
 			code,
 			err,
-			page,
 		}
 		tr.outTmplP(w, ptmplOverboardCatalogErr, code, ctx)
 		return

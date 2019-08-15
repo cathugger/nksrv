@@ -128,17 +128,27 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 			c.GetHTMLRenderer().ServeBoardList))
 
 		h_get.Handle("/_ukko", true,
-			handler.NewRegexPath().Handle("/{{pn:[0-9]*}}", false,
-				http.HandlerFunc(func(
-					w http.ResponseWriter, r *http.Request) {
+			handler.NewRegexPath().
+				Handle("/{{pn:[0-9]*}}", false,
+					http.HandlerFunc(func(
+						w http.ResponseWriter, r *http.Request) {
 
-					pn := r.Context().Value("pn").(string)
-					ok, pni := handlePageNum(w, r, pn)
-					if !ok {
-						return
-					}
-					c.GetHTMLRenderer().ServeOverboardPage(w, r, pni)
-				})))
+						pn := r.Context().Value("pn").(string)
+						ok, pni := handlePageNum(w, r, pn)
+						if !ok {
+							return
+						}
+
+						c.GetHTMLRenderer().
+							ServeOverboardPage(w, r, pni)
+					})).
+				Handle("/catalog", false,
+					http.HandlerFunc(func(
+						w http.ResponseWriter, r *http.Request) {
+
+						c.GetHTMLRenderer().
+							ServeOverboardCatalog(w, r)
+					})))
 
 		h_getr := handler.NewRegexPath()
 		h_get.Fallback(h_getr)
