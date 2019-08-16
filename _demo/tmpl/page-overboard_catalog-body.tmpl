@@ -43,7 +43,7 @@
     {{- if .Subject -}}
      <b><span class="cat_subject" dir="auto">{{html .Subject}}</span>&lrm;{{if .Message}}: {{end}}</b>
     {{- end -}}
-    {{- fmtmsgcat $.R $.N . -}}
+    {{- fmtmsgcat $.R $.N .IBThreadCatalogThread -}}
    </div>
   {{- end}}
 
