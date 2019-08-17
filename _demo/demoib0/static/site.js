@@ -312,9 +312,9 @@ function updateBackRefs(exinfo, elinfo) {
 
 			// it differs. clear this and all following
 			console.log("deleting brefs since " + exbref.textContent);
-			for (var j = i; j < exbrefs.length; j++) {
-				console.log("delet bref " + exbrefs[j].textContent);
-				exinfo.removeChild(exbrefs[j]);
+			while (i < exbrefs.length) {
+				console.log("delet bref " + exbrefs[i].textContent);
+				exinfo.removeChild(exbrefs[i]);
 			}
 			break;
 		}
