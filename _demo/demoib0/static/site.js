@@ -278,8 +278,7 @@ function refer(refcont) {
 
 		ta.setRangeText(txtinsert, selend, selend, "end");
 	}
-
-	return false;
+	return;
 }
 
 function onglobalclick(e) {
