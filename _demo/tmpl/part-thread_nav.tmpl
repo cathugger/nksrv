@@ -1,23 +1,18 @@
-{{/*
+{% /*
 
 navigation (top and bottom) of thread
 
-arguments list:
-  root
-  0 if top, 1 if bottom
+argument: 0 if top, 1 if bottom
 
-*/ -}}
-
-{{$X := index $ 0 -}}
-{{$B := index $ 1 -}}
+*/ -%}
 
 <nav class="nav">
- <div class="nav"> {{- /**/ -}}
+ <div class="nav"> {%- /**/ -%}
   [<a href="../">Return</a>]
   [<a href="../catalog">Catalog</a>]
-  {{if eq $B 1}}[<a href="">Update</a>]{{else}}[<a href="#bottom">Bottom</a>]{{end}}
+  {% if eq $ 1 %}[<a href="" class="update">Update</a>]{% else %}[<a href="#bottom" class="bottom">Bottom</a>]{% end %}
   <div class="thread_stats">
-   {{- with $X.D.ThreadStats -}}
+   {{- with $.D.ThreadStats -}}
     <span title="Replies">R: {{.NumReplies}}</span> /
     <span title="Attachments">A: {{.NumFiles}}</span> /
     <span title="Page">P: {{add_u32 .PageNum 1}}</span>

@@ -3,7 +3,7 @@
 
   <!-- XXX: "Overboard"? -->
 
-  {{template "_thread_catalog_nav" list $ 0}}
+  {% invoke "thread_catalog_nav" 0 %}
 
   <hr />
 
@@ -51,6 +51,6 @@
 
   <hr />
 
-  {{template "_thread_catalog_nav" list $ 1}}
+  {% invoke "thread_catalog_nav" 1 %}
 
   <hr />

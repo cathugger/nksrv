@@ -1,20 +1,20 @@
   {{- /* xxx: node name? board list? */}}
   <hr />
-  {{- template "_boardinfo" $ -}}
+  {%- invoke "board_info" -%}
   <hr />
-  {{template "_thread_nav" list $ 0}}
+  {% invoke "thread_nav" 0 %}
   <hr />
 
-  {{- template "op" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
+  {{- template "_op" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $.D.OP) 0 0 0}}
 
   {{- range $i, $v := $.D.Replies}}
-   {{- template "reply" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
+   {{- template "_reply" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
   {{- end}}
   <div style="clear:both"></div>
 
   <div id="bottom"></div>
   <hr />
-  {{template "_thread_nav" list $ 1}}
+  {% invoke "thread_nav" 1 %}
   <hr />
 
   <p><h1>New reply</h1></p>
