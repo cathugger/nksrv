@@ -301,6 +301,7 @@ function updateBackRefs(exinfo, elinfo) {
 	var exbrefs = exinfo.getElementsByClassName("bref");
 	var elbrefs = elinfo.getElementsByClassName("bref");
 	var i = 0;
+	console.log("brefs update: start");
 	// first check existing
 	for (; i < exbrefs.length; i++) {
 		var exbref = exbrefs[i];
@@ -310,6 +311,7 @@ function updateBackRefs(exinfo, elinfo) {
 			elbrefs[i].textContent != exbref.textContent) {
 
 			// it differs. clear this and all following
+			console.log("deleting brefs since " + exbref.textContent);
 			for (j = i; j < exbrefs.length; j++) {
 				exinfo.removeChild(exbrefs[j]);
 			}
@@ -318,8 +320,11 @@ function updateBackRefs(exinfo, elinfo) {
 	}
 	// add any extra/different
 	for (; i < elbrefs.length; i++) {
+		console.log("adding new bref " + elbrefs[i].textContent);
+		exinfo.appendChild(document.createTextNode(' '));
 		exinfo.appendChild(elbrefs[i]);
 	}
+	console.log("brefs update: end");
 }
 
 function processNewReply(el) {
