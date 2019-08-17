@@ -282,15 +282,80 @@ function refer(refcont) {
 	return;
 }
 
-function reqLoaded(e) {
-	console.log("req loaded!");
-}
-
-function reqErred(e) {
-	console.log("req erred!");
-}
 
 var doupdate = false;
+
+/*
+function findAllChildrenByClass(el, name, act) {
+	for (var i = 0; i < el.childNodes.length; i++) {
+		var e = el.childNodes[i];
+		if (e.className == name)
+			act(e);
+		else
+			findAllChildrenByClass(e, name, act);
+	}
+}
+*/
+
+function updateBackRefs(exinfo, elinfo) {
+	var exbrefs = exinfo.getElementsByClassName("bref");
+	var elbrefs = elinfo.getElementsByClassName("bref");
+	var i = 0;
+	// first check existing
+	for (; i < exbrefs.length; i++) {
+		var exbref = exbrefs[i];
+
+		// check for difference
+		if (i >= elbrefs.length ||
+			elbrefs[i].textContent != exbref.textContent) {
+
+			// it differs. clear this and all following
+			for (j = i; j < exbrefs.length; j++) {
+				exinfo.removeChild(exbrefs[j]);
+			}
+			break;
+		}
+	}
+	// add any extra/different
+	for (; i < elbrefs.length; i++) {
+		exinfo.appendChild(elbrefs[i]);
+	}
+}
+
+function processNewReply(el) {
+	console.log("processNewReply: id=" + el.id);
+	var ex = document.getElementById(el.id);
+	if (ex) {
+		console.log("processNewReply: got ex");
+		// update backrefs of reply
+		updateBackRefs(
+			ex.getElementsByClassName("rinfo")[0],
+			el.getElementsByClassName("rinfo")[0]);
+	}
+	else {
+		console.log("processNewReply: got no ex");
+		// add whole new element
+		// we actually gotta add reply-outer element
+		var bottom = document.getElementById("bottom");
+		bottom.parentElement.insertBefore(el.parentElement, bottom);
+	}
+}
+
+function processUpdatedThread(nel) {
+	console.log("processUpdatedThread: start");
+
+	// update backrefs of OP
+	updateBackRefs(
+		document.getElementsByClassName("opinfo")[0],
+		nel.getElementsByClassName("opinfo")[0]);
+
+	var repls = nel.getElementsByClassName("reply");
+	for (var i = 0; i < repls.length; i++) {
+		processNewReply(repls[i]);
+	}
+
+	console.log("processUpdatedThread: end");
+}
 
 function updateclick(e, tgt) {
 	// to prevent usage before feature is finished
@@ -306,8 +371,14 @@ function updateclick(e, tgt) {
 	console.log("url: " + thispageurl);
 
 	var req = new XMLHttpRequest();
-	req.addEventListener("load", reqLoaded);
-	req.addEventListener("error", reqErred);
+	req.addEventListener("load", function() {
+		console.log("req loaded!");
+
+		processUpdatedThread(req.responseXML);
+	});
+	req.addEventListener("error", function() {
+		console.log("req erred!");
+	});
 	req.open("GET", thispageurl);
 	req.responseType = "document";
 	req.send();

@@ -10,9 +10,8 @@
   {{- range $i, $v := $.D.Replies}}
    {{- template "_reply" list $ $.D.Board.Name (threadptr $.D.IBCommonThread) (postptr $v) 0 0 0}}
   {{- end}}
-  <div style="clear:both"></div>
 
-  <div id="bottom"></div>
+  <div id="bottom" style="clear:both"></div>
   <hr />
   {% invoke "thread_nav" 1 %}
   <hr />
