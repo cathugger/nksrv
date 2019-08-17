@@ -220,9 +220,16 @@ function dothumbclick(e, lnk, thm) {
 	e.preventDefault();
 }
 
+function dorefclick(tgt) {
+	console.log("ref click happen, textContent: " + tgt.textContent);
+}
+
 function onglobalclick(e) {
 	var tgt = e.target;
 	switch (tgt.className) {
+		case 'pnum_ref':
+			dorefclick(tgt);
+			break;
 		case 'imgthumb':
 			dothumbclick(e, tgt.parentElement, tgt);
 			break;
