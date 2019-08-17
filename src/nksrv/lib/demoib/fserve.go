@@ -12,10 +12,7 @@ var _ hfp.HTTPFileProvider = (*IBProviderDemo)(nil)
 var _ sp.StaticProvider = (*IBProviderDemo)(nil)
 
 /*
- * TODO:
- * static should ALSO have infinite caching BUT we should do something like this:
- * /_static/style.css?timestamp
- * this however will need templating engine awareness
+ * infinite caching, templating engine will provide proper ?v= params
  */
 var srccfg = fsd.Config{
 	CacheControl: "public, max-age=31536000, no-transform, immutable"}

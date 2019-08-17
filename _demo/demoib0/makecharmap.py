@@ -52,7 +52,7 @@ s = """<!DOCTYPE html>
 
 <head>
 <title>unicode runes test</title>
-<link rel="stylesheet" type="text/css" href="style.css" />
+<link rel="stylesheet" type="text/css" href="site.css" />
 </head>
 
 <body>
