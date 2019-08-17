@@ -242,8 +242,38 @@ function dorefclick(tgt) {
 			}
 		}
 		txtinsert += ">>" + refcont;
-		if (!endspace)
-			txtinsert += "\r\n";
+		if (!endspace) {
+			txtinsert += '\n';
+			// also quote selected text content
+			var sel = window.getSelection();
+			var str = sel.toString();
+			var stra = str.split(/\n/);
+			stra = stra.map(function(s){
+				// trim line endings
+				while (s.length > 0) {
+					var l = s.length - 1;
+					var c = s[l];
+					if (c != '\n' && c != '\r' && c != ' ' && c != '\t')
+						break;
+					s = s.substring(0, l);
+				}
+				// only if line is non-empty, quote it
+				if (s.length > 0)
+					return '>' + s;
+				else
+					return s;
+			});
+			// trim trailing empty lines
+			for (var i = stra.length-1; i >= 0; i--) {
+				if (stra[i].length() > 0)
+					break;
+
+				stra.length--;
+			}
+			// only append if we have something to append
+			if (stra.length > 0)
+				txtinsert += stra.join('\n') + '\n';
+		}
 		else
 			txtinsert += " ";
 
