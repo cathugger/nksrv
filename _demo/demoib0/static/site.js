@@ -220,9 +220,8 @@ function dothumbclick(e, lnk, thm) {
 	e.preventDefault();
 }
 
-function dorefclick(tgt) {
-	var refcont = tgt.textContent
-	//console.log("ref click happen, textContent: " + refcont);
+function refer(refcont) {
+	//console.log("ref click happen, post: " + refcont);
 	var ta = document.getElementById("message");
 	if (ta) {
 		//console.log("found message element");
@@ -279,14 +278,13 @@ function dorefclick(tgt) {
 
 		ta.setRangeText(txtinsert, selend, selend, "end");
 	}
+
+	return false;
 }
 
 function onglobalclick(e) {
 	var tgt = e.target;
 	switch (tgt.className) {
-		case 'pnum_ref':
-			dorefclick(tgt);
-			break;
 		case 'imgthumb':
 			dothumbclick(e, tgt.parentElement, tgt);
 			break;
