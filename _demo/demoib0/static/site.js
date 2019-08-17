@@ -265,7 +265,7 @@ function dorefclick(tgt) {
 			});
 			// trim trailing empty lines
 			for (var i = stra.length-1; i >= 0; i--) {
-				if (stra[i].length() > 0)
+				if (stra[i].length > 0)
 					break;
 
 				stra.length--;
