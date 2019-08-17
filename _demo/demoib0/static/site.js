@@ -222,10 +222,10 @@ function dothumbclick(e, lnk, thm) {
 
 function dorefclick(tgt) {
 	var refcont = tgt.textContent
-	console.log("ref click happen, textContent: " + refcont);
+	//console.log("ref click happen, textContent: " + refcont);
 	var ta = document.getElementById("message");
 	if (ta) {
-		console.log("found message element");
+		//console.log("found message element");
 
 		var currtxt = ta.value;
 		var selend = ta.selectionEnd;

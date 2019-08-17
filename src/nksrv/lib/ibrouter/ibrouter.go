@@ -124,8 +124,11 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 		h_get := handler.NewSimplePath()
 		h_html.Handle("GET", h_get)
 
-		h_get.Handle("/", false, http.HandlerFunc(
-			c.GetHTMLRenderer().ServeBoardList))
+		h_get.Handle("/", false,
+			http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					c.GetHTMLRenderer().ServeBoardList(w, r)
+				}))
 
 		h_get.Handle("/_ukko", true,
 			handler.NewRegexPath().
