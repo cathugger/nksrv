@@ -282,9 +282,44 @@ function refer(refcont) {
 	return;
 }
 
+function reqLoaded(e) {
+	console.log("req loaded!");
+}
+
+function reqErred(e) {
+	console.log("req erred!");
+}
+
+var doupdate = false;
+
+function updateclick(e, tgt) {
+	// to prevent usage before feature is finished
+	if (!doupdate)
+		return;
+
+	e.preventDefault();
+
+	console.log("update clicked");
+
+	var loc = window.location;
+	var thispageurl = loc.pathname + loc.search;
+	console.log("url: " + thispageurl);
+
+	var req = new XMLHttpRequest();
+	req.addEventListener("load", reqLoaded);
+	req.addEventListener("error", reqErred);
+	req.open("GET", thispageurl);
+	req.responseType = "document";
+	req.send();
+	console.log("update request sent");
+}
+
 function onglobalclick(e) {
 	var tgt = e.target;
 	switch (tgt.className) {
+		case 'update':
+			updateclick(e, tgt);
+			break;
 		case 'imgthumb':
 			dothumbclick(e, tgt.parentElement, tgt);
 			break;
