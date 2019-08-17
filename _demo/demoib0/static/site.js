@@ -221,7 +221,34 @@ function dothumbclick(e, lnk, thm) {
 }
 
 function dorefclick(tgt) {
-	console.log("ref click happen, textContent: " + tgt.textContent);
+	var refcont = tgt.textContent
+	console.log("ref click happen, textContent: " + refcont);
+	var ta = document.getElementById("message");
+	if (ta) {
+		console.log("found message element");
+
+		var currtxt = ta.value;
+		var selend = ta.selectionEnd;
+		var endspace = false;
+		var txtinsert = "";
+		if (selend > 0) {
+			// peek previous character
+			var pch = currtxt[selend-1];
+			if (pch != '\n') {
+				endspace = true;
+				if (pch != ' ' && pch != '\t') {
+					txtinsert += " ";
+				}
+			}
+		}
+		txtinsert += ">>" + refcont;
+		if (!endspace)
+			txtinsert += "\r\n";
+		else
+			txtinsert += " ";
+
+		ta.setRangeText(txtinsert, selend, selend, "end");
+	}
 }
 
 function onglobalclick(e) {
