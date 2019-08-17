@@ -216,6 +216,14 @@ a.name {
 	color: gray;
 }
 
+.pnum_anchor:link, .pnum_anchor:visited, .pnum_ref:link, .pnum_ref:visited {
+	color:black;
+	text-decoration: none;
+}
+.pnum_anchor:hover, .pnum_ref:hover {
+	color:#EE2222;
+}
+
 div.nav {
 	font-size: larger;
 }
