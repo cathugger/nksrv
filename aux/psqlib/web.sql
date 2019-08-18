@@ -552,6 +552,70 @@ WHERE
 	xb.b_name=$1
 
 
+-- :name web_prepost_newthread
+SELECT
+	b_id,
+	post_limits,
+	newthread_limits
+FROM
+	ib0.boards
+WHERE
+	b_name=$1
+
+-- :name web_prepost_newpost
+WITH
+	xb AS (
+		SELECT
+			b_id,
+			post_limits,
+			reply_limits,
+			thread_opts
+		FROM
+			ib0.boards
+		WHERE
+			b_name=$1
+		LIMIT
+			1
+	)
+SELECT
+	xb.b_id,
+	xb.post_limits,
+	xb.reply_limits,
+	xtp.t_id,
+	xtp.reply_limits,
+	xb.thread_opts,
+	xtp.thread_opts,
+	xtp.msgid,
+	xtp.pdate
+FROM
+	xb
+LEFT JOIN LATERAL
+	(
+		SELECT
+			xt.b_id,
+			xt.t_id,
+			xt.reply_limits,
+			xt.thread_opts,
+			xp.msgid,
+			xp.pdate
+		FROM
+			ib0.threads xt
+		JOIN
+			ib0.bposts xbp
+		ON
+			xt.b_id=xbp.b_id AND xt.t_id=xbp.b_p_id
+		JOIN
+			ib0.posts xp
+		ON
+			xbp.g_p_id = xp.g_p_id
+		WHERE
+			xb.b_id = xt.b_id AND xt.t_name=$2
+		LIMIT
+			1
+	) AS xtp
+ON
+	TRUE
+
 
 -- TODO common bucket
 

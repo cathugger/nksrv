@@ -316,6 +316,12 @@ function updateBackRefs(exinfo, elinfo) {
 			// just work it around using reverse loop, as I don't wanna rely on that
 			for (var j = exbrefs.length-1; j >= i; j--) {
 				console.log("delet bref " + exbrefs[j].textContent);
+				// delet whitespace text node
+				var ps = exbrefs[j].previousSibling;
+				if (ps && ps.nodeType == 3) {
+					exinfo.removeChild(ps);
+				}
+				// delet element
 				exinfo.removeChild(exbrefs[j]);
 			}
 			break;

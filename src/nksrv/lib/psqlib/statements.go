@@ -57,6 +57,9 @@ const (
 
 	st_web_thread
 
+	st_web_prepost_newthread
+	st_web_prepost_newpost
+
 	st_web_failref_write
 	st_web_failref_find
 	st_web_update_post_attrs
@@ -130,6 +133,9 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "web_overboard_catalog"},
 
 	st_reference{"web", "web_thread"},
+
+	st_reference{"web", "web_prepost_newthread"},
+	st_reference{"web", "web_prepost_newpost"},
 
 	st_reference{"web", "web_failref_write"},
 	st_reference{"web", "web_failref_find"},

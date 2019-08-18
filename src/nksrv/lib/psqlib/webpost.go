@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	xtypes "github.com/jmoiron/sqlx/types"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/text/unicode/norm"
 
@@ -341,6 +342,7 @@ func (sp *PSQLIB) commonNewPost(
 	var bid boardID
 	var tid sql.NullInt64
 	var ref sql.NullString
+	var opdate pq.NullTime
 
 	var postLimits submissionLimits
 	threadOpts := defaultThreadOptions
@@ -349,22 +351,23 @@ func (sp *PSQLIB) commonNewPost(
 	if !isReply {
 
 		// new thread
-		q := `SELECT b_id,post_limits,newthread_limits
-FROM ib0.boards
-WHERE b_name=$1`
 
 		//sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
 
-		err = sp.db.DB.QueryRow(q, board).Scan(&bid, &jbPL, &jbXL)
+		err = sp.st_prep[st_web_prepost_newthread].
+			QueryRow(board).
+			Scan(&bid, &jbPL, &jbXL)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
 			}
-			return rInfo, sp.sqlError("board row query scan", err),
+			return rInfo,
+				sp.sqlError("board row query scan", err),
 				http.StatusInternalServerError
 		}
 
-		sp.log.LogPrintf(DEBUG, "got bid(%d) post_limits(%q) newthread_limits(%q)",
+		sp.log.LogPrintf(DEBUG,
+			"got bid(%d) post_limits(%q) newthread_limits(%q)",
 			bid, jbPL, jbXL)
 
 		rInfo.Board = board
@@ -374,54 +377,20 @@ WHERE b_name=$1`
 	} else {
 
 		// new post
-		// TODO count files to enforce limit. do not bother about atomicity, too low cost/benefit ratio
-		q := `WITH
-	xb AS (
-		SELECT b_id,post_limits,reply_limits,thread_opts
-		FROM ib0.boards
-		WHERE b_name=$1
-		LIMIT 1
-	)
-SELECT
-	xb.b_id,xb.post_limits,xb.reply_limits,
-	xtp.t_id,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,xtp.msgid
-FROM
-	xb
-LEFT JOIN
-	(
-		SELECT
-			xt.b_id,xt.t_id,xt.reply_limits,xt.thread_opts,xp.msgid
-		FROM
-			ib0.threads xt
-		JOIN
-			xb
-		ON
-			xb.b_id = xt.b_id
-		JOIN
-			ib0.bposts xbp
-		ON
-			xt.b_id=xbp.b_id AND xt.t_id=xbp.b_p_id
-		JOIN
-			ib0.posts xp
-		ON
-			xbp.g_p_id = xp.g_p_id
-		WHERE
-			xt.t_name=$2
-		LIMIT
-			1
-	) AS xtp
-ON
-	xb.b_id=xtp.b_id`
 
 		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
 
-		err = sp.db.DB.QueryRow(q, board, thread).Scan(
-			&bid, &jbPL, &jbXL, &tid, &jtRL, &jbTO, &jtTO, &ref)
+		err = sp.st_prep[st_web_prepost_newpost].
+			QueryRow(board, thread).
+			Scan(
+				&bid, &jbPL, &jbXL, &tid, &jtRL,
+				&jbTO, &jtTO, &ref, &opdate)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return rInfo, errNoSuchBoard, http.StatusNotFound
 			}
-			return rInfo, sp.sqlError("board x thread row query scan", err),
+			return rInfo,
+				sp.sqlError("board x thread row query scan", err),
 				http.StatusInternalServerError
 		}
 
@@ -520,6 +489,19 @@ ON
 			http.StatusBadRequest
 	}
 
+	// time awareness
+	tu := date.NowTimeUnix()
+	// yeah we intentionally strip nanosec part
+	pInfo.Date = date.UnixTimeUTC(tu)
+	// could happen if OP' time is too far into the future
+	// or our time too far into the past
+	// result would be invalid so disallow
+	if isReply && pInfo.Date.Before(opdate.Time) {
+		err = errors.New(
+			"time error: server's time too far into the past or thread's time too far into the future")
+		return rInfo, err, http.StatusInternalServerError
+	}
+
 	// at this point message should be checked
 	// we should calculate proper file names here
 	// should we move files before or after writing to database?
@@ -604,10 +586,6 @@ ON
 		// do not add In-Reply-To for moderation messages
 		inreplyto = nil
 	}
-
-	// fill in info about post
-	tu := date.NowTimeUnix()
-	pInfo.Date = date.UnixTimeUTC(tu) // yeah we intentionally strip nanosec part
 
 	// fill in layout/sign
 	var fmsgids FullMsgIDStr
