@@ -312,9 +312,11 @@ function updateBackRefs(exinfo, elinfo) {
 
 			// it differs. clear this and all following
 			console.log("deleting brefs since " + exbref.textContent);
-			while (i < exbrefs.length) {
-				console.log("delet bref " + exbrefs[i].textContent);
-				exinfo.removeChild(exbrefs[i]);
+			// removeChild modifies exbrefs object... which is pretty crazy if you ask me
+			// just work it around using reverse loop, as I don't wanna rely on that
+			for (var j = exbrefs.length-1; j >= i; j--) {
+				console.log("delet bref " + exbrefs[j].textContent);
+				exinfo.removeChild(exbrefs[j]);
 			}
 			break;
 		}
