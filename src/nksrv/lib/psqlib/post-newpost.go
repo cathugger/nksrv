@@ -251,7 +251,7 @@ FROM
 
 	st := b.String()
 
-	sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
+	//sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newreply statement preparation", err)
@@ -373,6 +373,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
+	sp.log.LogPrintf(DEBUG, "NEWPOST %s start", pInfo.ID)
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
 		if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == "23505" {
@@ -382,6 +383,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		err = sp.sqlError("newreply insert query scan", err)
 		return
 	}
+	sp.log.LogPrintf(DEBUG, "NEWPOST %s done", pInfo.ID)
 
 	// done
 	return

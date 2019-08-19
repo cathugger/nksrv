@@ -640,7 +640,8 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
-	if filecount > 0 {
+	// FI may include extra stuff like signed msg
+	if len(pInfo.FI) > 0 {
 		err = sp.lockFilesTable(tx)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
@@ -650,10 +651,14 @@ func (sp *PSQLIB) commonNewPost(
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
+		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
+
 		modid, priv, err = sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
+
+		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
 	}
 
 	var gpid, bpid postID
@@ -688,6 +693,8 @@ func (sp *PSQLIB) commonNewPost(
 		var delmsgids delMsgIDState
 		defer sp.cleanDeletedMsgIDs(delmsgids)
 
+		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pInfo.MessageID)
+
 		delmsgids, err =
 			sp.execModCmd(
 				tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID,
@@ -695,6 +702,8 @@ func (sp *PSQLIB) commonNewPost(
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
+
+		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pInfo.MessageID)
 	}
 
 	// fixup references
@@ -769,11 +778,13 @@ func (sp *PSQLIB) commonNewPost(
 	}
 
 	// commit
+	sp.log.LogPrintf(DEBUG, "webpost commit start")
 	err = tx.Commit()
 	if err != nil {
 		err = sp.sqlError("webpost tx commit", err)
 		return rInfo, err, http.StatusInternalServerError
 	}
+	sp.log.LogPrintf(DEBUG, "webpost commit done")
 
 	if !isReply {
 		rInfo.ThreadID = pInfo.ID

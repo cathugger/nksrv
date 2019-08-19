@@ -24,6 +24,9 @@ import (
 // or we could just not bother with it and leave it for filesystem.
 
 func (sp *PSQLIB) preDelete(tx *sql.Tx) (err error) {
+
+	sp.log.LogPrintf(DEBUG, "pre-delete LOCK of ib0.files")
+
 	_, err = tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
 	if err != nil {
 		err = sp.sqlError("lock files query", err)
@@ -44,6 +47,7 @@ func (sp *PSQLIB) deleteByMsgID(
 		return
 	}
 
+	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
 	delst := tx.Stmt(sp.st_prep[st_web_delete_by_msgid])
 	rows, err := delst.Query(string(cmsgids))
 	if err != nil {
@@ -51,7 +55,9 @@ func (sp *PSQLIB) deleteByMsgID(
 		return
 	}
 
+	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> processing", cmsgids)
 	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
+	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> end", cmsgids)
 	return
 }
 
@@ -74,6 +80,7 @@ func (sp *PSQLIB) banByMsgID(
 		Valid: banbid != 0 && banbpid != 0,
 	}
 
+	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
 	banst := tx.Stmt(sp.st_prep[st_web_ban_by_msgid])
 	rows, err := banst.Query(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
@@ -81,7 +88,9 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
+	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids, reason)
 	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
+	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
 	return
 }
 
@@ -207,9 +216,12 @@ func (sp *PSQLIB) postDelete(
 }
 
 func (sp *PSQLIB) cleanDeletedMsgIDs(delmsgids delMsgIDState) {
+	sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS start")
 	for _, id := range delmsgids.delmsgids {
+		sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS <%s>", id)
 		sp.nntpce.RemoveItemFinish(id)
 	}
+	sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS done")
 }
 
 func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {

@@ -194,7 +194,7 @@ FROM
 		st = b.String()
 	}
 
-	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
+	//sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newthread statement preparation", err)

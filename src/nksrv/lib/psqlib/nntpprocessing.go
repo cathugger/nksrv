@@ -478,11 +478,15 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
+		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
+
 		modid, priv, err = sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			unexpected = true
 			return
 		}
+
+		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
 	}
 
 	var gpid, bpid postID
@@ -520,6 +524,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		var delmsgids delMsgIDState
 		defer sp.cleanDeletedMsgIDs(delmsgids)
 
+		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pi.MessageID)
+
 		// we should execute it
 		delmsgids, err = sp.execModCmd(
 			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
@@ -528,6 +534,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 			unexpected = true
 			return
 		}
+
+		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pi.MessageID)
 	}
 
 	// fixup references
@@ -587,12 +595,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	// commit
+	sp.log.LogPrintf(DEBUG, "nntppost commit start")
 	err = tx.Commit()
 	if err != nil {
 		err = sp.sqlError("nntp tx commit", err)
 		unexpected = true
 		return
 	}
+	sp.log.LogPrintf(DEBUG, "nntppost commit done")
 
 	return
 }
