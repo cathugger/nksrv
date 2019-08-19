@@ -88,7 +88,7 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids, reason)
+	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids)
 	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
 	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
 	return
