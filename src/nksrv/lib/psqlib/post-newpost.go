@@ -302,6 +302,8 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 
 	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
 
+	sp.log.LogPrintf(DEBUG, "NEWPOST %s start", pInfo.ID)
+
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
 		r = stmt.QueryRow(
@@ -373,7 +375,9 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		}
 		r = stmt.QueryRow(args...)
 	}
-	sp.log.LogPrintf(DEBUG, "NEWPOST %s start", pInfo.ID)
+
+	sp.log.LogPrintf(DEBUG, "NEWPOST %s process", pInfo.ID)
+
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
 		if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == "23505" {
@@ -383,6 +387,7 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 		err = sp.sqlError("newreply insert query scan", err)
 		return
 	}
+
 	sp.log.LogPrintf(DEBUG, "NEWPOST %s done", pInfo.ID)
 
 	// done
