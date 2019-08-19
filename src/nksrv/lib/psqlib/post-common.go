@@ -42,6 +42,14 @@ func (sp *PSQLIB) registeredMod(
 	}
 }
 
+func (sp *PSQLIB) lockFilesTable(tx *sql.Tx) (err error) {
+	_, err = tx.Exec("LOCK ib0.files IN ROW EXCLUSIVE MODE")
+	if err != nil {
+		err = sp.sqlError("lock files query", err)
+	}
+	return
+}
+
 func (sp *PSQLIB) setModPriv(
 	tx *sql.Tx, pubkeystr string, newpriv ModPriv, indelmsgids delMsgIDState) (
 	outdelmsgids delMsgIDState, err error) {

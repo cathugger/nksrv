@@ -259,6 +259,12 @@ func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
 			skipover,
 			smodid)
 	} else {
+
+		err = sp.lockFilesTable(tx)
+		if err != nil {
+			return
+		}
+
 		x := postTQMsgArgCount
 		xf := postTQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
