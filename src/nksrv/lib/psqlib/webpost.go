@@ -640,7 +640,6 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
-	// FI may include extra stuff like signed msg
 	if len(pInfo.FI) > 0 {
 		err = sp.lockFilesTable(tx)
 		if err != nil {
@@ -659,6 +658,16 @@ func (sp *PSQLIB) commonNewPost(
 		}
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
+	}
+
+	if priv > ModPrivNone {
+		// always assume we'll need exclusive lock to have consistent locking
+		err = sp.preModLockFiles(tx)
+	} else if len(pInfo.FI) > 0 {
+		err = sp.lockFilesTable(tx)
+	}
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
 	}
 
 	var gpid, bpid postID

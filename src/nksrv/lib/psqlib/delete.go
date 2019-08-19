@@ -23,9 +23,9 @@ import (
 // idk if and how really that'd work.
 // or we could just not bother with it and leave it for filesystem.
 
-func (sp *PSQLIB) preDelete(tx *sql.Tx) (err error) {
+func (sp *PSQLIB) preModLockFiles(tx *sql.Tx) (err error) {
 
-	sp.log.LogPrintf(DEBUG, "pre-delete LOCK of ib0.files")
+	sp.log.LogPrintf(DEBUG, "pre-mod LOCK of ib0.files")
 
 	_, err = tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
 	if err != nil {
@@ -41,11 +41,6 @@ type delMsgIDState struct {
 func (sp *PSQLIB) deleteByMsgID(
 	tx *sql.Tx, cmsgids CoreMsgIDStr, indelmsgids delMsgIDState) (
 	outdelmsgids delMsgIDState, err error) {
-
-	err = sp.preDelete(tx)
-	if err != nil {
-		return
-	}
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
 	delst := tx.Stmt(sp.st_prep[st_web_delete_by_msgid])
@@ -65,11 +60,6 @@ func (sp *PSQLIB) banByMsgID(
 	tx *sql.Tx, cmsgids CoreMsgIDStr,
 	banbid boardID, banbpid postID, reason string, indelmsgids delMsgIDState) (
 	outdelmsgids delMsgIDState, err error) {
-
-	err = sp.preDelete(tx)
-	if err != nil {
-		return
-	}
 
 	bidn := sql.NullInt64{
 		Int64: int64(banbid),

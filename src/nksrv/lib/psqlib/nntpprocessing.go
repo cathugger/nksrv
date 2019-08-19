@@ -465,14 +465,6 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}()
 
-	if len(pi.FI) > 0 {
-		err = sp.lockFilesTable(tx)
-		if err != nil {
-			unexpected = true
-			return
-		}
-	}
-
 	isctlgrp := info.Newsgroup == "ctl"
 
 	var modid int64
@@ -487,6 +479,17 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
+	}
+
+	if priv > ModPrivNone {
+		// always assume we'll need exclusive lock to have consistent locking
+		err = sp.preModLockFiles(tx)
+	} else if len(pi.FI) > 0 {
+		err = sp.lockFilesTable(tx)
+	}
+	if err != nil {
+		unexpected = true
+		return
 	}
 
 	var gpid, bpid postID
