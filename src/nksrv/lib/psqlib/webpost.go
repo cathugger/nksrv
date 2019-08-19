@@ -640,6 +640,13 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
+	if filecount > 0 {
+		err = sp.lockFilesTable(tx)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
+	}
+
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {

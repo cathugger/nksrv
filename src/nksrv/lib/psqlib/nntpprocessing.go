@@ -465,6 +465,14 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}()
 
+	if len(pi.FI) > 0 {
+		err = sp.lockFilesTable(tx)
+		if err != nil {
+			unexpected = true
+			return
+		}
+	}
+
 	isctlgrp := info.Newsgroup == "ctl"
 
 	var modid int64

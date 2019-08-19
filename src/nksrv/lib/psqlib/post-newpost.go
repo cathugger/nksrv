@@ -326,11 +326,6 @@ func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
 			smodid)
 	} else {
 
-		err = sp.lockFilesTable(tx)
-		if err != nil {
-			return
-		}
-
 		x := postRQMsgArgCount
 		xf := postRQFileArgCount
 		args := make([]interface{}, x+(len(pInfo.FI)*xf))
