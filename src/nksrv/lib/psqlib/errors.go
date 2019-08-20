@@ -11,6 +11,7 @@ var (
 	errNoSuchPage            = errors.New("page does not exist")
 	errInvalidSubmission     = errors.New("invalid form submission")
 	errBadSubmissionEncoding = errors.New("bad form submission encoding")
+	errBadSubmissionChars    = errors.New("form submission contains control characters")
 	errFileTypeNotAllowed    = errors.New("file type not allowed")
 	errTooLongTitle          = errors.New("too long title")
 	errTooLongName           = errors.New("too long name")

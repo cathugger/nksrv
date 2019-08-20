@@ -35,6 +35,8 @@ var defaultReplySubmissionLimits = submissionLimits{
 	FileMaxSizeAll: 8 * 1024 * 1024,
 }
 
+var maxSubmissionLimits = submissionLimits{FileMaxNum: 0x7FffFFff}
+
 // :^)
 var defaultNewThreadSubmissionLimits = func(l submissionLimits) submissionLimits {
 	l.FileMinNum = 1

@@ -241,10 +241,6 @@ func readableText(s string) bool {
 	return true
 }
 
-func validFormText(s string) bool {
-	return utf8.ValidString(s) && readableText(s)
-}
-
 var lineReplacer = strings.NewReplacer(
 	"\r", "",
 	"\n", " ",
@@ -326,12 +322,20 @@ func (sp *PSQLIB) commonNewPost(
 		"post: board %q thread %q xftitle %q xfmessage %q xfoptions %q",
 		board, thread, xftitle, xfmessage, xfoptions)
 
-	if !validFormText(xftitle) ||
-		!validFormText(xfname) ||
-		!validFormText(xfmessage) ||
-		!validFormText(xfoptions) {
+	if !utf8.ValidString(xftitle) ||
+		!utf8.ValidString(xfname) ||
+		!utf8.ValidString(xfmessage) ||
+		!utf8.ValidString(xfoptions) {
 
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
+	}
+
+	if !readableText(xftitle) ||
+		!readableText(xfname) ||
+		!readableText(xfmessage) ||
+		!readableText(xfoptions) {
+
+		return rInfo, errBadSubmissionChars, http.StatusBadRequest
 	}
 
 	var jbPL xtypes.JSONText // board post limits
@@ -433,8 +437,7 @@ func (sp *PSQLIB) commonNewPost(
 
 	if postOpts.nolimit {
 		// TODO check whether poster is privileged or something
-		// set empty
-		postLimits = submissionLimits{}
+		postLimits = maxSubmissionLimits
 	}
 
 	// apply instance-specific limit tweaks

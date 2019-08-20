@@ -49,19 +49,6 @@ type CoreMsgIDStr = mm.CoreMsgIDStr
 
 type postedInfo = ib0.IBPostedInfo
 
-func readableText(s string) bool {
-	for _, c := range s {
-		if (c < 32 && c != '\n' && c != '\r' && c != '\t') || c == 127 {
-			return false
-		}
-	}
-	return true
-}
-
-func validFormText(s string) bool {
-	return utf8.ValidString(s) && readableText(s)
-}
-
 var lineReplacer = strings.NewReplacer(
 	"\r", "",
 	"\n", " ",
@@ -99,8 +86,8 @@ func commonNewPost(
 	fmt.Fprintf(os.Stderr, "form fields: xftitle(%q) xfmessage(%q)\n",
 		xftitle, xfmessage)
 
-	if !validFormText(xftitle) ||
-		!validFormText(xfmessage) {
+	if !utf8.ValidString(xftitle) ||
+		!utf8.ValidString(xfmessage) {
 
 		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
 	}
