@@ -195,6 +195,7 @@ FROM
 	}
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
+	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement", n)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newthread statement preparation", err)
@@ -205,17 +206,13 @@ FROM
 	return
 }
 
-func (sp *PSQLIB) insertNewThread(tx *sql.Tx,
+func (sp *PSQLIB) insertNewThread(
+	tx *sql.Tx, gstmt *sql.Stmt,
 	bid boardID, pInfo mailib.PostInfo, skipover bool, modid int64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
-	}
-
-	gstmt, err := sp.getNTStmt(len(pInfo.FI))
-	if err != nil {
-		return
 	}
 
 	stmt := tx.Stmt(gstmt)

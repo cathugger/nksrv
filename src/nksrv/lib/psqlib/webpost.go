@@ -631,6 +631,18 @@ func (sp *PSQLIB) commonNewPost(
 	// number of attachments
 	pInfo.FC = countRealFiles(pInfo.FI)
 
+	// before starting transaction, ensure stmt for postinsert is ready
+	// otherwise deadlock is v possible
+	var gstmt *sql.Stmt
+	if !isReply {
+		gstmt, err = sp.getNTStmt(len(pInfo.FI))
+	} else {
+		gstmt, err = sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
+	}
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+
 	// start transaction
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
@@ -681,12 +693,13 @@ func (sp *PSQLIB) commonNewPost(
 	if !isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 		gpid, bpid, duplicate, err =
-			sp.insertNewThread(tx, bid, pInfo, isctlgrp, modid)
+			sp.insertNewThread(tx, gstmt, bid, pInfo, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, bpid, duplicate, err =
 			sp.insertNewReply(
-				tx, replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
+				tx, gstmt,
+				replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
 				pInfo, modid)
 	}
 	if err != nil {

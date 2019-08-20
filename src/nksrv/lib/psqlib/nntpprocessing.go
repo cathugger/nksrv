@@ -1,6 +1,7 @@
 package psqlib
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -452,6 +453,19 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		return
 	}
 
+	// before starting transaction, ensure stmt for postinsert is ready
+	// otherwise deadlock is v possible
+	var gstmt *sql.Stmt
+	if !info.isReply {
+		gstmt, err = sp.getNTStmt(len(pi.FI))
+	} else {
+		gstmt, err = sp.getNPStmt(npTuple{len(pi.FI), pi.MI.Sage})
+	}
+	if err != nil {
+		unexpected = true
+		return
+	}
+
 	// start transaction
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
@@ -500,12 +514,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	if !info.isReply {
 		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
 		gpid, bpid, duplicate, err =
-			sp.insertNewThread(tx, info.bid, pi, isctlgrp, modid)
+			sp.insertNewThread(tx, gstmt, info.bid, pi, isctlgrp, modid)
 	} else {
 		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
 		gpid, bpid, duplicate, err =
 			sp.insertNewReply(
-				tx, replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
+				tx, gstmt,
+				replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
 				pi, modid)
 	}
 	if err != nil {

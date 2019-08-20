@@ -252,6 +252,7 @@ FROM
 	st := b.String()
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
+	sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement", t.n, t.sage)
 	s, err = sp.db.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newreply statement preparation", err)
@@ -268,17 +269,13 @@ type replyTargetInfo struct {
 	bumpLimit uint32
 }
 
-func (sp *PSQLIB) insertNewReply(tx *sql.Tx,
+func (sp *PSQLIB) insertNewReply(
+	tx *sql.Tx, gstmt *sql.Stmt,
 	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
 		panic("post should have header filled")
-	}
-
-	gstmt, err := sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
-	if err != nil {
-		return
 	}
 
 	stmt := tx.Stmt(gstmt)
