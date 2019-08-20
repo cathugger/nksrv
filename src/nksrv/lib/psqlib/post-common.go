@@ -27,7 +27,7 @@ func (sp *PSQLIB) registeredMod(
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
 	// at which point we're fucked because moddel posts also will exclusively block files table
 	// and then we won't be able to insert into it..
-	_, err = tx.Exec("LOCK ib0.modlist IN SHARE ROW EXCLUSIVE MODE")
+	_, err = tx.Exec("LOCK ib0.modlist IN EXCLUSIVE MODE")
 	if err != nil {
 		err = sp.sqlError("lock ib0.modlist query", err)
 	}
