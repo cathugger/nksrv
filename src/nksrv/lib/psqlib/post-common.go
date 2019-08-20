@@ -24,14 +24,29 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 func (sp *PSQLIB) registeredMod(
 	tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
 
+	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
+	// at which point we're fucked because moddel posts also will exclusively block files table
+	// and then we won't be able to insert into it..
+	_, err = tx.Exec("LOCK ib0.modlist IN SHARE ROW EXCLUSIVE MODE")
+	if err != nil {
+		err = sp.sqlError("lock ib0.modlist query", err)
+	}
+
+	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
+
 	var privstr string
 	st := tx.Stmt(sp.st_prep[st_web_autoregister_mod])
 	x := 0
 	for {
 		err = st.QueryRow(pubkeystr).Scan(&modid, &privstr)
 		if err != nil {
+
 			if err == sql.ErrNoRows && x < 100 {
+
 				x++
+
+				sp.log.LogPrintf(DEBUG, "REGMOD %s retry", pubkeystr)
+
 				continue
 			}
 			err = sp.sqlError("st_web_autoregister_mod queryrowscan", err)

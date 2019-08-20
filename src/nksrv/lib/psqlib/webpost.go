@@ -639,7 +639,9 @@ func (sp *PSQLIB) commonNewPost(
 	}
 	defer func() {
 		if err != nil {
+			sp.log.LogPrintf(DEBUG, "webpost rollback start")
 			_ = tx.Rollback()
+			sp.log.LogPrintf(DEBUG, "webpost rollback done")
 		}
 	}()
 

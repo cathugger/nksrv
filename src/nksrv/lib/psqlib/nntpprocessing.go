@@ -461,7 +461,9 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 	defer func() {
 		if err != nil {
+			sp.log.LogPrintf(DEBUG, "nntppost rollback start")
 			_ = tx.Rollback()
+			sp.log.LogPrintf(DEBUG, "nntppost rollback done")
 		}
 	}()
 
