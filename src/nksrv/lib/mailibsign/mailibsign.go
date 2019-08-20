@@ -97,12 +97,12 @@ type VerifierEd25519 struct {
 func (v VerifierEd25519) Verify(iw InnerWriter) (res VerifyResult) {
 	var sumbuf [64]byte
 	sum := iw.Sum(sumbuf[:0])
-	fmt.Printf("sig ver hash %X pubkey %X signature %X\n", sum, v.pk, v.sig)
+	//fmt.Printf("sig ver hash %X pubkey %X signature %X\n", sum, v.pk, v.sig)
 	if ed25519.Verify(v.pk, sum, v.sig) {
 		res.PubKey = tohex(v.pk)
-		fmt.Printf("sig ver okay\n")
+		//fmt.Printf("sig ver okay\n")
 	} else {
-		fmt.Printf("sig ver fail\n")
+		//fmt.Printf("sig ver fail\n")
 	}
 	return
 }
