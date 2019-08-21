@@ -542,7 +542,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 		// msgid deletion state
 		var delmsgids delMsgIDState
-		defer sp.cleanDeletedMsgIDs(delmsgids)
+		defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pi.MessageID)
 
