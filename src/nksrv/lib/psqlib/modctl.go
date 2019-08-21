@@ -59,6 +59,8 @@ func (sp *PSQLIB) execModCmd(
 	selfid, ref CoreMsgIDStr, indelmsgids delMsgIDState) (
 	outdelmsgids delMsgIDState, err error) {
 
+	outdelmsgids = indelmsgids
+
 	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
 		return
@@ -107,7 +109,7 @@ func (sp *PSQLIB) execModCmd(
 					// global delete by msgid
 					outdelmsgids, err =
 						sp.modCmdDelete(
-							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args, indelmsgids)
+							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args, outdelmsgids)
 				}
 			}
 			if err != nil {
