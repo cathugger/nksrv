@@ -59,6 +59,9 @@ func (sp *PSQLIB) registeredMod(
 
 func (sp *PSQLIB) lockFilesTable(tx *sql.Tx) (err error) {
 
+	// try not doing this
+	return
+
 	sp.log.LogPrintf(DEBUG, "pre-post LOCK of ib0.files")
 
 	_, err = tx.Exec("LOCK ib0.files IN ROW EXCLUSIVE MODE")
