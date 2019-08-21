@@ -657,13 +657,6 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
-	if len(pInfo.FI) > 0 {
-		err = sp.lockFilesTable(tx)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
-	}
-
 	var modid int64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
@@ -675,16 +668,6 @@ func (sp *PSQLIB) commonNewPost(
 		}
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
-	}
-
-	if priv > ModPrivNone {
-		// always assume we'll need exclusive lock to have consistent locking
-		err = sp.preModLockFiles(tx)
-	} else if len(pInfo.FI) > 0 {
-		err = sp.lockFilesTable(tx)
-	}
-	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
 	}
 
 	var gpid, bpid postID
@@ -715,6 +698,11 @@ func (sp *PSQLIB) commonNewPost(
 	if priv > ModPrivNone {
 		// we should execute it
 		// we never put message in file when processing message
+
+		err = sp.preModLockFiles(tx)
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
 
 		// msgid deletion state
 		var delmsgids delMsgIDState
