@@ -36,7 +36,7 @@ import (
 // every user wanting to write to finished/finisherr/p/f/n, must wlock
 // if n == 0, object must be taken off active object pool
 // n==0 on enter CAN happen if object is being removed from pool; in this case, wait on cond and try taking off new object after
-type cacheObj struct {
+type CacheObj struct {
 	m sync.RWMutex // guard for all
 	c *sync.Cond   // cond for reading new stuff
 
@@ -68,13 +68,13 @@ type Backend interface {
 
 type CacheEngine struct {
 	m sync.RWMutex
-	w map[string]*cacheObj
+	w map[string]*CacheObj
 	b Backend
 }
 
 func NewCacheEngine(b Backend) CacheEngine {
 	return CacheEngine{
-		w: make(map[string]*cacheObj),
+		w: make(map[string]*CacheObj),
 		b: b,
 	}
 }
@@ -90,7 +90,7 @@ var errRestart = errors.New("plz restart kthxbai")
 func (ce *CacheEngine) ObtainItem(
 	w CopyDestination, objid string, objinfo interface{}) error {
 
-	var o, oo *cacheObj
+	var o, oo *CacheObj
 
 	var nx int
 	var fx *os.File
@@ -180,7 +180,7 @@ begin:
 
 	if o == nil {
 		// new cache obj
-		oo = &cacheObj{n: 1}
+		oo = &CacheObj{n: 1}
 		oo.c = sync.NewCond(oo.m.RLocker())
 
 		// second time check & set
@@ -408,14 +408,14 @@ feedFromReadFile:
  * this way we won't leave files even after unclean shutdown after commit but before delete
  */
 
-func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
+func (ce *CacheEngine) RemoveItemStart(objid string) (n *CacheObj, err error) {
 	// XXX how do we handle remove denial because of active readers?
 	// could inject fake obj into w and spin until last reader finishes
 	// but it won't come up on any system other than windows probably
 
 	filename := ce.b.MakeFilename(objid)
 
-	n := &cacheObj{n: 1}
+	n = &CacheObj{n: 1}
 	n.c = sync.NewCond(n.m.RLocker())
 
 	ce.m.Lock()
@@ -440,15 +440,18 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (err error) {
 	}
 	if err != nil {
 		// we've failed so don't hold lock as file is still on disk
-		ce.RemoveItemFinish(objid)
+		ce.RemoveItemFinish(objid, n)
 	}
 	return
 }
 
-func (ce *CacheEngine) RemoveItemFinish(objid string) {
+func (ce *CacheEngine) RemoveItemFinish(objid string, oo *CacheObj) {
 	ce.m.Lock()
 	o := ce.w[objid]
-	delete(ce.w, objid)
+	if o == oo {
+		// only DELET if its ours
+		delete(ce.w, objid)
+	}
 	ce.m.Unlock()
 
 	if o == nil {
@@ -456,22 +459,25 @@ func (ce *CacheEngine) RemoveItemFinish(objid string) {
 	}
 
 	if o.p != nil || o.f != nil || o.e != nil {
+		// we can't be overwritten by valid object
+		// if we're overwritten, that has to be placeholder object too
 		panic("wrong object condition")
 	}
 
+	// NOTE: we're doing operations with original object not the one we got
 	// mark as done & ded
-	o.m.Lock()
-	o.e = errRestart
-	o.n = 0
-	o.m.Unlock()
+	oo.m.Lock()
+	oo.e = errRestart
+	oo.n = 0
+	oo.m.Unlock()
 	// notify readers if any about (un)availability
-	o.c.Broadcast()
+	oo.c.Broadcast()
 }
 
 func (ce *CacheEngine) RemoveItem(objid string) (err error) {
-	err = ce.RemoveItemStart(objid)
+	oo, err := ce.RemoveItemStart(objid)
 	if err == nil {
-		ce.RemoveItemFinish(objid)
+		ce.RemoveItemFinish(objid, oo)
 	}
 	return
 }

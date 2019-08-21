@@ -239,6 +239,7 @@ ON CONFLICT (sid,bid)
 func (s *PullerDB) LoadTempGroup() (
 	group string, new_id int64, old_id uint64, err error) {
 
+	// TODO throw out this deadlock-inducing logic
 	if s.temp_rows == nil {
 		q := `SELECT xb.b_name,xs.next_max,xs.last_max
 FROM ib0.puller_group_track xs

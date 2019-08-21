@@ -6,6 +6,7 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
+	"nksrv/lib/cacheengine"
 	. "nksrv/lib/logx"
 	mm "nksrv/lib/minimail"
 )
@@ -34,8 +35,22 @@ func (sp *PSQLIB) preModLockFiles(tx *sql.Tx) (err error) {
 	return
 }
 
+type delMsgHandle struct {
+	id string
+	h  *cacheengine.CacheObj
+}
+
 type delMsgIDState struct {
-	delmsgids []string
+	delmsgids []delMsgHandle
+}
+
+func (s delMsgIDState) isNotPresent(id string) bool {
+	for i := range s.delmsgids {
+		if s.delmsgids[i].id == id {
+			return false
+		}
+	}
+	return true
 }
 
 func (sp *PSQLIB) deleteByMsgID(
@@ -146,10 +161,29 @@ func (sp *PSQLIB) postDelete(
 		}
 		// message-ids which were delet'd, we need to delet them from cache too
 		if msgid.String != "" {
-			sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid.String)
-			sp.nntpce.RemoveItemStart(msgid.String)
-			// XXX can grow large (DoS vector?)
-			outdelmsgids.delmsgids = append(outdelmsgids.delmsgids, msgid.String)
+
+			if outdelmsgids.isNotPresent(msgid.String) {
+
+				sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid.String)
+
+				var h *cacheengine.CacheObj
+				h, err = sp.nntpce.RemoveItemStart(msgid.String)
+				if err != nil {
+					// XXX wrap error?
+					rows.Close()
+					return
+				}
+				// XXX can grow large (DoS vector?)
+				outdelmsgids.delmsgids = append(outdelmsgids.delmsgids,
+					delMsgHandle{
+						id: msgid.String,
+						h:  h,
+					})
+			} else {
+				sp.log.LogPrintf(
+					DEBUG,
+					"DELET cached NNTP <%s> (ignored duplicate)", msgid.String)
+			}
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -207,9 +241,9 @@ func (sp *PSQLIB) postDelete(
 
 func (sp *PSQLIB) cleanDeletedMsgIDs(delmsgids delMsgIDState) {
 	sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS start")
-	for _, id := range delmsgids.delmsgids {
-		sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS <%s>", id)
-		sp.nntpce.RemoveItemFinish(id)
+	for _, x := range delmsgids.delmsgids {
+		sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS <%s>", x.id)
+		sp.nntpce.RemoveItemFinish(x.id, x.h)
 	}
 	sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS done")
 }
