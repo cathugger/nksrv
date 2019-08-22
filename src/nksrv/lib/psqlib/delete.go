@@ -270,6 +270,12 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 		}
 	}()
 
+	err = sp.preModLockFiles(tx)
+	if err != nil {
+		sp.log.LogPrintf(ERROR, "%v", err)
+		return
+	}
+
 	var delmsgids delMsgIDState
 	defer sp.cleanDeletedMsgIDs(delmsgids)
 
