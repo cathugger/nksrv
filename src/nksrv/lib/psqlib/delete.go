@@ -277,7 +277,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	}
 
 	var delmsgids delMsgIDState
-	defer sp.cleanDeletedMsgIDs(delmsgids)
+	defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
 	for _, s := range msgids {
 		sp.log.LogPrintf(INFO, "deleting %s", s)
