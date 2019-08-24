@@ -168,6 +168,7 @@ a.bref:link, a.bref:visited {
 
 .pdate {
 	font-size: 12px;
+	display: inline-block;
 }
 
 .reply {
@@ -190,6 +191,7 @@ a.bref:link, a.bref:visited {
 	color: #0F0C5D;
 	font-weight: bold;
 	unicode-bidi: embed;
+	display: inline-block;
 }
 
 .name {
@@ -199,6 +201,7 @@ a.bref:link, a.bref:visited {
 
 span.name {
 	color: #117743;
+	display: inline-block;
 }
 
 a.name {
