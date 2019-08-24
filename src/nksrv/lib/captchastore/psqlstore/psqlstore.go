@@ -19,7 +19,7 @@ type PSQLStore struct {
 	log Logger
 }
 
-func (p PSQLStore) InitDb() (err error) {
+func (p PSQLStore) InitDB() (err error) {
 	stmts := [...]string{
 		"INSERT INTO capabilities(component,version) VALUES ('captcha','" + currDbVersion + "')",
 		`CREATE SCHEMA captcha`,
@@ -70,7 +70,7 @@ func (p PSQLStore) InitDb() (err error) {
 	return
 }
 
-func (p PSQLStore) CheckDb() (initialised bool, err error) {
+func (p PSQLStore) CheckDB() (initialised bool, err error) {
 	q := `SELECT version FROM capabilities WHERE component = 'captcha' LIMIT 1`
 	var ver string
 	err = p.db.DB.QueryRow(q).Scan(&ver)
@@ -94,7 +94,7 @@ func NewPSQLStore(db *psql.PSQL, l LoggerX) PSQLStore {
 }
 
 func (p PSQLStore) InitAndPrepare() (err error) {
-	valid, err := p.CheckDb()
+	valid, err := p.CheckDB()
 	if err != nil {
 		return fmt.Errorf("error checking: %v", err)
 	}
@@ -102,12 +102,12 @@ func (p PSQLStore) InitAndPrepare() (err error) {
 		p.log.LogPrint(NOTICE,
 			"uninitialized db, attempting to initialize")
 
-		err = p.InitDb()
+		err = p.InitDB()
 		if err != nil {
 			return fmt.Errorf("error initializing: %v", err)
 		}
 
-		valid, err = p.CheckDb()
+		valid, err = p.CheckDB()
 		if err != nil {
 			return fmt.Errorf("error checking (2): %v", err)
 		}

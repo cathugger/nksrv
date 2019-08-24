@@ -12,7 +12,7 @@ import (
 
 const currDbVersion = "demo6"
 
-func (sp *PSQLIB) InitDb() (err error) {
+func (sp *PSQLIB) InitDB() (err error) {
 	stmts, err := sqlbucket.LoadFromFile("aux/psqlib/init.sql")
 	if err != nil {
 		return fmt.Errorf("err on sql loading: %v", err)
@@ -50,7 +50,7 @@ func (sp *PSQLIB) InitDb() (err error) {
 	return
 }
 
-func (sp *PSQLIB) CheckDb() (initialised bool, versionerror error) {
+func (sp *PSQLIB) CheckDB() (initialised bool, versionerror error) {
 	q := "SHOW server_version_num"
 	var vernum int64
 	err := sp.db.DB.QueryRow(q).Scan(&vernum)
