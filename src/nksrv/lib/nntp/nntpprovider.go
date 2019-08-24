@@ -31,6 +31,7 @@ type NNTPProvider interface {
 	SupportsIHave() bool
 	SupportsPost() bool
 	SupportsStream() bool
+	SupportsXListen() bool
 
 	// + ARTICLE, HEAD, BODY, STAT x 3 forms for each
 	// ok:

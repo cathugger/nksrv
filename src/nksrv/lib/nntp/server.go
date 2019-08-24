@@ -423,8 +423,8 @@ func (c *ConnState) serveClient() bool {
 			}
 			if len(args) >= cmd.maxargs {
 				if !cmd.allowextra {
-					AbortOnErr(c.w.PrintfLine("501 too much parameters"))
-					c.log.LogPrintf(WARN, "too much parameters")
+					AbortOnErr(c.w.PrintfLine("501 too many parameters"))
+					c.log.LogPrintf(WARN, "too many parameters")
 				} else {
 					if !cmd.cmdfunc(c, args, incmd[x:]) {
 						return false

@@ -79,6 +79,8 @@ func (p *PSQLIB) SupportsIHave() bool  { return true }
 func (p *PSQLIB) SupportsPost() bool   { return true }
 func (p *PSQLIB) SupportsStream() bool { return true }
 
+func (p *PSQLIB) SupportsXListen() bool { return false }
+
 func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))
 }

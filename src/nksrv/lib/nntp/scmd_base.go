@@ -215,6 +215,20 @@ func init() {
 			maxargs: 1,
 			help:    "<message-id> - It's dangerous to go alone! Take this.",
 		},
+
+		"XLISTEN": &command{
+			cmdfunc:    cmdXListen,
+			minargs:    1,
+			maxargs:    1,
+			allowextra: true,
+			help:       "eventtype - Start listening for events.",
+		},
+		"XWAIT": &command{
+			cmdfunc: cmdXWait,
+			minargs: 1,
+			maxargs: 1,
+			help:    "millisecs - wait for event; 0 means poll, -1 means no limit.",
+		},
 	}
 	commandList = sortedCmdMapSlice(commandMap)
 

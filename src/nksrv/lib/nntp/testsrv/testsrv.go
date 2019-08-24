@@ -51,29 +51,15 @@ func artnumInGroup(cs *ConnState, group string, num uint64) uint64 {
 	}
 }
 
-func (p *TestSrv) SupportsNewNews() bool {
-	return p.SupportNewNews
-}
+func (p *TestSrv) SupportsNewNews() bool     { return p.SupportNewNews }
+func (p *TestSrv) SupportsOverByMsgID() bool { return p.SupportOverByMsgID }
+func (p *TestSrv) SupportsHdr() bool         { return p.SupportHdr }
 
-func (p *TestSrv) SupportsOverByMsgID() bool {
-	return p.SupportOverByMsgID
-}
+func (p *TestSrv) SupportsIHave() bool  { return p.SupportIHave }
+func (p *TestSrv) SupportsPost() bool   { return p.SupportPost }
+func (p *TestSrv) SupportsStream() bool { return p.SupportStream }
 
-func (p *TestSrv) SupportsHdr() bool {
-	return p.SupportHdr
-}
-
-func (p *TestSrv) SupportsIHave() bool {
-	return p.SupportIHave
-}
-
-func (p *TestSrv) SupportsPost() bool {
-	return p.SupportPost
-}
-
-func (p *TestSrv) SupportsStream() bool {
-	return p.SupportStream
-}
+func (p *TestSrv) SupportsXListen() bool { return false }
 
 func (p *TestSrv) GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool {
 	sid := unsafeCoreMsgIDToStr(msgid)
