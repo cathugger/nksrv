@@ -237,6 +237,19 @@ div.nav {
 
 .pf_body {
 	margin: 0 auto;
+	background-color: #D6DAF0;
+}
+.pf_label {
+	background-color: #C6CAE0;
+}
+.pf_input {
+	padding: 0;
+}
+#postform:target {
+	position: fixed;
+	top: 5px;
+	right: 5px;
+	border: 1px solid black;
 }
 
 #message {
