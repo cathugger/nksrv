@@ -19,7 +19,7 @@ func main() {
 	thumbdir := flag.String("thumbdir", "_demothm", "thumbnail directory")
 	thumbcolor := flag.String("color", "", "background color")
 	thumbgray := flag.Bool("grayscale", false, "grayscale")
-	thumbext := flag.Bool("ext", false, "use extthm")
+	thumbext := flag.Bool("extthm", false, "use extthm")
 
 	flag.Parse()
 

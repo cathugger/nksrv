@@ -22,6 +22,7 @@ import (
 	"nksrv/lib/logx"
 	"nksrv/lib/psql"
 	"nksrv/lib/psqlib"
+	"nksrv/lib/thumbnailer/extthm"
 	rt "nksrv/lib/tmplrenderer"
 	wc "nksrv/lib/webcaptcha"
 )
@@ -35,6 +36,7 @@ func main() {
 	readonly := flag.Bool("readonly", false, "read-only mode")
 	captchamode := flag.String("captchamode", "simple", "[simple, cookie, ssi, esi]")
 	usememstore := flag.Bool("memstore", false, "use memstore instead of psqlstore")
+	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
@@ -104,6 +106,9 @@ func main() {
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.WebCaptcha = webcap
 	psqlibcfg.NodeName = *nodename
+	if *thumbext {
+		psqlibcfg.TBuilder = extthm.DefaultConfig
+	}
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {
