@@ -47,10 +47,12 @@ func main() {
 	}
 
 	tcfg := thumbnailer.ThumbConfig{
-		Width:     200,
-		Height:    200,
-		Color:     *thumbcolor,
-		Grayscale: *thumbgray,
+		Width:       200,
+		Height:      200,
+		AudioWidth:  350,
+		AudioHeight: 350,
+		Color:       *thumbcolor,
+		Grayscale:   *thumbgray,
 	}
 
 	args := flag.Args()
