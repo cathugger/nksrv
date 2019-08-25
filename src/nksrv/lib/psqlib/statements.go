@@ -73,6 +73,15 @@ const (
 	st_web_set_mod_priv
 	st_web_fetch_and_clear_mod_msgs
 
+	st_puller_get_last_newnews
+	st_puller_set_last_newnews
+	st_puller_get_last_newsgroups
+	st_puller_set_last_newsgroups
+	st_puller_get_group_id
+	st_puller_set_group_id
+	st_puller_unset_group_id
+	st_puller_load_temp_groups
+
 	st_max
 )
 
@@ -149,6 +158,15 @@ var st_names = [st_max]st_reference{
 
 	st_reference{"web", "set_mod_priv"},
 	st_reference{"web", "fetch_and_clear_mod_msgs"},
+
+	st_reference{"puller", "puller_get_last_newnews"},
+	st_reference{"puller", "puller_set_last_newnews"},
+	st_reference{"puller", "puller_get_last_newsgroups"},
+	st_reference{"puller", "puller_set_last_newsgroups"},
+	st_reference{"puller", "puller_get_group_id"},
+	st_reference{"puller", "puller_set_group_id"},
+	st_reference{"puller", "puller_unset_group_id"},
+	st_reference{"puller", "puller_load_temp_groups"},
 }
 
 func loadStatements() {
