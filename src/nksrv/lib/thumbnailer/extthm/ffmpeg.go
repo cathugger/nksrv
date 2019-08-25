@@ -200,7 +200,10 @@ foundfmt:
 						prof := ffproberes.Streams[i].Profile
 						lvl := ffproberes.Streams[i].Level
 						switch {
-						case isavc && prof == "Baseline":
+						// XXX Constrained Baseline is really the same??
+						case isavc &&
+							(prof == "Baseline" ||
+								prof == "Constrained Baseline"):
 							cname = fmt.Sprintf("avc1.42E0%02X", lvl)
 						case isavc && prof == "Main":
 							cname = fmt.Sprintf("avc1.4D40%02X", lvl)
