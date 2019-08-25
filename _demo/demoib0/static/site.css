@@ -249,6 +249,7 @@ div.nav {
 	padding: 0;
 }
 
+/* do fixed postform only if screen is wide enough */
 @media screen and (min-width: 800px) {
 	#postform:target {
 		position: fixed;
@@ -258,8 +259,10 @@ div.nav {
 }
 
 #message {
-	width: 300px;
 	box-sizing: border-box;
+	width: 300px;
+	min-width: 300px;
+	min-height: 8em;
 }
 
 #captcha_img {
