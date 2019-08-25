@@ -53,7 +53,7 @@ LEFT JOIN LATERAL
 		FROM
 			ib0.puller_group_track xt
 		WHERE
-			xt.b_id = sg.b_id AND xt.sid = $1
+			xt.bid = sg.b_id AND xt.sid = $1
 	) AS st
 ON
 	TRUE
