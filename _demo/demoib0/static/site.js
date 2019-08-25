@@ -156,7 +156,7 @@ function newembedcontrol(me) {
 function expandaudio(lnk, thm) {
 	var adiv = document.createElement('div');
 	adiv.className = 'audioembed';
-	adiv.style.backgroundImage = 'url("' + thm.src + '")';
+	adiv.style.background = 'url("' + thm.src + '") center';
 	var audio = new Audio(lnk.href);
 	audio.controls = true;
 	adiv.appendChild(audio);

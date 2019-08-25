@@ -92,6 +92,7 @@ tr.blist:hover td {
 	width:  350px;
 	height: 350px;
 	position: relative;
+	max-width: 100%;
 
 	/* disable selection on doubleclick */
 	-webkit-user-select: none;
