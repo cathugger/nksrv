@@ -248,10 +248,13 @@ div.nav {
 .pf_input {
 	padding: 0;
 }
-#postform:target {
-	position: fixed;
-	top: 5px;
-	right: 5px;
+
+@media screen and (min-width: 800px) {
+	#postform:target {
+		position: fixed;
+		top: 5px;
+		right: 5px;
+	}
 }
 
 #message {
