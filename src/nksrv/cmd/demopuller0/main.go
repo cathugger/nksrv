@@ -17,6 +17,7 @@ import (
 	"nksrv/lib/nntp"
 	"nksrv/lib/psql"
 	"nksrv/lib/psqlib"
+	"nksrv/lib/thumbnailer/extthm"
 )
 
 func main() {
@@ -27,6 +28,7 @@ func main() {
 	socks := flag.String("socks", "", "socks proxy address")
 	pullkey := flag.String("pullkey", "test", "puller identifier used to store state")
 	notrace := flag.Bool("notrace", false, "disable NNTP Path trace")
+	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
@@ -67,6 +69,9 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.NodeName = *nodename
+	if *thumbext {
+		psqlibcfg.TBuilder = extthm.DefaultConfig
+	}
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {

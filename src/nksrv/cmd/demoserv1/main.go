@@ -16,6 +16,7 @@ import (
 	"nksrv/lib/nntp"
 	"nksrv/lib/psql"
 	"nksrv/lib/psqlib"
+	"nksrv/lib/thumbnailer/extthm"
 )
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	// initialize flags
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	nntpbind := flag.String("nntpbind", "", "nntp server bind string")
+	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
 
 	flag.Parse()
@@ -63,6 +65,9 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.NodeName = *nodename
+	if *thumbext {
+		psqlibcfg.TBuilder = extthm.DefaultConfig
+	}
 
 	dbib, err := psqlib.NewInitAndPrepare(psqlibcfg)
 	if err != nil {
