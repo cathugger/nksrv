@@ -89,6 +89,7 @@ tr.blist:hover td {
 
 .audioembed {
 	background-size: cover;
+	background-position: center;
 	width:  350px;
 	height: 350px;
 	position: relative;
