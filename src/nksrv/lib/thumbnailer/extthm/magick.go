@@ -21,6 +21,12 @@ type magickBackend struct {
 
 var errMagickOutputMisunderstod = errors.New("convert output not understod")
 
+// XXX
+func (b *magickBackend) init(magickBin string) (err error) {
+	b.binPath, err = exec.LookPath(magickBin)
+	return
+}
+
 func (b *magickBackend) doThumbnailing(
 	p tparams, f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {

@@ -3,6 +3,7 @@ package extthm
 // thumbnailer which calls external programs and is designed to work for most of things with some amount of customization
 
 import (
+	"mime"
 	"os"
 
 	"github.com/gobwas/glob"
@@ -35,11 +36,43 @@ var DefaultConfig = Config{
 }
 
 func (c Config) BuildThumbnailer(
-	fs *fstore.FStore) (thumbnailer.Thumbnailer, error) {
+	fs *fstore.FStore) (t thumbnailer.Thumbnailer, err error) {
 
-	// XXX check existence of binaries
+	// XXX customization
+	imt := new(magickBackend)
+	err = imt.init("convert")
+	if err != nil {
+		return
+	}
 
-	return &ExternalThumbnailer{cfg: c, fs: fs}, nil
+	mt := new(ffmpegSoxBackend)
+	err = mt.init("ffprobe", "ffmpeg", "sox")
+	if err != nil {
+		return
+	}
+
+	return &ExternalThumbnailer{
+		cfg: c,
+		fs:  fs,
+		routes: []extExec{
+			extExec{t: imt, m_mime: glob.MustCompile("image/jpeg")},
+			extExec{t: imt, m_mime: glob.MustCompile("image/png")},
+			extExec{t: imt, m_mime: glob.MustCompile("image/gif")},
+			extExec{t: imt, m_mime: glob.MustCompile("image/webp")},
+			extExec{t: imt, m_mime: glob.MustCompile("image/bmp")},
+
+			extExec{t: mt, m_mime: glob.MustCompile("video/webm"), p: tparams{"fmt": "webm"}},
+			extExec{t: mt, m_mime: glob.MustCompile("video/ogg"), p: tparams{"fmt": "ogg"}},
+			extExec{t: mt, m_mime: glob.MustCompile("video/mp4"), p: tparams{"fmt": "mp4"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/ogg"), p: tparams{"fmt": "ogg"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/mpeg"), p: tparams{"fmt": "mp3"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/mp4"), p: tparams{"fmt": "mp4"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/wave"), p: tparams{"fmt": "wav"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/wav"), p: tparams{"fmt": "wav"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/flac"), p: tparams{"fmt": "flac"}},
+			extExec{t: mt, m_mime: glob.MustCompile("audio/webm"), p: tparams{"fmt": "webm"}},
+		},
+	}, nil
 }
 
 type tparams = map[string]string
@@ -85,8 +118,10 @@ func (t *ExternalThumbnailer) ThumbProcess(
 		}
 	}
 
+	mt, _, _ := mime.ParseMediaType(mimeType)
+
 	for i := range t.routes {
-		if (t.routes[i].m_mime == nil || t.routes[i].m_mime.Match(mimeType)) &&
+		if (t.routes[i].m_mime == nil || t.routes[i].m_mime.Match(mt)) &&
 			(t.routes[i].m_ext == nil || t.routes[i].m_ext.Match(ext)) {
 
 			// XXX fallbacks?

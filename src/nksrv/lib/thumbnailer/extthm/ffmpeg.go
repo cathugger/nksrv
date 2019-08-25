@@ -16,12 +16,32 @@ import (
 //sect.Add("video/*", "{{.ffmpeg}} -i {{.infile}} -vf scale=300:200 -vframes 1 {{.outfile}}")
 
 type ffmpegSoxBackend struct {
-	t   *ExternalThumbnailer
-	fmt string // needs to be set properly or death will await
+	t *ExternalThumbnailer
+	// needs to be set properly or death will await
+	// alternatively can be set via p["fmt"]
+	fmt string
 
 	ffprobePath string
 	ffmpegPath  string
 	soxPath     string
+}
+
+func (b *ffmpegSoxBackend) init(
+	ffprobeBin, ffmpegBin, soxBin string) (err error) {
+
+	b.ffprobePath, err = exec.LookPath(ffprobeBin)
+	if err != nil {
+		return
+	}
+	b.ffmpegPath, err = exec.LookPath(ffmpegBin)
+	if err != nil {
+		return
+	}
+	b.soxPath, err = exec.LookPath(soxBin)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // ffprobe json structs for reading infos we're interested in
@@ -92,6 +112,8 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 	}
 	if b.fmt != "" {
 		args = append(args, "-f", b.fmt)
+	} else if p["fmt"] != "" {
+		args = append(args, "-f", p["fmt"])
 	}
 	args = append(args, fn)
 
