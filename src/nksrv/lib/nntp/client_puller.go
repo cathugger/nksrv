@@ -153,9 +153,9 @@ func (c *NNTPPuller) doActiveList() (err error, fatal bool) {
 		}
 
 		if hiwm >= 0 {
-			e = c.db.StoreTempGroupID(gname, uint64(hiwm), uint64(old_id))
+			e = c.db.StoreTempGroupID(gname, uint64(hiwm))
 		} else {
-			e = c.db.StoreTempGroup(gname, uint64(old_id))
+			e = c.db.StoreTempGroup(gname)
 		}
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
@@ -228,7 +228,7 @@ func (c *NNTPPuller) doNewsgroupsList() (err error, fatal bool) {
 		if old_id < 0 {
 			continue
 		}
-		e = c.db.StoreTempGroup(gname, uint64(old_id))
+		e = c.db.StoreTempGroup(gname)
 		if e != nil {
 			err = fmt.Errorf("StoreTempGroup() failed: %v", e)
 			return
