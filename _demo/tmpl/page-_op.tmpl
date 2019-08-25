@@ -47,7 +47,7 @@ arguments list:
    class="pnum_anchor"
    title="Link to this post"
    href="{{if $fullURLs}}{{$X.N.Root}}/{{escboard $B}}/thread/{{$T.ID}}{{end}}#{{$P.ID}}"
-  >No.</a> <a href="javascript:refer('{{shortid $P.ID}}');" class="pnum_ref" title="{{$P.ID}}">{{shortid $P.ID}}</a>
+  >No.</a> <a href="#postform" onclick="refer('{{shortid $P.ID}}');" class="pnum_ref" title="{{$P.ID}}">{{shortid $P.ID}}</a>
 
   {{- if $fullURLs}} <span class="replylink">[<a class="replylink" href="{{$X.N.Root}}/{{escboard $B}}/thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 

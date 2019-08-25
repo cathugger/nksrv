@@ -50,7 +50,7 @@ func (s *PullerDB) nextNonce() int64 {
 }
 
 func (s *PullerDB) GetLastNewNews() (t int64, err error) {
-	q := `SELECT last_newnews FROM ib0.puller_last_newnews WHERE sid=$1`
+	q := ``puller_get_last_newnews
 	e := s.sp.db.DB.
 		QueryRow(q, s.id).
 		Scan(&t)
@@ -63,12 +63,7 @@ func (s *PullerDB) GetLastNewNews() (t int64, err error) {
 	return
 }
 func (s *PullerDB) UpdateLastNewNews(t int64) error {
-	q := `INSERT INTO ib0.puller_last_newnews AS ln (sid,last_newnews)
-VALUES ($1,$2)
-ON CONFLICT (sid)
-DO
-	UPDATE SET last_newnews = $2
-	WHERE ln.sid = $1`
+	q := ``puller_set_last_newnews
 	_, e := s.sp.db.DB.Exec(q, s.id, t)
 	if e != nil {
 		return s.sp.sqlError("puller_last_newnews upsert query execution", e)
@@ -77,7 +72,7 @@ DO
 }
 
 func (s *PullerDB) GetLastNewGroups() (t int64, err error) {
-	q := `SELECT last_newgroups FROM ib0.puller_last_newgroups WHERE sid=$1`
+	q := ``puller_get_last_newsgroups
 	e := s.sp.db.DB.
 		QueryRow(q, s.id).
 		Scan(&t)
@@ -90,12 +85,7 @@ func (s *PullerDB) GetLastNewGroups() (t int64, err error) {
 	return
 }
 func (s *PullerDB) UpdateLastNewGroups(t int64) error {
-	q := `INSERT INTO ib0.puller_last_newgroups AS ln (sid,last_newgroups)
-VALUES ($1,$2)
-ON CONFLICT (sid)
-DO
-	UPDATE SET last_newgroups = $2
-	WHERE ln.sid = $1`
+	q := ``puller_set_last_newsgroups
 	_, e := s.sp.db.DB.Exec(q, s.id, t)
 	if e != nil {
 		return s.sp.sqlError("puller_last_newgroups upsert query execution", e)
@@ -108,21 +98,7 @@ func (s *PullerDB) GetGroupID(group []byte) (int64, error) {
 
 	loopn := 0
 	for {
-		q := `WITH
-	sg AS (
-		SELECT b_id FROM ib0.boards WHERE b_name = $2 LIMIT 1
-	),
-	st AS (
-		SELECT xt.bid AS bid, xt.last_max AS last_max
-		FROM ib0.puller_group_track xt
-		JOIN sg
-		ON sg.b_id = xt.bid
-		WHERE xt.sid = $1
-	)
-SELECT sg.b_id,st.last_max
-FROM sg
-LEFT JOIN st
-ON sg.b_id = st.bid`
+		q := ``puller_get_group_id
 		var bid boardID
 		var lid sql.NullInt64
 
@@ -140,7 +116,7 @@ ON sg.b_id = st.bid`
 				return -1, s.sp.sqlError("GetGroupID query scan", e)
 			}
 		} else {
-			// found something
+			// found something. board exists but ID may be NULL. which is OK
 			return lid.Int64, nil
 		}
 
@@ -160,16 +136,11 @@ func (s *PullerDB) UpdateGroupID(group string, id uint64) error {
 	var es string
 	var e error
 	if id != 0 {
-		q = `UPDATE ib0.puller_group_track AS st
-SET last_max = $3
-FROM ib0.boards AS xb
-WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
+		q = ``puller_set_group_id
 		es = "puller_group_track update query execution"
 		_, e = s.sp.db.DB.Exec(q, s.id, group, id)
 	} else {
-		q = `DELETE FROM ib0.puller_group_track AS st
-USING ib0.boards xb
-WHERE st.sid=$1 AND xb.b_name=$2 AND st.bid=xb.b_id`
+		q = ``puller_unset_group_id
 		es = "puller_group_track clear query execution"
 		_, e = s.sp.db.DB.Exec(q, s.id, group)
 	}
@@ -205,7 +176,7 @@ func (s *PullerDB) DoneTempGroups() error {
 	return nil
 }
 func (s *PullerDB) StoreTempGroupID(
-	group []byte, new_id uint64, old_id uint64) error {
+	group []byte, new_id uint64) error {
 
 	q := `INSERT INTO ib0.puller_group_track AS sgt (sid,bid,last_use,last_max,next_max)
 SELECT $1 AS sid, b_id AS bid, $3, 0, $4
@@ -221,7 +192,7 @@ ON CONFLICT (sid,bid)
 	}
 	return nil
 }
-func (s *PullerDB) StoreTempGroup(group []byte, old_id uint64) error {
+func (s *PullerDB) StoreTempGroup(group []byte) error {
 	q := `INSERT INTO ib0.puller_group_track AS sgt (sid,bid,last_use,last_max,next_max)
 SELECT $1 AS sid, b_id AS bid, $3, 0, -1
 FROM ib0.boards xb
@@ -241,12 +212,7 @@ func (s *PullerDB) LoadTempGroup() (
 
 	// TODO throw out this deadlock-inducing logic
 	if s.temp_rows == nil {
-		q := `SELECT xb.b_name,xs.next_max,xs.last_max
-FROM ib0.puller_group_track xs
-JOIN ib0.boards xb
-ON xs.bid = xb.b_id
-WHERE xs.sid=$1 AND xs.last_use=$2
-ORDER BY xb.b_name`
+		q := ``
 		s.temp_rows, err = s.sp.db.DB.Query(q, s.id, s.nonce)
 		if err != nil {
 			s.temp_rows = nil

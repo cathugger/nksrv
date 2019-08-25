@@ -238,6 +238,7 @@ div.nav {
 .pf_body {
 	margin: 0 auto;
 	background-color: #D6DAF0;
+	border: 1px solid #BCBCE6;
 }
 .pf_label {
 	background-color: #C6CAE0;
@@ -249,7 +250,6 @@ div.nav {
 	position: fixed;
 	top: 5px;
 	right: 5px;
-	border: 1px solid black;
 }
 
 #message {

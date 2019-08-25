@@ -11,6 +11,7 @@ import (
 	"nksrv/lib/fstore"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/gothm"
+	"nksrv/lib/thumbnailer/extthm"
 )
 
 func main() {
@@ -18,6 +19,7 @@ func main() {
 	thumbdir := flag.String("thumbdir", "_demothm", "thumbnail directory")
 	thumbcolor := flag.String("color", "", "background color")
 	thumbgray := flag.Bool("grayscale", false, "grayscale")
+	thumbext := flag.Bool("ext", false, "use extthm")
 
 	flag.Parse()
 
@@ -27,7 +29,12 @@ func main() {
 		return
 	}
 
-	thm, err := gothm.DefaultConfig.BuildThumbnailer(&fs)
+	var thm thumbnailer.Thumbnailer
+	if !thumbext {
+		thm, err = gothm.DefaultConfig.BuildThumbnailer(&fs)
+	} else {
+		thm, err = extthm.DefaultConfig.BuildThumbnailer(&fs)
+	}
 	if err != nil {
 		fmt.Printf("err building thumbnailer: %v\n", err)
 		return

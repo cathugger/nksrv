@@ -33,8 +33,8 @@ type PullerDatabase interface {
 	CancelTempGroups() error             // if we fail in middle of adding
 	FinishTempGroups(partial bool) error // after all list is added
 	DoneTempGroups() error               // after we finished using them
-	StoreTempGroupID(group []byte, new_id uint64, old_id uint64) error
-	StoreTempGroup(group []byte, old_id uint64) error
+	StoreTempGroupID(group []byte, new_id uint64) error
+	StoreTempGroup(group []byte) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
 	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
@@ -130,6 +130,7 @@ func (c *NNTPPuller) doActiveList() (err error, fatal bool) {
 			// negative count = no articles
 			if c.s.workaroundStupidActiveList {
 				// unless it's broke implementation
+				// if that's the case, use special value to mark "we dunno"
 				hiwm = -1
 			} else {
 				hiwm = 0

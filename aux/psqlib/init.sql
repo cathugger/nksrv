@@ -245,7 +245,8 @@ CREATE INDEX
 CREATE TABLE ib0.puller_list (
 	sid      BIGINT  GENERATED ALWAYS AS IDENTITY,
 	sname    TEXT    COLLATE "C"  NOT NULL,
-	last_use BIGINT               NOT NULL, -- used for cleanup
+	-- nonce, used to clean dead server trackings
+	last_use BIGINT               NOT NULL,
 
 	PRIMARY KEY (sid),
 	UNIQUE (sname)
@@ -255,6 +256,7 @@ CREATE INDEX ON ib0.puller_list (last_use)
 
 
 -- :next
+-- last timestamp when we did NEWNEWS (per-server)
 CREATE TABLE ib0.puller_last_newnews (
 	sid          BIGINT NOT NULL,
 	last_newnews BIGINT NOT NULL,
@@ -267,6 +269,7 @@ CREATE TABLE ib0.puller_last_newnews (
 
 
 -- :next
+-- last timestamp when we did NEWGROUPS (per-server)
 CREATE TABLE ib0.puller_last_newgroups (
 	sid            BIGINT NOT NULL,
 	last_newgroups BIGINT NOT NULL,
@@ -282,9 +285,12 @@ CREATE TABLE ib0.puller_last_newgroups (
 CREATE TABLE ib0.puller_group_track (
 	sid      BIGINT  NOT NULL,
 	bid      INTEGER NOT NULL,
-	last_use BIGINT  NOT NULL, -- used for cleanup
-	last_max BIGINT  NOT NULL, -- max id seen last time
-	next_max BIGINT  NOT NULL, -- new max id
+	-- nonce, used to clean dead board trackings
+	last_use BIGINT  NOT NULL,
+	-- max id seen last time
+	last_max BIGINT  NOT NULL,
+	-- max id seen now
+	next_max BIGINT  NOT NULL,
 
 	PRIMARY KEY (sid,bid),
 	FOREIGN KEY (sid)
