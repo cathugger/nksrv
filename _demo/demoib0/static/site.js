@@ -279,7 +279,7 @@ function refer(refcont) {
 		ta.setRangeText(txtinsert, selend, selend, "end");
 		ta.focus();
 	}
-	return;
+	return false;
 }
 
 
