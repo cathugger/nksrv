@@ -36,7 +36,7 @@ var DefaultConfig = Config{
 }
 
 func (c Config) BuildThumbnailer(
-	fs *fstore.FStore) (t thumbnailer.Thumbnailer, err error) {
+	fs *fstore.FStore) (_ thumbnailer.Thumbnailer, err error) {
 
 	// XXX customization
 	imt := new(magickBackend)
@@ -51,7 +51,7 @@ func (c Config) BuildThumbnailer(
 		return
 	}
 
-	return &ExternalThumbnailer{
+	t := &ExternalThumbnailer{
 		cfg: c,
 		fs:  fs,
 		routes: []extExec{
@@ -72,7 +72,12 @@ func (c Config) BuildThumbnailer(
 			extExec{t: mt, m_mime: glob.MustCompile("audio/flac"), p: tparams{"fmt": "flac"}},
 			extExec{t: mt, m_mime: glob.MustCompile("audio/webm"), p: tparams{"fmt": "webm"}},
 		},
-	}, nil
+	}
+
+	imt.t = t
+	mt.t = t
+
+	return t, nil
 }
 
 type tparams = map[string]string
