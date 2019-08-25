@@ -38,7 +38,7 @@ import (
 // n==0 on enter CAN happen if object is being removed from pool; in this case, wait on cond and try taking off new object after
 type CacheObj struct {
 	m sync.RWMutex // guard for all
-	c *sync.Cond   // cond for reading new stuff
+	c sync.Cond    // cond for reading new stuff
 
 	n int                // current amount of readers (refcount for gc)
 	f *os.File           // for shared reading
@@ -181,7 +181,7 @@ begin:
 	if o == nil {
 		// new cache obj
 		oo = &CacheObj{n: 1}
-		oo.c = sync.NewCond(oo.m.RLocker())
+		oo.c.L = oo.m.RLocker()
 
 		// second time check & set
 		ce.m.Lock()
@@ -416,7 +416,7 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (n *CacheObj, err error) {
 	filename := ce.b.MakeFilename(objid)
 
 	n = &CacheObj{n: 1}
-	n.c = sync.NewCond(n.m.RLocker())
+	n.c.L = n.m.RLocker()
 
 	ce.m.Lock()
 	o := ce.w[objid]
