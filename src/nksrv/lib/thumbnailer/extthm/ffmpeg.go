@@ -219,6 +219,7 @@ foundfmt:
 					}
 
 					fallthrough
+
 				case cname == "theora" && knownfmt == "ogg",
 					cname == "vp8" && knownfmt != "ogg",
 					cname == "vp9" && knownfmt != "ogg":

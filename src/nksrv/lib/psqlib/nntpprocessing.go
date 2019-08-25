@@ -198,8 +198,9 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		}
 		info.PostedDate = pdate.Unix()
 		// check if message is not too new
-		const maxFutureSecs = 5 * 60 // 5 minutes
+		const maxFutureSecs = 15 * 60 // 15 minutes
 		if info.PostedDate-maxFutureSecs > nowtimeu {
+			// XXX soft error, have a way to serialize it into condition
 			err = errors.New("date is too far in the future")
 			return
 		}

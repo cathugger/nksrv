@@ -3,6 +3,7 @@ package tmplrenderer
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
 	"strings"
@@ -177,15 +178,63 @@ func filesize(s int64) string {
 	return fmt.Sprintf("%.6f TiB", fs/(1<<40))
 }
 
+func filesizew(w io.Writer, s int64) {
+	if s < 1<<10 {
+		fmt.Fprintf(w, "%d B", s)
+		return
+	}
+	fs := float64(s)
+	if s < 1<<20 {
+		fmt.Fprintf(w, "%.3f KiB", fs/(1<<10))
+		return
+	}
+	if s < 1<<30 {
+		fmt.Fprintf(w, "%.3f MiB", fs/(1<<20))
+		return
+	}
+	if s < 1<<40 {
+		fmt.Fprintf(w, "%.3f GiB", fs/(1<<30))
+		return
+	}
+	fmt.Fprintf(w, "%.6f TiB", fs/(1<<40))
+}
+
 func fileinfo(fi *ib0.IBFileInfo) string {
-	// width x height
-	wf, wok := fi.Options["width"].(float64)
-	hf, hok := fi.Options["height"].(float64)
-	if wok && hok {
-		return fmt.Sprintf("%dx%d, %s", int(wf), int(hf), filesize(fi.Size))
+
+	b := &strings.Builder{}
+
+	if fi.Type == "audio" || fi.Type == "video" {
+		// duration in float point secs
+		length, _ := fi.Options["length"].(float64)
+		if length > 0 {
+			ilen := int(length + 0.5) // round
+			if ilen < 60*60 {
+				// mins:secs
+				fmt.Fprintf(b, "%d:%2d, ", ilen/60, ilen%60)
+			} else {
+				// hours:mins:secs
+				var h int
+				h, ilen = ilen/(60*60), ilen%(60*60)
+				fmt.Fprintf(b, "%d:%2d:%2d, ", h, ilen/60, ilen%60)
+			}
+		}
 	}
 
-	return filesize(fi.Size)
+	if fi.Type == "image" || fi.Type == "video" {
+		// width x height
+		wf, _ := fi.Options["width"].(float64)
+		hf, _ := fi.Options["height"].(float64)
+		if wf > 0 && hf > 0 {
+			fmt.Fprintf(b, "%dx%d, ", int(wf), int(hf))
+		}
+	}
+
+	if b.Len() != 0 {
+		filesizew(b, fi.Size)
+		return b.String()
+	} else {
+		return filesize(fi.Size)
+	}
 }
 
 func filedata(fi *ib0.IBFileInfo) string {

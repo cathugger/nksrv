@@ -70,6 +70,10 @@ func (r Responder) ResPostingAccepted() error {
 	return r.PrintfLine("240 article taken in")
 }
 
+func (r Responder) ResXWaitAwake() error {
+	return r.PrintfLine("290 ohayo~")
+}
+
 // 3** - successful continuation
 
 func (r Responder) ResSendArticleToBeTransferred() error {
@@ -174,6 +178,14 @@ func (r Responder) ResPostingFailed(e error) error {
 
 func (r Responder) ResAuthRequired() error {
 	return r.PrintfLine("480 authentication required")
+}
+
+func (r Responder) ResXWaitTimeout() error {
+	return r.PrintfLine("490 timeout")
+}
+
+func (r Responder) ResXWaitCancel() error {
+	return r.PrintfLine("491 cancelled")
 }
 
 // 5** - pernament errors

@@ -33,6 +33,9 @@ type ConnState struct {
 	UserPriv                   // stuff allowed
 	authenticated bool         // whether authenticated
 	activeLogin   *ActiveLogin // for AUTHINFO USER
+
+	listen     *nntpListenObj
+	activeWait bool
 }
 
 func (c *ConnState) Cleanup() {
