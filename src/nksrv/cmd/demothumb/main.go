@@ -10,8 +10,8 @@ import (
 	"nksrv/lib/emime"
 	"nksrv/lib/fstore"
 	"nksrv/lib/thumbnailer"
-	"nksrv/lib/thumbnailer/gothm"
 	"nksrv/lib/thumbnailer/extthm"
+	"nksrv/lib/thumbnailer/gothm"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	var thm thumbnailer.Thumbnailer
-	if !thumbext {
+	if !*thumbext {
 		thm, err = gothm.DefaultConfig.BuildThumbnailer(&fs)
 	} else {
 		thm, err = extthm.DefaultConfig.BuildThumbnailer(&fs)
