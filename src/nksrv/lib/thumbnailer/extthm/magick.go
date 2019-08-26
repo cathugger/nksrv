@@ -176,6 +176,8 @@ func (b *magickBackend) doThumbnailing(
 		// XXX following would kill non-sRGB profiles
 		//args = append(args, "-strip")
 	}
+	// TODO make configurable and let unset (IM can estimate from src)
+	args = append(args, "-quality", "92")
 	// output to tfn
 	args = append(args, tfn)
 

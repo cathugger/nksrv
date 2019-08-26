@@ -415,6 +415,7 @@ foundfmt:
 			"-map", fmt.Sprintf("0:%d", gotVidsID),
 			"-vframes", "1",
 			"-vf", vfilter,
+			"-qscale:v", "2", // TODO make configurable
 			"-y", tfn,
 		}
 		cmd := &exec.Cmd{
@@ -511,6 +512,7 @@ foundfmt:
 				"-map", fmt.Sprintf("0:%d", gotPicsID),
 				"-vframes", "1",
 				"-vf", vfilter,
+				"-qscale:v", "2", // TODO make configurable
 				"-y", tfn,
 			}
 			cmd := &exec.Cmd{
