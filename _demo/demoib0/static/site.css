@@ -87,6 +87,16 @@ tr.blist:hover td {
 	display: inline-block;
 }
 
+label {
+	/* why this isn't default? */
+	/* disable selection on doubleclick */
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	 -khtml-user-select: none;
+	    -ms-user-select: none;
+	        user-select: none;
+}
+
 .audioembed {
 	background-size: cover;
 	background-position: center;
@@ -101,7 +111,6 @@ tr.blist:hover td {
 	 -khtml-user-select: none;
 	    -ms-user-select: none;
 	        user-select: none;
-
 }
 
 .videoembed {
