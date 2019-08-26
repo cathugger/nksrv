@@ -539,7 +539,7 @@ func (sp *PSQLIB) commonNewPost(
 			var res thumbnailer.ThumbResult
 			var tfi thumbnailer.FileInfo
 			res, tfi, err = sp.thumbnailer.ThumbProcess(
-				files[i].F, ext, files[i].ContentType, tplan.ThumbConfig)
+				files[i].F, ext, pInfo.FI[x].ContentType, tplan.ThumbConfig)
 			if err != nil {
 				return rInfo, fmt.Errorf("error thumbnailing file: %v", err),
 					http.StatusInternalServerError
