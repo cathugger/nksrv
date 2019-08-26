@@ -526,7 +526,7 @@ func cmdDate(c *ConnState, args [][]byte, rest []byte) bool {
 	// 111 YYYYMMDDhhmmss    Server date and time
 	// XXX will break format when year>9999
 	AbortOnErr(c.w.PrintfLine(
-		"111 %4d%2d%2d%2d%2d%2d YYYYMMDDhhmmss", Y, M, D, h, m, s))
+		"111 %04d%02d%02d%02d%02d%02d YYYYMMDDhhmmss", Y, M, D, h, m, s))
 	return true
 }
 

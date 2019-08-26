@@ -210,12 +210,12 @@ func fileinfo(fi *ib0.IBFileInfo) string {
 			ilen := int(length + 0.5) // round
 			if ilen < 60*60 {
 				// mins:secs
-				fmt.Fprintf(b, "%d:%2d, ", ilen/60, ilen%60)
+				fmt.Fprintf(b, "%d:%02d, ", ilen/60, ilen%60)
 			} else {
 				// hours:mins:secs
 				var h int
 				h, ilen = ilen/(60*60), ilen%(60*60)
-				fmt.Fprintf(b, "%d:%2d:%2d, ", h, ilen/60, ilen%60)
+				fmt.Fprintf(b, "%d:%02d:%02d, ", h, ilen/60, ilen%60)
 			}
 		}
 	}
