@@ -207,16 +207,10 @@ func fileinfo(fi *ib0.IBFileInfo) string {
 		// duration in float point secs
 		length, _ := fi.Options["length"].(float64)
 		if length > 0 {
+			// hours:mins:secs
 			ilen := int(length + 0.5) // round
-			if ilen < 60*60 {
-				// mins:secs
-				fmt.Fprintf(b, "%d:%02d, ", ilen/60, ilen%60)
-			} else {
-				// hours:mins:secs
-				var h int
-				h, ilen = ilen/(60*60), ilen%(60*60)
-				fmt.Fprintf(b, "%d:%02d:%02d, ", h, ilen/60, ilen%60)
-			}
+			h, ilen := ilen/(60*60), ilen%(60*60)
+			fmt.Fprintf(b, "%d:%02d:%02d, ", h, ilen/60, ilen%60)
 		}
 	}
 
