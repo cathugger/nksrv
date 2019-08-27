@@ -161,7 +161,7 @@ func (b *magickBackend) doThumbnailing(
 	args = append(args, convsrc)
 	// NOTE: we thumbnail disregarding profile
 	// correct would be first converting to linear RGB, but that's bad for perf
-	args = append(args, "-thumbnail", fmt.Sprintf("%dx%d", cfg.Width, cfg.Height))
+	args = append(args, "-thumbnail", fmt.Sprintf("%dx%d>", cfg.Width, cfg.Height))
 	args = append(args, "-auto-orient")
 	if cfg.Color != "" && cfgfmt != "jpeg" && cfgfmt != "bmp" {
 		// tbh this should be always set when doing JPEG thumbnails
@@ -205,7 +205,7 @@ func (b *magickBackend) doThumbnailing(
 	}
 
 	res.Width, res.Height =
-		calcDecreaseThumbSize(
+		calcDecreaseThumbSizeOIS(
 			imgcfg.Width, imgcfg.Height, cfg.Width, cfg.Height)
 	res.FileName = tfn
 	res.FileExt = "jpg"
