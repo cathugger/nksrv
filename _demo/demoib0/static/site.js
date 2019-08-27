@@ -169,6 +169,9 @@ function expandaudio(lnk, thm) {
 	var audio = new Audio(lnk.href);
 	audio.controls = true;
 	adiv.appendChild(audio);
+	var idiv = document.createElement('div');
+	idiv.className = 'audioembedinner';
+	adiv.appendChild(idiv);
 
 	var cspan = newembedcontrol(audio);
 
@@ -408,6 +411,13 @@ function updateclick(e, tgt) {
 	console.log("update request sent");
 }
 
+function togglePause(audio) {
+	if (audio.paused)
+		audio.play();
+	else
+		audio.pause();
+}
+
 function onglobalclick(e) {
 	var tgt = e.target;
 	switch (tgt.className) {
@@ -491,11 +501,14 @@ function onglobalclick(e) {
 		case 'audioembed':
 		{
 			// toggle play/pause if clicked on background
-			var audio = tgt.childNodes[0];
-			if (audio.paused)
-				audio.play();
-			else
-				audio.pause();
+			togglePause(tgt.childNodes[0]);
+			e.preventDefault();
+			break;
+		}
+		case 'audioembedinner':
+		{
+			// toggle play/pause if clicked on background
+			togglePause(tgt.parentElement.childNodes[0]);
 			e.preventDefault();
 			break;
 		}

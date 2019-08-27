@@ -100,10 +100,10 @@ label {
 .audioembed {
 	background-size: cover;
 	background-position: center;
-	width:  350px;
-	height: 350px;
-	position: relative;
+	width: 350px;
 	max-width: 100%;
+	min-width: 215px;
+	position: relative;
 
 	/* disable selection on doubleclick */
 	-webkit-user-select: none;
@@ -111,12 +111,6 @@ label {
 	 -khtml-user-select: none;
 	    -ms-user-select: none;
 	        user-select: none;
-}
-
-.videoembed {
-	max-width: 100%;
-	max-height: 80vh;
-	min-width: 250px;
 }
 
 .audioembed audio {
@@ -130,6 +124,17 @@ label {
 
 .audioembed:hover audio {
 	opacity: 1.0;
+}
+
+.audioembedinner {
+	width: 100%;
+	padding-bottom: 100%;
+}
+
+.videoembed {
+	max-width: 100%;
+	max-height: 80vh;
+	min-width: 250px;
 }
 
 .opinfo, .rinfo {
