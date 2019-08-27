@@ -11,6 +11,7 @@ function finishimgexpansion(lnk, exp, thm) {
 	if (lnk.dataset.width && lnk.dataset.height) {
 		exp.width  = lnk.dataset.width;
 		exp.height = lnk.dataset.height;
+		/* -- eh nvm
 		// if expanded img is exactly the same size as thm or v close,
 		// make it have border to show difference
 		if (Math.abs(exp.width - thm.width + 1) < 5 &&
@@ -18,6 +19,7 @@ function finishimgexpansion(lnk, exp, thm) {
 
 			exp.style.border = '2px black dashed';
 		}
+		*/
 	}
 	// un-hide
 	exp.style.removeProperty('display');
