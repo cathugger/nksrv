@@ -34,9 +34,9 @@ func errNotEnoughFiles(minimum int32) error {
 }
 
 func errTooBigFileSingle(limit int64) error {
-	return fmt.Errorf("one of files is too large (limit: %d)", limit)
+	return fmt.Errorf("one of files is too large (limit: %d bytes)", limit)
 }
 
 func errTooBigFileAll(limit int64) error {
-	return fmt.Errorf("files are too large (limit: %d)", limit)
+	return fmt.Errorf("files are too large (limit: %d bytes)", limit)
 }
