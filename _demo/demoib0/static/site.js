@@ -8,10 +8,17 @@ function finishimgexpansion(lnk, exp, thm) {
 	// remove expimg from DOM before modification
 	lnk.removeChild(exp);
 	// configure width and height
-	if (lnk.dataset.width)
+	if (lnk.dataset.width && lnk.dataset.height) {
 		exp.width  = lnk.dataset.width;
-	if (lnk.dataset.height)
 		exp.height = lnk.dataset.height;
+		// if expanded img is exactly the same size as thm or v close,
+		// make it have border to show difference
+		if (Math.abs(exp.width - thm.width + 1) < 5 &&
+			Math.abs(exp.height - thm.height + 1) < 5) {
+
+			exp.style.border = '2px black dashed';
+		}
+	}
 	// un-hide
 	exp.style.removeProperty('display');
 	// perform replace thumb with expanded img
