@@ -486,7 +486,7 @@ function onglobalclick(e) {
 			// parent of that is either opimg or rimg doesnt matter
 			// it should have some sort of embed inside
 			// what sort depends on hidden imglink element [which we'll need to unhide]
-			var cspan = tgt.parentElement;
+			var cspan = tgt.parentElement.parentElement;
 			var imginfo = cspan.parentElement;
 			var pcont = imginfo.parentElement;
 			var lnk = pcont.getElementsByClassName('imglink')[0];
