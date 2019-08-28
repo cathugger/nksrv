@@ -145,6 +145,8 @@ function newembedcontrol(me) {
 			loopcb.addEventListener('input', function(e){
 				me.loop = e.target.checked;
 			});
+			loopcb.style.margin = '0';
+			loopcb.style.verticalAlign = 'bottom';
 		var cloop = document.createElement('label');
 		cloop.appendChild(loopcb);
 		cloop.appendChild(document.createTextNode('Loop'));
