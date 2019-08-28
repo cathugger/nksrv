@@ -135,32 +135,53 @@ function unexpandimg(lnk, thm, exp) {
 
 function newembedcontrol(me) {
 	var cspan = document.createElement('span');
-	cspan.appendChild(document.createTextNode('['));
 
 	// XXX it doesn't seem like media elements have event for loop var change
 	// so we can't do reliable back notification
 
-			var loopcb = document.createElement('input');
-			loopcb.type = 'checkbox';
-			loopcb.addEventListener('input', function(e){
-				me.loop = e.target.checked;
-			});
-			loopcb.style.margin = '0';
-			loopcb.style.verticalAlign = 'bottom';
-		var cloop = document.createElement('label');
-		cloop.appendChild(loopcb);
-		cloop.appendChild(document.createTextNode('Loop'));
-	cspan.appendChild(cloop);
+	// checkbox
+	var loopcb = document.createElement('input');
+	loopcb.type = 'checkbox';
+	loopcb.addEventListener('input', function(e){
+		me.loop = e.target.checked;
+	});
+	loopcb.style.margin = '0px 2px 0px 2px';
+	loopcb.style.verticalAlign = 'bottom';
 
-	cspan.appendChild(document.createTextNode('] ['));
+	// label which carries checkbox and text
+	var cloop = document.createElement('label');
+	cloop.appendChild(loopcb);
+	cloop.appendChild(document.createTextNode('Loop'));
 
-		var clink = document.createElement('a');
-		clink.href = "";
-		clink.className = 'embedclose';
-		clink.appendChild(document.createTextNode('Close'));
-	cspan.appendChild(clink);
+	// box for [] and above label element
+	var cloopbox = document.createElement('span');
+	cloopbox.style.display = 'inline-block';
+	cloopbox.appendChild(document.createTextNode('['));
+	cloopbox.appendChild(cloop);
+	cloopbox.appendChild(document.createTextNode(']'));
 
-	cspan.appendChild(document.createTextNode(']'));
+	// put it in
+	cspan.appendChild(cloopbox);
+
+	// space before next box
+	cspan.appendChild(document.createTextNode(' '));
+
+	// close link
+	var clink = document.createElement('a');
+	clink.href = "";
+	clink.className = 'embedclose';
+	clink.appendChild(document.createTextNode('Close'));
+
+	// close link box
+	var clinkbox = document.createElement('span');
+	clinkbox.style.display = 'inline-block';
+	clinkbox.appendChild(document.createTextNode('['));
+	clinkbox.appendChild(clink);
+	clinkbox.appendChild(document.createTextNode(']'));
+
+	// put it in
+	cspan.appendChild(clinkbox);
+
 	return cspan;
 }
 
