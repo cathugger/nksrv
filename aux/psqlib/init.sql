@@ -1,9 +1,7 @@
 --- core stuff
 -- :name version
-demo6
+demo7
 -- :name init
-INSERT INTO capabilities(component,version) VALUES ('ib0','demo6')
--- :next
 CREATE SCHEMA ib0
 
 
@@ -80,10 +78,9 @@ CREATE TABLE ib0.boards (
 -- :next
 CREATE INDEX
 	ON ib0.boards (badded,b_id) -- NEWGROUPS
-
-/*
- * TODO index for `b_name COLLATE "und-x-icu"`
- */
+-- :next
+CREATE INDEX
+	ON ib0.boards (b_name COLLATE "und-x-icu")
 
 
 -- :next

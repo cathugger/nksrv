@@ -10,7 +10,7 @@ import (
 	"nksrv/lib/sqlbucket"
 )
 
-const currDbVersion = "demo6"
+const currDbVersion = "demo7"
 
 func (sp *PSQLIB) InitDB() (err error) {
 	stmts, err := sqlbucket.LoadFromFile("aux/psqlib/init.sql")
@@ -34,6 +34,13 @@ func (sp *PSQLIB) InitDB() (err error) {
 			_ = tx.Rollback()
 		}
 	}()
+
+	q := `INSERT INTO capabilities(component,version) VALUES ('ib0',$1)`
+	_, err = tx.Exec(q, currDbVersion)
+	if err != nil {
+		err = fmt.Errorf("err on version stmt: %v", err)
+		return
+	}
 
 	for i, s := range stmts["init"] {
 		_, err = tx.Exec(s)

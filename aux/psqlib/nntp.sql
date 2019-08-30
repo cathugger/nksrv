@@ -306,7 +306,7 @@ USING
 GROUP BY
 	xb.b_id
 ORDER BY
-	xb.b_name
+	xb.b_name COLLATE "und-x-icu"
 
 -- :name nntp_listactive_one
 -- input: {board name}
