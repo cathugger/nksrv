@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
-	"net/url"
 	"os"
 
 	"golang.org/x/net/proxy"
@@ -18,6 +16,7 @@ import (
 	"nksrv/lib/psql"
 	"nksrv/lib/psqlib"
 	"nksrv/lib/thumbnailer/extthm"
+	"nksrv/lib/xdialer"
 )
 
 func main() {
@@ -88,39 +87,19 @@ func main() {
 
 	puller := nntp.NewNNTPPuller(dbpuller, lgr)
 
-	var proto, host string
-	u, e := url.ParseRequestURI(*nntpconn)
-	if e == nil {
-		proto, host = u.Scheme, u.Host
-	} else {
-		proto, host = "tcp", *nntpconn
-	}
-	if host == "" {
-		mlg.LogPrintln(CRITICAL, "no nntpconn host specified")
+	d, proto, host, e := xdialer.XDial(*nntpconn)
+	if e != nil {
+		mlg.LogPrintln(CRITICAL, "dial %d fail:", j, e)
 		return
 	}
 
-	var d nntp.Dialer
-	if *socks == "" {
-		d = &net.Dialer{}
-	} else {
+	if *socks != "" {
 		d, e = proxy.SOCKS5("tcp", *socks, nil, nil)
 		if e != nil {
 			mlg.LogPrintln(CRITICAL, "SOCKS5 fail:", e)
 			return
 		}
 	}
-
-	/*
-		defer func() {
-			r := recover()
-			mlg.LogPrintf(ERROR, "recover: %v", r)
-			if mlg.LockWrite(ERROR) {
-				mlg.Write(debug.Stack())
-				mlg.Close()
-			}
-		}()
-	*/
 
 	mlg.LogPrintf(
 		NOTICE, "starting nntp puller with proto(%s) host(%s)", proto, host)
