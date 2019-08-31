@@ -89,10 +89,10 @@ CREATE INDEX
 
 -- :next
 CREATE TABLE ib0.threads (
-	b_id   INTEGER               NOT NULL, -- internal board ID this thread belongs to
-	t_id   BIGINT                NOT NULL, -- internal board-local thread ID (ID of board-local OP post)
-	g_t_id BIGINT                NOT NULL, -- internal global thread OP post ID
-	t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
+	b_id     INTEGER               NOT NULL, -- internal board ID this thread belongs to
+	b_t_id   BIGINT                NOT NULL, -- internal board-local thread ID (ID of board-local OP post)
+	g_t_id   BIGINT                NOT NULL, -- internal global thread OP post ID
+	b_t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
 
 	bump      TIMESTAMP  WITH TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
 	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
@@ -103,8 +103,8 @@ CREATE TABLE ib0.threads (
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
 	attrib       JSONB, -- extra attributes
 
-	PRIMARY KEY (b_id,t_id),
-	UNIQUE      (b_id,t_name),
+	PRIMARY KEY (b_id,b_t_id),
+	UNIQUE      (b_id,b_t_name),
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards
 )
@@ -114,7 +114,7 @@ CREATE INDEX
 	ON ib0.threads (
 		b_id ASC,
 		bump DESC,
-		t_id ASC
+		b_t_id ASC
 	)
 -- :next
 -- for overboard
@@ -133,7 +133,7 @@ CREATE TABLE ib0.bposts (
 	b_id   INTEGER               NOT NULL, -- internal board ID this post belongs to
 	b_p_id BIGINT                NOT NULL, -- internal post ID of this post. if pid==tid then this is OP
 	p_name TEXT     COLLATE "C"  NOT NULL, -- external post identifier
-	t_id   BIGINT                NOT NULL, -- internal thread ID this post belongs to
+	b_t_id BIGINT                NOT NULL, -- internal thread ID this post belongs to
 	g_p_id BIGINT                NOT NULL, -- global internal post ID
 
 	-- redundant w/ global but needed for efficient indexes
@@ -150,7 +150,7 @@ CREATE TABLE ib0.bposts (
 	UNIQUE      (g_p_id,b_id),
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards,
-	FOREIGN KEY (b_id,t_id)
+	FOREIGN KEY (b_id,b_t_id)
 		REFERENCES ib0.threads,
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.posts,
@@ -163,7 +163,7 @@ CREATE TABLE ib0.bposts (
 CREATE INDEX
 	ON ib0.bposts (
 		b_id,
-		t_id,
+		b_t_id,
 		pdate ASC,
 		b_p_id ASC
 	)

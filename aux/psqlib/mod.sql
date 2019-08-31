@@ -60,7 +60,7 @@ SELECT
 	xp.message,
 	xp.headers -> 'In-Reply-To' ->> 0,
 	xbp.attrib,
-	xbp.t_id
+	xbp.b_t_id
 FROM
 	msgs
 JOIN

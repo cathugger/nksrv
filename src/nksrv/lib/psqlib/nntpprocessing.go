@@ -447,7 +447,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	pi.MI.Sage = isSage
 
 	var xrefs []ibref_nntp.Reference
-	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
+	prefs :=
+		mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
 	pi.A.References, xrefs, err =
 		sp.processReferencesOnIncoming(
 			sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)

@@ -14,8 +14,8 @@ SELECT
 	xb.attrib,
 	xb.threads_per_page,
 	xb.t_count,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
@@ -44,8 +44,8 @@ LEFT JOIN
 	LATERAL (
 		SELECT
 			zt.b_id,
-			zt.t_id,
-			zt.t_name,
+			zt.b_t_id,
+			zt.b_t_name,
 			zt.bump,
 			zt.p_count,
 			zt.f_count
@@ -55,7 +55,7 @@ LEFT JOIN
 			zt.b_id = xb.b_id
 		ORDER BY
 			zt.bump DESC,
-			zt.t_id ASC
+			zt.b_t_id ASC
 		LIMIT
 			(CASE
 				WHEN
@@ -87,7 +87,7 @@ LEFT JOIN
 	LATERAL (
 		SELECT
 			b_id,
-			t_id,
+			b_t_id,
 			b_p_id,
 			g_p_id,
 			p_name,
@@ -95,11 +95,11 @@ LEFT JOIN
 		FROM
 			ib0.bposts AS op
 		WHERE
-			op.b_id = xb.b_id AND op.b_p_id = xt.t_id
+			op.b_id = xb.b_id AND op.b_p_id = xt.b_t_id
 		UNION ALL
 		SELECT
 			b_id,
-			t_id,
+			b_t_id,
 			b_p_id,
 			g_p_id,
 			p_name,
@@ -111,7 +111,7 @@ LEFT JOIN
 				(
 					SELECT
 						rp.b_id,
-						rp.t_id,
+						rp.b_t_id,
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
@@ -120,8 +120,8 @@ LEFT JOIN
 						ib0.bposts AS rp
 					WHERE
 						rp.b_id = xb.b_id AND
-							rp.t_id = xt.t_id AND
-							rp.b_p_id != xt.t_id
+							rp.b_t_id = xt.b_t_id AND
+							rp.b_p_id != xt.b_t_id
 					ORDER BY
 						rp.pdate DESC,
 						rp.b_p_id DESC
@@ -159,8 +159,8 @@ WHERE
 SELECT
 	xt.b_id,
 	xt.b_name,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
@@ -188,8 +188,8 @@ FROM
 		SELECT
 			zt.b_id,
 			zb.b_name,
-			zt.t_id,
-			zt.t_name,
+			zt.b_t_id,
+			zt.b_t_name,
 			zt.bump,
 			zt.p_count,
 			zt.f_count
@@ -234,7 +234,7 @@ LEFT JOIN
 	LATERAL (
 		SELECT
 			b_id,
-			t_id,
+			b_t_id,
 			b_p_id,
 			g_p_id,
 			p_name,
@@ -242,11 +242,11 @@ LEFT JOIN
 		FROM
 			ib0.bposts AS op
 		WHERE
-			op.b_id = xt.b_id AND op.b_p_id = xt.t_id
+			op.b_id = xt.b_id AND op.b_p_id = xt.b_t_id
 		UNION ALL
 		SELECT
 			b_id,
-			t_id,
+			b_t_id,
 			b_p_id,
 			g_p_id,
 			p_name,
@@ -258,7 +258,7 @@ LEFT JOIN
 				(
 					SELECT
 						rp.b_id,
-						rp.t_id,
+						rp.b_t_id,
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
@@ -267,8 +267,8 @@ LEFT JOIN
 						ib0.bposts AS rp
 					WHERE
 						rp.b_id = xt.b_id AND
-							rp.t_id = xt.t_id AND
-							rp.b_p_id != xt.t_id
+							rp.b_t_id = xt.b_t_id AND
+							rp.b_p_id != xt.b_t_id
 					ORDER BY
 						rp.pdate DESC,
 						rp.b_p_id DESC
@@ -306,8 +306,8 @@ SELECT
 	xb.b_id,
 	xb.bdesc,
 	xb.attrib,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
 	xt.bump,
@@ -335,14 +335,14 @@ LEFT JOIN LATERAL
 			xb.b_id = zt.b_id
 		ORDER BY
 			zt.bump DESC,
-			zt.t_id ASC
+			zt.b_t_id ASC
 	) AS xt
 ON
 	TRUE
 LEFT JOIN
 	ib0.bposts xbp
 ON
-	xt.b_id = xbp.b_id AND xt.t_id = xbp.b_p_id
+	xt.b_id = xbp.b_id AND xt.b_t_id = xbp.b_p_id
 LEFT JOIN
 	ib0.posts xp
 ON
@@ -374,8 +374,8 @@ WHERE
 SELECT
 	xt.b_id,
 	xt.b_name,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
 	xt.bump,
@@ -396,8 +396,8 @@ FROM
 		SELECT
 			zt.b_id,
 			zb.b_name,
-			zt.t_id,
-			zt.t_name,
+			zt.b_t_id,
+			zt.b_t_name,
 			zt.bump,
 			zt.p_count,
 			zt.f_count
@@ -419,7 +419,7 @@ FROM
 LEFT JOIN
 	ib0.bposts xbp
 ON
-	xt.b_id = xbp.b_id AND xt.t_id = xbp.b_p_id
+	xt.b_id = xbp.b_id AND xt.b_t_id = xbp.b_p_id
 LEFT JOIN
 	ib0.posts xp
 ON
@@ -452,8 +452,8 @@ SELECT
 	xb.attrib,
 	xb.threads_per_page,
 	xb.t_count,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xt.p_count,
 	xt.f_count AS xt_f_count,
 	xto.t_pos,
@@ -486,7 +486,7 @@ LEFT JOIN LATERAL
 		FROM
 			ib0.threads zt
 		WHERE
-			zt.b_id = xb.b_id AND zt.t_name = $2
+			zt.b_id = xb.b_id AND zt.b_t_name = $2
 		LIMIT
 			1
 	) AS xt
@@ -500,11 +500,11 @@ LEFT JOIN
 			(
 				SELECT
 					b_id,
-					t_id,
+					b_t_id,
 					row_number() OVER (
 						ORDER BY
 							bump DESC,
-							t_id ASC
+							b_t_id ASC
 					) AS t_pos
 				FROM
 					ib0.threads qt
@@ -512,7 +512,7 @@ LEFT JOIN
 					qt.b_id = xt.b_id
 			) AS zt
 		WHERE
-			xt.b_id = zt.b_id AND xt.t_id = zt.t_id
+			xt.b_id = zt.b_id AND xt.b_t_id = zt.b_t_id
 		LIMIT
 			1
 	) AS xto
@@ -525,7 +525,7 @@ LEFT JOIN LATERAL
 		FROM
 			ib0.bposts zbp
 		WHERE
-			xt.b_id = zbp.b_id AND xt.t_id = zbp.t_id
+			xt.b_id = zbp.b_id AND xt.b_t_id = zbp.b_t_id
 		ORDER BY
 			zbp.pdate ASC,zbp.b_p_id ASC
 	) AS xbp
@@ -581,7 +581,7 @@ SELECT
 	xb.b_id,
 	xb.post_limits,
 	xb.reply_limits,
-	xtp.t_id,
+	xtp.b_t_id,
 	xtp.reply_limits,
 	xb.thread_opts,
 	xtp.thread_opts,
@@ -593,7 +593,7 @@ LEFT JOIN LATERAL
 	(
 		SELECT
 			xt.b_id,
-			xt.t_id,
+			xt.b_t_id,
 			xt.reply_limits,
 			xt.thread_opts,
 			xp.msgid,
@@ -603,13 +603,13 @@ LEFT JOIN LATERAL
 		JOIN
 			ib0.bposts xbp
 		ON
-			xt.b_id=xbp.b_id AND xt.t_id=xbp.b_p_id
+			xt.b_id=xbp.b_id AND xt.b_t_id=xbp.b_p_id
 		JOIN
 			ib0.posts xp
 		ON
 			xbp.g_p_id = xp.g_p_id
 		WHERE
-			xb.b_id = xt.b_id AND xt.t_name=$2
+			xb.b_id = xt.b_id AND xt.b_t_name=$2
 		LIMIT
 			1
 	) AS xtp
@@ -666,7 +666,7 @@ WITH
 		WHERE
 			xbp.g_p_id = delgp.g_p_id
 		RETURNING
-			xbp.b_id,xbp.t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
+			xbp.b_id,xbp.b_t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
 	),
 	delbt AS (
 		-- delete thread(s) incase we nuked OP(s)
@@ -675,9 +675,9 @@ WITH
 		USING
 			delbp
 		WHERE
-			xt.b_id = delbp.b_id AND xt.t_id = delbp.b_p_id
+			xt.b_id = delbp.b_id AND xt.b_t_id = delbp.b_p_id
 		RETURNING
-			xt.b_id,xt.t_id
+			xt.b_id,xt.b_t_id
 	),
 	updbt AS (
 		-- update thread(s) counters incase we haven't deleted thread(s) earlier
@@ -690,7 +690,7 @@ WITH
 		FROM
 			delbp
 		WHERE
-			delbp.b_id = xt.b_id AND delbp.t_id = xt.t_id
+			delbp.b_id = xt.b_id AND delbp.b_t_id = xt.b_t_id
 	),
 	delbcp AS (
 		-- delete board child posts incase we nuked thread(s)
@@ -699,7 +699,7 @@ WITH
 		USING
 			delbt
 		WHERE
-			xbp.b_id = delbt.b_id AND xbp.t_id = delbt.t_id
+			xbp.b_id = delbt.b_id AND xbp.b_t_id = delbt.b_t_id
 		RETURNING
 			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
 	),
@@ -838,11 +838,11 @@ ON
 	leftf.fname = leftt.fname
 UNION ALL
 SELECT
-	'',0,'',0,b_id,t_id,NULL
+	'',0,'',0,b_id,b_t_id,NULL
 FROM
 	delbp
 WHERE
-	t_id != b_p_id
+	b_t_id != b_p_id
 UNION ALL
 SELECT
 	'',0,'',0,NULL,NULL,msgid
@@ -934,7 +934,7 @@ WITH
 		WHERE
 			xbp.g_p_id = delgp.g_p_id
 		RETURNING
-			xbp.b_id,xbp.t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
+			xbp.b_id,xbp.b_t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
 	),
 	delbt AS (
 		-- delete thread(s) incase we nuked OP(s)
@@ -943,9 +943,9 @@ WITH
 		USING
 			delbp
 		WHERE
-			xt.b_id = delbp.b_id AND xt.t_id = delbp.b_p_id
+			xt.b_id = delbp.b_id AND xt.b_t_id = delbp.b_p_id
 		RETURNING
-			xt.b_id,xt.t_id
+			xt.b_id,xt.b_t_id
 	),
 	updbt AS (
 		-- update thread(s) counters incase we haven't deleted thread(s) earlier
@@ -958,7 +958,7 @@ WITH
 		FROM
 			delbp
 		WHERE
-			delbp.b_id = xt.b_id AND delbp.t_id = xt.t_id
+			delbp.b_id = xt.b_id AND delbp.b_t_id = xt.b_t_id
 	),
 	delbcp AS (
 		-- delete board child posts incase we nuked thread(s)
@@ -967,7 +967,7 @@ WITH
 		USING
 			delbt
 		WHERE
-			xbp.b_id = delbt.b_id AND xbp.t_id = delbt.t_id
+			xbp.b_id = delbt.b_id AND xbp.b_t_id = delbt.b_t_id
 		RETURNING
 			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
 	),
@@ -1106,11 +1106,11 @@ ON
 	leftf.fname = leftt.fname
 UNION ALL
 SELECT
-	'',0,'',0,b_id,t_id,NULL
+	'',0,'',0,b_id,b_t_id,NULL
 FROM
 	delbp
 WHERE
-	t_id != b_p_id
+	b_t_id != b_p_id
 UNION ALL
 SELECT
 	'',0,'',0,NULL,NULL,msgid
@@ -1133,7 +1133,7 @@ JOIN
 ON
 	xb.b_id = xt.b_id
 WHERE
-	xb.b_id = $1 AND xt.t_id = $2
+	xb.b_id = $1 AND xt.b_t_id = $2
 
 -- :name refresh_bump_by_tid
 UPDATE
@@ -1155,7 +1155,7 @@ FROM
 				WHERE
 					-- count sages against bump limit.
 					-- because others do it like that :<
-					b_id = $1 AND t_id = $2
+					b_id = $1 AND b_t_id = $2
 				ORDER BY
 					pdate ASC,
 					b_p_id ASC
@@ -1173,7 +1173,7 @@ FROM
 		-- and pick latest one
 	) as xbump
 WHERE
-	b_id = $1 AND t_id = $2
+	b_id = $1 AND b_t_id = $2
 
 
 -- :name set_mod_priv
@@ -1242,7 +1242,7 @@ WITH
 		SELECT
 			b_id,
 			b_p_id,
-			t_id,
+			b_t_id,
 			g_p_id
 		FROM
 			ib0.bposts
@@ -1305,7 +1305,7 @@ ON
 LEFT JOIN
 	ib0.bposts ypbp
 ON
-	zbp.b_id = ypbp.b_id AND zbp.t_id = ypbp.b_p_id AND zbp.t_id != zbp.b_p_id
+	zbp.b_id = ypbp.b_id AND zbp.b_t_id = ypbp.b_p_id AND zbp.b_t_id != zbp.b_p_id
 -- parent global post
 LEFT JOIN
 	ib0.posts ypp
