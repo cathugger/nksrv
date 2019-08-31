@@ -578,7 +578,9 @@ func (sp *PSQLIB) commonNewPost(
 	isctlgrp := board == "ctl"
 
 	// process references
-	refs, inreplyto, failrefs, err := sp.processReferencesOnPost(
+	// XXX there's gap before moment we query DB and when we write xrefs
+	// TBH should re-query after we inserted xrefs
+	refs, inreplyto, xrefs, err := sp.processReferencesOnPost(
 		sp.db.DB, pInfo.MI.Message, bid, postID(tid.Int64))
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
@@ -722,8 +724,8 @@ func (sp *PSQLIB) commonNewPost(
 	}
 
 	// fixup references
-	err = sp.fixupFailRefsInTx(
-		tx, gpid, failrefs, pInfo.ID, board, pInfo.MessageID)
+	err = sp.fixupXRefsInTx(
+		tx, bid, bpid, xrefs, pInfo.ID, board, pInfo.MessageID)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}

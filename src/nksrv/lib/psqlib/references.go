@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/lib/pq"
@@ -81,7 +82,7 @@ type queryable interface {
 func (sp *PSQLIB) processReferencesOnPost(
 	qq queryable, msg string, bid boardID, tid postID) (
 	refs []ib0.IBMessageReference, inreplyto []string,
-	failrefs []ibref_nntp.Reference, err error) {
+	xrefs []ibref_nntp.Reference, err error) {
 
 	srefs := ibref_nntp.ParseReferences(msg)
 
@@ -206,12 +207,14 @@ LIMIT
 		}
 
 		if len(srefs[i].Post) != 0 {
+
 			err = fetchrow()
 			if err != nil {
 				return
 			}
 
 			if len(srefs[i].Board) == 0 {
+
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
 						Start: uint(srefs[i].Start),
@@ -228,10 +231,10 @@ LIMIT
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "ref: %#v %q", r, r_msgid)
-				} else {
-					failrefs = append(failrefs, srefs[i].Reference)
 				}
+
 			} else {
+
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
 						Start: uint(srefs[i].Start),
@@ -244,18 +247,18 @@ LIMIT
 					refs = append(refs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
-				} else {
-					failrefs = append(failrefs, srefs[i].Reference)
 				}
+
 			}
+
 		} else if len(srefs[i].Board) != 0 {
 
 			r := ib0.IBMessageReference{
 				Start: uint(srefs[i].Start),
 				End:   uint(srefs[i].End),
 			}
-
 			r.Board = string(srefs[i].Board)
+
 			refs = append(refs, r)
 			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
 
@@ -278,13 +281,15 @@ LIMIT
 				refs = append(refs, r)
 				inreplyto = append(inreplyto, r_msgid)
 				sp.log.LogPrintf(DEBUG, "mref: %#v %q", r, r_msgid)
-			} else {
-				failrefs = append(failrefs, srefs[i].Reference)
 			}
+
 		} else {
 			panic("wtf")
 		}
+
+		xrefs = append(xrefs, srefs[i].Reference)
 	}
+
 	if rows != nil {
 		err = rows.Err()
 		if err != nil {
@@ -299,7 +304,7 @@ LIMIT
 func (sp *PSQLIB) processReferencesOnIncoming(
 	qq queryable, msg string, prefs []mm.FullMsgIDStr,
 	bid boardID, tid postID) (
-	refs []ib0.IBMessageReference, failrefs []ibref_nntp.Reference,
+	refs []ib0.IBMessageReference, xrefs []ibref_nntp.Reference,
 	err error) {
 
 	srefs := ibref_nntp.ParseReferences(msg)
@@ -434,6 +439,7 @@ LIMIT
 			}
 
 			if len(srefs[i].Board) == 0 {
+
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
 						Start: uint(srefs[i].Start),
@@ -449,10 +455,10 @@ LIMIT
 					}
 
 					refs = append(refs, r)
-				} else {
-					failrefs = append(failrefs, srefs[i].Reference)
 				}
+
 			} else {
+
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
 						Start: uint(srefs[i].Start),
@@ -463,9 +469,8 @@ LIMIT
 					r.Post = r_pname
 
 					refs = append(refs, r)
-				} else {
-					failrefs = append(failrefs, srefs[i].Reference)
 				}
+
 			}
 		} else if len(srefs[i].Board) != 0 {
 
@@ -496,11 +501,15 @@ LIMIT
 				r.Post = r_pname
 
 				refs = append(refs, r)
-			} else {
-				failrefs = append(failrefs, srefs[i].Reference)
 			}
+
+		} else {
+			panic("wtf")
 		}
+
+		xrefs = append(xrefs, srefs[i].Reference)
 	}
+
 	if rows != nil {
 		err = rows.Err()
 		if err != nil {
@@ -512,98 +521,100 @@ LIMIT
 	return
 }
 
-func (sp *PSQLIB) writeFailRefs(
-	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
+func (sp *PSQLIB) insertXRefs(
+	st *sql.Stmt, bid boardID, bpid postID, xrefs []ibref_nntp.Reference) (err error) {
 
-	postids := make([]sql.NullString, len(failref))
-	boards := make([]sql.NullString, len(failref))
-	msgids := make([]sql.NullString, len(failref))
+	if len(xrefs) == 0 {
+		// don't waste resources if we have no refs
+		// we insert them only once, and they won't need change
+		return
+	}
 
-	for i := range failref {
-		if failref[i].Post != "" {
+	postids := make([]sql.NullString, len(xrefs))
+	boards := make([]sql.NullString, len(xrefs))
+	msgids := make([]sql.NullString, len(xrefs))
+
+	for i := range xrefs {
+		if xrefs[i].Post != "" {
 			postids[i].Valid = true
-			postids[i].String = failref[i].Post
-
-			if failref[i].Board != "" {
+			postids[i].String = xrefs[i].Post
+			if xrefs[i].Board != "" {
 				boards[i].Valid = true
-				boards[i].String = failref[i].Board
+				boards[i].String = xrefs[i].Board
 			}
-		} else if failref[i].MsgID != "" {
+		} else if xrefs[i].Board != "" {
+			boards[i].Valid = true
+			boards[i].String = xrefs[i].Board
+		} else if xrefs[i].MsgID != "" {
 			msgids[i].Valid = true
-			msgids[i].String = failref[i].MsgID
+			msgids[i].String = xrefs[i].MsgID
 		}
 	}
 
-	_, err = st.Exec(gpid,
-		pq.Array(postids), pq.Array(boards), pq.Array(msgids))
+	_, err = st.Exec(
+		bid, bpid,
+		pq.Array(postids),
+		pq.Array(boards),
+		pq.Array(msgids))
 	if err != nil {
-		err = sp.sqlError("failrefs insert exec", err)
+		err = sp.sqlError("xrefs insert exec", err)
 		return
 	}
 
 	return
 }
 
-func (sp *PSQLIB) writeFailRefsAfterPost(
-	st *sql.Stmt, gpid postID, failref []ibref_nntp.Reference) (err error) {
-
-	if len(failref) == 0 {
-		// after post, we don't have anything to delete
-		return
-	}
-
-	return sp.writeFailRefs(st, gpid, failref)
+type xRefData struct {
+	b_id       boardID
+	b_p_id     postID
+	message    string
+	inreplyto  []FullMsgIDStr
+	b_p_attrib boardPostAttributes
+	b_t_id     postID
 }
 
-type failedRefData struct {
-	gpid      postID
-	message   string
-	inreplyto []FullMsgIDStr
-	pattrib   postAttributes
-	bid       boardID
-	tid       postID
-}
+func (sp *PSQLIB) findReferences(
+	st *sql.Stmt, off_b boardID, off_b_p postID,
+	pname string, pboard string, msgid CoreMsgIDStr) (
+	xrefs []xRefData, err error) {
 
-func (sp *PSQLIB) findFailedReferences(
-	st *sql.Stmt, off postID, pname string, pboard string, msgid CoreMsgIDStr) (
-	frefs []failedRefData, err error) {
-
-	rows, err := st.Query(off, pname, pboard, string(msgid))
+	rows, err := st.Query(off_b, off_b_p, pname, pboard, string(msgid))
 	if err != nil {
 		err = sp.sqlError("find_failrefs query", err)
 		return
 	}
 
 	for rows.Next() {
-		var gpid postID
+		var b_id boardID
+		var b_p_id postID
 		var msg string
 		var inreplyto sql.NullString
-		var j_attrib xtypes.JSONText
-		var bid boardID
-		var tid postID
+		var j_b_p_attrib xtypes.JSONText
+		var b_t_id postID
 
-		err = rows.Scan(&gpid, &msg, &inreplyto, &j_attrib, &bid, &tid)
+		err = rows.Scan(
+			&b_id, &b_p_id, &msg, &inreplyto, &j_b_p_attrib, &b_t_id)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("find_failrefs query rows scan", err)
 			return
 		}
 
-		p_attrib := defaultPostAttributes
-		err = j_attrib.Unmarshal(&p_attrib)
+		b_p_attrib := defaultBoardPostAttributes
+		err = j_b_p_attrib.Unmarshal(&b_p_attrib)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("find_failrefs json unmarshal", err)
 			return
 		}
 
-		frefs = append(frefs, failedRefData{
-			gpid:      gpid,
-			message:   msg,
-			inreplyto: mail.ExtractAllValidReferences(nil, inreplyto.String),
-			pattrib:   p_attrib,
-			bid:       bid,
-			tid:       tid,
+		xrefs = append(xrefs, xRefData{
+			b_id:       b_id,
+			b_p_id:     b_p_id,
+			message:    msg,
+			inreplyto:  mail.ExtractAllValidReferences(nil, inreplyto.String),
+			b_p_attrib: b_p_attrib,
+			b_t_id:     b_t_id,
 		})
 	}
 	if err = rows.Err(); err != nil {
@@ -615,97 +626,122 @@ func (sp *PSQLIB) findFailedReferences(
 }
 
 func (sp *PSQLIB) updatePostReferences(
-	st *sql.Stmt, gpid postID, pattrib postAttributes) (err error) {
+	st *sql.Stmt, b_id boardID, b_p_id postID,
+	b_p_attrib boardPostAttributes) (
+	err error) {
 
-	Ajson, err := json.Marshal(pattrib)
+	Ajson, err := json.Marshal(b_p_attrib)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = st.Exec(gpid, Ajson)
+	_, err = st.Exec(b_id, b_p_id, Ajson)
 	if err != nil {
-		return sp.sqlError("update_post_refs exec", err)
+		return sp.sqlError("mod_update_bpost_attrib exec", err)
 	}
 
 	return
 }
 
-func (sp *PSQLIB) fixupFailRefsInTx(
-	tx *sql.Tx, gpid postID, failrefs []ibref_nntp.Reference,
+// xx
+func (sp *PSQLIB) fixupXRefsInTx(
+	tx *sql.Tx, bid boardID, bpid postID,
+	xrefs []ibref_nntp.Reference,
 	p_name, b_name string, msgid CoreMsgIDStr) (err error) {
 
 	if p_name == "" || b_name == "" || msgid == "" {
 		panic("wtf")
 	}
 
-	failref_wr_st := tx.Stmt(sp.st_prep[st_web_failref_write])
-	failref_up_st := tx.Stmt(sp.st_prep[st_web_update_post_attrs])
-	failref_fn_st := tx.Stmt(sp.st_prep[st_web_failref_find])
+	xref_wr_st := tx.Stmt(sp.st_prep[st_mod_ref_write])
+	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
+	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_attrib])
 
-	if len(failrefs) != 0 {
-		sp.log.LogPrintf(DEBUG, "writing %d failed refs", len(failrefs))
+	if len(xrefs) != 0 {
+		sp.log.LogPrintf(DEBUG, "writing %d failed refs", len(xrefs))
 	}
 
 	// put our failed references
-	err = sp.writeFailRefsAfterPost(failref_wr_st, gpid, failrefs)
+	err = sp.insertXRefs(xref_wr_st, bid, bpid, xrefs)
 	if err != nil {
 		return
 	}
 
-	var frefpostsinfos []failedRefData
+	var xrefpostsinfos []xRefData
 	// in loop because can repeat
-	offset := postID(0)
+	off_b, off_b_p := boardID(0), postID(0)
 	for {
-		// obtain infos about posts with failed refs we can fix
-		frefpostsinfos, err = sp.findFailedReferences(
-			failref_fn_st, offset, p_name, b_name, msgid)
+		// obtain infos about posts with refs
+		xrefpostsinfos, err = sp.findReferences(
+			xref_fn_st, off_b, off_b_p, p_name, b_name, msgid)
 		if err != nil {
 			return
 		}
 
-		if len(frefpostsinfos) != 0 || offset != 0 {
-			sp.log.LogPrintf(DEBUG, "found %d failref posts", len(frefpostsinfos))
+		if len(xrefpostsinfos) != 0 {
+			sp.log.LogPrintf(
+				DEBUG, "found %d failref posts", len(xrefpostsinfos))
 		}
 
-		for i := range frefpostsinfos {
-			var newfailrefs []ibref_nntp.Reference
+		for i := range xrefpostsinfos {
+
+			var newrefs []ib0.IBMessageReference
+			var newxrefs []ibref_nntp.Reference
 
 			// update references and collect new failed references
-			frefpostsinfos[i].pattrib.References, newfailrefs, err =
+			newrefs, newxrefs, err =
 				sp.processReferencesOnIncoming(
-					tx, frefpostsinfos[i].message, frefpostsinfos[i].inreplyto,
-					frefpostsinfos[i].bid, frefpostsinfos[i].tid)
+					tx,
+					xrefpostsinfos[i].message,
+					xrefpostsinfos[i].inreplyto,
+					xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_t_id)
 			if err != nil {
 				return
 			}
 
-			sp.log.LogPrintf(DEBUG, "failrefpost %d: %d refs %d fails",
-				i, len(frefpostsinfos[i].pattrib.References), len(newfailrefs))
+			if reflect.DeepEqual(
+				xrefpostsinfos[i].b_p_attrib.References, newrefs) {
+
+				sp.log.LogPrintf(DEBUG, "failrefpost %d: unchanged", i)
+				continue
+			}
+
+			sp.log.LogPrintf(
+				DEBUG,
+				"failrefpost %d: %d refs %d fails",
+				i,
+				len(newrefs),
+				len(newxrefs))
+
+			// assign new references
+			xrefpostsinfos[i].b_p_attrib.References = newrefs
 
 			// store updated refs
 			err = sp.updatePostReferences(
-				failref_up_st, frefpostsinfos[i].gpid, frefpostsinfos[i].pattrib)
-			if err != nil {
-				return
-			}
-
-			// unconditionally store new failed refs
-			// also deletes old ones of same gpid
-			err = sp.writeFailRefs(
-				failref_wr_st, frefpostsinfos[i].gpid, newfailrefs)
+				xref_up_st,
+				xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_p_id,
+				xrefpostsinfos[i].b_p_attrib)
 			if err != nil {
 				return
 			}
 		}
 
-		if len(frefpostsinfos) < 8192 {
+		if len(xrefpostsinfos) < 5000 {
+
 			// the usual case
 			break
+
 		} else {
+
 			// we can't know if we processed them all, so lets do search again
-			offset = frefpostsinfos[len(frefpostsinfos)-1].gpid
+			off_b, off_b_p =
+				xrefpostsinfos[len(xrefpostsinfos)-1].b_id,
+				xrefpostsinfos[len(xrefpostsinfos)-1].b_p_id
+
 			sp.log.LogPrintf(DEBUG, "continuing failref loop")
+
 			continue
+
 		}
 	}
 

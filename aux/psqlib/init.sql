@@ -40,10 +40,14 @@ CREATE TABLE ib0.posts (
 	trip    TEXT    COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
 	title   TEXT                 NOT NULL, -- message title/subject field
 	message TEXT                 NOT NULL, -- post message, in UTF-8
-	headers JSONB,                         -- map of lists of strings
-	attrib  JSONB,                         -- extra attributes which are optional
-	layout  JSON,                          -- multipart msg and attachment layout
-	extras  JSONB,                         -- dunno if really need this field
+	-- headers of msg root, map of lists of strings, needed for NNTP HDR
+	headers JSONB,
+	-- attributes associated with global post and visible in webui
+	attrib  JSON,
+	-- article layout, needed to reconstruct original article
+	layout  JSON,
+	-- passive extra data
+	extras  JSONB,
 
 	PRIMARY KEY (g_p_id),
 	UNIQUE      (msgid)
@@ -132,12 +136,15 @@ CREATE TABLE ib0.bposts (
 	t_id   BIGINT                NOT NULL, -- internal thread ID this post belongs to
 	g_p_id BIGINT                NOT NULL, -- global internal post ID
 
-	-- redundant
+	-- redundant w/ global but needed for efficient indexes
 	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
 	padded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
 
 	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
+	-- attributes associated with board post and visible in webui
+	-- notably, refs
+	attrib  JSON,
 
 	PRIMARY KEY (b_id,b_p_id),
 	UNIQUE      (g_p_id,b_id),
@@ -195,9 +202,9 @@ CREATE TABLE ib0.files (
 	fsize    BIGINT                NOT NULL, -- file size
 	thumb    TEXT     COLLATE "C"  NOT NULL, -- filename of thumbnail. not unique!
 	oname    TEXT     COLLATE "C"  NOT NULL, -- original file name of this file
-	filecfg  JSONB,                          -- additional info about original file. like metadata
-	thumbcfg JSONB,                          -- additional info about thumbnail. like width/height
-	extras   JSONB,                          -- extra info not used for display but sometimes useful. undecided.
+	filecfg  JSON,                           -- additional info about original file. like metadata
+	thumbcfg JSON,                           -- additional info about thumbnail. like width/height
+	extras   JSON,                           -- extra info not used for display but sometimes useful. undecided.
 
 	PRIMARY KEY (f_id),
 	FOREIGN KEY (g_p_id)
@@ -210,25 +217,25 @@ CREATE INDEX ON ib0.files (fname,thumb)
 
 
 -- :next
--- index of references, so that we can pick them up and correct
+-- index of references, so that we can pick them up and correct when we modify stuff
+-- references are rendered per-board, not per-post,
+-- as multiboard posts may end up refering to odd things otherwise
 CREATE TABLE ib0.refs (
-	g_p_id BIGINT  NOT NULL,
-	valid  BOOLEAN NOT NULL,
+	-- board post who owns reference
+	b_id   INTEGER NOT NULL,
+	b_p_id BIGINT  NOT NULL,
 
-	p_name TEXT  COLLATE "C", -- external post identifier
+	p_name TEXT  COLLATE "C", -- external post identifier (or part of it)
 	b_name TEXT  COLLATE "C", -- board name
 	msgid  TEXT  COLLATE "C", -- Message-ID
 
-	v_b_id   INTEGER,
-	v_b_p_id BIGINT,
-
-	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.posts
+	FOREIGN KEY (b_id,b_p_id)
+		REFERENCES ib0.bposts
 		ON DELETE CASCADE
 )
 -- :next
 CREATE INDEX
-	ON ib0.refs (g_p_id) -- FK
+	ON ib0.refs (b_id,b_p_id) -- FK
 -- :next
 CREATE INDEX
 	ON ib0.refs (p_name text_pattern_ops,b_name NULLS FIRST)
@@ -236,7 +243,7 @@ CREATE INDEX
 -- :next
 CREATE INDEX
 	ON ib0.refs (b_name)
-	WHERE b_name IS NOT NULL
+	WHERE b_name IS NOT NULL AND p_name IS NULL
 -- :next
 CREATE INDEX
 	ON ib0.refs (msgid)

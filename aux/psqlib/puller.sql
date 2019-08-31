@@ -1,3 +1,5 @@
+-- puller-related stuff
+
 -- :name puller_get_last_newnews
 SELECT
 	last_newnews

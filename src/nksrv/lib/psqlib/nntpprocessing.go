@@ -446,10 +446,11 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	pi.MI.Sage = isSage
 
-	var failrefs []ibref_nntp.Reference
+	var xrefs []ibref_nntp.Reference
 	prefs := mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
-	pi.A.References, failrefs, err =
-		sp.processReferencesOnIncoming(sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)
+	pi.A.References, xrefs, err =
+		sp.processReferencesOnIncoming(
+			sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)
 	if err != nil {
 		unexpected = true
 		return
@@ -557,8 +558,8 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	// fixup references
-	err = sp.fixupFailRefsInTx(
-		tx, gpid, failrefs, pi.ID, info.Newsgroup, pi.MessageID)
+	err = sp.fixupXRefsInTx(
+		tx, info.bid, bpid, xrefs, pi.ID, info.Newsgroup, pi.MessageID)
 	if err != nil {
 		err = fmt.Errorf("failed refs fixup failed: %v", err)
 		unexpected = true

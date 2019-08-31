@@ -20,6 +20,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
 	xbp.p_name,
+	xbp.attrib,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,
@@ -28,7 +29,6 @@ SELECT
 	xp.trip,
 	xp.title,
 	xp.message,
-	xp.attrib,
 	xp.headers,
 	xf.f_id,
 	xf.fname,
@@ -165,6 +165,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
 	xbp.p_name,
+	xbp.attrib,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,
@@ -173,7 +174,6 @@ SELECT
 	xp.trip,
 	xp.title,
 	xp.message,
-	xp.attrib,
 	xp.headers,
 	xf.f_id,
 	xf.fname,
@@ -459,6 +459,7 @@ SELECT
 	xto.t_pos,
 	xbp.b_p_id,
 	xbp.p_name,
+	xbp.attrib,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,
@@ -467,7 +468,6 @@ SELECT
 	xp.trip,
 	xp.title,
 	xp.message,
-	xp.attrib,
 	xp.headers,
 	xf.f_id,
 	xf.fname,
@@ -619,100 +619,6 @@ ON
 
 -- TODO common bucket
 
--- :name web_failref_write
-WITH
-	delold AS (
-		DELETE FROM
-			ib0.failrefs
-		WHERE
-			g_p_id = $1
-	)
-INSERT INTO
-	ib0.failrefs (
-		g_p_id,
-		p_name,
-		b_name,
-		msgid
-	)
-SELECT
-	$1,
-	unnest($2::text[]) AS p_name,
-	unnest($3::text[]) AS b_name,
-	unnest($4::text[]) AS msgid
-
--- :name web_failref_find
--- args: offset,p_name,board,msgid
-WITH
-	msgs AS (
-		SELECT
-			*
-		FROM
-			(
-				SELECT
-					g_p_id
-				FROM
-					ib0.failrefs
-				WHERE
-					-- index-search by first 8 bytes, then narrow
-					(p_name LIKE substring($2 for 8) || '%') AND
-						($2 LIKE p_name || '%') AND
-						(b_name IS NULL OR b_name = $3)
-				UNION
-				SELECT
-					g_p_id
-				FROM
-					ib0.failrefs
-				WHERE
-					msgid = $4
-				ORDER BY
-					g_p_id
-			) AS x
-		WHERE
-			g_p_id > $1
-		LIMIT
-			8192
-	)
-SELECT
-	msgs.g_p_id,
-	xp.message,
-	xp.headers -> 'In-Reply-To' ->> 0,
-	xp.attrib,
-	xbp.b_id,
-	xbp.t_id
-FROM
-	msgs
-JOIN
-	ib0.posts AS xp
-ON
-	xp.g_p_id = msgs.g_p_id
-JOIN
-	LATERAL (
-		SELECT
-			zbp.b_id,
-			zbp.t_id
-		FROM
-			ib0.bposts AS zbp
-		JOIN
-			ib0.boards AS zb
-		ON
-			zbp.b_id = zb.b_id
-		WHERE
-			zbp.g_p_id = xp.g_p_id
-		ORDER BY
-			zb.b_name
-		LIMIT
-			1
-	) AS xbp
-ON
-	TRUE
-
--- :name update_post_attrs
-UPDATE
-	ib0.posts
-SET
-	attrib = $2
-WHERE
-	g_p_id = $1
 
 
 -- :name autoregister_mod

@@ -101,8 +101,9 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			t_p_count sql.NullInt64
 			t_f_count sql.NullInt64
 			// xbp
-			b_p_id sql.NullInt64
-			p_name sql.NullString
+			b_p_id       sql.NullInt64
+			p_name       sql.NullString
+			b_p_attrib_j xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -112,7 +113,6 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			trip       sql.NullString
 			title      sql.NullString
 			message    []byte
-			pattrib_j  xtypes.JSONText
 			pheaders_j xtypes.JSONText
 			// xf
 			f_id       sql.NullInt64
@@ -130,10 +130,10 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 			&t_id, &t_name, &t_p_count, &t_f_count,
 
-			&b_p_id, &p_name,
+			&b_p_id, &p_name, &b_p_attrib_j,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
-			&message, &pattrib_j, &pheaders_j,
+			&message, &pheaders_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
@@ -203,9 +203,9 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 		if x_bpid != postID(b_p_id.Int64) {
 			var pi ib0.IBPostInfo
-			pattrib := defaultPostAttributes
+			p_attrib := defaultBoardPostAttributes
 
-			err = pattrib_j.Unmarshal(&pattrib)
+			err = b_p_attrib_j.Unmarshal(&p_attrib)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
@@ -233,7 +233,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = pattrib.References
+			pi.References = p_attrib.References
 
 			if b_p_id.Int64 == t_id.Int64 {
 				// OP
@@ -344,8 +344,9 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			t_p_count sql.NullInt64
 			t_f_count sql.NullInt64
 			// xbp
-			b_p_id sql.NullInt64
-			p_name sql.NullString
+			b_p_id       sql.NullInt64
+			p_name       sql.NullString
+			b_p_attrib_j xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -355,7 +356,6 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			trip       sql.NullString
 			title      sql.NullString
 			message    []byte
-			pattrib_j  xtypes.JSONText
 			pheaders_j xtypes.JSONText
 			// xf
 			f_id       sql.NullInt64
@@ -373,10 +373,10 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 
 			&t_id, &t_name, &t_p_count, &t_f_count,
 
-			&b_p_id, &p_name,
+			&b_p_id, &p_name, &b_p_attrib_j,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
-			&message, &pattrib_j, &pheaders_j,
+			&message, &pheaders_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
@@ -410,9 +410,9 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 
 		if x_bpid != postID(b_p_id.Int64) {
 			var pi ib0.IBPostInfo
-			pattrib := defaultPostAttributes
+			p_attrib := defaultBoardPostAttributes
 
-			err = pattrib_j.Unmarshal(&pattrib)
+			err = b_p_attrib_j.Unmarshal(&p_attrib)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
@@ -440,7 +440,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = pattrib.References
+			pi.References = p_attrib.References
 
 			if postID(b_p_id.Int64) == t_id {
 				// OP
@@ -797,8 +797,9 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			// xto
 			t_pos sql.NullInt64
 			// xbp
-			b_p_id sql.NullInt64
-			p_name sql.NullString
+			b_p_id       sql.NullInt64
+			p_name       sql.NullString
+			b_p_attrib_j xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -808,7 +809,6 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			trip       sql.NullString
 			title      sql.NullString
 			message    []byte
-			pattrib_j  xtypes.JSONText
 			pheaders_j xtypes.JSONText
 			// xf
 			f_id       sql.NullInt64
@@ -828,10 +828,10 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 			&t_pos,
 
-			&b_p_id, &p_name,
+			&b_p_id, &p_name, &b_p_attrib_j,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
-			&message, &pattrib_j, &pheaders_j,
+			&message, &pheaders_j,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
@@ -889,9 +889,9 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 		if x_bpid != postID(b_p_id.Int64) {
 			var pi ib0.IBPostInfo
-			pattrib := defaultPostAttributes
+			p_attrib := defaultBoardPostAttributes
 
-			err = pattrib_j.Unmarshal(&pattrib)
+			err = b_p_attrib_j.Unmarshal(&p_attrib)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
@@ -919,7 +919,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = pattrib.References
+			pi.References = p_attrib.References
 
 			if b_p_id.Int64 == t_id.Int64 {
 				// OP

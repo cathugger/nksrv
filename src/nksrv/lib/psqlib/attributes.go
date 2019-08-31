@@ -64,11 +64,15 @@ var defaultThreadOptions = threadOptions{
 	//FileLimit: 150,
 }
 
-type postAttributes struct {
+type boardPostAttributes struct {
 	References []ib0.IBMessageReference `json:"refs,omitempty"`
 }
 
-var defaultPostAttributes = postAttributes{}
+var defaultBoardPostAttributes = boardPostAttributes{}
+
+type globalPostAttributes struct{}
+
+var defaultGlobalPostAttributes = globalPostAttributes{}
 
 type thumbAttributes struct {
 	Width  uint32 `json:"w"`

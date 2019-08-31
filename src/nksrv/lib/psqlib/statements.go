@@ -60,9 +60,9 @@ const (
 	st_web_prepost_newthread
 	st_web_prepost_newpost
 
-	st_web_failref_write
-	st_web_failref_find
-	st_web_update_post_attrs
+	st_mod_ref_write
+	st_mod_ref_find_post
+	st_mod_update_bpost_attrib
 
 	st_web_autoregister_mod
 	st_web_delete_by_msgid
@@ -146,9 +146,9 @@ var st_names = [st_max]st_reference{
 	st_reference{"web", "web_prepost_newthread"},
 	st_reference{"web", "web_prepost_newpost"},
 
-	st_reference{"web", "web_failref_write"},
-	st_reference{"web", "web_failref_find"},
-	st_reference{"web", "update_post_attrs"},
+	st_reference{"mod", "mod_ref_write"},
+	st_reference{"mod", "mod_ref_find_post"},
+	st_reference{"mod", "mod_update_bpost_attrib"},
 
 	st_reference{"web", "autoregister_mod"},
 	st_reference{"web", "delete_by_msgid"},
