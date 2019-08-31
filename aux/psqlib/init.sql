@@ -210,15 +210,17 @@ CREATE INDEX ON ib0.files (fname,thumb)
 
 
 -- :next
--- index of failed references, so that we can pick them up and correct
-CREATE TABLE ib0.failrefs (
-	fr_id BIGINT GENERATED ALWAYS AS IDENTITY,
-
-	g_p_id BIGINT NOT NULL,
+-- index of references, so that we can pick them up and correct
+CREATE TABLE ib0.refs (
+	g_p_id BIGINT  NOT NULL,
+	valid  BOOLEAN NOT NULL,
 
 	p_name TEXT  COLLATE "C", -- external post identifier
-	b_name TEXT  COLLATE "C",
+	b_name TEXT  COLLATE "C", -- board name
 	msgid  TEXT  COLLATE "C", -- Message-ID
+
+	v_b_id   INTEGER,
+	v_b_p_id BIGINT,
 
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.posts
@@ -226,14 +228,18 @@ CREATE TABLE ib0.failrefs (
 )
 -- :next
 CREATE INDEX
-	ON ib0.failrefs (g_p_id)
+	ON ib0.refs (g_p_id) -- FK
 -- :next
 CREATE INDEX
-	ON ib0.failrefs(p_name text_pattern_ops,b_name NULLS FIRST)
+	ON ib0.refs (p_name text_pattern_ops,b_name NULLS FIRST)
 	WHERE p_name IS NOT NULL
 -- :next
 CREATE INDEX
-	ON ib0.failrefs(msgid)
+	ON ib0.refs (b_name)
+	WHERE b_name IS NOT NULL
+-- :next
+CREATE INDEX
+	ON ib0.refs (msgid)
 	WHERE msgid IS NOT NULL
 
 

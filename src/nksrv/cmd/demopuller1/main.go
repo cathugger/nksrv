@@ -3,12 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
-	"net/url"
 	"os"
 	"time"
-
-	"golang.org/x/net/proxy"
 
 	"nksrv/lib/democonfigs"
 	"nksrv/lib/emime"
@@ -19,6 +15,7 @@ import (
 	"nksrv/lib/psql"
 	"nksrv/lib/psqlib"
 	"nksrv/lib/thumbnailer/extthm"
+	"nksrv/lib/xdialer"
 )
 
 func main() {
@@ -104,31 +101,9 @@ func main() {
 	for i := 0; i+1 < len(args); i += 2 {
 		addr := args[i+1]
 
-		var d nntp.Dialer = &net.Dialer{}
-		var proto, host string
-		u, e := url.ParseRequestURI(addr)
-		if e == nil {
-			proto, host = u.Scheme, u.Host
-		} else {
-			proto, host = "tcp", addr
-		}
-		if proto == "socks" || proto == "socks5" {
-			d, e = proxy.SOCKS5("tcp", host, nil, nil)
-			if e != nil {
-				mlg.LogPrintln(CRITICAL, "SOCKS5 fail:", e)
-				return
-			}
-
-			nh := u.Path
-			u, e = url.ParseRequestURI(nh)
-			if e == nil {
-				proto, host = u.Scheme, u.Host
-			} else {
-				proto, host = "tcp", nh
-			}
-		}
-		if host == "" {
-			mlg.LogPrintln(CRITICAL, "no host specified")
+		d, proto, host, e := xdialer.XDial(addr)
+		if e != nil {
+			mlg.LogPrintln(CRITICAL, "dial %d fail:", j, e)
 			return
 		}
 

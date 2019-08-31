@@ -261,6 +261,7 @@ func isSubjectEmpty(s string, isReply, isSage bool, ref_subject string) bool {
 	}
 	if isReply {
 		// content-less copy of parent subject
+		// XXX do we actually need this check?
 		if au.EqualFoldString(s, ref_subject) {
 			return true
 		}
