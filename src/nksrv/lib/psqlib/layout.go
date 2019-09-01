@@ -49,14 +49,14 @@ type FormFileList struct {
 	files map[string][]form.File
 }
 
-func (ffl FormFileList) OpenFileAt(i int) (io.ReadCloser, error) {
+func (ffl FormFileList) OpenFileAt(x int) (io.ReadCloser, error) {
 	n := 0
 	// yeah this is stupid
 	for _, fieldname := range FileFields {
 		files := ffl.files[fieldname]
 		for i := range files {
-			fn := files[i].F.Name()
-			if i == n {
+			if x == n {
+				fn := files[i].F.Name()
 				return os.Open(fn)
 			}
 
