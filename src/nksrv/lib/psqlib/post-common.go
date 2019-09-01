@@ -35,7 +35,7 @@ func (sp *PSQLIB) registeredMod(
 	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
 
 	var privstr string
-	st := tx.Stmt(sp.st_prep[st_web_autoregister_mod])
+	st := tx.Stmt(sp.st_prep[st_mod_autoregister_mod])
 	x := 0
 	for {
 		err = st.QueryRow(pubkeystr).Scan(&modid, &privstr)
@@ -63,7 +63,7 @@ func (sp *PSQLIB) setModPriv(
 
 	outdelmsgids = indelmsgids
 
-	ust := tx.Stmt(sp.st_prep[st_web_set_mod_priv])
+	ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 	// do key update
 	var modid int64
 	// this probably should lock relevant row.
@@ -85,7 +85,7 @@ func (sp *PSQLIB) setModPriv(
 		"setmodpriv: %s priv changed, modid %d", pubkeystr, modid)
 
 	srcdir := sp.src.Main()
-	xst := tx.Stmt(sp.st_prep[st_web_fetch_and_clear_mod_msgs])
+	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs])
 
 	offset := uint64(0)
 

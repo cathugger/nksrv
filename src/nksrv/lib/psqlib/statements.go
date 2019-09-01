@@ -46,15 +46,10 @@ const (
 	st_NNTP_GetHdrByCurr_any
 
 	st_web_listboards
-
 	st_web_thread_list_page
-
 	st_web_overboard_page
-
 	st_web_thread_catalog
-
 	st_web_overboard_catalog
-
 	st_web_thread
 
 	st_web_prepost_newthread
@@ -64,14 +59,15 @@ const (
 	st_mod_ref_find_post
 	st_mod_update_bpost_attrib
 
-	st_web_autoregister_mod
-	st_web_delete_by_msgid
-	st_web_ban_by_msgid
-	st_web_bname_topts_by_tid
-	st_web_refresh_bump_by_tid
+	st_mod_autoregister_mod
+	st_mod_delete_by_msgid
+	st_mod_ban_by_msgid
+	st_mod_bname_topts_by_tid
+	st_mod_refresh_bump_by_tid
 
-	st_web_set_mod_priv
-	st_web_fetch_and_clear_mod_msgs
+	st_mod_set_mod_priv
+	st_mod_unset_mod
+	st_mod_fetch_and_clear_mod_msgs
 
 	st_puller_get_last_newnews
 	st_puller_set_last_newnews
@@ -132,15 +128,10 @@ var st_names = [st_max]st_reference{
 	st_reference{"nntp", "nntp_hdr_curr_any"},
 
 	st_reference{"web", "web_listboards"},
-
 	st_reference{"web", "web_thread_list_page"},
-
 	st_reference{"web", "web_overboard_page"},
-
 	st_reference{"web", "web_thread_catalog"},
-
 	st_reference{"web", "web_overboard_catalog"},
-
 	st_reference{"web", "web_thread"},
 
 	st_reference{"web", "web_prepost_newthread"},
@@ -150,14 +141,15 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_ref_find_post"},
 	st_reference{"mod", "mod_update_bpost_attrib"},
 
-	st_reference{"web", "autoregister_mod"},
-	st_reference{"web", "delete_by_msgid"},
-	st_reference{"web", "ban_by_msgid"},
-	st_reference{"web", "bname_topts_by_tid"},
-	st_reference{"web", "refresh_bump_by_tid"},
+	st_reference{"mod", "mod_autoregister_mod"},
+	st_reference{"mod", "mod_delete_by_msgid"},
+	st_reference{"mod", "mod_ban_by_msgid"},
+	st_reference{"mod", "mod_bname_topts_by_tid"},
+	st_reference{"mod", "mod_refresh_bump_by_tid"},
 
-	st_reference{"web", "set_mod_priv"},
-	st_reference{"web", "fetch_and_clear_mod_msgs"},
+	st_reference{"mod", "mod_set_mod_priv"},
+	st_reference{"mod", "mod_unset_mod"},
+	st_reference{"mod", "mod_fetch_and_clear_mod_msgs"},
 
 	st_reference{"puller", "puller_get_last_newnews"},
 	st_reference{"puller", "puller_set_last_newnews"},
