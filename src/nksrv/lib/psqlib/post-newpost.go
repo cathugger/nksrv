@@ -17,8 +17,8 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 17
-const postRQFileArgCount = 7
+const postRQMsgArgCount = 18
+const postRQFileArgCount = 8
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	sp.npMutex.RLock()
@@ -180,7 +180,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				pdate,
 				padded,
 				sage,
-				mod_id
+				mod_id,
+				attrib
 			)
 		SELECT
 			$13,        -- b_id
@@ -191,7 +192,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ugp.pdate,
 			ugp.padded,
 			ugp.sage,
-			$17         -- mod_id
+			$17,        -- mod_id
+			$18         -- attrib
 		FROM
 			ub
 		CROSS JOIN
@@ -213,9 +215,11 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				thumb,
 				oname,
 				filecfg,
-				thumbcfg
+				thumbcfg,
+				extras
 			)
-		SELECT *
+		SELECT
+			*
 		FROM (
 			SELECT g_p_id
 			FROM ugp
@@ -229,8 +233,9 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d::jsonb,$%d::jsonb)",
-				x+0, x+1, x+2, x+3, x+4, x+5, x+6)
+			xq := "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d::jsonb,$%d::jsonb,$%d::jsonb)"
+			fmt.Fprintf(&b, xq,
+				x+0, x+1, x+2, x+3, x+4, x+5, x+6, x+7)
 			x += postRQFileArgCount
 		}
 
@@ -284,7 +289,7 @@ func (sp *PSQLIB) insertNewReply(
 	if err != nil {
 		panic(err)
 	}
-	Ajson, err := json.Marshal(pInfo.A)
+	GAjson, err := json.Marshal(pInfo.GA)
 	if err != nil {
 		panic(err)
 	}
@@ -293,6 +298,10 @@ func (sp *PSQLIB) insertNewReply(
 		panic(err)
 	}
 	Ejson, err := json.Marshal(&pInfo.E)
+	if err != nil {
+		panic(err)
+	}
+	BAjson, err := json.Marshal(pInfo.BA)
 	if err != nil {
 		panic(err)
 	}
@@ -313,7 +322,7 @@ func (sp *PSQLIB) insertNewReply(
 			pInfo.MI.Trip,
 			pInfo.MI.Message,
 			Hjson,
-			Ajson,
+			GAjson,
 			Ljson,
 			Ejson,
 
@@ -322,7 +331,8 @@ func (sp *PSQLIB) insertNewReply(
 			rti.bumpLimit,
 
 			pInfo.ID,
-			smodid)
+			smodid,
+			BAjson)
 	} else {
 
 		x := postRQMsgArgCount
@@ -338,7 +348,7 @@ func (sp *PSQLIB) insertNewReply(
 		args[6] = pInfo.MI.Trip
 		args[7] = pInfo.MI.Message
 		args[8] = Hjson
-		args[9] = Ajson
+		args[9] = GAjson
 		args[10] = Ljson
 		args[11] = Ejson
 
@@ -348,14 +358,19 @@ func (sp *PSQLIB) insertNewReply(
 
 		args[15] = pInfo.ID
 		args[16] = smodid
+		args[17] = BAjson
 
 		for i := range pInfo.FI {
 
-			Fjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
+			FFjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
 			if err != nil {
 				panic(err)
 			}
-			Tjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			FTjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			if err != nil {
+				panic(err)
+			}
+			FEjson, err := json.Marshal(pInfo.FI[i].Extras)
 			if err != nil {
 				panic(err)
 			}
@@ -365,8 +380,9 @@ func (sp *PSQLIB) insertNewReply(
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
 			args[x+4] = pInfo.FI[i].Original
-			args[x+5] = Fjson
-			args[x+6] = Tjson
+			args[x+5] = FFjson
+			args[x+6] = FTjson
+			args[x+7] = FEjson
 
 			x += xf
 		}

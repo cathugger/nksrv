@@ -19,10 +19,11 @@ type PostInfo struct {
 	FI []FileInfo
 	FC int // file count -- may be less than len(FI)
 
-	H mail.Headers
-	A PostAttributes
-	L PartInfo
-	E PostExtraAttribs
+	H  mail.Headers
+	GA GlobalPostAttributes
+	L  PartInfo
+	E  PostExtraAttribs
+	BA BoardPostAttributes
 }
 
 type IBThumbAttributes struct {
@@ -38,13 +39,19 @@ type MessageInfo struct {
 	Trip    string
 }
 
-type PostAttributes struct {
-	References []ib0.IBMessageReference `json:"refs,omitempty"`
-}
+type GlobalPostAttributes struct{}
 
 type PostExtraAttribs struct {
 	// if msg txt is in attachment, 1-based index which file it is
 	TextAttachment uint32 `json:"text_attach,omitempty"`
+}
+
+type BoardPostAttributes struct {
+	References []ib0.IBMessageReference `json:"refs,omitempty"`
+}
+
+type FileExtraAttribs struct {
+	ContentType string `json:"ct,omitempty"`
 }
 
 type FileInfo struct {
@@ -56,6 +63,7 @@ type FileInfo struct {
 	Original    string                 // original file name
 	FileAttrib  map[string]interface{} // file attributes
 	ThumbAttrib IBThumbAttributes      // thumbnail attributes
+	Extras      FileExtraAttribs
 }
 
 func (x FileInfo) Equivalent(y FileInfo) bool {

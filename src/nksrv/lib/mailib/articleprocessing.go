@@ -475,6 +475,9 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			// if translated message was already stored in msg field
 			fi.Type = ftypes.FTypeMsg
 		}
+		// save orig CT
+		fi.Extras.ContentType = ct_t
+		// add
 		pi.FI = append(pi.FI, fi)
 
 		obj.Data = PostObjectIndex(len(pi.FI))

@@ -12,8 +12,8 @@ import (
 	"nksrv/lib/mailib"
 )
 
-const postTQMsgArgCount = 15
-const postTQFileArgCount = 7
+const postTQMsgArgCount = 16
+const postTQFileArgCount = 8
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	sp.ntMutex.RLock()
@@ -122,7 +122,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				pdate,
 				padded,
 				sage,
-				mod_id
+				mod_id,
+				attribs
 			)
 		SELECT
 			$12,
@@ -133,7 +134,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			ugp.pdate,
 			ugp.padded,
 			FALSE,
-			$15
+			$15,
+			$16
 		FROM
 			ub
 		CROSS JOIN
@@ -165,7 +167,8 @@ FROM
 				thumb,
 				oname,
 				filecfg,
-				thumbcfg
+				thumbcfg,
+				extras
 			)
 		SELECT *
 		FROM (
@@ -181,8 +184,9 @@ FROM
 			if i != 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d::jsonb,$%d::jsonb)",
-				x+0, x+1, x+2, x+3, x+4, x+5, x+6)
+			xq := "($%d::ftype_t,$%d::BIGINT,$%d,$%d,$%d,$%d::jsonb,$%d::jsonb,$%d::jsonb)"
+			fmt.Fprintf(&b, xq,
+				x+0, x+1, x+2, x+3, x+4, x+5, x+6, x+7)
 			x += postTQFileArgCount
 		}
 
@@ -221,7 +225,7 @@ func (sp *PSQLIB) insertNewThread(
 	if err != nil {
 		panic(err)
 	}
-	Ajson, err := json.Marshal(pInfo.A)
+	GAjson, err := json.Marshal(pInfo.GA)
 	if err != nil {
 		panic(err)
 	}
@@ -230,6 +234,10 @@ func (sp *PSQLIB) insertNewThread(
 		panic(err)
 	}
 	Ejson, err := json.Marshal(&pInfo.E)
+	if err != nil {
+		panic(err)
+	}
+	BAjson, err := json.Marshal(pInfo.BA)
 	if err != nil {
 		panic(err)
 	}
@@ -249,14 +257,15 @@ func (sp *PSQLIB) insertNewThread(
 			pInfo.MI.Trip,
 			pInfo.MI.Message,
 			Hjson,
-			Ajson,
+			GAjson,
 			Ljson,
 			Ejson,
 
 			bid,
 			pInfo.ID,
 			skipover,
-			smodid)
+			smodid,
+			BAjson)
 	} else {
 
 		x := postTQMsgArgCount
@@ -271,7 +280,7 @@ func (sp *PSQLIB) insertNewThread(
 		args[5] = pInfo.MI.Trip
 		args[6] = pInfo.MI.Message
 		args[7] = Hjson
-		args[8] = Ajson
+		args[8] = GAjson
 		args[9] = Ljson
 		args[10] = Ejson
 
@@ -279,14 +288,19 @@ func (sp *PSQLIB) insertNewThread(
 		args[12] = pInfo.ID
 		args[13] = skipover
 		args[14] = smodid
+		args[15] = BAjson
 
 		for i := range pInfo.FI {
 
-			Fjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
+			FFjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
 			if err != nil {
 				panic(err)
 			}
-			Tjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			FTjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
+			if err != nil {
+				panic(err)
+			}
+			FEjson, err := json.Marshal(pInfo.FI[i].Extras)
 			if err != nil {
 				panic(err)
 			}
@@ -296,8 +310,9 @@ func (sp *PSQLIB) insertNewThread(
 			args[x+2] = pInfo.FI[i].ID
 			args[x+3] = pInfo.FI[i].Thumb
 			args[x+4] = pInfo.FI[i].Original
-			args[x+5] = Fjson
-			args[x+6] = Tjson
+			args[x+5] = FFjson
+			args[x+6] = FTjson
+			args[x+7] = FEjson
 
 			x += xf
 		}

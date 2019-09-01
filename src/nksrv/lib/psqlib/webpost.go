@@ -550,6 +550,9 @@ func (sp *PSQLIB) commonNewPost(
 				pInfo.FI[x].ContentType = tfi.DetectedType
 				// XXX change
 			}
+			// save it
+			pInfo.FI[x].Extras.ContentType = pInfo.FI[x].ContentType
+			// thumbnail
 			if res.FileName != "" {
 				tfile := pInfo.FI[x].ID + "." + tplan.Name + "." + res.FileExt
 				pInfo.FI[x].Thumb = tfile
@@ -585,7 +588,7 @@ func (sp *PSQLIB) commonNewPost(
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}
-	pInfo.A.References = refs
+	pInfo.BA.References = refs
 
 	if isctlgrp {
 		// do not add In-Reply-To for moderation messages

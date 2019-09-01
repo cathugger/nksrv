@@ -449,7 +449,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	var xrefs []ibref_nntp.Reference
 	prefs :=
 		mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
-	pi.A.References, xrefs, err =
+	pi.BA.References, xrefs, err =
 		sp.processReferencesOnIncoming(
 			sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)
 	if err != nil {
