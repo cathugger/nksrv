@@ -39,9 +39,9 @@ pre_reference    = """
 post_reference   = "</a>"
 truncation_line  = """
 <div><strong class=\"trunc\">\
-message truncated. click
+message truncated. click \
 <a
  href=\"{{$.N.Root}}/{{escboard .B}}/thread/{{.T.ID}}#{{.P.ID}}\"
->here</a>
+>here</a> \
 to see whole.\
 </strong></div>"""
