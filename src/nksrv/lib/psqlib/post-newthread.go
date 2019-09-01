@@ -89,9 +89,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		INSERT INTO
 			ib0.threads (
 				b_id,
-				t_id,
+				b_t_id,
 				g_t_id,
-				t_name,
+				b_t_name,
 				bump,
 				p_count,
 				f_count,
@@ -99,9 +99,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			)
 		SELECT
 			$12,        -- b_id
-			ub.last_id, -- t_id
+			ub.last_id, -- b_t_id
 			ugp.g_p_id, -- g_t_id
-			$13,        -- t_name
+			$13,        -- b_t_name
 			$1,         -- pdate
 			1,          -- p_count
 			$2,         -- f_count
@@ -115,7 +115,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		INSERT INTO
 			ib0.bposts (
 				b_id,
-				t_id,
+				b_t_id,
 				b_p_id,
 				p_name,
 				g_p_id,

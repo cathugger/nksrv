@@ -120,7 +120,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					WHERE
 						-- count sages against bump limit.
 						-- because others do it like that :<
-						b_id = $13 AND t_id = $14
+						b_id = $13 AND b_t_id = $14
 					UNION ALL
 					SELECT
 						$1,
@@ -145,7 +145,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				-- and pick latest one
 			) as xbump
 		WHERE
-			b_id = $13 AND t_id = $14
+			b_id = $13 AND b_t_id = $14
 	),`
 		b.WriteString(st_bump)
 	} else {
@@ -157,7 +157,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			p_count = p_count + 1,
 			f_count = f_count + $3
 		WHERE
-			b_id = $13 AND t_id = $14
+			b_id = $13 AND b_t_id = $14
 	),
 	utx AS (
 		SELECT
@@ -173,7 +173,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		INSERT INTO
 			ib0.bposts (
 				b_id,
-				t_id,
+				b_t_id,
 				b_p_id,
 				p_name,
 				g_p_id,
@@ -184,7 +184,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			)
 		SELECT
 			$13,        -- b_id
-			$14,        -- t_id
+			$14,        -- b_t_id
 			ub.last_id,
 			$16,        -- p_name
 			ugp.g_p_id,
