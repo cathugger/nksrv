@@ -423,7 +423,8 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (n *CacheObj, err error) {
 	ce.w[objid] = n // overwrite existing if any
 	ce.m.Unlock()
 
-	if o != nil {
+	// XXX fails in multiprocess model
+	if !safeToRemoveOpen && o != nil {
 		// we have already existing, wait till it gets cleared
 		o.m.RLock()
 		for (o.n > 0 || o.f != nil) && o.e == nil {
@@ -472,6 +473,14 @@ func (ce *CacheEngine) RemoveItemFinish(objid string, oo *CacheObj) {
 	oo.m.Unlock()
 	// notify readers if any about (un)availability
 	oo.c.Broadcast()
+
+	// XXX
+	// if running multiprocess locking might have not helped;
+	// further deletion success is not guaranteed either because
+	// we could be interrupted before this point, so delet there
+	// would be oppurtunistic.
+	// is likelihood of this happening worth it?
+	// if something cleans the cache for us it'd pick it up anyway..
 }
 
 func (ce *CacheEngine) RemoveItem(objid string) (err error) {
