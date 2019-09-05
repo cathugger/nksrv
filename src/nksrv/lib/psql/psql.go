@@ -6,16 +6,16 @@ package psql
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	. "nksrv/lib/logx"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type Config struct {
-	ConnDriver      string
 	ConnStr         string
 	ConnMaxLifetime float64
 	MaxIdleConns    int32
@@ -24,7 +24,6 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	ConnDriver:      "postgres",
 	ConnStr:         "",
 	ConnMaxLifetime: 0.0,
 	MaxIdleConns:    0,
@@ -32,13 +31,19 @@ var DefaultConfig = Config{
 }
 
 type PSQL struct {
-	DB  *sqlx.DB
-	log Logger
-	id  string
+	DB *sqlx.DB
+
+	connstr string
+	lii     sync.Once
+	li      *pq.Listener
+	limMu   sync.Mutex // only single consumer so RWMutex would be useless
+	lim     map[string]ListenCB
+	log     Logger
+	id      string
 }
 
 func OpenPSQL(cfg Config) (PSQL, error) {
-	db, err := sqlx.Open(cfg.ConnDriver, cfg.ConnStr)
+	db, err := sqlx.Open("postgres", cfg.ConnStr)
 	if err != nil {
 		return PSQL{}, err
 	}
@@ -59,15 +64,26 @@ func OpenPSQL(cfg Config) (PSQL, error) {
 	p := PSQL{DB: db}
 	p.id = fmt.Sprintf("psqlib.%p", p.DB)
 	p.log = NewLogToX(cfg.Logger, p.id)
+	p.connstr = cfg.ConnStr
 
 	return p, nil
 }
 
-func (p PSQL) Close() error {
-	return p.DB.Close()
+func (p *PSQL) Close() error {
+	e := p.DB.Close()
+
+	// incase didn't exec yet, prevents
+	// incase exec'ing rn, waits till done
+	p.lii.Do(func() {})
+
+	if p.li != nil {
+		p.li.Close()
+	}
+
+	return e
 }
 
-func (p PSQL) ID() string {
+func (p *PSQL) ID() string {
 	return p.id
 }
 
