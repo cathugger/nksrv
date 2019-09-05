@@ -9,7 +9,7 @@ then
 	exit
 fi
 
-export GOPATH=`pwd`
+export GOPATH=`go env GOPATH`:`pwd`
 
 if [ x"$1" = x"-all" ]
 then

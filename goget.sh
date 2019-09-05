@@ -1,3 +1,3 @@
 #!/bin/sh
-export GOPATH=`pwd`
+export GOPATH=`go env GOPATH`:`pwd`
 exec go get "$@"
