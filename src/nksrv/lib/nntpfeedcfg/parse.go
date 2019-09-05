@@ -1,8 +1,13 @@
 package nntpfeedcfg
 
 import (
+	"crypto/tls"
+	"errors"
+	"fmt"
+
 	"github.com/BurntSushi/toml"
 
+	"nksrv/lib/certfp"
 	"nksrv/lib/nntp"
 )
 
@@ -40,10 +45,10 @@ type parsedServer struct {
 }
 
 type parsedCfg struct {
-	users []parsedUserCfg
-	certfp []parsedCertFPCfg
+	users   []parsedUserCfg
+	certfp  []parsedCertFPCfg
 	servers map[string]parsedServer
-	peers map[string]parsedPeer
+	peers   map[string]parsedPeer
 	// TODO
 }
 
@@ -69,8 +74,8 @@ func ParseCfg(cfg string) (err error) {
 			return fmt.Errorf("unrecognised priv %q", fc_user.Priv)
 		}
 		pcfg.users = append(pcfg.users, parsedUserCfg{
-			ui:nntp.UserInfo{Name: fc_user.Name,UserPriv: priv},
-			ch:fc_user.Pass,
+			ui: nntp.UserInfo{Name: fc_user.Name, UserPriv: priv},
+			ch: fc_user.Pass,
 		})
 	}
 	for i := range fc.CertFP {
@@ -86,7 +91,7 @@ func ParseCfg(cfg string) (err error) {
 			return fmt.Errorf("unrecognised priv %q", fc_certfp.Priv)
 		}
 		pcfp := parsedCertFPCfg{
-			ui: nntp.UserInfo{Name: fc_user.Name,UserPriv: priv},
+			ui: nntp.UserInfo{Name: fc_user.Name, UserPriv: priv},
 		}
 		if fc_certfp.Cert != "" {
 			pcfp.sl = certfp.SelectorFull
@@ -100,9 +105,9 @@ func ParseCfg(cfg string) (err error) {
 		pcfg.certfp = append(pcfg.certfp, pcfp)
 	}
 
-	parseServAddr := func(listen toml.Primitive) []
+	//parseServAddr := func(listen toml.Primitive) []
 	for i := range fc.Servers {
-		fc_server := ServerCfg{ServerInnerCfg:fc.ServersDefault}
+		fc_server := ServerCfg{ServerInnerCfg: fc.ServersDefault}
 
 		err = md.PrimitiveDecode(fc.Servers[i], &fc_server)
 		if err != nil {

@@ -70,8 +70,12 @@ func (r Responder) ResPostingAccepted() error {
 	return r.PrintfLine("240 article taken in")
 }
 
+func (r Responder) ResXListening() error {
+	return r.PrintfLine("290 listening in")
+}
+
 func (r Responder) ResXWaitAwake() error {
-	return r.PrintfLine("290 ohayo~")
+	return r.PrintfLine("291 ohayo~")
 }
 
 // 3** - successful continuation

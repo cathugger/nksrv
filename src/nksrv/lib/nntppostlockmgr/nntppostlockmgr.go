@@ -13,7 +13,7 @@ package nntppostlockmgr
  */
 
 const (
-	stNone
+	stNone = iota
 	stCanceled
 	stPosting
 )

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -426,9 +427,12 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (n *CacheObj, err error) {
 	// XXX fails in multiprocess model
 	if !safeToRemoveOpen && o != nil {
 		// we have already existing, wait till it gets cleared
+
+		// eventually timeout tho
+		go deleteTimeoutClose(o)
+
 		o.m.RLock()
 		for (o.n > 0 || o.f != nil) && o.e == nil {
-			// XXX can be v slow (DoS vector). should have timeout??
 			o.c.Wait()
 		}
 		o.m.RUnlock()
@@ -444,6 +448,39 @@ func (ce *CacheEngine) RemoveItemStart(objid string) (n *CacheObj, err error) {
 		ce.RemoveItemFinish(objid, n)
 	}
 	return
+}
+
+func deleteTimeoutClose(o *CacheObj) {
+
+	time.Sleep(5 * time.Second)
+
+	o.m.Lock()
+
+	if o.n <= 0 {
+		// already closed or inactive
+		o.m.Unlock()
+		return
+	}
+
+	if o.f != nil {
+		// close, mark as closed, signal error
+		o.f.Close()
+		o.f = nil
+		o.n = 0
+		o.e = errors.New("forcibly closed because of prune timeout")
+
+		o.m.Unlock()
+		o.c.Broadcast()
+		return
+	}
+
+	// at this point 2 possibilities:
+	// it's placeholder entry
+	// or it's generating and not reading yet
+	// either way extend timeout because we dont know what to do
+	// and both conditions are supposed to end eventually
+	o.m.Unlock()
+	go deleteTimeoutClose(o) // rethrow self
 }
 
 func (ce *CacheEngine) RemoveItemFinish(objid string, oo *CacheObj) {
