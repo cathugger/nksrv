@@ -43,11 +43,15 @@ arguments list:
    title="{{dateAlt $P.Date}}"
   >{{date $P.Date}}</time>
 
-  <a
+  <span class="pnum"><a
    class="pnum_anchor"
    title="Link to this post"
    href="{{if $fullURLs}}{{$X.N.Root}}/{{escboard $B}}/thread/{{$T.ID}}{{end}}#{{$P.ID}}"
-  >No.</a> <a href="#postform" onclick="return refer('{{shortid $P.ID}}');" class="pnum_ref" title="{{$P.ID}}">{{shortid $P.ID}}</a>
+  >No.</a> <a
+   class="pnum_ref"
+   href="#postform"
+   onclick="return refer('{{shortid $P.ID}}');"
+   title="{{$P.ID}}">{{shortid $P.ID}}</a></span>
 
   {{- if $fullURLs}} <span class="replylink">[<a class="replylink" href="{{$X.N.Root}}/{{escboard $B}}/thread/{{$T.ID}}">Reply</a>]</span>{{end -}}
 

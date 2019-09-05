@@ -230,11 +230,16 @@ a.name {
 	color: #0055CC;
 	font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
 	font-size: 15px;
+	display: inline-block;
 }
 
 .trunc {
 	/* background-color: #CCEEBB; */
 	color: gray;
+}
+
+.pnum {
+	display: inline-block;
 }
 
 .pnum_anchor:link, .pnum_anchor:visited, .pnum_ref:link, .pnum_ref:visited {
