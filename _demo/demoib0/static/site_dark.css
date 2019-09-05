@@ -22,15 +22,15 @@
 }
 
 html {
-	background-color: #EEF2FF;
-	color: black;
+	background-color: #101010;
+	color: white;
 	font-family: Arial, Helvetica, sans-serif, 'DejaVu Sans';
 	font-size: 13px;
 	word-wrap: break-word;
 }
 
 a:link, a:visited {
-	color: #1133BB;
+	color: #6F94FF;
 }
 
 .cat_div {
@@ -173,15 +173,15 @@ label {
 }
 
 .quote {
-	color: #407F10;
+	color: #95D564;
 }
 
 a.ref:link, a.ref:visited {
-	color: #EF1000;
+	color: #F66;
 }
 
 a.bref:link, a.bref:visited {
-	color: #004070;
+	color: #589ADD;
 	font-size: 11px;
 }
 
@@ -191,8 +191,8 @@ a.bref:link, a.bref:visited {
 }
 
 .reply {
-	background-color: #D6DAF0;
-	border: 1px solid #BCBCE6;
+	background-color: #222;
+	border: 1px solid #484848;
 	display: inline-block;
 	padding: 0px 0px 0px 0px;
 	max-width: 100%;
@@ -207,7 +207,7 @@ a.bref:link, a.bref:visited {
 }
 
 .subject {
-	color: #0F0C5D;
+	color: #807CE1;
 	font-weight: bold;
 	unicode-bidi: embed;
 	display: inline-block;
@@ -219,7 +219,7 @@ a.bref:link, a.bref:visited {
 }
 
 span.name {
-	color: #117743;
+	color: #59bf8b;
 	display: inline-block;
 }
 
@@ -228,7 +228,7 @@ a.name {
 }
 
 .unitrip {
-	color: #0055CC;
+	color: #61F73C;
 	font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
 	font-size: 15px;
 	display: inline-block;
@@ -244,7 +244,7 @@ a.name {
 }
 
 .pnum_anchor:link, .pnum_anchor:visited, .pnum_ref:link, .pnum_ref:visited {
-	color:black;
+	color:#ffffff;
 	text-decoration: none;
 }
 .pnum_anchor:hover, .pnum_ref:hover {
@@ -362,4 +362,8 @@ div.nav {
 }
 #showmorefiles:checked ~ .morefiles {
 	display: block;
+}
+
+hr {
+	color:#5d5d9d;
 }
