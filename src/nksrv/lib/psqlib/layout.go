@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"mime"
 	"os"
 	"strings"
 
@@ -26,7 +25,12 @@ func attachmentDisposition(oname string) (cdis string) {
 	return
 }
 
-func attachmentConentType(ctype string, oname string) string {
+func attachmentConentType(ctype, oname string) string {
+	return ctype
+}
+
+/* revert if someone complains
+func attachmentConentType(ctype, oname string) string {
 	ct, cpar, err := mime.ParseMediaType(ctype)
 	if err != nil {
 		// cannot parse media type -- cannot add "name" parameter
@@ -36,8 +40,10 @@ func attachmentConentType(ctype string, oname string) string {
 	// always escape using bencoding if needed, for compat,
 	// proper readers will use disposition anyway
 	cpar["name"] = mime.BEncoding.Encode("UTF-8", oname)
+
 	return mail.FormatMediaTypeX(ct, cpar)
 }
+*/
 
 const (
 	plainTextType = "text/plain; charset=US-ASCII"
@@ -336,8 +342,9 @@ func (sp *PSQLIB) fillWebPostInner(
 		if len(i.FI[a].ContentType) == 0 {
 			panic("Content-Type not set")
 		}
-		xparts[x].ContentType = attachmentConentType(
-			i.FI[a].ContentType, i.FI[a].Original)
+		xparts[x].ContentType =
+			attachmentConentType(
+				i.FI[a].ContentType, i.FI[a].Original)
 		xparts[x].Headers = mail.Headers{
 			"Content-Disposition": mail.OneHeaderVal(
 				attachmentDisposition(i.FI[a].Original)),
