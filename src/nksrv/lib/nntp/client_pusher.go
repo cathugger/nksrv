@@ -116,3 +116,52 @@ func nonBlockArticlePumper(in <-chan articleNotif, out chan<- articleNotif) {
 		}
 	}
 }
+
+/*
+ * planned pipeline:
+ * notify func gets called
+ * it sends thru 0-sized channel
+ * nonBlockArticlePumper receives and sends thru buffered channel
+ * sends to worker
+ *
+ * worker:
+ * initially, checks what groups server can recv
+ * clears unsendable-to groups from trackdb
+ * adds any new sendable-to groups to trackdb,
+ *   initialized to either 0 or {current_max_gpost_num} depending on setting
+ * checks for each group if {current_max_gpost_num} > max_gpost_num in trackdb
+ * for each such article gets msgid and groups off db, and offers to server
+ * for each sent/server didn't need conclusion, writes to db
+ * listens on channel and offers to server
+ * after every sent/rejected, writes new stats to db
+ * if event was nil, does initial check procedure
+ *
+ * stat writer:
+ * should queue and merge writes
+ * should disallow write if trackdb is increased more than by one
+ * unless there's few pending things
+ * or expected tracked ver > actual db tracked ver
+ * update algo:
+ *   if db_ver >= expected_ver, db_ver := max(new_ver,db_ver)
+ * this can fail update if theres mismatch...
+ *   but that can be detected, and write held up
+ *   until some thread gets notified about gap and fixes it up
+ *   note that only single thread should do gap fixing up
+ *   that should be guarded by lock
+ *
+ * determining what groups are sendable-to:
+ * we should list current server's groups
+ * and also match these with autoadd-wildcards
+ * autoadd-wildcards would be obtained by extension
+ * or otherwise could be statically set in config
+ * static config is sorta ass tbh
+ * either way, these would be matched against current grouplist of ours
+ * this sendable-to list would need to be periodically rechecked
+ * period should be configurable and default to reasonable value (15 mins?)
+ *
+ * server accept policy:
+ * server may either accept only to currently available groups
+ * or it may use wildcard expressions to match groups it accepts
+ * if server don't specify a way, then whether server can autoaccept
+ *   and what it can autoaccept should be configurable
+ */
