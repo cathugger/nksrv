@@ -1,5 +1,7 @@
 package nntp
 
+import . "nksrv/lib/logx"
+
 /*
 
 type nntpCopyer interface {
@@ -71,11 +73,18 @@ func (c *fullNNTPCopyer) IsClosed() bool {
 
 */
 
+type NNTPPusher struct {
+	NNTPClient
+
+	// XXX
+}
+
 type articleNotif struct {
 	cmsgid string
+	glpid  uint64
 	ginfo  []struct {
 		group string
-		gpid  uint64
+		grpid uint64
 	}
 }
 
@@ -165,3 +174,55 @@ func nonBlockArticlePumper(in <-chan articleNotif, out chan<- articleNotif) {
  * if server don't specify a way, then whether server can autoaccept
  *   and what it can autoaccept should be configurable
  */
+
+func (c *NNTPPusher) sendArticleToServer(
+	cmsgid string, glpid uint64) (error, bool) {
+	// TODO
+	return nil, false
+}
+
+func (c *NNTPPusher) pushworker(
+	inev <-chan articleNotif) (err error, fatal bool) {
+
+	// x
+	var ev articleNotif
+
+	offer := func() {
+		err = c.w.PrintfLine("IHAVE <%s>", ev.cmsgid)
+		if err != nil {
+			// XXX
+			panic(err)
+		}
+		var code uint
+		code, _, err, fatal = c.readResponse()
+		if err != nil {
+			c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+			return
+		}
+		if code == 335 {
+			// server wants
+			err, fatal = c.sendArticleToServer(ev.cmsgid, ev.glpid)
+			if err != nil {
+				return
+			}
+			code, _, err, fatal = c.readResponse()
+			if err != nil {
+				c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
+				return
+			}
+		} else if code == 435 {
+			// server doesn't want
+		} else {
+			// some error
+		}
+	}
+	_ = offer
+
+	for {
+		if ev.cmsgid != "" {
+			// valid event, just try pushing this one
+		} else {
+			// gap, figure out how much we need to send
+		}
+	}
+}
