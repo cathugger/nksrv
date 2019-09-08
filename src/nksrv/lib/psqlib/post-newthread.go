@@ -119,6 +119,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				b_p_id,
 				p_name,
 				g_p_id,
+				msgid,
 				pdate,
 				padded,
 				sage,
@@ -126,16 +127,17 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				attribs
 			)
 		SELECT
-			$12,
-			ub.last_id,
-			ub.last_id,
-			$13,
-			ugp.g_p_id,
-			ugp.pdate,
-			ugp.padded,
-			FALSE,
-			$15,
-			$16
+			$12,        -- b_id
+			ub.last_id, -- b_t_id
+			ub.last_id, -- b_p_id
+			$13,        -- p_name
+			ugp.g_p_id, -- g_p_id
+			$3,         -- msgid
+			ugp.pdate,  -- pdate
+			ugp.padded, -- padded
+			FALSE,      -- sage
+			$15,        -- mod_id
+			$16         -- attribs
 		FROM
 			ub
 		CROSS JOIN

@@ -135,6 +135,7 @@ CREATE TABLE ib0.bposts (
 	p_name TEXT     COLLATE "C"  NOT NULL, -- external post identifier
 	b_t_id BIGINT                NOT NULL, -- internal thread ID this post belongs to
 	g_p_id BIGINT                NOT NULL, -- global internal post ID
+	msgid  TEXT     COLLATE "C"  NOT NULL, -- global external msgid
 
 	-- redundant w/ global but needed for efficient indexes
 	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
@@ -175,6 +176,10 @@ CREATE INDEX
 -- for post num lookup
 CREATE UNIQUE INDEX
 	ON ib0.bposts (p_name text_pattern_ops,b_id)
+-- :next
+-- mostly for boardban checks for now
+CREATE UNIQUE INDEX
+	ON ib0.bposts (b_id,msgid)
 -- :next
 -- FK
 CREATE INDEX

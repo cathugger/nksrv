@@ -309,7 +309,7 @@ func (sp *PSQLIB) netnewsSubmitFullArticle(
 	mh, err := mail.SkipHeaders(r)
 	if err != nil {
 		sp.log.LogPrintf(WARN,
-			"netnewsSubmitFullArticle: failed reading headers: %v", err)
+			"netnewsSubmitFullArticle: failed skipping headers: %v", err)
 		return
 	}
 	defer mh.Close()

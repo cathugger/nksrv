@@ -177,6 +177,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				b_p_id,
 				p_name,
 				g_p_id,
+				msgid,
 				pdate,
 				padded,
 				sage,
@@ -186,12 +187,13 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		SELECT
 			$13,        -- b_id
 			$14,        -- b_t_id
-			ub.last_id,
+			ub.last_id, -- b_p_id
 			$16,        -- p_name
-			ugp.g_p_id,
-			ugp.pdate,
-			ugp.padded,
-			ugp.sage,
+			ugp.g_p_id, -- g_p_id
+			$4,         -- msgid
+			ugp.pdate,  -- pdate
+			ugp.padded, -- padded
+			ugp.sage,   -- sage
 			$17,        -- mod_id
 			$18         -- attrib
 		FROM
