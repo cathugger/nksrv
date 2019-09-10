@@ -380,6 +380,8 @@ WITH
 				attrib  = excluded.attrib,
 				layout  = excluded.layout,
 				extras  = excluded.extras
+			WHERE
+				padded IS NOT NULL
 		RETURNING
 			g_p_id,f_count,msgid
 	),
