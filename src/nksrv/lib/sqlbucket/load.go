@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"text/template"
 	"unicode"
 )
 
@@ -36,8 +37,9 @@ func LoadFromBuffer(b []byte) (Bucket, error) {
 }
 
 var (
-	reName = regexp.MustCompile(`^\s*--\s*:name\s*(\S+)\s*$`)
-	reNext = regexp.MustCompile(`^\s*--\s*:next\s*$`)
+	reName  = regexp.MustCompile(`^\s*--\s*:name\s*(\S+)\s*$`)
+	reNameT = regexp.MustCompile(`^\s*--\s*:namet\s*(\S+)\s*$`)
+	reNext  = regexp.MustCompile(`^\s*--\s*:next\s*$`)
 )
 
 func Scan(in *bufio.Scanner) Bucket {
@@ -45,9 +47,32 @@ func Scan(in *bufio.Scanner) Bucket {
 
 	currtag := ""
 	curri := 0
+	currt := false
 
-	cleancurrent := func() {
-		queries[currtag][curri] = strings.TrimSpace(queries[currtag][curri])
+	templates := make(map[string]string)
+
+	finishcurrent := func() {
+		q := queries[currtag][curri]
+		var qw strings.Builder
+		e := template.Must(template.New(currtag).Parse(q)).
+			Execute(&qw, templates)
+		if e != nil {
+			panic("exec err: " + e.Error())
+		}
+		q = qw.String()
+		if !currt {
+			// normal query
+			// XXX improve
+			queries[currtag][curri] = strings.TrimSpace(q)
+		} else {
+			// template
+			if curri != 0 {
+				panic("cant multitemplate")
+			}
+			currt = false
+			templates[currtag] = q
+			delete(queries, currtag)
+		}
 	}
 
 	for in.Scan() {
@@ -56,9 +81,21 @@ func Scan(in *bufio.Scanner) Bucket {
 		matches := reName.FindStringSubmatch(line)
 		if len(matches) != 0 {
 			if currtag != "" {
-				cleancurrent()
+				finishcurrent()
 			}
 			currtag = matches[1]
+			queries[currtag] = append(queries[currtag], "")
+			curri = len(queries[currtag]) - 1
+			continue
+		}
+
+		matches = reNameT.FindStringSubmatch(line)
+		if len(matches) != 0 {
+			if currtag != "" {
+				finishcurrent()
+			}
+			currtag = matches[1]
+			currt = true
 			queries[currtag] = append(queries[currtag], "")
 			curri = len(queries[currtag]) - 1
 			continue
@@ -69,7 +106,7 @@ func Scan(in *bufio.Scanner) Bucket {
 		}
 
 		if reNext.MatchString(line) {
-			cleancurrent()
+			finishcurrent()
 			queries[currtag] = append(queries[currtag], "")
 			curri++
 			continue
@@ -79,7 +116,7 @@ func Scan(in *bufio.Scanner) Bucket {
 	}
 
 	if currtag != "" {
-		cleancurrent()
+		finishcurrent()
 	}
 
 	return queries
