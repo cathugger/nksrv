@@ -111,9 +111,12 @@ WITH
 		DELETE FROM
 			ib0.posts
 		WHERE
-			msgid = $1 AND padded IS NOT NULL
+			msgid = $1 AND
+				padded IS NOT NULL
 		RETURNING
-			g_p_id,f_count,msgid
+			g_p_id,
+			f_count,
+			msgid
 	),
 	delbp AS (
 		-- delete all board posts of that
@@ -124,7 +127,12 @@ WITH
 		WHERE
 			xbp.g_p_id = delgp.g_p_id
 		RETURNING
-			xbp.b_id,xbp.b_t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
+			xbp.b_id,
+			xbp.b_t_id,
+			xbp.b_p_id,
+			xbp.p_name,
+			xbp.mod_id,
+			delgp.f_count
 	),
 	delbt AS (
 		-- delete thread(s) incase we nuked OP(s)
@@ -133,9 +141,11 @@ WITH
 		USING
 			delbp
 		WHERE
-			xt.b_id = delbp.b_id AND xt.b_t_id = delbp.b_p_id
+			xt.b_id = delbp.b_id AND
+				xt.b_t_id = delbp.b_p_id
 		RETURNING
-			xt.b_id,xt.b_t_id
+			xt.b_id,
+			xt.b_t_id
 	),
 	updbt AS (
 		-- update thread(s) counters incase we haven't deleted thread(s) earlier
@@ -148,7 +158,8 @@ WITH
 		FROM
 			delbp
 		WHERE
-			delbp.b_id = xt.b_id AND delbp.b_t_id = xt.b_t_id
+			delbp.b_id = xt.b_id AND
+				delbp.b_t_id = xt.b_t_id
 	),
 	delbcp AS (
 		-- delete board child posts incase we nuked thread(s)
@@ -157,12 +168,19 @@ WITH
 		USING
 			delbt
 		WHERE
-			xbp.b_id = delbt.b_id AND xbp.b_t_id = delbt.b_t_id
+			xbp.b_id = delbt.b_id AND
+				xbp.b_t_id = delbt.b_t_id
 		RETURNING
-			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
+			xbp.b_id,
+			xbp.b_p_id,
+			xbp.p_name,
+			xbp.g_p_id,
+			xbp.mod_id
 	),
 	delgcp AS (
 		-- delete global child posts (from above)
+		-- (if they dont have refs from other boards)
+		-- XXX but how children of thread could have extra refs???
 		DELETE FROM
 			ib0.posts xp
 		USING
@@ -180,7 +198,8 @@ WITH
 					delbcp.g_p_id
 			) AS rcnts
 		WHERE
-			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
+			rcnts.hasrefs = FALSE AND
+				rcnts.g_p_id = xp.g_p_id
 		RETURNING
 			xp.g_p_id,xp.msgid
 	),
@@ -208,7 +227,9 @@ WITH
 					delmod.mod_id
 			) AS rcnts
 		WHERE
-			rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id AND mods.automanage = TRUE
+			rcnts.hasrefs = FALSE AND
+				rcnts.mod_id = mods.mod_id AND
+				mods.automanage = TRUE
 	),
 	updb AS (
 		-- update boards post and thread counts
@@ -260,10 +281,14 @@ WITH
 		WHERE
 			xgpids.g_p_id = xf.g_p_id
 		RETURNING
-			xf.f_id,xf.fname,xf.thumb
+			xf.f_id,
+			xf.fname,
+			xf.thumb
 	)
+
 SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL,NULL
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
+	NULL,NULL,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -288,30 +313,52 @@ FULL JOIN
 		LEFT JOIN
 			ib0.files xf
 		ON
-			delf.fname = xf.fname AND delf.thumb = xf.thumb
+			delf.fname = xf.fname AND
+				delf.thumb = xf.thumb
 		GROUP BY
-			delf.fname,delf.thumb
+			delf.fname,
+			delf.thumb
 	) AS leftt
 ON
 	leftf.fname = leftt.fname
+
 UNION ALL
+
 SELECT
-	'',0,'',0,b_id,b_t_id,NULL
+	'',0,'',0,b_id,b_t_id,NULL,NULL,NULL
 FROM
 	delbp
 WHERE
 	b_t_id != b_p_id
+
 UNION ALL
+
 SELECT
-	'',0,'',0,NULL,NULL,msgid
+	'',0,'',0,NULL,NULL,msgid,NULL,NULL
 FROM
 	delgp
+
 UNION ALL
+
 SELECT
-	'',0,'',0,NULL,NULL,msgid
+	'',0,'',0,NULL,NULL,msgid,NULL,NULL
 FROM
 	delgcp
 
+UNION ALL
+
+SELECT
+	'',0,'',0,NULL,NULL,NULL,xb.b_name,delbpx.p_name
+FROM
+	(
+		SELECT b_id,p_name FROM delbp
+		UNION ALL
+		SELECT b_id,p_name FROM delbcp
+	) AS delbpx
+JOIN
+	ib0.boards xb
+ON
+	delbpx.b_id = xb.b_id
 
 -- :name mod_ban_by_msgid
 -- TODO deduplicate w/ delete stmt above
@@ -383,7 +430,9 @@ WITH
 			WHERE
 				padded IS NOT NULL
 		RETURNING
-			g_p_id,f_count,msgid
+			g_p_id,
+			f_count,
+			msgid
 	),
 	delbp AS (
 		-- delete all board posts of that
@@ -394,7 +443,12 @@ WITH
 		WHERE
 			xbp.g_p_id = delgp.g_p_id
 		RETURNING
-			xbp.b_id,xbp.b_t_id,xbp.b_p_id,xbp.mod_id,delgp.f_count
+			xbp.b_id,
+			xbp.b_t_id,
+			xbp.b_p_id,
+			xbp.p_name,
+			xbp.mod_id,
+			delgp.f_count
 	),
 	delbt AS (
 		-- delete thread(s) incase we nuked OP(s)
@@ -403,9 +457,11 @@ WITH
 		USING
 			delbp
 		WHERE
-			xt.b_id = delbp.b_id AND xt.b_t_id = delbp.b_p_id
+			xt.b_id = delbp.b_id AND
+				xt.b_t_id = delbp.b_p_id
 		RETURNING
-			xt.b_id,xt.b_t_id
+			xt.b_id,
+			xt.b_t_id
 	),
 	updbt AS (
 		-- update thread(s) counters incase we haven't deleted thread(s) earlier
@@ -418,7 +474,8 @@ WITH
 		FROM
 			delbp
 		WHERE
-			delbp.b_id = xt.b_id AND delbp.b_t_id = xt.b_t_id
+			delbp.b_id = xt.b_id AND
+				delbp.b_t_id = xt.b_t_id
 	),
 	delbcp AS (
 		-- delete board child posts incase we nuked thread(s)
@@ -427,9 +484,14 @@ WITH
 		USING
 			delbt
 		WHERE
-			xbp.b_id = delbt.b_id AND xbp.b_t_id = delbt.b_t_id
+			xbp.b_id = delbt.b_id AND
+				xbp.b_t_id = delbt.b_t_id
 		RETURNING
-			xbp.b_id,xbp.b_p_id,xbp.g_p_id,xbp.mod_id
+			xbp.b_id,
+			xbp.b_p_id,
+			xbp.p_name,
+			xbp.g_p_id,
+			xbp.mod_id
 	),
 	delgcp AS (
 		-- delete global child posts (from above)
@@ -450,9 +512,11 @@ WITH
 					delbcp.g_p_id
 			) AS rcnts
 		WHERE
-			rcnts.hasrefs = FALSE AND rcnts.g_p_id = xp.g_p_id
+			rcnts.hasrefs = FALSE AND
+				rcnts.g_p_id = xp.g_p_id
 		RETURNING
-			xp.g_p_id,xp.msgid
+			xp.g_p_id,
+			xp.msgid
 	),
 	clean_mods AS (
 		-- garbage collect moderator list (maybe we nuked mod post(s))
@@ -478,7 +542,9 @@ WITH
 					delmod.mod_id
 			) AS rcnts
 		WHERE
-			rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id AND mods.automanage = TRUE
+			rcnts.hasrefs = FALSE AND
+				rcnts.mod_id = mods.mod_id AND
+				mods.automanage = TRUE
 	),
 	updb AS (
 		-- update boards post and thread counts
@@ -532,8 +598,10 @@ WITH
 		RETURNING
 			xf.f_id,xf.fname,xf.thumb
 	)
+
 SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,NULL,NULL,NULL
+	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
+	NULL,NULL,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -564,23 +632,44 @@ FULL JOIN
 	) AS leftt
 ON
 	leftf.fname = leftt.fname
+
 UNION ALL
+
 SELECT
-	'',0,'',0,b_id,b_t_id,NULL
+	'',0,'',0,b_id,b_t_id,NULL,NULL,NULL
 FROM
 	delbp
 WHERE
 	b_t_id != b_p_id
+
 UNION ALL
+
 SELECT
-	'',0,'',0,NULL,NULL,msgid
+	'',0,'',0,NULL,NULL,msgid,NULL,NULL
 FROM
 	delgp
+
 UNION ALL
+
 SELECT
-	'',0,'',0,NULL,NULL,msgid
+	'',0,'',0,NULL,NULL,msgid,NULL,NULL
 FROM
 	delgcp
+
+UNION ALL
+
+SELECT
+	'',0,'',0,NULL,NULL,NULL,xb.b_name,delbpx.p_name
+FROM
+	(
+		SELECT b_id,p_name FROM delbp
+		UNION ALL
+		SELECT b_id,p_name FROM delbcp
+	) AS delbpx
+JOIN
+	ib0.boards xb
+ON
+	delbpx.b_id = xb.b_id
 
 -- :name mod_bname_topts_by_tid
 -- returns boardname and thread opts
