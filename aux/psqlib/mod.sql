@@ -32,17 +32,20 @@ WITH
 				FROM
 					ib0.refs
 				WHERE
-					-- index-search by first 8 bytes, then narrow
+					-- index-search by first 8 chars, then narrow
 					(p_name LIKE substring($3 for 8) || '%') AND
 						($3 LIKE p_name || '%') AND
 						(b_name IS NULL OR b_name = $4)
+
 				UNION
+
 				SELECT
 					b_id,b_p_id
 				FROM
 					ib0.refs
 				WHERE
 					msgid = $5
+
 				ORDER BY
 					b_id,b_p_id
 			) AS x
@@ -131,6 +134,7 @@ WITH
 			xbp.b_t_id,
 			xbp.b_p_id,
 			xbp.p_name,
+			xbp.msgid,
 			xbp.mod_id,
 			delgp.f_count
 	),
@@ -174,6 +178,7 @@ WITH
 			xbp.b_id,
 			xbp.b_p_id,
 			xbp.p_name,
+			xbp.msgid,
 			xbp.g_p_id,
 			xbp.mod_id
 	),
@@ -288,7 +293,7 @@ WITH
 
 SELECT
 	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
-	NULL,NULL,NULL,NULL,NULL
+	NULL,NULL,NULL,NULL,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -325,35 +330,61 @@ ON
 UNION ALL
 
 SELECT
-	'',0,'',0,b_id,b_t_id,NULL,NULL,NULL
+	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL
 FROM
-	delbp
+	delbp AS xt
+LEFT JOIN
+	LATERAL (
+		SELECT
+			*
+		FROM
+			(
+				SELECT
+					b_id,
+					b_t_id,
+					row_number() OVER (
+						ORDER BY
+							bump DESC,
+							b_t_id ASC
+					) AS t_pos
+				FROM
+					ib0.threads qt
+				WHERE
+					qt.b_id = xt.b_id
+			) AS zt
+		WHERE
+			xt.b_id = zt.b_id AND xt.b_t_id = zt.b_t_id
+		LIMIT
+			1
+	) AS xto
+ON
+	TRUE
 WHERE
-	b_t_id != b_p_id
+	xt.b_t_id != xt.b_p_id
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,msgid,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
 FROM
 	delgp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,msgid,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
 FROM
 	delgcp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,xb.b_name,delbpx.p_name
+	'',0,'',0,NULL,NULL,NULL,NULL,xb.b_name,delbpx.p_name,delbpx.msgid
 FROM
 	(
-		SELECT b_id,p_name FROM delbp
+		SELECT b_id,p_name,msgid FROM delbp
 		UNION ALL
-		SELECT b_id,p_name FROM delbcp
+		SELECT b_id,p_name,msgid FROM delbcp
 	) AS delbpx
 JOIN
 	ib0.boards xb
@@ -447,6 +478,7 @@ WITH
 			xbp.b_t_id,
 			xbp.b_p_id,
 			xbp.p_name,
+			xbp.msgid,
 			xbp.mod_id,
 			delgp.f_count
 	),
@@ -490,6 +522,7 @@ WITH
 			xbp.b_id,
 			xbp.b_p_id,
 			xbp.p_name,
+			xbp.msgid,
 			xbp.g_p_id,
 			xbp.mod_id
 	),
@@ -601,7 +634,7 @@ WITH
 
 SELECT
 	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
-	NULL,NULL,NULL,NULL,NULL
+	NULL,NULL,NULL,NULL,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -636,35 +669,61 @@ ON
 UNION ALL
 
 SELECT
-	'',0,'',0,b_id,b_t_id,NULL,NULL,NULL
+	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL
 FROM
-	delbp
+	delbp AS xt
+LEFT JOIN
+	LATERAL (
+		SELECT
+			*
+		FROM
+			(
+				SELECT
+					b_id,
+					b_t_id,
+					row_number() OVER (
+						ORDER BY
+							bump DESC,
+							b_t_id ASC
+					) AS t_pos
+				FROM
+					ib0.threads qt
+				WHERE
+					qt.b_id = xt.b_id
+			) AS zt
+		WHERE
+			xt.b_id = zt.b_id AND xt.b_t_id = zt.b_t_id
+		LIMIT
+			1
+	) AS xto
+ON
+	TRUE
 WHERE
-	b_t_id != b_p_id
+	xt.b_t_id != xt.b_p_id
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,msgid,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
 FROM
 	delgp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,msgid,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
 FROM
 	delgcp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,xb.b_name,delbpx.p_name
+	'',0,'',0,NULL,NULL,NULL,NULL,xb.b_name,delbpx.p_name,delbpx.msgid
 FROM
 	(
-		SELECT b_id,p_name FROM delbp
+		SELECT b_id,p_name,msgid FROM delbp
 		UNION ALL
-		SELECT b_id,p_name FROM delbcp
+		SELECT b_id,p_name,msgid FROM delbcp
 	) AS delbpx
 JOIN
 	ib0.boards xb

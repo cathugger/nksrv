@@ -649,13 +649,7 @@ func (sp *PSQLIB) fixupXRefsInTx(
 	xrefs []ibref_nntp.Reference,
 	p_name, b_name string, msgid CoreMsgIDStr) (err error) {
 
-	if p_name == "" || b_name == "" || msgid == "" {
-		panic("wtf")
-	}
-
 	xref_wr_st := tx.Stmt(sp.st_prep[st_mod_ref_write])
-	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
-	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_attrib])
 
 	if len(xrefs) != 0 {
 		sp.log.LogPrintf(DEBUG, "writing %d failed refs", len(xrefs))
@@ -665,6 +659,19 @@ func (sp *PSQLIB) fixupXRefsInTx(
 	err = sp.insertXRefs(xref_wr_st, bid, bpid, xrefs)
 	if err != nil {
 		return
+	}
+
+	return sp.fixupAffectedXRefsInTx(tx, p_name, b_name, msgid)
+}
+
+func (sp *PSQLIB) fixupAffectedXRefsInTx(
+	tx *sql.Tx, p_name, b_name string, msgid CoreMsgIDStr) (err error) {
+
+	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
+	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_attrib])
+
+	if p_name == "" || b_name == "" || msgid == "" {
+		panic("wtf")
 	}
 
 	var xrefpostsinfos []xRefData

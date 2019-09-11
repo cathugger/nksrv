@@ -106,23 +106,38 @@ func (sp *PSQLIB) postDelete(
 	outdelmsgids = indelmsgids
 
 	type affThr struct {
-		b boardID
-		t postID
+		b   boardID
+		t   postID
+		loc int64
 	}
 	var thr_aff []affThr
+
+	type affBPosts struct {
+		bn string
+		pn string
+		mi CoreMsgIDStr
+	}
+	var bp_aff []affBPosts
 
 	for rows.Next() {
 		var fname, tname string
 		var fnum, tnum int64
 		var xb_id, xt_id sql.NullInt64
+		var xt_loc sql.NullInt64
 		var msgid sql.NullString
-		err = rows.Scan(&fname, &fnum, &tname, &tnum, &xb_id, &xt_id, &msgid)
+		var b_name sql.NullString
+		var p_name sql.NullString
+		var p_msgid sql.NullString
+
+		err = rows.Scan(
+			&fname, &fnum, &tname, &tnum,
+			&xb_id, &xt_id, &xt_loc, &msgid, &b_name, &p_name, &p_msgid)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("delete by msgid rows scan", err)
 			return
 		}
-		// delet
+		// file and thumb names
 		if fname != "" {
 			sp.log.LogPrintf(DEBUG, "MAYB DELET file %q num %d", fname, fnum)
 		}
@@ -155,8 +170,9 @@ func (sp *PSQLIB) postDelete(
 		if xb_id.Int64 != 0 && xt_id.Int64 != 0 {
 			// this won't grow large as crosspost aint so allowing
 			thr_aff = append(thr_aff, affThr{
-				b: boardID(xb_id.Int64),
-				t: postID(xt_id.Int64),
+				b:   boardID(xb_id.Int64),
+				t:   postID(xt_id.Int64),
+				loc: xt_loc.Int64,
 			})
 		}
 		// message-ids which were delet'd, we need to delet them from cache too
@@ -184,6 +200,14 @@ func (sp *PSQLIB) postDelete(
 					DEBUG,
 					"DELET cached NNTP <%s> (ignored duplicate)", msgid.String)
 			}
+		}
+		// deleted publicboardposts
+		if b_name.String != "" && p_name.String != "" {
+			bp_aff = append(bp_aff, affBPosts{
+				bn: b_name.String,
+				pn: p_name.String,
+				mi: CoreMsgIDStr(p_msgid.String),
+			})
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -232,6 +256,14 @@ func (sp *PSQLIB) postDelete(
 		_, err = refbump.Exec(ta.b, ta.t, threadOpts.BumpLimit)
 		if err != nil {
 			err = sp.sqlError("thread debump exec", err)
+			return
+		}
+	}
+
+	// re-calculate affected references
+	for _, bpa := range bp_aff {
+		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, bpa.mi)
+		if err != nil {
 			return
 		}
 	}
