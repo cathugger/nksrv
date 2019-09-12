@@ -241,7 +241,8 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate
+			pdate,
+			attrib
 		FROM
 			ib0.bposts AS op
 		WHERE
@@ -253,7 +254,8 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate
+			pdate,
+			attrib
 		FROM (
 			SELECT
 				*
@@ -265,7 +267,8 @@ LEFT JOIN
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
-						rp.pdate
+						rp.pdate,
+						rp.attrib
 					FROM
 						ib0.bposts AS rp
 					WHERE
