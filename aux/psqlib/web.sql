@@ -117,7 +117,8 @@ LEFT JOIN
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
-						rp.pdate
+						rp.pdate,
+						rp.attrib
 					FROM
 						ib0.bposts AS rp
 					WHERE
