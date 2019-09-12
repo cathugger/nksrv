@@ -26,8 +26,8 @@ const selhead_a = `SELECT
 	%d,
 	xb.b_id,
 	xb.b_name,
-	xt.t_id,
-	xt.t_name,
+	xt.b_t_id,
+	xt.b_t_name,
 	xbp.p_name`
 
 const selhead_b = `
@@ -36,7 +36,7 @@ FROM
 JOIN
 	ib0.threads xt
 ON
-	xbp.b_id = xt.b_id AND xbp.t_id = xt.t_id
+	xbp.b_id = xt.b_id AND xbp.b_t_id = xt.b_t_id
 JOIN
 	ib0.boards xb
 ON
@@ -116,7 +116,7 @@ func (sp *PSQLIB) processReferencesOnPost(
 WHERE
 	xbp.p_name LIKE '%s%%'
 ORDER BY
-	(xbp.b_id = %d AND xbp.t_id = %d) DESC,
+	(xbp.b_id = %d AND xbp.b_t_id = %d) DESC,
 	(xbp.b_id = %d) DESC,
 	xbp.g_p_id DESC,
 	xb.b_name ASC
