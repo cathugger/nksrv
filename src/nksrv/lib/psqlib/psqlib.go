@@ -23,24 +23,27 @@ import (
 )
 
 type PSQLIB struct {
-	db                   psql.PSQL
-	log                  Logger
-	src                  fstore.FStore
-	thm                  fstore.FStore
-	nntpfs               fstore.FStore
-	nntpce               cacheengine.CacheEngine
-	thumbnailer          thumbnailer.Thumbnailer
-	tplan_thread         thumbnailer.ThumbPlan
-	tplan_reply          thumbnailer.ThumbPlan
-	tplan_sage           thumbnailer.ThumbPlan
-	altthumb             altthumber.AltThumber
-	ffo                  formFileOpener
-	fpp                  form.ParserParams
-	instance             string
-	maxArticleBodySize   int64
-	autoAddNNTPPostGroup bool
-	webcaptcha           *webcaptcha.WebCaptcha
-	webFrontendKey       ed25519.PrivateKey
+	db                 psql.PSQL
+	log                Logger
+	src                fstore.FStore
+	thm                fstore.FStore
+	nntpfs             fstore.FStore
+	nntpce             cacheengine.CacheEngine
+	thumbnailer        thumbnailer.Thumbnailer
+	tplan_thread       thumbnailer.ThumbPlan
+	tplan_reply        thumbnailer.ThumbPlan
+	tplan_sage         thumbnailer.ThumbPlan
+	altthumb           altthumber.AltThumber
+	ffo                formFileOpener
+	fpp                form.ParserParams
+	instance           string
+	maxArticleBodySize int64
+	webcaptcha         *webcaptcha.WebCaptcha
+	webFrontendKey     ed25519.PrivateKey
+
+	ngp_global    newGroupPolicy
+	ngp_anypuller newGroupPolicy
+	ngp_anyserver newGroupPolicy
 
 	st_prep [st_max]*sql.Stmt
 
@@ -56,20 +59,22 @@ type PSQLIB struct {
 }
 
 type Config struct {
-	DB                 *psql.PSQL
-	Logger             *LoggerX
-	NodeName           string
-	WebFrontendKey     string
-	SrcCfg             *fstore.Config
-	ThmCfg             *fstore.Config
-	NNTPFSCfg          *fstore.Config
-	TBuilder           thumbnailer.ThumbnailerBuilder
-	TCfgThread         *thumbnailer.ThumbConfig
-	TCfgReply          *thumbnailer.ThumbConfig
-	TCfgSage           *thumbnailer.ThumbConfig
-	AltThumber         *altthumber.AltThumber
-	WebCaptcha         *webcaptcha.WebCaptcha
-	AddBoardOnNNTPPost bool
+	DB             *psql.PSQL
+	Logger         *LoggerX
+	NodeName       string
+	WebFrontendKey string
+	SrcCfg         *fstore.Config
+	ThmCfg         *fstore.Config
+	NNTPFSCfg      *fstore.Config
+	TBuilder       thumbnailer.ThumbnailerBuilder
+	TCfgThread     *thumbnailer.ThumbConfig
+	TCfgReply      *thumbnailer.ThumbConfig
+	TCfgSage       *thumbnailer.ThumbConfig
+	AltThumber     *altthumber.AltThumber
+	WebCaptcha     *webcaptcha.WebCaptcha
+	NGPGlobal      string
+	NGPAnyPuller   string
+	NGPAnyServer   string
 }
 
 // readonly for now
@@ -169,7 +174,18 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.webcaptcha = cfg.WebCaptcha
 
-	p.autoAddNNTPPostGroup = cfg.AddBoardOnNNTPPost
+	p.ngp_global, err = makeNewGroupPolicy(cfg.NGPGlobal)
+	if err != nil {
+		return
+	}
+	p.ngp_anyserver, err = makeNewGroupPolicy(cfg.NGPAnyServer)
+	if err != nil {
+		return
+	}
+	p.ngp_anyserver, err = makeNewGroupPolicy(cfg.NGPAnyPuller)
+	if err != nil {
+		return
+	}
 
 	p.ntStmts = make(map[int]*sql.Stmt)
 	p.npStmts = make(map[npTuple]*sql.Stmt)

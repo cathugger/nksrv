@@ -24,6 +24,7 @@ func main() {
 	dbconnstr := flag.String("dbstr", "", "postgresql connection string")
 	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
+	ngp := flag.String("ngp", "*", "new group policy: which groups can be automatically added?")
 
 	flag.Parse()
 
@@ -57,6 +58,7 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.NodeName = *nodename
+	psqlibcfg.NGPGlobal = *ngp
 	if *thumbext {
 		psqlibcfg.TBuilder = extthm.DefaultConfig
 	}
@@ -86,7 +88,7 @@ func main() {
 			notrace = true
 		}
 
-		dbpuller, err := dbib.NewPullerDB(key, true, notrace)
+		dbpuller, err := dbib.NewPullerDB(key, "", notrace)
 		if err != nil {
 			mlg.LogPrintln(CRITICAL, "dbib.NewPullerDB failed:", err)
 			return
@@ -103,7 +105,7 @@ func main() {
 
 		d, proto, host, e := xdialer.XDial(addr)
 		if e != nil {
-			mlg.LogPrintln(CRITICAL, "dial %d fail:", j, e)
+			mlg.LogPrintf(CRITICAL, "dial %d fail: %v", j, e)
 			return
 		}
 

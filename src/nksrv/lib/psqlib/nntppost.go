@@ -30,8 +30,9 @@ func cutMsgID(s FullMsgIDStr) CoreMsgIDStr {
 }
 
 func (sp *PSQLIB) shouldAutoAddNNTPPostGroup(group string) bool {
-	// TODO some kind of filtering maybe?
-	return sp.autoAddNNTPPostGroup
+	return sp.ngp_global.checkGroup(group) ||
+		sp.ngp_anyserver.checkGroup(group)
+	// TODO per-server-client privileges
 }
 
 func (sp *PSQLIB) acceptArticleHead(

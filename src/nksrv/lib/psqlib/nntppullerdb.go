@@ -14,8 +14,8 @@ type PullerDB struct {
 	id    int64
 	nonce int64
 
-	autoadd bool
-	notrace bool
+	ngp_thispuller newGroupPolicy
+	notrace        bool
 
 	temp_rows *sql.Rows
 }
@@ -23,8 +23,9 @@ type PullerDB struct {
 var _ nntp.PullerDatabase = (*PullerDB)(nil)
 
 func (s *PullerDB) autoAddGroup(group string) bool {
-	// TODO some kind of filtering maybe?
-	return s.autoadd || s.sp.shouldAutoAddNNTPPostGroup(group)
+	return s.sp.ngp_global.checkGroup(group) ||
+		s.sp.ngp_anypuller.checkGroup(group) ||
+		s.ngp_thispuller.checkGroup(group)
 }
 
 func (s *PullerDB) getNonce() int64 {
@@ -284,7 +285,7 @@ func (sp *PSQLIB) getPullerNonce() int64 {
 	return sp.puller_nonce
 }
 
-func (sp *PSQLIB) NewPullerDB(name string, autoadd, notrace bool) (*PullerDB, error) {
+func (sp *PSQLIB) NewPullerDB(name string, autoadd string, notrace bool) (*PullerDB, error) {
 	q := `INSERT INTO ib0.puller_list AS sl (sname,last_use)
 VALUES ($1,$2)
 ON CONFLICT (sname)
@@ -293,8 +294,16 @@ DO
 	WHERE sl.sname = $1
 RETURNING sid`
 	nonce := sp.getPullerNonce()
-	db := &PullerDB{sp: sp, autoadd: autoadd, notrace: notrace}
-	e := sp.db.DB.
+	ngp, e := makeNewGroupPolicy(autoadd)
+	if e != nil {
+		return nil, e
+	}
+	db := &PullerDB{
+		sp:             sp,
+		ngp_thispuller: ngp,
+		notrace:        notrace,
+	}
+	e = sp.db.DB.
 		QueryRow(q, name, nonce).
 		Scan(&db.id)
 	if e != nil {

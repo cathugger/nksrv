@@ -26,6 +26,7 @@ func main() {
 	nntpbind := flag.String("nntpbind", "", "nntp server bind string")
 	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
+	ngp := flag.String("ngp", "*", "new group policy: which groups can be automatically added?")
 
 	flag.Parse()
 
@@ -65,6 +66,7 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.NodeName = *nodename
+	psqlibcfg.NGPGlobal = *ngp
 	if *thumbext {
 		psqlibcfg.TBuilder = extthm.DefaultConfig
 	}

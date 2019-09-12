@@ -29,6 +29,7 @@ func main() {
 	notrace := flag.Bool("notrace", false, "disable NNTP Path trace")
 	thumbext := flag.Bool("extthm", false, "use extthm")
 	nodename := flag.String("nodename", "nekochan", "node name. must be non-empty")
+	ngp := flag.String("ngp", "*", "new group policy: which groups can be automatically added?")
 
 	flag.Parse()
 
@@ -68,6 +69,7 @@ func main() {
 	psqlibcfg.DB = &db
 	psqlibcfg.Logger = &lgr
 	psqlibcfg.NodeName = *nodename
+	psqlibcfg.NGPGlobal = *ngp
 	if *thumbext {
 		psqlibcfg.TBuilder = extthm.DefaultConfig
 	}
@@ -78,7 +80,7 @@ func main() {
 		return
 	}
 
-	dbpuller, err := dbib.NewPullerDB(*pullkey, true, *notrace)
+	dbpuller, err := dbib.NewPullerDB(*pullkey, "", *notrace)
 	if err != nil {
 		mlg.LogPrintln(CRITICAL, "dbib.NewPullerDB failed:", err)
 		return
@@ -89,7 +91,7 @@ func main() {
 
 	d, proto, host, e := xdialer.XDial(*nntpconn)
 	if e != nil {
-		mlg.LogPrintln(CRITICAL, "dial %d fail:", j, e)
+		mlg.LogPrintln(CRITICAL, "dial fail:", e)
 		return
 	}
 
