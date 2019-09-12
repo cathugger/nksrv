@@ -91,7 +91,8 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate
+			pdate,
+			attrib
 		FROM
 			ib0.bposts AS op
 		WHERE
@@ -103,7 +104,8 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate
+			pdate,
+			attrib
 		FROM (
 			SELECT
 				*
