@@ -30,6 +30,7 @@ func (sp *PSQLIB) registeredMod(
 	_, err = tx.Exec("LOCK ib0.modlist IN EXCLUSIVE MODE")
 	if err != nil {
 		err = sp.sqlError("lock ib0.modlist query", err)
+		return
 	}
 
 	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
