@@ -5,7 +5,7 @@
 -- it used to contain delete stmt, but since we now track all refs,
 -- it's no longer needed
 INSERT INTO
-	ib0.failrefs (
+	ib0.refs (
 		b_id,
 		b_p_id,
 		p_name,
