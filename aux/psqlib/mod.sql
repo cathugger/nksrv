@@ -419,7 +419,7 @@ WITH
 	delgp AS (
 		-- replace global post with ban post
 		INSERT INTO
-			ib0.posts xp (
+			ib0.posts AS xp (
 				msgid,
 				pdate,
 				padded,
