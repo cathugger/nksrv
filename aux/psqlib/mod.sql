@@ -419,7 +419,7 @@ WITH
 	delgp AS (
 		-- replace global post with ban post
 		INSERT INTO
-			ib0.posts (
+			ib0.posts xp (
 				msgid,
 				pdate,
 				padded,
@@ -465,7 +465,7 @@ WITH
 				layout  = excluded.layout,
 				extras  = excluded.extras
 			WHERE
-				padded IS NOT NULL
+				xp.padded IS NOT NULL
 		RETURNING
 			g_p_id,
 			f_count,
