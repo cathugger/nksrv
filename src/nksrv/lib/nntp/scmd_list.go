@@ -22,7 +22,7 @@ func listCmdActive(c *ConnState, args [][]byte, rest []byte) bool {
 	var wildmat []byte
 	if len(args) != 0 {
 		wildmat = args[0]
-		if !validWildmat(wildmat) {
+		if !ValidWildmat(wildmat) {
 			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}
@@ -42,7 +42,7 @@ func listCmdNewsgroups(c *ConnState, args [][]byte, rest []byte) bool {
 	var wildmat []byte
 	if len(args) > 0 {
 		wildmat = args[0]
-		if !validWildmat(wildmat) {
+		if !ValidWildmat(wildmat) {
 			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}
@@ -79,7 +79,7 @@ func cmdXGTitle(c *ConnState, args [][]byte, rest []byte) bool {
 	var wildmat []byte
 	if len(args) > 0 {
 		wildmat = args[0]
-		if !validWildmat(wildmat) {
+		if !ValidWildmat(wildmat) {
 			AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 			return true
 		}

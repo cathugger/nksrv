@@ -184,7 +184,7 @@ func cmdNewNews(c *ConnState, args [][]byte, rest []byte) bool {
 	// NEWNEWS wildmat [YY]YYMMDD hhmmss
 
 	wildmat := args[0]
-	if !validWildmat(wildmat) {
+	if !ValidWildmat(wildmat) {
 		AbortOnErr(c.w.PrintfLine("501 invalid wildmat"))
 		return true
 	}

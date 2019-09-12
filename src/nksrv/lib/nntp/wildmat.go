@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 )
 
-func validWildmat(x []byte) bool {
+func ValidWildmat(x []byte) bool {
 	/*
 	 * {RFC 3977}
 	 * wildmat = wildmat-pattern *("," ["!"] wildmat-pattern)
