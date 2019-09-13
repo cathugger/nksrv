@@ -460,6 +460,12 @@ function onglobalclick(e) {
 			e.preventDefault();
 			break;
 		}
+		case 'pnum_ref':
+		{
+			refer(tgt.textContent);
+			e.preventDefault();
+			break;
+		}
 		case 'imglink':
 		{
 			// paranoia
