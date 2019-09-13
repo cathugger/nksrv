@@ -545,3 +545,38 @@ function onglobalclick(e) {
 }
 
 document.documentElement.addEventListener("click", onglobalclick);
+
+// executed once page is ready
+function ready() {
+	// linkify all of pnum_ref elements
+	var els = document.getElementsByClassName('pnum_ref');
+	for (var i = 0; i < els.length; i++) {
+		var e = els[i];
+		if (e.tagName.toLowerCase() == "a") {
+			e.href = '#';
+		}
+	}
+}
+
+// executed once page completed loading
+function completed() {
+	document.removeEventListener("DOMContentLoaded", completed);
+	window.removeEventListener("load", completed);
+	ready();
+}
+
+// stolen from jquery
+if (document.readyState === "complete" ||
+	(document.readyState !== "loading" &&
+		!document.documentElement.doScroll)) {
+
+	// just call it now
+	// don't delay as we don't do much stuff in there
+	ready();
+
+} else {
+	// Use the handy event callback
+	document.addEventListener("DOMContentLoaded", completed);
+	// A fallback to window.onload, that will always work
+	window.addEventListener("load", completed);
+}
