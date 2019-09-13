@@ -452,18 +452,18 @@ function onglobalclick(e) {
 			break;
 		case 'imgexp':
 		{
+			// don't actually open link
+			e.preventDefault();
 			// if we encounter this type then we already know that this is image
 			var lnk = tgt.parentElement;
 			var thm = lnk.getElementsByClassName('imgthumb')[0];
 			unexpandimg(lnk, thm, tgt);
-			// don't actually open link
-			e.preventDefault();
 			break;
 		}
 		case 'pnum_ref':
 		{
-			refer(tgt.textContent);
 			e.preventDefault();
+			refer(tgt.textContent);
 			break;
 		}
 		case 'imglink':
@@ -474,8 +474,8 @@ function onglobalclick(e) {
 				// display set (probably to none), this means we have expanded
 				var exps = tgt.getElementsByClassName("imgexp");
 				if (exps.length > 0) {
-					unexpandimg(tgt, thm, exps[0]);
 					e.preventDefault();
+					unexpandimg(tgt, thm, exps[0]);
 				}
 				// else something weird happened ¯\_(ツ)_/¯
 			} else {
@@ -529,16 +529,16 @@ function onglobalclick(e) {
 		}
 		case 'audioembed':
 		{
+			e.preventDefault();
 			// toggle play/pause if clicked on background
 			togglePause(tgt.childNodes[0]);
-			e.preventDefault();
 			break;
 		}
 		case 'audioembedinner':
 		{
+			e.preventDefault();
 			// toggle play/pause if clicked on background
 			togglePause(tgt.parentElement.childNodes[0]);
-			e.preventDefault();
 			break;
 		}
 	}
