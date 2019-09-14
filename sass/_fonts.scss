@@ -1,0 +1,21 @@
+@font-face {
+	font-family: 'DejaVu Sans';
+	font-style: normal;
+	font-weight: normal;
+	src:
+		local("DejaVu Sans"),
+		url("fonts/dejavu-2.37/DejaVuSans.woff2") format("woff2"),
+		url("fonts/dejavu-2.37/DejaVuSans.woff")  format("woff");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'DejaVu Sans';
+	font-style: normal;
+	font-weight: bold;
+	src:
+		local("DejaVu Sans"),
+		url("fonts/dejavu-2.37/DejaVuSans-Bold.woff2") format("woff2"),
+		url("fonts/dejavu-2.37/DejaVuSans-Bold.woff")  format("woff");
+	font-display: swap;
+}
