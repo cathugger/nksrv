@@ -1,4 +1,14 @@
 
+$reply-target-border: #FF5555   !default;
+$skipped-fg:          gray      !default;
+$name-link-fg:        gray      !default;
+$truncated-fg:        gray      !default;
+
+$pnum-fg:             $main-fg      !default;
+$pf-body-bg:          $reply-bg     !default;
+$pf-body-border:      $reply-border !default;
+
+
 @font-face {
 	font-family: 'DejaVu Sans';
 	font-style: normal;
@@ -22,15 +32,21 @@
 }
 
 html {
-	background-color: #EEF2FF;
-	color: black;
+	background-color: $main-bg;
+	color: $main-fg;
 	font-family: Arial, Helvetica, sans-serif, 'DejaVu Sans';
 	font-size: 13px;
 	word-wrap: break-word;
 }
 
 a:link, a:visited {
-	color: #1133BB;
+	color: $link-nav-fg;
+}
+
+@if variable-exists("hr-fg") {
+	hr {
+		color: $hr-fg;
+	}
 }
 
 .cat_div {
@@ -161,20 +177,20 @@ label {
 }
 
 .t_skipped {
-	color: gray;
+	color: $skipped-fg;
 	padding: 0px 12px 4px 16px;
 }
 
 .quote {
-	color: #407F10;
+	color: $quote-fg;
 }
 
 a.ref:link, a.ref:visited {
-	color: #EF1000;
+	color: $link-ref-fg;
 }
 
 a.bref:link, a.bref:visited {
-	color: #004070;
+	color: $link-bref-fg;
 	font-size: 11px;
 }
 
@@ -184,15 +200,15 @@ a.bref:link, a.bref:visited {
 }
 
 .reply {
-	background-color: #D6DAF0;
-	border: 1px solid #BCBCE6;
+	background-color: $reply-bg;
+	border: 1px solid $reply-border;
 	display: inline-block;
 	padding: 0px 0px 0px 0px;
 	max-width: 100%;
 }
 
 .reply:target {
-	border: 1px solid #FF5555;
+	border: 1px solid $reply-target-border;
 }
 
 .reply-outer {
@@ -200,7 +216,7 @@ a.bref:link, a.bref:visited {
 }
 
 .subject {
-	color: #0F0C5D;
+	color: $subject-fg;
 	font-weight: bold;
 	unicode-bidi: embed;
 	display: inline-block;
@@ -212,23 +228,24 @@ a.bref:link, a.bref:visited {
 }
 
 span.name {
-	color: #117743;
+	color: $name-span-fg;
 	display: inline-block;
 }
 
 a.name {
-	color: gray;
+	color: $name-link-fg;
+	display: inline-block;
 }
 
 .unitrip {
-	color: #0055CC;
+	color: $unitrip-fg;
 	font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
 	font-size: 15px;
 	display: inline-block;
 }
 
 .trunc {
-	color: gray;
+	color: $truncated-fg;
 }
 
 .pnum {
@@ -236,11 +253,11 @@ a.name {
 }
 
 .pnum_anchor:link, .pnum_anchor:visited, .pnum_ref:link, .pnum_ref:visited {
-	color:black;
+	color: $pnum-fg;
 	text-decoration: none;
 }
 .pnum_anchor:hover, .pnum_ref:hover {
-	color:#EE2222;
+	color: $pnum-hover-fg;
 }
 
 div.nav {
@@ -252,12 +269,12 @@ div.nav {
 }
 
 .pf_body {
-	background-color: #D6DAF0;
-	border: 1px solid #BCBCE6;
+	background-color: $pf-body-bg;
+	border: 1px solid $pf-body-border;
 	margin: 0 auto;
 }
 .pf_label {
-	background-color: #C6CAE0;
+	background-color: $pf-label-bg;
 }
 .pf_input {
 	padding: 0;
@@ -325,7 +342,7 @@ div.nav {
 }
 
 .poi_hr {
-	color: #BCBCE6;
+	color: $hr-poi-fg;
 	margin-top:    2px;
 	margin-bottom: 2px;
 }

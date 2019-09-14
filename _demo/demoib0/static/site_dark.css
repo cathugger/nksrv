@@ -38,7 +38,6 @@ a:link, a:visited {
 	text-align: center;
 	width:  180px;
 	height: 250px;
-	/* background-color: #EEFFDD; */
 	margin:  2px 2px 2px 2px;
 	padding: 4px 2px 4px 2px;
 	/* border: 1px solid #EE6666; */
@@ -47,10 +46,8 @@ a:link, a:visited {
 }
 
 .cat_div:hover {
-	/*
-	margin: 0px 0px 0px 0px;
-	border: 2px solid #77CC99;
-	*/
+	/* margin: 0px 0px 0px 0px; */
+	/* border: 2px solid #77CC99; */
 }
 
 .cat_subject {
@@ -141,22 +138,18 @@ label {
 
 .opinfo, .rinfo {
 	margin: 2px 2px 2px 4px;
-	/* background-color: #FFCCCC; */
 }
 
 .opimg, .rimg {
 	float: left;
-	/* background-color: #DDFFCC; */
 	margin: 2px 12px 8px 12px;
 }
 
 .imginfo {
 	margin: 0px 4px 2px 0px;
-	/* background-color: #CCCCFF; */
 }
 
 .body {
-	/* background-color: #FFFFCC; */
 	padding: 6px 32px 8px 16px;
 	max-width: 100%;
 	display: inline-block;
@@ -235,7 +228,6 @@ a.name {
 }
 
 .trunc {
-	/* background-color: #CCEEBB; */
 	color: gray;
 }
 
