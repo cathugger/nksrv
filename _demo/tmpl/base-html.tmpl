@@ -3,16 +3,33 @@
 
 <head>
 <meta charset="UTF-8" />
+
 <meta
  name="viewport"
  content="width=device-width, initial-scale=1.0"
 />
+
 {% page "head" -%}
+
 <link
  rel="stylesheet"
  type="text/css"
- href="{% static "site.css" %}"
+ href="{% static "blue.css" %}"
+ title="Blue (default)"
 />
+<link
+ rel="alternate stylesheet"
+ type="text/css"
+ href="{% static "dark.css" %}"
+ title="Dark"
+/>
+<link
+ rel="alternate stylesheet"
+ type="text/css"
+ href="{% static "green_neko1.css" %}"
+ title="Green Neko 1"
+/>
+
 </head>
 
 <body>
