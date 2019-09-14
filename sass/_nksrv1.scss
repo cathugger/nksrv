@@ -144,15 +144,18 @@ label {
 	margin: 0px 4px 2px 0px;
 }
 
+@mixin border-box {
+	   -moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	        box-sizing: border-box;
+}
+
 .body {
 	padding: 6px 32px 8px 16px;
 	max-width: 100%;
 	display: inline-block;
 	overflow: hidden;
-
-	   -moz-box-sizing: border-box;
-	-webkit-box-sizing: border-box;
-	        box-sizing: border-box;
+	@include border-box;
 }
 
 .t_skipped {
@@ -269,7 +272,7 @@ div.nav {
 }
 
 #message {
-	box-sizing: border-box;
+	@include border-box;
 	width: 300px;
 	min-width: 300px;
 	min-height: 8em;
