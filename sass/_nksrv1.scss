@@ -84,7 +84,7 @@ a:link, a:visited {
 }
 
 tr.blist:hover td {
-	background-color: #BED2E8;
+	background-color: $blist-hover-bg;
 }
 
 .imgthumb {
