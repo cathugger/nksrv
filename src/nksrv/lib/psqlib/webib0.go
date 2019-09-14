@@ -33,7 +33,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 		var b ib0.IBBoardListBoard
 		cfg := defaultBoardAttributes
 
-		err = rows.Scan(&b.Name, &b.Description, &jcfg, &b.NumThreads, &b.NumPosts)
+		err = rows.Scan(&b.BNum, &b.Name, &b.Description, &jcfg, &b.NumThreads, &b.NumPosts)
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("boards query rows scan", err), http.StatusInternalServerError
@@ -162,6 +162,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			}
 
 			page.Board = ib0.IBBoardInfo{
+				BNum:        bid,
 				Name:        board,
 				Description: bdesc,
 				Info:        battrs.Info,
@@ -224,6 +225,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				webCleanHeaders(pi.Headers)
 			}
 
+			pi.Num = uint64(b_p_id.Int64)
 			pi.ID = p_name.String
 			pi.MsgID = msgid.String
 			pi.Subject = title.String
@@ -390,6 +392,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		if x_bid != bid || x_tid != t_id {
 			var t ib0.IBOverboardPageThread
 
+			t.BNum = bid
 			t.ID = t_name
 			t.BoardName = bname
 			if t_p_count.Int64 > 0 {
@@ -431,6 +434,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 				webCleanHeaders(pi.Headers)
 			}
 
+			pi.Num = uint64(b_p_id.Int64)
 			pi.ID = p_name.String
 			pi.MsgID = msgid.String
 			pi.Subject = title.String
@@ -583,6 +587,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 			}
 
 			page.Board = ib0.IBBoardInfo{
+				BNum:        bid,
 				Name:        board,
 				Description: bdesc,
 				Info:        battrs.Info,
@@ -596,6 +601,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 
 			var t ib0.IBThreadCatalogThread
 
+			t.Num = uint64(b_p_id.Int64)
 			t.ID = t_name.String
 			if t_p_count.Int64 > 0 {
 				// OP itself not included
@@ -711,7 +717,9 @@ func (sp *PSQLIB) IBGetOverboardCatalog(
 
 			var t ib0.IBOverboardCatalogThread
 
+			t.BNum = bid
 			t.BoardName = bname
+			t.Num = uint64(b_p_id.Int64)
 			t.ID = t_name.String
 			if t_p_count.Int64 > 0 {
 				// OP itself not included
@@ -853,6 +861,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			}
 
 			page.Board = ib0.IBBoardInfo{
+				BNum:        bid,
 				Name:        board,
 				Description: bdesc,
 				Info:        battrs.Info,
@@ -910,6 +919,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				webCleanHeaders(pi.Headers)
 			}
 
+			pi.Num = uint64(b_p_id.Int64)
 			pi.ID = p_name.String
 			pi.MsgID = msgid.String
 			pi.Subject = title.String

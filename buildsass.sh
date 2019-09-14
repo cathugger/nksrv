@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eux
 
-root=$(realpath $(dirname $0))
+root=$(realpath $(dirname "$0"))
 
 : ${outdir:=_demo/demoib0/static}
 #: ${sasscmd:=sassc -t compressed}

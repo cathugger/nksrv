@@ -15,6 +15,7 @@ import "nksrv/lib/mail"
 
 // board list member
 type IBBoardListBoard struct {
+	BNum        uint64   `json:"bn"`             // internal num
 	Name        string   `json:"name"`           // short name
 	Description string   `json:"desc"`           // description
 	Tags        []string `json:"tags,omitempty"` // tags
@@ -54,7 +55,7 @@ type IBFileInfo struct {
 type IBReference struct {
 	Board  string `json:"b,omitempty"` // board which contains post which is refered to. if empty, "this board"
 	Thread string `json:"t,omitempty"` // thread which contains post which is refered to. if empty, "this thread"
-	Post   string `json:"p,omitempty"` // full post number. may be empty when referencing to board or thread
+	Post   string `json:"p,omitempty"` // full external post id. may be empty when referencing to board or thread
 }
 
 type IBMessageReference struct {
@@ -71,7 +72,8 @@ type IBMessage []byte
 
 // post
 type IBPostInfo struct {
-	ID             string                 `json:"id"`                // ID of post. untruncated, per board
+	Num            uint64                 `json:"n"`                 // internal post number. unique only per this server
+	ID             string                 `json:"id"`                // external ID of post. untruncated, per board
 	MsgID          string                 `json:"msgid"`             // Message-ID of post, if available
 	Subject        string                 `json:"subject"`           // subject text
 	Name           string                 `json:"name"`              // name of poster
@@ -112,6 +114,7 @@ type IBThreadListPageThread struct {
 
 // info about board common across pages
 type IBBoardInfo struct {
+	BNum        uint32 `json:"bn"`   // internal board num
 	Name        string `json:"name"` // short name
 	Description string `json:"desc"` // description
 	Info        string `json:"info"` // optional additional info string
@@ -126,6 +129,7 @@ type IBThreadListPage struct {
 }
 
 type IBOverboardPageThread struct {
+	BNum      uint32 `json:"bn"` // internal board num
 	BoardName string `json:"bname"`
 
 	IBThreadListPageThread
@@ -153,7 +157,8 @@ type IBThreadPage struct {
 }
 
 type IBThreadCatalogThread struct {
-	ID           string      `json:"id"`       // thread ID
+	Num          uint64      `json:"n"`        // internal thread number
+	ID           string      `json:"id"`       // external thread ID
 	Thumb        IBThumbInfo `json:"thumb"`    // thumbnail
 	TotalReplies int64       `json:"nreplies"` // number of replies
 	TotalFiles   int64       `json:"nfiles"`   // number of attachments
@@ -168,6 +173,7 @@ type IBThreadCatalog struct {
 }
 
 type IBOverboardCatalogThread struct {
+	BNum      uint32 `json:"bn"` // internal board num
 	BoardName string `json:"bname"`
 
 	IBThreadCatalogThread

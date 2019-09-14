@@ -75,9 +75,11 @@ func validHeaderQuery(hq []byte) bool {
 
 func ValidGroupSlice(s []byte) bool {
 	for _, c := range s {
+		// exclude ctl and ! * , ? [ \ ]
 		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
 			(c >= 0x2D && c <= 0x3E) || (c >= 0x40 && c <= 0x5A) ||
 			(c >= 0x5E && c <= 0x7E) || c >= 0x80) {
+
 			return false
 		}
 	}

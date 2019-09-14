@@ -95,6 +95,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				bump,
 				p_count,
 				f_count,
+				--fr_count,
 				skip_over
 			)
 		SELECT
@@ -105,6 +106,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			$1,         -- pdate
 			1,          -- p_count
 			$2,         -- f_count
+			--0,          -- fr_count
 			$14         -- skip_over
 		FROM
 			ub

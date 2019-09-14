@@ -1,6 +1,6 @@
 -- :name web_listboards
 SELECT
-	b_name,bdesc,attrib,t_count,p_count
+	b_id,b_name,bdesc,attrib,t_count,p_count
 FROM
 	ib0.boards
 ORDER BY

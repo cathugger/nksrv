@@ -139,6 +139,7 @@ RETURNING
 		SET
 			p_count = xt.p_count - 1,
 			f_count = xt.f_count - delbp.f_count
+			--fr_count = xt.fr_count - (CASE WHEN delbp.f_count > 0 THEN 1 ELSE 0)
 		FROM
 			delbp
 		WHERE
@@ -600,7 +601,8 @@ WITH
 		WHERE
 			mod_id = $1
 		ORDER BY
-			b_id,b_p_id
+			b_id,
+			b_p_id
 		OFFSET
 			$2
 		LIMIT

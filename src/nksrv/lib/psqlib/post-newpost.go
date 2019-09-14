@@ -156,6 +156,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		SET
 			p_count = p_count + 1,
 			f_count = f_count + $3
+			--fr_count = fr_count + (CASE WHEN $3 > 0 THEN 1 ELSE 0)
 		WHERE
 			b_id = $13 AND b_t_id = $14
 	),

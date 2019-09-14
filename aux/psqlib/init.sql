@@ -96,8 +96,9 @@ CREATE TABLE ib0.threads (
 
 	bump      TIMESTAMP  WITH TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
 	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
-	p_count   BIGINT                     NOT NULL, -- post count
-	f_count   BIGINT                     NOT NULL, -- sum of posts' f_count
+	p_count   BIGINT                     NOT NULL, -- post count (including OP)
+	f_count   BIGINT                     NOT NULL, -- sum of posts' (including OP) f_count
+	--fr_count  BIGINT                     NOT NULL, -- file-replies count (not including OP)
 
 	reply_limits JSONB, -- inherits from reply_limits of ib0.boards
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
