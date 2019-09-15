@@ -275,7 +275,7 @@ RETURNING
 
 SELECT
 	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
-	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL::BIGINT
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -312,7 +312,7 @@ ON
 UNION ALL
 
 SELECT
-	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL
+	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL::BIGINT
 FROM
 	delbp AS xt
 LEFT JOIN
@@ -347,14 +347,14 @@ WHERE
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL::BIGINT
 FROM
 	delgp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL::BIGINT
 FROM
 	delgcp
 
@@ -362,12 +362,12 @@ UNION ALL
 
 SELECT
 	'',0,'',0,NULL,NULL,NULL,NULL,
-	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id
+	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id::BIGINT
 FROM
 	(
-		SELECT b_id,p_name,msgid,mod_id::BIGINT FROM delbp
+		SELECT b_id,p_name,msgid,mod_id FROM delbp
 		UNION ALL
-		SELECT b_id,p_name,msgid,mod_id::BIGINT FROM delbcp
+		SELECT b_id,p_name,msgid,mod_id FROM delbcp
 	) AS delbpx
 JOIN
 	ib0.boards xb
