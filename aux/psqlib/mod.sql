@@ -312,7 +312,7 @@ ON
 UNION ALL
 
 SELECT
-	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL::BIGINT
+	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL
 FROM
 	delbp AS xt
 LEFT JOIN
@@ -347,14 +347,14 @@ WHERE
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL::BIGINT
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
 FROM
 	delgp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL::BIGINT
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
 FROM
 	delgcp
 
@@ -362,7 +362,7 @@ UNION ALL
 
 SELECT
 	'',0,'',0,NULL,NULL,NULL,NULL,
-	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id::BIGINT
+	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id
 FROM
 	(
 		SELECT b_id,p_name,msgid,mod_id FROM delbp
