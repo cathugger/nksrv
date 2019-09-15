@@ -238,6 +238,7 @@ func (sp *PSQLIB) postDelete(
 			})
 		}
 		if mod_id.Int64 != 0 {
+			sp.log.LogPrintf(DEBUG, "DETEL add modid %d", mod_id.Int64)
 			out_delmodids.add(uint64(mod_id.Int64))
 		}
 	}

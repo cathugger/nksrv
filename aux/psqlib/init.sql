@@ -339,7 +339,7 @@ CREATE TABLE ib0.banlist (
 	PRIMARY KEY (ban_id),
 
 	FOREIGN KEY (b_id,b_p_id)
-		REFERENCES ib0.bposts
+		REFERENCES ib0.bposts (b_id,b_p_id)
 		MATCH FULL
 		ON DELETE CASCADE    -- see trigger below
 )

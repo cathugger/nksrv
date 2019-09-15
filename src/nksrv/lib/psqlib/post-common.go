@@ -201,6 +201,7 @@ requery:
 					sp.log.LogPrintf(ERROR,
 						"setmodpriv: [proceeding anyway] inputerr while execing <%s>: %v",
 						posts[i].msgid, err)
+					err = nil
 					continue
 				}
 
@@ -209,12 +210,15 @@ requery:
 			}
 
 			if delmodids.contain(modid) {
+				sp.log.LogPrintf(
+					DEBUG, "setmodpriv: delmodid %d is ours, requerying", modid)
 				// msg we just deleted was made by mod we just upp'd
 				// that means that it may be msg in query we just made
 				// it's unsafe to proceed with current cached query
 				off_pdate = posts[i].pdate
 				off_g_p_id = posts[i].gpid
 				off_b_id = posts[i].xid.bid
+				posts = posts[:0]
 				continue requery
 			}
 		}
@@ -229,7 +233,7 @@ requery:
 			off_g_p_id = posts[i].gpid
 			off_b_id = posts[i].xid.bid
 			posts = posts[:0]
-			continue
+			continue requery
 		}
 	}
 
