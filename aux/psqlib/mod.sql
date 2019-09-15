@@ -365,9 +365,9 @@ SELECT
 	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id
 FROM
 	(
-		SELECT b_id,p_name,msgid,mod_id FROM delbp
+		SELECT b_id,p_name,msgid,mod_id::BIGINT FROM delbp
 		UNION ALL
-		SELECT b_id,p_name,msgid,mod_id FROM delbcp
+		SELECT b_id,p_name,msgid,mod_id::BIGINT FROM delbcp
 	) AS delbpx
 JOIN
 	ib0.boards xb
