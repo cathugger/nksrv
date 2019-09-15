@@ -284,3 +284,8 @@ func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 		return
 	}
 }
+
+func checkFiles() {
+	//
+	//sp.st_prep[st_mod_load_files].
+}

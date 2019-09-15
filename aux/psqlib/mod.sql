@@ -400,6 +400,22 @@ WITH
 	),
 	{{- .mod_delete_msgid_common }}
 
+-- :name mod_delete_by_gpid
+WITH
+	delgp AS (
+		-- delete global post
+		DELETE FROM
+			ib0.posts
+		WHERE
+			g_p_id = $1 AND
+				padded IS NOT NULL
+		RETURNING
+			g_p_id,
+			f_count,
+			msgid
+	),
+	{{- .mod_delete_msgid_common }}
+
 -- :name mod_ban_by_msgid
 WITH
 	insban AS (
@@ -667,3 +683,26 @@ LEFT JOIN
 	ib0.posts ypp
 ON
 	ypbp.g_p_id = ypp.g_p_id
+
+
+--:name mod_load_files
+-- loads all files w/ gpids for checking
+SELECT
+	fname,
+	thumb,
+	fsize,
+	array_agg(DISTINCT g_p_id)
+FROM
+	ib0.files
+WHERE
+	(fname,thumb,fsize) > ($1,$2,$3)
+GROUP BY
+	fname,
+	thumb,
+	fsize
+ORDER BY
+	fname,
+	thumb,
+	fsize
+LIMIT
+	200

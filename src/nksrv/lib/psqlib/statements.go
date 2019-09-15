@@ -61,6 +61,7 @@ const (
 
 	st_mod_autoregister_mod
 	st_mod_delete_by_msgid
+	st_mod_delete_by_gpid
 	st_mod_ban_by_msgid
 	st_mod_bname_topts_by_tid
 	st_mod_refresh_bump_by_tid
@@ -68,6 +69,8 @@ const (
 	st_mod_set_mod_priv
 	st_mod_unset_mod
 	st_mod_fetch_and_clear_mod_msgs
+
+	st_mod_load_files
 
 	st_puller_get_last_newnews
 	st_puller_set_last_newnews
@@ -143,6 +146,7 @@ var st_names = [st_max]st_reference{
 
 	st_reference{"mod", "mod_autoregister_mod"},
 	st_reference{"mod", "mod_delete_by_msgid"},
+	st_reference{"mod", "mod_delete_by_gpid"},
 	st_reference{"mod", "mod_ban_by_msgid"},
 	st_reference{"mod", "mod_bname_topts_by_tid"},
 	st_reference{"mod", "mod_refresh_bump_by_tid"},
@@ -150,6 +154,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_set_mod_priv"},
 	st_reference{"mod", "mod_unset_mod"},
 	st_reference{"mod", "mod_fetch_and_clear_mod_msgs"},
+
+	st_reference{"mod", "mod_load_files"},
 
 	st_reference{"puller", "puller_get_last_newnews"},
 	st_reference{"puller", "puller_set_last_newnews"},

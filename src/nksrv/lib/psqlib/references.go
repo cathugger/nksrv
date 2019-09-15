@@ -580,7 +580,7 @@ func (sp *PSQLIB) findReferences(
 
 	rows, err := st.Query(off_b, off_b_p, pname, pboard, string(msgid))
 	if err != nil {
-		err = sp.sqlError("find_failrefs query", err)
+		err = sp.sqlError("mod_ref_find_post query", err)
 		return
 	}
 
@@ -596,7 +596,7 @@ func (sp *PSQLIB) findReferences(
 			&b_id, &b_p_id, &msg, &inreplyto, &j_b_p_attrib, &b_t_id)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("find_failrefs query rows scan", err)
+			err = sp.sqlError("mod_ref_find_post query rows scan", err)
 			return
 		}
 
@@ -604,7 +604,7 @@ func (sp *PSQLIB) findReferences(
 		err = j_b_p_attrib.Unmarshal(&b_p_attrib)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("find_failrefs json unmarshal", err)
+			err = sp.sqlError("mod_ref_find_post json unmarshal", err)
 			return
 		}
 
@@ -618,7 +618,7 @@ func (sp *PSQLIB) findReferences(
 		})
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("find_failrefs query rows", err)
+		err = sp.sqlError("mod_ref_find_post query rows", err)
 		return
 	}
 
