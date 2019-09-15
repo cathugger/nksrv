@@ -397,3 +397,7 @@ REFERENCING OLD TABLE AS oldrows
 FOR EACH STATEMENT
 EXECUTE PROCEDURE
 	ib0_gc_banposts_after()
+
+--- need table to hold partial processing results of setmodpriv
+-- mod messages are processed backwards (by date)
+-- it will hold: pdate,g_p_id,b_id x mod_id
