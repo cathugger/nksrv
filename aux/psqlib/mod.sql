@@ -275,7 +275,7 @@ RETURNING
 
 SELECT
 	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
-	NULL,NULL,NULL,NULL,NULL,NULL,NULL
+	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
 FROM
 	(
 		-- minus 1 because snapshot isolation
@@ -312,7 +312,7 @@ ON
 UNION ALL
 
 SELECT
-	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL
+	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL
 FROM
 	delbp AS xt
 LEFT JOIN
@@ -347,26 +347,27 @@ WHERE
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
 FROM
 	delgp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL
+	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
 FROM
 	delgcp
 
 UNION ALL
 
 SELECT
-	'',0,'',0,NULL,NULL,NULL,NULL,xb.b_name,delbpx.p_name,delbpx.msgid
+	'',0,'',0,NULL,NULL,NULL,NULL,
+	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id
 FROM
 	(
-		SELECT b_id,p_name,msgid FROM delbp
+		SELECT b_id,p_name,msgid,mod_id FROM delbp
 		UNION ALL
-		SELECT b_id,p_name,msgid FROM delbcp
+		SELECT b_id,p_name,msgid,mod_id FROM delbcp
 	) AS delbpx
 JOIN
 	ib0.boards xb
@@ -587,7 +588,7 @@ WHERE
 	rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id
 
 -- :name mod_fetch_and_clear_mod_msgs
--- args: <modid> <offset>
+-- args: <modid> <off_pdate> <off_gpid> <off_bid>
 -- fetches all messages of mod, and also clears all their actions
 WITH
 	zbp AS (
@@ -595,16 +596,17 @@ WITH
 			b_id,
 			b_p_id,
 			b_t_id,
+			pdate,
 			g_p_id
 		FROM
 			ib0.bposts
 		WHERE
-			mod_id = $1
+			mod_id = $1 AND
+				(pdate,g_p_id,b_id) < ($2,$3,$4)
 		ORDER BY
-			b_id,
-			b_p_id
-		OFFSET
-			$2
+			pdate DESC,
+			g_p_id DESC,
+			b_id DESC
 		LIMIT
 			4096
 	),
@@ -614,7 +616,8 @@ WITH
 		USING
 			zbp
 		WHERE
-			bl.b_id = zbp.b_id AND bl.b_p_id = zbp.b_p_id
+			bl.b_id = zbp.b_id AND
+				bl.b_p_id = zbp.b_p_id
 	)
 SELECT
 	zbp.g_p_id,
@@ -624,7 +627,7 @@ SELECT
 	yp.msgid,
 	ypp.msgid,
 	yp.title,
-	yp.pdate,
+	zbp.pdate,
 	yp.message,
 	yp.extras -> 'text_attach',
 	yf.fname

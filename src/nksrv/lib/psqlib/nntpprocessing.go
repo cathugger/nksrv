@@ -487,7 +487,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	isctlgrp := info.Newsgroup == "ctl"
 
-	var modid int64
+	var modid uint64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
@@ -547,9 +547,9 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pi.MessageID)
 
 		// we should execute it
-		delmsgids, err = sp.execModCmd(
+		delmsgids, _, err, _ = sp.execModCmd(
 			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
-			pi.MessageID, cref, delmsgids)
+			pi.MessageID, cref, delmsgids, delModIDState{})
 		if err != nil {
 			unexpected = true
 			return

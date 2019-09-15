@@ -279,7 +279,7 @@ type replyTargetInfo struct {
 
 func (sp *PSQLIB) insertNewReply(
 	tx *sql.Tx, gstmt *sql.Stmt,
-	rti replyTargetInfo, pInfo mailib.PostInfo, modid int64) (
+	rti replyTargetInfo, pInfo mailib.PostInfo, modid uint64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
@@ -309,7 +309,7 @@ func (sp *PSQLIB) insertNewReply(
 		panic(err)
 	}
 
-	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
+	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
 	sp.log.LogPrintf(DEBUG, "NEWPOST %s start", pInfo.ID)
 

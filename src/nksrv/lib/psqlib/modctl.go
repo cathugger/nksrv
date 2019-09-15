@@ -14,8 +14,10 @@ import (
 func (sp *PSQLIB) modCmdDelete(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	pi mailib.PostInfo, selfid, ref CoreMsgIDStr,
-	cmd string, args []string, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	cmd string, args []string,
+	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
+	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	err error) {
 
 	if len(args) == 0 {
 		return
@@ -30,8 +32,10 @@ func (sp *PSQLIB) modCmdDelete(
 		return
 	}
 
-	outdelmsgids, err =
-		sp.banByMsgID(tx, cmsgids, bid, bpid, pi.MI.Title, indelmsgids)
+	out_delmsgids, out_delmodids, err =
+		sp.banByMsgID(
+			tx, cmsgids, bid, bpid, pi.MI.Title,
+			in_delmsgids, in_delmodids)
 	if err != nil {
 		return
 	}
@@ -54,15 +58,19 @@ func getModCmdInput(
 
 func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	modid int64, modpriv ModPriv,
+	modid uint64, modpriv ModPriv,
 	pi mailib.PostInfo, filenames []string,
-	selfid, ref CoreMsgIDStr, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	selfid, ref CoreMsgIDStr,
+	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
+	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	err error, inputerr bool) {
 
-	outdelmsgids = indelmsgids
+	out_delmsgids = _in_delmsgids
+	out_delmodids = _in_delmodids
 
 	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
+		inputerr = true
 		return
 	}
 	if c != nil {
@@ -107,9 +115,10 @@ func (sp *PSQLIB) execModCmd(
 			case "delete":
 				if modpriv >= ModPrivMod {
 					// global delete by msgid
-					outdelmsgids, err =
+					out_delmsgids, out_delmodids, err =
 						sp.modCmdDelete(
-							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args, outdelmsgids)
+							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args,
+							out_delmsgids, out_delmodids)
 				}
 			}
 			if err != nil {

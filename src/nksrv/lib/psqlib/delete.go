@@ -53,9 +53,27 @@ func (s delMsgIDState) isNotPresent(id string) bool {
 	return true
 }
 
+type delModIDState struct {
+	delmodids map[uint64]struct{}
+}
+
+func (s *delModIDState) add(x uint64) {
+	if s.delmodids == nil {
+		s.delmodids = make(map[uint64]struct{})
+	}
+	s.delmodids[x] = struct{}{}
+}
+
+func (s delModIDState) contain(x uint64) bool {
+	_, doesit := s.delmodids[x]
+	return doesit
+}
+
 func (sp *PSQLIB) deleteByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	tx *sql.Tx, cmsgids CoreMsgIDStr,
+	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
+	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	err error) {
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
 	delst := tx.Stmt(sp.st_prep[st_mod_delete_by_msgid])
@@ -66,15 +84,18 @@ func (sp *PSQLIB) deleteByMsgID(
 	}
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> processing", cmsgids)
-	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
+	out_delmsgids, out_delmodids, err =
+		sp.postDelete(tx, rows, in_delmsgids, in_delmodids)
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> end", cmsgids)
 	return
 }
 
 func (sp *PSQLIB) banByMsgID(
 	tx *sql.Tx, cmsgids CoreMsgIDStr,
-	banbid boardID, banbpid postID, reason string, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	banbid boardID, banbpid postID, reason string,
+	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
+	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	err error) {
 
 	bidn := sql.NullInt64{
 		Int64: int64(banbid),
@@ -85,7 +106,8 @@ func (sp *PSQLIB) banByMsgID(
 		Valid: banbid != 0 && banbpid != 0,
 	}
 
-	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
+	sp.log.LogPrintf(
+		DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
 	banst := tx.Stmt(sp.st_prep[st_mod_ban_by_msgid])
 	rows, err := banst.Query(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
@@ -94,16 +116,20 @@ func (sp *PSQLIB) banByMsgID(
 	}
 
 	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids)
-	outdelmsgids, err = sp.postDelete(tx, rows, indelmsgids)
+	out_delmsgids, out_delmodids, err =
+		sp.postDelete(tx, rows, in_delmsgids, in_delmodids)
 	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
 	return
 }
 
 func (sp *PSQLIB) postDelete(
-	tx *sql.Tx, rows *sql.Rows, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	tx *sql.Tx, rows *sql.Rows,
+	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
+	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	err error) {
 
-	outdelmsgids = indelmsgids
+	out_delmsgids = _in_delmsgids
+	out_delmodids = _in_delmodids
 
 	type affThr struct {
 		b   boardID
@@ -128,10 +154,12 @@ func (sp *PSQLIB) postDelete(
 		var b_name sql.NullString
 		var p_name sql.NullString
 		var p_msgid sql.NullString
+		var mod_id sql.NullInt64
 
 		err = rows.Scan(
 			&fname, &fnum, &tname, &tnum,
-			&xb_id, &xt_id, &xt_loc, &msgid, &b_name, &p_name, &p_msgid)
+			&xb_id, &xt_id, &xt_loc,
+			&msgid, &b_name, &p_name, &p_msgid, &mod_id)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("delete by msgid rows scan", err)
@@ -178,7 +206,7 @@ func (sp *PSQLIB) postDelete(
 		// message-ids which were delet'd, we need to delet them from cache too
 		if msgid.String != "" {
 
-			if outdelmsgids.isNotPresent(msgid.String) {
+			if out_delmsgids.isNotPresent(msgid.String) {
 
 				sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid.String)
 
@@ -190,7 +218,7 @@ func (sp *PSQLIB) postDelete(
 					return
 				}
 				// XXX can grow large (DoS vector?)
-				outdelmsgids.delmsgids = append(outdelmsgids.delmsgids,
+				out_delmsgids.delmsgids = append(out_delmsgids.delmsgids,
 					delMsgHandle{
 						id: msgid.String,
 						h:  h,
@@ -208,6 +236,9 @@ func (sp *PSQLIB) postDelete(
 				pn: p_name.String,
 				mi: CoreMsgIDStr(p_msgid.String),
 			})
+		}
+		if mod_id.Int64 != 0 {
+			out_delmodids.add(uint64(mod_id.Int64))
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -280,7 +311,9 @@ func (sp *PSQLIB) cleanDeletedMsgIDs(delmsgids delMsgIDState) {
 	sp.log.LogPrintf(DEBUG, "CLR DEL MSGIDS done")
 }
 
-func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
+func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
+	msgids []string, banreason string) {
+
 	var err error
 
 	for _, s := range msgids {
@@ -314,12 +347,14 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(msgids []string, banreason string) {
 	for _, s := range msgids {
 		sp.log.LogPrintf(INFO, "deleting %s", s)
 		if banreason == "" {
-			delmsgids, err =
-				sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)), delmsgids)
+			delmsgids, _, err =
+				sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)),
+					delmsgids, delModIDState{})
 		} else {
-			delmsgids, err =
+			delmsgids, _, err =
 				sp.banByMsgID(
-					tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason, delmsgids)
+					tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason,
+					delmsgids, delModIDState{})
 		}
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)

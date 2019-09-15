@@ -184,7 +184,7 @@ CREATE UNIQUE INDEX
 -- :next
 -- FK
 CREATE INDEX
-	ON ib0.bposts (mod_id)
+	ON ib0.bposts (mod_id,pdate)
 	WHERE mod_id IS NOT NULL
 
 

@@ -216,7 +216,7 @@ FROM
 
 func (sp *PSQLIB) insertNewThread(
 	tx *sql.Tx, gstmt *sql.Stmt,
-	bid boardID, pInfo mailib.PostInfo, skipover bool, modid int64) (
+	bid boardID, pInfo mailib.PostInfo, skipover bool, modid uint64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
 
 	if len(pInfo.H) == 0 {
@@ -246,7 +246,7 @@ func (sp *PSQLIB) insertNewThread(
 		panic(err)
 	}
 
-	smodid := sql.NullInt64{Int64: modid, Valid: modid != 0}
+	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
 	sp.log.LogPrintf(DEBUG, "NEWTHREAD %s start", pInfo.ID)
 

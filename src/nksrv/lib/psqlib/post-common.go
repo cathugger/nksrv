@@ -22,7 +22,7 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 }
 
 func (sp *PSQLIB) registeredMod(
-	tx *sql.Tx, pubkeystr string) (modid int64, priv ModPriv, err error) {
+	tx *sql.Tx, pubkeystr string) (modid uint64, priv ModPriv, err error) {
 
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
 	// at which point we're fucked because moddel posts also will exclusively block files table
@@ -59,14 +59,15 @@ func (sp *PSQLIB) registeredMod(
 }
 
 func (sp *PSQLIB) setModPriv(
-	tx *sql.Tx, pubkeystr string, newpriv ModPriv, indelmsgids delMsgIDState) (
-	outdelmsgids delMsgIDState, err error) {
+	tx *sql.Tx, pubkeystr string, newpriv ModPriv,
+	_in_delmsgids delMsgIDState) (
+	out_delmsgids delMsgIDState, err error) {
 
-	outdelmsgids = indelmsgids
+	out_delmsgids = _in_delmsgids
 
 	ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 	// do key update
-	var modid int64
+	var modid uint64
 	// this probably should lock relevant row.
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
@@ -88,7 +89,10 @@ func (sp *PSQLIB) setModPriv(
 	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs])
 
-	offset := uint64(0)
+	// 666 days in the future
+	off_pdate := time.Now().Add(time.Hour * 24 * 666).UTC()
+	off_g_p_id := uint64(0)
+	off_b_id := uint32(0)
 
 	type idt struct {
 		bid  boardID
@@ -101,7 +105,7 @@ func (sp *PSQLIB) setModPriv(
 		msgid   string
 		ref     string
 		title   string
-		date    time.Time
+		pdate   time.Time
 		message string
 		txtidx  uint32
 		files   []string
@@ -109,9 +113,10 @@ func (sp *PSQLIB) setModPriv(
 	var posts []postinfo
 	lastx := idt{0, 0}
 
+requery:
 	for {
 		var rows *sql.Rows
-		rows, err = xst.Query(modid, offset)
+		rows, err = xst.Query(modid, off_pdate, off_g_p_id, off_b_id)
 		if err != nil {
 			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
 			return
@@ -137,7 +142,7 @@ func (sp *PSQLIB) setModPriv(
 
 			err = rows.Scan(
 				&p.gpid, &p.xid.bid, &p.xid.bpid, &p.bname, &p.msgid, &ref,
-				&p.title, &p.date, &p.message, &txtidx, &fname)
+				&p.title, &p.pdate, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
 				err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
@@ -148,10 +153,11 @@ func (sp *PSQLIB) setModPriv(
 				lastx = p.xid
 				p.ref = ref.String
 				p.txtidx = uint32(txtidx.Int64)
+				p.pdate = p.pdate.UTC()
 				posts = append(posts, p)
 			}
-			pp := &posts[len(posts)-1]
 			if fname.String != "" {
+				pp := &posts[len(posts)-1]
 				pp.files = append(pp.files, srcdir+fname.String)
 			}
 		}
@@ -164,7 +170,7 @@ func (sp *PSQLIB) setModPriv(
 			// prepare postinfo good enough for execModCmd
 			pi := mailib.PostInfo{
 				MessageID: CoreMsgIDStr(posts[i].msgid),
-				Date:      posts[i].date.UTC(),
+				Date:      posts[i].pdate,
 				MI: mailib.MessageInfo{
 					Title:   posts[i].title,
 					Message: posts[i].message,
@@ -178,12 +184,38 @@ func (sp *PSQLIB) setModPriv(
 				"setmodpriv: executing <%s> from board[%s]",
 				posts[i].msgid, posts[i].bname)
 
-			outdelmsgids, err = sp.execModCmd(
+			var delmodids delModIDState
+			var inputerr bool
+
+			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
 				newpriv, pi, posts[i].files, pi.MessageID,
-				CoreMsgIDStr(posts[i].ref), outdelmsgids)
+				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
+
 			if err != nil {
+
+				if inputerr {
+					// mod msg is just fucked at this point
+					// this shouldn't happen
+					// XXX should we delete this bad msg??
+					sp.log.LogPrintf(ERROR,
+						"setmodpriv: [proceeding anyway] inputerr while execing <%s>: %v",
+						posts[i].msgid, err)
+					continue
+				}
+
+				// return err directly
 				return
+			}
+
+			if delmodids.contain(modid) {
+				// msg we just deleted was made by mod we just upp'd
+				// that means that it may be msg in query we just made
+				// it's unsafe to proceed with current cached query
+				off_pdate = posts[i].pdate
+				off_g_p_id = posts[i].gpid
+				off_b_id = posts[i].xid.bid
+				continue requery
 			}
 		}
 
@@ -192,7 +224,10 @@ func (sp *PSQLIB) setModPriv(
 			break
 		} else {
 			// issue another query, there may be more data
-			offset += uint64(len(posts))
+			i := len(posts) - 1
+			off_pdate = posts[i].pdate
+			off_g_p_id = posts[i].gpid
+			off_b_id = posts[i].xid.bid
 			posts = posts[:0]
 			continue
 		}
@@ -226,7 +261,7 @@ func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 	}()
 
 	var delmsgids delMsgIDState
-	defer sp.cleanDeletedMsgIDs(delmsgids)
+	defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
 	for _, s := range mods {
 		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, newpriv.String())

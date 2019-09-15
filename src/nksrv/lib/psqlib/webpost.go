@@ -662,7 +662,7 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
-	var modid int64
+	var modid uint64
 	var priv ModPriv
 	if isctlgrp && pubkeystr != "" {
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
@@ -715,10 +715,10 @@ func (sp *PSQLIB) commonNewPost(
 
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pInfo.MessageID)
 
-		delmsgids, err =
+		delmsgids, _, err, _ =
 			sp.execModCmd(
 				tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID,
-				cref, delmsgids)
+				cref, delmsgids, delModIDState{})
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
