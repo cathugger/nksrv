@@ -40,7 +40,8 @@ type IBNewBoardInfo struct {
 }
 
 type IBWebPostProvider interface {
-	IBGetPostParams() (*form.ParserParams, form.FileOpener, []string)
+	IBGetPostParams() (
+		*form.ParserParams, form.FileOpener, func(string) bool)
 
 	IBDefaultBoardInfo() IBNewBoardInfo
 	IBPostNewBoard(

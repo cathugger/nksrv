@@ -23,6 +23,8 @@ type Cfg struct {
 	// fallback?
 }
 
+var formFileFieldFunc = form.FieldsCheckFunc(ib0.IBWebFormFileFields)
+
 func eatMessagePost(
 	w http.ResponseWriter, r *http.Request,
 	wpp ib0.IBWebPostProvider) (f form.Form, ok bool) {
@@ -43,7 +45,7 @@ func eatMessagePost(
 	var err error
 	f, err = fparam.ParseForm(
 		r.Body, param["boundary"],
-		tfields, ib0.IBWebFormFileFields,
+		tfields, formFileFieldFunc,
 		fopener)
 	if err != nil {
 		// TODO

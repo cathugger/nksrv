@@ -68,16 +68,29 @@ var (
 	errTooMuchFiles  = errors.New("form submission contains too much files")
 )
 
+func FieldsCheckFunc(fields []string) func(field string) bool {
+	return func(field string) bool {
+		for _, v := range fields {
+			if field == v {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 func ParseForm(
-	r io.Reader, boundary string, textfields, filefields []string,
+	r io.Reader, boundary string,
+	wantTextField, wantFileField func(field string) bool,
 	fo FileOpener) (Form, error) {
 
 	return DefaultParserParams.ParseForm(
-		r, boundary, textfields, filefields, fo)
+		r, boundary, wantTextField, wantFileField, fo)
 }
 
 func (fp *ParserParams) ParseForm(
-	r io.Reader, boundary string, textfields, filefields []string,
+	r io.Reader, boundary string,
+	wantTextField, wantFileField func(field string) bool,
 	fo FileOpener) (f Form, e error) {
 
 	defer func() {
@@ -89,22 +102,6 @@ func (fp *ParserParams) ParseForm(
 	f.Values = make(map[string][]string)
 	f.Files = make(map[string][]File)
 
-	wantTextField := func(field string) bool {
-		for _, v := range textfields {
-			if field == v {
-				return true
-			}
-		}
-		return false
-	}
-	wantFileField := func(field string) bool {
-		for _, v := range filefields {
-			if field == v {
-				return true
-			}
-		}
-		return false
-	}
 	pr := mail.NewPartReader(r, boundary)
 	memleft := fp.MaxMemory
 	fieldsleft := fp.MaxFields

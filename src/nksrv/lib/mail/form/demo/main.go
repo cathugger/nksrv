@@ -27,7 +27,10 @@ func testf1(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad Content-Type", 400)
 		return
 	}
-	f, e := form.ParseForm(r.Body, param["boundary"], []string{"aaa"}, []string{"bbb"}, fo{})
+	f, e := form.ParseForm(
+		r.Body, param["boundary"],
+		form.FieldsCheckFunc([]string{"aaa"}),
+		form.FieldsCheckFunc([]string{"bbb"}), fo{})
 	if e != nil {
 		http.Error(w, fmt.Sprintf("error parsing form: %v", e), 400)
 		return

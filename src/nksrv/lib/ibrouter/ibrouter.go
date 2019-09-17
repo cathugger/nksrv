@@ -15,6 +15,7 @@ import (
 	fsd "nksrv/lib/fservedir"
 	"nksrv/lib/handler"
 	fp "nksrv/lib/httpibfileprovider"
+	"nksrv/lib/mail/form"
 	"nksrv/lib/renderer"
 	wc "nksrv/lib/webcaptcha"
 	ib0 "nksrv/lib/webib0"
@@ -70,6 +71,8 @@ func (c *IBRouterCtl) SetHTMLRenderer(r renderer.Renderer) {
 func (c *IBRouterCtl) GetHTMLRenderer() renderer.Renderer {
 	return *(*renderer.Renderer)(atomic.LoadPointer(&c.p_HTMLRenderer))
 }
+
+var fileFieldsCheck = form.FieldsCheckFunc(ib0.IBWebFormFileFields)
 
 func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 
@@ -188,10 +191,9 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 	}
 
 	fparam, fopener, tfields := cfg.WebPostProvider.IBGetPostParams()
-	textFields := append(tfields, []string{
-		"board",
-		"thread",
-	}...)
+	textFieldsCheck := func(field string) bool {
+		return tfields(field) || field == "board" || field == "thread"
+	}
 
 	// TODO maybe should do it in more REST-ful way and add to html handler?
 	if cfg.WebPostProvider != nil {
@@ -218,7 +220,7 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 				var err error
 				f, err := fparam.ParseForm(
 					r.Body, param["boundary"],
-					textFields, ib0.IBWebFormFileFields, fopener)
+					textFieldsCheck, fileFieldsCheck, fopener)
 				if err != nil {
 					// TODO
 					http.Error(w,
@@ -258,6 +260,7 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 		h_captchaget := handler.NewSimplePath().
 			Handle("/captcha.png", false, http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
+					// since we're only accepting GET, don't need to check type
 					err := r.ParseForm()
 					if err != nil {
 						http.Error(w, "bad query", http.StatusBadRequest)

@@ -27,6 +27,7 @@ import (
 	"nksrv/lib/mailib"
 	tu "nksrv/lib/textutils"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/webcaptcha"
 	ib0 "nksrv/lib/webib0"
 )
 
@@ -46,19 +47,23 @@ func (o formFileOpener) OpenFile() (*os.File, error) {
 
 // FIXME: this probably in future should go thru some sort of abstractation
 
-func (sp *PSQLIB) IBGetPostParams() (
-	*form.ParserParams, form.FileOpener, []string) {
-
+func makePostParamFunc(c *webcaptcha.WebCaptcha) func(string) bool {
 	tfields := []string{
 		ib0.IBWebFormTextTitle,
 		ib0.IBWebFormTextName,
 		ib0.IBWebFormTextMessage,
 		ib0.IBWebFormTextOptions,
 	}
-	if sp.webcaptcha != nil {
-		tfields = append(tfields, sp.webcaptcha.TextFields()...)
+	if c != nil {
+		tfields = append(tfields, c.TextFields()...)
 	}
-	return &sp.fpp, sp.ffo, tfields
+	return form.FieldsCheckFunc(tfields)
+}
+
+func (sp *PSQLIB) IBGetPostParams() (
+	*form.ParserParams, form.FileOpener, func(string) bool) {
+
+	return &sp.fpp, sp.ffo, sp.textPostParamFunc
 }
 
 func matchExtension(fn, ext string) bool {

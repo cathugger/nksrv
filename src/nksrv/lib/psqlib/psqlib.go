@@ -36,6 +36,7 @@ type PSQLIB struct {
 	altthumb           altthumber.AltThumber
 	ffo                formFileOpener
 	fpp                form.ParserParams
+	textPostParamFunc  func(string) bool
 	instance           string
 	maxArticleBodySize int64
 	webcaptcha         *webcaptcha.WebCaptcha
@@ -173,6 +174,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 	p.maxArticleBodySize = (2 << 30) - 1 // TODO config
 
 	p.webcaptcha = cfg.WebCaptcha
+	p.textPostParamFunc = makePostParamFunc(cfg.WebCaptcha)
 
 	p.ngp_global, err = makeNewGroupPolicy(cfg.NGPGlobal)
 	if err != nil {
