@@ -62,7 +62,7 @@ SELECT
 	xbp.b_p_id,
 	xp.message,
 	xp.headers -> 'In-Reply-To' ->> 0,
-	xbp.attrib,
+	xbp.activ_refs,
 	xbp.b_t_id
 FROM
 	msgs
@@ -75,11 +75,11 @@ JOIN
 ON
 	xp.g_p_id = xbp.g_p_id
 
--- :name mod_update_bpost_attrib
+-- :name mod_update_bpost_activ_refs
 UPDATE
 	ib0.bposts
 SET
-	attrib = $3
+	activ_refs = $3
 WHERE
 	(b_id,b_p_id) = ($1,$2)
 

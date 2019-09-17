@@ -1,7 +1,5 @@
 package psqlib
 
-import ib0 "nksrv/lib/webib0"
-
 type boardID = uint32
 
 type postID = uint64
@@ -64,9 +62,7 @@ var defaultThreadOptions = threadOptions{
 	//FileLimit: 150,
 }
 
-type boardPostAttributes struct {
-	References []ib0.IBMessageReference `json:"refs,omitempty"`
-}
+type boardPostAttributes struct{}
 
 var defaultBoardPostAttributes = boardPostAttributes{}
 

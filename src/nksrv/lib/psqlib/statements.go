@@ -57,7 +57,7 @@ const (
 
 	st_mod_ref_write
 	st_mod_ref_find_post
-	st_mod_update_bpost_attrib
+	st_mod_update_bpost_activ_refs
 
 	st_mod_autoregister_mod
 	st_mod_delete_by_msgid
@@ -142,7 +142,7 @@ var st_names = [st_max]st_reference{
 
 	st_reference{"mod", "mod_ref_write"},
 	st_reference{"mod", "mod_ref_find_post"},
-	st_reference{"mod", "mod_update_bpost_attrib"},
+	st_reference{"mod", "mod_update_bpost_activ_refs"},
 
 	st_reference{"mod", "mod_autoregister_mod"},
 	st_reference{"mod", "mod_delete_by_msgid"},

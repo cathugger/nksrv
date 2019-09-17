@@ -145,7 +145,7 @@ CREATE TABLE ib0.bposts (
 
 	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
 	-- attributes associated with board post and visible in webui
-	attrib     JSON,
+	attrib JSON,
 	-- active references
 	activ_refs JSON,
 

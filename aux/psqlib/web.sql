@@ -20,7 +20,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
 	xbp.p_name,
-	xbp.attrib,
+	xbp.activ_refs,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,
@@ -92,12 +92,14 @@ LEFT JOIN
 			g_p_id,
 			p_name,
 			pdate,
-			attrib
+			activ_refs
 		FROM
 			ib0.bposts AS op
 		WHERE
 			op.b_id = xb.b_id AND op.b_p_id = xt.b_t_id
+
 		UNION ALL
+
 		SELECT
 			b_id,
 			b_t_id,
@@ -105,7 +107,7 @@ LEFT JOIN
 			g_p_id,
 			p_name,
 			pdate,
-			attrib
+			activ_refs
 		FROM (
 			SELECT
 				*
@@ -118,7 +120,7 @@ LEFT JOIN
 						rp.g_p_id,
 						rp.p_name,
 						rp.pdate,
-						rp.attrib
+						rp.activ_refs
 					FROM
 						ib0.bposts AS rp
 					WHERE
@@ -168,7 +170,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xbp.b_p_id,
 	xbp.p_name,
-	xbp.attrib,
+	xbp.activ_refs,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,
@@ -242,12 +244,14 @@ LEFT JOIN
 			g_p_id,
 			p_name,
 			pdate,
-			attrib
+			activ_refs
 		FROM
 			ib0.bposts AS op
 		WHERE
 			op.b_id = xt.b_id AND op.b_p_id = xt.b_t_id
+
 		UNION ALL
+
 		SELECT
 			b_id,
 			b_t_id,
@@ -255,7 +259,7 @@ LEFT JOIN
 			g_p_id,
 			p_name,
 			pdate,
-			attrib
+			activ_refs
 		FROM (
 			SELECT
 				*
@@ -268,7 +272,7 @@ LEFT JOIN
 						rp.g_p_id,
 						rp.p_name,
 						rp.pdate,
-						rp.attrib
+						rp.activ_refs
 					FROM
 						ib0.bposts AS rp
 					WHERE
@@ -465,7 +469,7 @@ SELECT
 	xto.t_pos,
 	xbp.b_p_id,
 	xbp.p_name,
-	xbp.attrib,
+	xbp.activ_refs,
 	xp.msgid,
 	xp.pdate,
 	xp.sage,

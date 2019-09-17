@@ -569,7 +569,7 @@ type xRefData struct {
 	b_p_id     postID
 	message    string
 	inreplyto  []FullMsgIDStr
-	b_p_attrib boardPostAttributes
+	activ_refs []ib0.IBMessageReference
 	b_t_id     postID
 }
 
@@ -589,19 +589,19 @@ func (sp *PSQLIB) findReferences(
 		var b_p_id postID
 		var msg string
 		var inreplyto sql.NullString
-		var j_b_p_attrib xtypes.JSONText
+		var j_activ_refs xtypes.JSONText
 		var b_t_id postID
 
 		err = rows.Scan(
-			&b_id, &b_p_id, &msg, &inreplyto, &j_b_p_attrib, &b_t_id)
+			&b_id, &b_p_id, &msg, &inreplyto, &j_activ_refs, &b_t_id)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("mod_ref_find_post query rows scan", err)
 			return
 		}
 
-		b_p_attrib := defaultBoardPostAttributes
-		err = j_b_p_attrib.Unmarshal(&b_p_attrib)
+		var activ_refs []ib0.IBMessageReference
+		err = j_activ_refs.Unmarshal(&activ_refs)
 		if err != nil {
 			rows.Close()
 			err = sp.sqlError("mod_ref_find_post json unmarshal", err)
@@ -613,7 +613,7 @@ func (sp *PSQLIB) findReferences(
 			b_p_id:     b_p_id,
 			message:    msg,
 			inreplyto:  mail.ExtractAllValidReferences(nil, inreplyto.String),
-			b_p_attrib: b_p_attrib,
+			activ_refs: activ_refs,
 			b_t_id:     b_t_id,
 		})
 	}
@@ -627,17 +627,17 @@ func (sp *PSQLIB) findReferences(
 
 func (sp *PSQLIB) updatePostReferences(
 	st *sql.Stmt, b_id boardID, b_p_id postID,
-	b_p_attrib boardPostAttributes) (
+	activ_refs []ib0.IBMessageReference) (
 	err error) {
 
-	Ajson, err := json.Marshal(b_p_attrib)
+	Ajson, err := json.Marshal(activ_refs)
 	if err != nil {
 		panic(err)
 	}
 
 	_, err = st.Exec(b_id, b_p_id, Ajson)
 	if err != nil {
-		return sp.sqlError("mod_update_bpost_attrib exec", err)
+		return sp.sqlError("mod_update_bpost_activ_refs exec", err)
 	}
 
 	return
@@ -668,7 +668,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 	tx *sql.Tx, p_name, b_name string, msgid CoreMsgIDStr) (err error) {
 
 	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
-	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_attrib])
+	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
 
 	if p_name == "" || b_name == "" || msgid == "" {
 		panic("wtf")
@@ -707,7 +707,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 			}
 
 			if reflect.DeepEqual(
-				xrefpostsinfos[i].b_p_attrib.References, newrefs) {
+				xrefpostsinfos[i].activ_refs, newrefs) {
 
 				sp.log.LogPrintf(DEBUG, "failrefpost %d: unchanged", i)
 				continue
@@ -720,14 +720,11 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 				len(newrefs),
 				len(newxrefs))
 
-			// assign new references
-			xrefpostsinfos[i].b_p_attrib.References = newrefs
-
 			// store updated refs
 			err = sp.updatePostReferences(
 				xref_up_st,
 				xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_p_id,
-				xrefpostsinfos[i].b_p_attrib)
+				newrefs)
 			if err != nil {
 				return
 			}

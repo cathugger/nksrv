@@ -101,9 +101,9 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			t_p_count sql.NullInt64
 			t_f_count sql.NullInt64
 			// xbp
-			b_p_id       sql.NullInt64
-			p_name       sql.NullString
-			b_p_attrib_j xtypes.JSONText
+			b_p_id         sql.NullInt64
+			p_name         sql.NullString
+			b_p_activ_refs xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -130,7 +130,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 			&t_id, &t_name, &t_p_count, &t_f_count,
 
-			&b_p_id, &p_name, &b_p_attrib_j,
+			&b_p_id, &p_name, &b_p_activ_refs,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
 			&message, &pheaders_j,
@@ -140,7 +140,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(
-					"Web_thread_list_page query rows scan", err),
+					"web_thread_list_page query rows scan", err),
 				http.StatusInternalServerError
 		}
 
@@ -157,7 +157,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
-						"Web_thread_list_page board attr json unmarshal", err),
+						"web_thread_list_page board attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
 
@@ -203,14 +203,14 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		}
 
 		if x_bpid != postID(b_p_id.Int64) {
-			var pi ib0.IBPostInfo
-			p_attrib := defaultBoardPostAttributes
 
-			err = b_p_attrib_j.Unmarshal(&p_attrib)
+			var pi ib0.IBPostInfo
+
+			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
-						"Web_thread_list_page post attr json unmarshal", err),
+						"web_thread_list_page post attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
 
@@ -218,7 +218,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
-						"Web_thread_list_page post headers json unmarshal", err),
+						"web_thread_list_page post headers json unmarshal", err),
 					http.StatusInternalServerError
 			}
 			if pi.Headers != nil {
@@ -235,7 +235,6 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = p_attrib.References
 
 			if b_p_id.Int64 == t_id.Int64 {
 				// OP
@@ -268,7 +267,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				if err != nil {
 					rows.Close()
 					return sp.sqlError(
-							"Web_thread_list_page thumbcfg json unmarshal", err),
+							"web_thread_list_page thumbcfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
 
@@ -276,7 +275,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				if err != nil {
 					rows.Close()
 					return sp.sqlError(
-							"Web_thread_list_page filecfg json unmarshal", err),
+							"web_thread_list_page filecfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
 
@@ -298,7 +297,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError("Web_thread_list_page query rows iteration", err),
+		return sp.sqlError("web_thread_list_page query rows iteration", err),
 			http.StatusInternalServerError
 	}
 
@@ -346,9 +345,9 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			t_p_count sql.NullInt64
 			t_f_count sql.NullInt64
 			// xbp
-			b_p_id       sql.NullInt64
-			p_name       sql.NullString
-			b_p_attrib_j xtypes.JSONText
+			b_p_id         sql.NullInt64
+			p_name         sql.NullString
+			b_p_activ_refs xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -375,7 +374,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 
 			&t_id, &t_name, &t_p_count, &t_f_count,
 
-			&b_p_id, &p_name, &b_p_attrib_j,
+			&b_p_id, &p_name, &b_p_activ_refs,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
 			&message, &pheaders_j,
@@ -412,10 +411,10 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		}
 
 		if x_bpid != postID(b_p_id.Int64) {
-			var pi ib0.IBPostInfo
-			p_attrib := defaultBoardPostAttributes
 
-			err = b_p_attrib_j.Unmarshal(&p_attrib)
+			var pi ib0.IBPostInfo
+
+			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
@@ -444,7 +443,6 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = p_attrib.References
 
 			if postID(b_p_id.Int64) == t_id {
 				// OP
@@ -805,9 +803,9 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			// xto
 			t_pos sql.NullInt64
 			// xbp
-			b_p_id       sql.NullInt64
-			p_name       sql.NullString
-			b_p_attrib_j xtypes.JSONText
+			b_p_id         sql.NullInt64
+			p_name         sql.NullString
+			b_p_activ_refs xtypes.JSONText
 			// xp
 			msgid      sql.NullString
 			pdate      pq.NullTime
@@ -836,7 +834,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 			&t_pos,
 
-			&b_p_id, &p_name, &b_p_attrib_j,
+			&b_p_id, &p_name, &b_p_activ_refs,
 
 			&msgid, &pdate, &psage, &p_f_count, &author, &trip, &title,
 			&message, &pheaders_j,
@@ -846,17 +844,19 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(
-					"Web_thread query rows scan", err),
+					"web_thread query rows scan", err),
 				http.StatusInternalServerError
 		}
 
 		if x_bid != bid {
+
 			battrs := defaultBoardAttributes
 
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError("Web_thread board attr json unmarshal", err),
+				return sp.sqlError(
+						"web_thread board attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
 
@@ -897,14 +897,14 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 		}
 
 		if x_bpid != postID(b_p_id.Int64) {
-			var pi ib0.IBPostInfo
-			p_attrib := defaultBoardPostAttributes
 
-			err = b_p_attrib_j.Unmarshal(&p_attrib)
+			var pi ib0.IBPostInfo
+
+			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
-						"Web_thread post attr json unmarshal", err),
+						"web_thread post attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
 
@@ -912,7 +912,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			if err != nil {
 				rows.Close()
 				return sp.sqlError(
-						"Web_thread post headers json unmarshal", err),
+						"web_thread post headers json unmarshal", err),
 					http.StatusInternalServerError
 			}
 			if pi.Headers != nil {
@@ -929,7 +929,6 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			pi.Sage = psage.Bool
 			pi.Date = pdate.Time.Unix()
 			pi.Message = message
-			pi.References = p_attrib.References
 
 			if b_p_id.Int64 == t_id.Int64 {
 				// OP
@@ -954,7 +953,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				if err != nil {
 					rows.Close()
 					return sp.sqlError(
-							"Web_thread thumbcfg json unmarshal", err),
+							"web_thread thumbcfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
 
@@ -962,7 +961,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				if err != nil {
 					rows.Close()
 					return sp.sqlError(
-							"Web_thread filecfg json unmarshal", err),
+							"web_thread filecfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
 
@@ -984,7 +983,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError("Web_thread query rows iteration", err),
+		return sp.sqlError("web_thread query rows iteration", err),
 			http.StatusInternalServerError
 	}
 
