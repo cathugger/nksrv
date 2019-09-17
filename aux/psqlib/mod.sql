@@ -138,8 +138,8 @@ RETURNING
 			ib0.threads xt
 		SET
 			p_count = xt.p_count - 1,
-			f_count = xt.f_count - delbp.f_count
-			--fr_count = xt.fr_count - (CASE WHEN delbp.f_count > 0 THEN 1 ELSE 0)
+			f_count = xt.f_count - delbp.f_count,
+			fr_count = xt.fr_count - (CASE WHEN delbp.f_count > 0 THEN 1 ELSE 0)
 		FROM
 			delbp
 		WHERE

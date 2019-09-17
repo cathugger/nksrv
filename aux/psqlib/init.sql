@@ -1,6 +1,6 @@
 --- core stuff
 -- :name version
-demo7
+demo8
 -- :name init
 CREATE SCHEMA ib0
 
@@ -98,7 +98,7 @@ CREATE TABLE ib0.threads (
 	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
 	p_count   BIGINT                     NOT NULL, -- post count (including OP)
 	f_count   BIGINT                     NOT NULL, -- sum of posts' (including OP) f_count
-	--fr_count  BIGINT                     NOT NULL, -- file-replies count (not including OP)
+	fr_count  BIGINT                     NOT NULL, -- file-replies count (not including OP)
 
 	reply_limits JSONB, -- inherits from reply_limits of ib0.boards
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
@@ -145,8 +145,9 @@ CREATE TABLE ib0.bposts (
 
 	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
 	-- attributes associated with board post and visible in webui
-	-- notably, refs
-	attrib JSON,
+	attrib     JSON,
+	-- active references
+	activ_refs JSON,
 
 	PRIMARY KEY (b_id,b_p_id),
 	UNIQUE      (g_p_id,b_id),
