@@ -696,17 +696,17 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 
 		if len(xrefpostsinfos) != 0 {
 			sp.log.LogPrintf(
-				DEBUG, "found %d failref posts", len(xrefpostsinfos))
+				DEBUG, "found %d revref posts", len(xrefpostsinfos))
 		}
 
 		for i := range xrefpostsinfos {
 
-			var newrefs []ib0.IBMessageReference
+			var arefs []ib0.IBMessageReference
 
 			// update references and collect new failed references
 			srefs, irefs :=
 				ibref_nntp.ParseReferences(xrefpostsinfos[i].message)
-			newrefs, err = sp.processReferencesOnIncoming(
+			arefs, err = sp.processReferencesOnIncoming(
 				tx,
 				srefs, irefs,
 				xrefpostsinfos[i].inreplyto,
@@ -716,23 +716,25 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 			}
 
 			if reflect.DeepEqual(
-				xrefpostsinfos[i].activ_refs, newrefs) {
+				xrefpostsinfos[i].activ_refs, arefs) {
 
-				sp.log.LogPrintf(DEBUG, "failrefpost %d: unchanged", i)
+				sp.log.LogPrintf(
+					DEBUG, "fixupAffectedXRefsInTx %d: unchanged", i)
 				continue
 			}
 
 			sp.log.LogPrintf(
 				DEBUG,
-				"failrefpost %d: %d refs %d fails",
+				"fixupAffectedXRefsInTx %d: %d arefs %d srefs",
 				i,
-				len(newrefs))
+				len(arefs),
+				len(srefs))
 
 			// store updated refs
 			err = sp.updatePostReferences(
 				xref_up_st,
 				xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_p_id,
-				newrefs)
+				arefs)
 			if err != nil {
 				return
 			}

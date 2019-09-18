@@ -16,8 +16,8 @@ type GlobalPostAttribs struct{}
 var DefaultGlobalPostAttribs = GlobalPostAttribs{}
 
 type ThumbAttribs struct {
-	Width  uint32 `json:"w"`
-	Height uint32 `json:"h"`
+	Width  uint32 `json:"w,omitempty"`
+	Height uint32 `json:"h,omitempty"`
 }
 
 var DefaultThumbAttribs = ThumbAttribs{}
