@@ -446,17 +446,6 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	pi.MI.Sage = isSage
 
-	var xrefs []ibref_nntp.Reference
-	prefs :=
-		mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
-	pi.BA.References, xrefs, err =
-		sp.processReferencesOnIncoming(
-			sp.db.DB, pi.MI.Message, prefs, info.bid, info.tid)
-	if err != nil {
-		unexpected = true
-		return
-	}
-
 	// before starting transaction, ensure stmt for postinsert is ready
 	// otherwise deadlock is v possible
 	var gstmt *sql.Stmt
@@ -558,11 +547,18 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pi.MessageID)
 	}
 
-	// fixup references
-	err = sp.fixupXRefsInTx(
-		tx, info.bid, bpid, xrefs, pi.ID, info.Newsgroup, pi.MessageID)
+	// parse msg itself
+	srefs, irefs := ibref_nntp.ParseReferences(pi.MI.Message)
+	// In-Reply-To helps
+	prefs :=
+		mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))
+	// do processing
+	err = sp.processRefsAfterPost(
+		tx,
+		srefs, irefs, prefs,
+		info.bid, info.tid, bpid,
+		pi.ID, info.Newsgroup, pi.MessageID)
 	if err != nil {
-		err = fmt.Errorf("failed refs fixup failed: %v", err)
 		unexpected = true
 		return
 	}

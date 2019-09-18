@@ -21,6 +21,7 @@ import (
 	fu "nksrv/lib/fileutil"
 	"nksrv/lib/fstore"
 	ht "nksrv/lib/hashtools"
+	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/mail/form"
@@ -586,18 +587,19 @@ func (sp *PSQLIB) commonNewPost(
 	isctlgrp := board == "ctl"
 
 	// process references
-	// XXX there's gap before moment we query DB and when we write xrefs
-	// TBH should re-query after we inserted xrefs
-	refs, inreplyto, xrefs, err := sp.processReferencesOnPost(
-		sp.db.DB, pInfo.MI.Message, bid, postID(tid.Int64))
-	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
-	}
-	pInfo.BA.References = refs
-
-	if isctlgrp {
-		// do not add In-Reply-To for moderation messages
-		inreplyto = nil
+	srefs, irefs := ibref_nntp.ParseReferences(pInfo.MI.Message)
+	var inreplyto []string
+	// we need to build In-Reply-To beforehand
+	// if group is ctl then we shouldn't as it'd be sort of waste
+	// XXX actually ctl group always uses full msgids
+	// and full msgids don't have strict in-reply-to requirement
+	// and also could be built from srefs data
+	if !isctlgrp {
+		_, inreplyto, err = sp.processReferencesOnPost(
+			sp.db.DB, srefs, irefs, bid, postID(tid.Int64))
+		if err != nil {
+			return rInfo, err, http.StatusInternalServerError
+		}
 	}
 
 	// fill in layout/sign
@@ -731,9 +733,11 @@ func (sp *PSQLIB) commonNewPost(
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pInfo.MessageID)
 	}
 
-	// fixup references
-	err = sp.fixupXRefsInTx(
-		tx, bid, bpid, xrefs, pInfo.ID, board, pInfo.MessageID)
+	err = sp.processRefsAfterPost(
+		tx,
+		srefs, irefs, inreplyto,
+		bid, uint64(tid.Int64), bpid,
+		pInfo.ID, board, pInfo.MessageID)
 	if err != nil {
 		return rInfo, err, http.StatusInternalServerError
 	}

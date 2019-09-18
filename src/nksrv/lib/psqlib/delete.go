@@ -293,8 +293,9 @@ func (sp *PSQLIB) postDelete(
 	}
 
 	// re-calculate affected references
+	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
 	for _, bpa := range bp_aff {
-		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, bpa.mi)
+		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, bpa.mi, xref_up_st)
 		if err != nil {
 			return
 		}

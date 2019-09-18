@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"nksrv/lib/ftypes"
+	"nksrv/lib/ibattribs"
 	"nksrv/lib/mail"
-	ib0 "nksrv/lib/webib0"
 )
 
 type PostInfo struct {
@@ -20,16 +20,13 @@ type PostInfo struct {
 	FC int // file count -- may be less than len(FI)
 
 	H  mail.Headers
-	GA GlobalPostAttributes
+	GA GlobalPostAttribs
+	BA BoardPostAttribs
 	L  PartInfo
 	E  PostExtraAttribs
-	BA BoardPostAttributes
 }
 
-type IBThumbAttributes struct {
-	Width  uint32 `json:"w,omitempty"` // width
-	Height uint32 `json:"h,omitempty"` // height
-}
+type IBThumbAttribs = ibattribs.ThumbAttribs
 
 type MessageInfo struct {
 	Title   string
@@ -39,16 +36,14 @@ type MessageInfo struct {
 	Trip    string
 }
 
-type GlobalPostAttributes struct{}
+type GlobalPostAttribs = ibattribs.GlobalPostAttribs
 
 type PostExtraAttribs struct {
 	// if msg txt is in attachment, 1-based index which file it is
 	TextAttachment uint32 `json:"text_attach,omitempty"`
 }
 
-type BoardPostAttributes struct {
-	References []ib0.IBMessageReference `json:"refs,omitempty"`
-}
+type BoardPostAttribs = ibattribs.BoardPostAttribs
 
 type FileExtraAttribs struct {
 	ContentType string `json:"ct,omitempty"`
@@ -62,7 +57,7 @@ type FileInfo struct {
 	Thumb       string                 // thumbnail
 	Original    string                 // original file name
 	FileAttrib  map[string]interface{} // file attributes
-	ThumbAttrib IBThumbAttributes      // thumbnail attributes
+	ThumbAttrib IBThumbAttribs         // thumbnail attributes
 	Extras      FileExtraAttribs
 }
 

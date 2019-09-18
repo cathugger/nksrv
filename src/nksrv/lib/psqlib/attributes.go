@@ -1,5 +1,7 @@
 package psqlib
 
+import "nksrv/lib/ibattribs"
+
 type boardID = uint32
 
 type postID = uint64
@@ -41,13 +43,6 @@ var defaultNewThreadSubmissionLimits = func(l submissionLimits) submissionLimits
 	return l
 }(defaultReplySubmissionLimits)
 
-type boardAttributes struct {
-	Info string   `json:"info,omitempty"`
-	Tags []string `json:"tags,omitempty"`
-}
-
-var defaultBoardAttributes = boardAttributes{}
-
 type threadOptions struct {
 	///Locked     bool   `json:"locked,omitempty"`     // do not allow non-mod posts? or any posts at all??
 	///PostLimit  uint32 `json:"post_limit,omitempty"` // do not bump after thread has this much posts. is this behavior good?
@@ -62,17 +57,5 @@ var defaultThreadOptions = threadOptions{
 	//FileLimit: 150,
 }
 
-type boardPostAttributes struct{}
-
-var defaultBoardPostAttributes = boardPostAttributes{}
-
-type globalPostAttributes struct{}
-
-var defaultGlobalPostAttributes = globalPostAttributes{}
-
-type thumbAttributes struct {
-	Width  uint32 `json:"w"`
-	Height uint32 `json:"h"`
-}
-
-var defaultThumbAttributes = thumbAttributes{}
+var defaultBoardAttributes = ibattribs.DefaultBoardAttribs
+var defaultThumbAttributes = ibattribs.DefaultThumbAttribs

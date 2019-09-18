@@ -14,7 +14,6 @@ import (
 	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
-	mm "nksrv/lib/minimail"
 	ib0 "nksrv/lib/webib0"
 )
 
@@ -55,7 +54,7 @@ func escapeSQLString(s string) string {
 	return strings.Replace(s, "'", "''", -1)
 }
 
-func buildMsgIDArray(prefs []mm.FullMsgIDStr) string {
+func buildMsgIDArray(prefs []string) string {
 	var b strings.Builder
 
 	b.WriteString("ARRAY[")
@@ -79,12 +78,11 @@ type queryable interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
-func (sp *PSQLIB) processReferencesOnPost(
-	qq queryable, msg string, bid boardID, tid postID) (
-	refs []ib0.IBMessageReference, inreplyto []string,
-	xrefs []ibref_nntp.Reference, err error) {
-
-	srefs := ibref_nntp.ParseReferences(msg)
+func (sp *PSQLIB) processReferencesOnPost(qq queryable,
+	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
+	bid boardID, tid postID) (
+	arefs []ib0.IBMessageReference, inreplyto []string,
+	err error) {
 
 	// build query
 	b := &strings.Builder{}
@@ -217,8 +215,8 @@ LIMIT
 
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].Start),
-						End:   uint(srefs[i].End),
+						Start: uint(irefs[i].Start),
+						End:   uint(irefs[i].End),
 					}
 					r.Post = r_pname
 
@@ -228,7 +226,7 @@ LIMIT
 					} else if r_tid != tid {
 						r.Thread = r_tname
 					}
-					refs = append(refs, r)
+					arefs = append(arefs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "ref: %#v %q", r, r_msgid)
 				}
@@ -237,14 +235,14 @@ LIMIT
 
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].Start),
-						End:   uint(srefs[i].End),
+						Start: uint(irefs[i].Start),
+						End:   uint(irefs[i].End),
 					}
 					r.Board = r_bname
 					r.Thread = r_tname
 					r.Post = r_pname
 
-					refs = append(refs, r)
+					arefs = append(arefs, r)
 					inreplyto = append(inreplyto, r_msgid)
 					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
 				}
@@ -254,12 +252,12 @@ LIMIT
 		} else if len(srefs[i].Board) != 0 {
 
 			r := ib0.IBMessageReference{
-				Start: uint(srefs[i].Start),
-				End:   uint(srefs[i].End),
+				Start: uint(irefs[i].Start),
+				End:   uint(irefs[i].End),
 			}
 			r.Board = string(srefs[i].Board)
 
-			refs = append(refs, r)
+			arefs = append(arefs, r)
 			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
 
 		} else if len(srefs[i].MsgID) != 0 {
@@ -271,14 +269,14 @@ LIMIT
 
 			if r_id == i+1 {
 				r := ib0.IBMessageReference{
-					Start: uint(srefs[i].Start),
-					End:   uint(srefs[i].End),
+					Start: uint(irefs[i].Start),
+					End:   uint(irefs[i].End),
 				}
 				r.Board = r_bname
 				r.Thread = r_tname
 				r.Post = r_pname
 
-				refs = append(refs, r)
+				arefs = append(arefs, r)
 				inreplyto = append(inreplyto, r_msgid)
 				sp.log.LogPrintf(DEBUG, "mref: %#v %q", r, r_msgid)
 			}
@@ -286,8 +284,6 @@ LIMIT
 		} else {
 			panic("wtf")
 		}
-
-		xrefs = append(xrefs, srefs[i].Reference)
 	}
 
 	if rows != nil {
@@ -301,13 +297,12 @@ LIMIT
 	return
 }
 
-func (sp *PSQLIB) processReferencesOnIncoming(
-	qq queryable, msg string, prefs []mm.FullMsgIDStr,
+func (sp *PSQLIB) processReferencesOnIncoming(qq queryable,
+	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
+	prefs []string,
 	bid boardID, tid postID) (
-	refs []ib0.IBMessageReference, xrefs []ibref_nntp.Reference,
+	arefs []ib0.IBMessageReference,
 	err error) {
-
-	srefs := ibref_nntp.ParseReferences(msg)
 
 	if len(srefs) == 0 {
 		return
@@ -442,8 +437,8 @@ LIMIT
 
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].Start),
-						End:   uint(srefs[i].End),
+						Start: uint(irefs[i].Start),
+						End:   uint(irefs[i].End),
 					}
 					r.Post = r_pname
 
@@ -454,21 +449,21 @@ LIMIT
 						r.Thread = r_tname
 					}
 
-					refs = append(refs, r)
+					arefs = append(arefs, r)
 				}
 
 			} else {
 
 				if r_id == i+1 {
 					r := ib0.IBMessageReference{
-						Start: uint(srefs[i].Start),
-						End:   uint(srefs[i].End),
+						Start: uint(irefs[i].Start),
+						End:   uint(irefs[i].End),
 					}
 					r.Board = r_bname
 					r.Thread = r_tname
 					r.Post = r_pname
 
-					refs = append(refs, r)
+					arefs = append(arefs, r)
 				}
 
 			}
@@ -477,12 +472,12 @@ LIMIT
 			// plain board - don't need SQL, just take in
 
 			r := ib0.IBMessageReference{
-				Start: uint(srefs[i].Start),
-				End:   uint(srefs[i].End),
+				Start: uint(irefs[i].Start),
+				End:   uint(irefs[i].End),
 			}
 			r.Board = string(srefs[i].Board)
 
-			refs = append(refs, r)
+			arefs = append(arefs, r)
 
 		} else if len(srefs[i].MsgID) != 0 {
 
@@ -493,21 +488,19 @@ LIMIT
 
 			if r_id == i+1 {
 				r := ib0.IBMessageReference{
-					Start: uint(srefs[i].Start),
-					End:   uint(srefs[i].End),
+					Start: uint(irefs[i].Start),
+					End:   uint(irefs[i].End),
 				}
 				r.Board = r_bname
 				r.Thread = r_tname
 				r.Post = r_pname
 
-				refs = append(refs, r)
+				arefs = append(arefs, r)
 			}
 
 		} else {
 			panic("wtf")
 		}
-
-		xrefs = append(xrefs, srefs[i].Reference)
 	}
 
 	if rows != nil {
@@ -568,7 +561,7 @@ type xRefData struct {
 	b_id       boardID
 	b_p_id     postID
 	message    string
-	inreplyto  []FullMsgIDStr
+	inreplyto  []string
 	activ_refs []ib0.IBMessageReference
 	b_t_id     postID
 }
@@ -643,32 +636,48 @@ func (sp *PSQLIB) updatePostReferences(
 	return
 }
 
-// xx
-func (sp *PSQLIB) fixupXRefsInTx(
-	tx *sql.Tx, bid boardID, bpid postID,
-	xrefs []ibref_nntp.Reference,
-	p_name, b_name string, msgid CoreMsgIDStr) (err error) {
+func (sp *PSQLIB) processRefsAfterPost(
+	tx *sql.Tx,
+	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
+	prefs []string,
+	b_id boardID, b_t_id, b_p_id postID,
+	postid, newsgroup string, msgid CoreMsgIDStr) (err error) {
 
+	// write our declaration of references
 	xref_wr_st := tx.Stmt(sp.st_prep[st_mod_ref_write])
-
-	if len(xrefs) != 0 {
-		sp.log.LogPrintf(DEBUG, "writing %d failed refs", len(xrefs))
+	err = sp.insertXRefs(xref_wr_st, b_id, b_p_id, srefs)
+	if err != nil {
+		return
 	}
-
-	// put our failed references
-	err = sp.insertXRefs(xref_wr_st, bid, bpid, xrefs)
+	// process our stuff
+	arefs, err := sp.processReferencesOnIncoming(
+		tx, srefs, irefs, prefs, b_id, b_t_id)
+	if err != nil {
+		return
+	}
+	// then, put proper references in our bpost
+	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
+	err = sp.updatePostReferences(
+		xref_up_st,
+		b_id, b_p_id,
+		arefs)
+	if err != nil {
+		return
+	}
+	// then, fixup any other stuff possibly referring to us
+	err = sp.fixupAffectedXRefsInTx(tx, postid, newsgroup, msgid, xref_up_st)
 	if err != nil {
 		return
 	}
 
-	return sp.fixupAffectedXRefsInTx(tx, p_name, b_name, msgid)
+	return
 }
 
 func (sp *PSQLIB) fixupAffectedXRefsInTx(
-	tx *sql.Tx, p_name, b_name string, msgid CoreMsgIDStr) (err error) {
+	tx *sql.Tx, p_name, b_name string, msgid CoreMsgIDStr,
+	xref_up_st *sql.Stmt) (err error) {
 
 	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
-	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
 
 	if p_name == "" || b_name == "" || msgid == "" {
 		panic("wtf")
@@ -693,15 +702,15 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 		for i := range xrefpostsinfos {
 
 			var newrefs []ib0.IBMessageReference
-			var newxrefs []ibref_nntp.Reference
 
 			// update references and collect new failed references
-			newrefs, newxrefs, err =
-				sp.processReferencesOnIncoming(
-					tx,
-					xrefpostsinfos[i].message,
-					xrefpostsinfos[i].inreplyto,
-					xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_t_id)
+			srefs, irefs :=
+				ibref_nntp.ParseReferences(xrefpostsinfos[i].message)
+			newrefs, err = sp.processReferencesOnIncoming(
+				tx,
+				srefs, irefs,
+				xrefpostsinfos[i].inreplyto,
+				xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_t_id)
 			if err != nil {
 				return
 			}
@@ -717,8 +726,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 				DEBUG,
 				"failrefpost %d: %d refs %d fails",
 				i,
-				len(newrefs),
-				len(newxrefs))
+				len(newrefs))
 
 			// store updated refs
 			err = sp.updatePostReferences(

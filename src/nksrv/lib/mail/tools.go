@@ -53,13 +53,13 @@ func ExtractFirstValidReference(s string) (ref mm.FullMsgIDStr) {
 }
 
 func ExtractAllValidReferences(
-	refs []mm.FullMsgIDStr, s string) []mm.FullMsgIDStr {
+	refs []string, s string) []string {
 
 	for {
 		var x mm.FullMsgIDStr
 		x, s = NextValidReference(s)
 		if x != "" {
-			refs = append(refs, x)
+			refs = append(refs, string(x))
 		}
 		if s == "" {
 			break

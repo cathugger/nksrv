@@ -26,70 +26,83 @@ type Reference struct {
 	MsgID string
 }
 
-type IndexReference struct {
+type Index struct {
 	Start int
 	End   int
-
-	Reference
 }
 
-func ParseReferences(msg string) (srefs []IndexReference) {
+type tiedSorter struct {
+	srefs []Reference
+	irefs []Index
+}
+
+func (s tiedSorter) Len() int {
+	return len(s.srefs)
+}
+
+func (s tiedSorter) Less(i, j int) bool {
+	return s.irefs[i].Start < s.irefs[j].Start
+}
+
+func (s tiedSorter) Swap(i, j int) {
+	s.srefs[i], s.srefs[j] = s.srefs[j], s.srefs[i]
+	s.irefs[i], s.irefs[j] = s.irefs[j], s.irefs[i]
+}
+
+func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 	var sm [][]int
 	sm = re_ref.FindAllStringSubmatchIndex(msg, -1)
 	for i := range sm {
-		srefs = append(srefs, IndexReference{
+		srefs = append(srefs, Reference{
+			Post: strings.ToLower(msg[sm[i][2]:sm[i][3]]),
+		})
+		irefs = append(irefs, Index{
 			Start: sm[i][0],
 			End:   sm[i][1],
-
-			Reference: Reference{
-				Post: strings.ToLower(msg[sm[i][2]:sm[i][3]]),
-			},
 		})
 	}
 	sm = re_cref.FindAllStringSubmatchIndex(msg, -1)
 	for i := range sm {
-		x := IndexReference{
-			Start: sm[i][0],
-			End:   sm[i][1],
-
-			Reference: Reference{
-				Board: msg[sm[i][2]:sm[i][3]],
-			},
+		x := Reference{
+			Board: msg[sm[i][2]:sm[i][3]],
 		}
 		if sm[i][4] >= 0 {
 			x.Post = strings.ToLower(msg[sm[i][4]:sm[i][5]])
 		}
 		srefs = append(srefs, x)
+
+		irefs = append(irefs, Index{
+			Start: sm[i][0],
+			End:   sm[i][1],
+		})
 	}
 	sm = re_msgid.FindAllStringIndex(msg, -1)
 	for i := range sm {
 		if sm[i][1]-sm[i][0] > 250 || sm[i][1]-sm[i][0] < 3 {
 			continue
 		}
-		x := IndexReference{
+		srefs = append(srefs, Reference{
+			MsgID: msg[sm[i][0]+1 : sm[i][1]-1],
+		})
+		irefs = append(irefs, Index{
 			Start: sm[i][0],
 			End:   sm[i][1],
-
-			Reference: Reference{
-				MsgID: msg[sm[i][0]+1 : sm[i][1]-1],
-			},
-		}
-		srefs = append(srefs, x)
+		})
 	}
 	// sort by position
-	sort.Slice(srefs, func(i, j int) bool {
-		return srefs[i].Start < srefs[j].Start
-	})
+	sort.Sort(tiedSorter{srefs: srefs, irefs: irefs})
 	// remove overlaps, if any
-	for i := 1; i < len(srefs); i++ {
-		if srefs[i-1].End > srefs[i].Start {
+	for i := 1; i < len(irefs); i++ {
+		if irefs[i-1].End > irefs[i].Start {
 			srefs = append(srefs[:i], srefs[i+1:]...)
+			irefs = append(irefs[:i], irefs[i+1:]...)
 			i--
 		}
 	}
 	// limit
 	if len(srefs) > 255 {
 		srefs = srefs[:255]
+		irefs = irefs[:255]
 	}
 	return
 }
