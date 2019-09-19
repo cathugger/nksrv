@@ -22,12 +22,7 @@ import (
 // So generate our own queries.
 
 const selhead_a = `SELECT
-	%d,
-	xb.b_id,
-	xb.b_name,
-	xt.b_t_id,
-	xt.b_t_name,
-	xbp.p_name`
+	%d`
 
 const selhead_b = `
 FROM
@@ -48,7 +43,12 @@ ON
 const selhead = selhead_a + `,
 	'<' || xp.msgid || '>'` + selhead_b
 
-const selhead2 = selhead_a + selhead_b
+const selhead2 = selhead_a + `,
+	xb.b_id,
+	xb.b_name,
+	xt.b_t_id,
+	xt.b_t_name,
+	xbp.p_name` + selhead_b
 
 func escapeSQLString(s string) string {
 	return strings.Replace(s, "'", "''", -1)
@@ -79,10 +79,9 @@ type queryable interface {
 }
 
 func (sp *PSQLIB) processReferencesOnPost(qq queryable,
-	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
-	bid boardID, tid postID) (
-	arefs []ib0.IBMessageReference, inreplyto []string,
-	err error) {
+	srefs []ibref_nntp.Reference,
+	bid boardID, tid postID, isctl bool) (
+	inreplyto []string, err error) {
 
 	// build query
 	b := &strings.Builder{}
@@ -100,6 +99,16 @@ func (sp *PSQLIB) processReferencesOnPost(qq queryable,
 				b.WriteString("\n)\nUNION ALL\n(\n")
 			}
 		}
+	}
+
+	addirt := func(x string) {
+		for _, s := range inreplyto {
+			if s == x {
+				// duplicate
+				return
+			}
+		}
+		inreplyto = append(inreplyto, x)
 	}
 
 	for i := range srefs {
@@ -140,9 +149,12 @@ LIMIT
 		} else if len(srefs[i].MsgID) != 0 {
 			// message-id
 
-			next()
+			// if posting onto ctl group, <msgid> references are usually for deletes
+			if !isctl {
 
-			q := selhead + `
+				next()
+
+				q := selhead + `
 WHERE
 	xp.msgid = '%s'
 ORDER BY
@@ -150,7 +162,9 @@ ORDER BY
 	xb.b_name ASC
 LIMIT
 	1`
-			fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].MsgID), bid)
+				fmt.Fprintf(b, q, i+1, escapeSQLString(srefs[i].MsgID), bid)
+
+			}
 
 		} else {
 			panic("wtf")
@@ -171,6 +185,7 @@ LIMIT
 
 		sp.log.LogPrintf(DEBUG, "SQL for post references:\n%s", q)
 
+		// do query
 		rows, err = qq.Query(q)
 		if err != nil {
 			err = sp.sqlError("references query", err)
@@ -180,22 +195,14 @@ LIMIT
 	}
 
 	var r_id int
-	var r_bid boardID
-	var r_bname string
-	var r_tid postID
-	var r_tname string
-	var r_pname string
 	var r_msgid string
 
 	for i := range srefs {
 
 		fetchrow := func() (err error) {
+			// there's more questions than answers so no need to use `for`
 			if r_id <= i && rows.Next() {
-				err = rows.Scan(
-					&r_id,
-					&r_bid, &r_bname,
-					&r_tid, &r_tname,
-					&r_pname, &r_msgid)
+				err = rows.Scan(&r_id, &r_msgid)
 				if err != nil {
 					err = sp.sqlError("references query scan", err)
 					return
@@ -211,54 +218,14 @@ LIMIT
 				return
 			}
 
-			if len(srefs[i].Board) == 0 {
-
-				if r_id == i+1 {
-					r := ib0.IBMessageReference{
-						Start: uint(irefs[i].Start),
-						End:   uint(irefs[i].End),
-					}
-					r.Post = r_pname
-
-					if r_bid != bid {
-						r.Board = r_bname
-						r.Thread = r_tname
-					} else if r_tid != tid {
-						r.Thread = r_tname
-					}
-					arefs = append(arefs, r)
-					inreplyto = append(inreplyto, r_msgid)
-					sp.log.LogPrintf(DEBUG, "ref: %#v %q", r, r_msgid)
-				}
-
-			} else {
-
-				if r_id == i+1 {
-					r := ib0.IBMessageReference{
-						Start: uint(irefs[i].Start),
-						End:   uint(irefs[i].End),
-					}
-					r.Board = r_bname
-					r.Thread = r_tname
-					r.Post = r_pname
-
-					arefs = append(arefs, r)
-					inreplyto = append(inreplyto, r_msgid)
-					sp.log.LogPrintf(DEBUG, "cref: %#v %q", r, r_msgid)
-				}
-
+			if r_id == i+1 {
+				addirt(r_msgid)
+				sp.log.LogPrintf(DEBUG, "ref: %#v %q", srefs[i], r_msgid)
 			}
 
 		} else if len(srefs[i].Board) != 0 {
 
-			r := ib0.IBMessageReference{
-				Start: uint(irefs[i].Start),
-				End:   uint(irefs[i].End),
-			}
-			r.Board = string(srefs[i].Board)
-
-			arefs = append(arefs, r)
-			sp.log.LogPrintf(DEBUG, "bref: %#v", r)
+			sp.log.LogPrintf(DEBUG, "bref: %#v", srefs[i])
 
 		} else if len(srefs[i].MsgID) != 0 {
 
@@ -268,17 +235,8 @@ LIMIT
 			}
 
 			if r_id == i+1 {
-				r := ib0.IBMessageReference{
-					Start: uint(irefs[i].Start),
-					End:   uint(irefs[i].End),
-				}
-				r.Board = r_bname
-				r.Thread = r_tname
-				r.Post = r_pname
-
-				arefs = append(arefs, r)
-				inreplyto = append(inreplyto, r_msgid)
-				sp.log.LogPrintf(DEBUG, "mref: %#v %q", r, r_msgid)
+				addirt(r_msgid)
+				sp.log.LogPrintf(DEBUG, "mref: %#v %q", srefs[i], r_msgid)
 			}
 
 		} else {

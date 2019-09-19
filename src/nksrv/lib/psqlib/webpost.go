@@ -590,16 +590,10 @@ func (sp *PSQLIB) commonNewPost(
 	srefs, irefs := ibref_nntp.ParseReferences(pInfo.MI.Message)
 	var inreplyto []string
 	// we need to build In-Reply-To beforehand
-	// if group is ctl then we shouldn't as it'd be sort of waste
-	// XXX actually ctl group always uses full msgids
-	// and full msgids don't have strict in-reply-to requirement
-	// and also could be built from srefs data
-	if !isctlgrp {
-		_, inreplyto, err = sp.processReferencesOnPost(
-			sp.db.DB, srefs, irefs, bid, postID(tid.Int64))
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
+	inreplyto, err = sp.processReferencesOnPost(
+		sp.db.DB, srefs, bid, postID(tid.Int64), isctlgrp)
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
 	}
 
 	// fill in layout/sign
