@@ -146,10 +146,11 @@ function newembedcontrol(me) {
 		me.loop = e.target.checked;
 	});
 	loopcb.style.margin = '0px 2px 0px 2px';
-	loopcb.style.verticalAlign = 'bottom';
+	loopcb.style.verticalAlign = 'middle';
 
 	// label which carries checkbox and text
 	var cloop = document.createElement('label');
+	cloop.style.paddingRight = '2px'; // compensate for checkbox margin
 	cloop.appendChild(loopcb);
 	cloop.appendChild(document.createTextNode('Loop'));
 
@@ -258,6 +259,7 @@ function dothumbclick(e, lnk, thm) {
 function refer(refcont) {
 	//console.log("ref click happen, post: " + refcont);
 	var ta = document.getElementById("message");
+
 	if (ta) {
 		//console.log("found message element");
 
