@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	"nksrv/lib/ftypes"
+	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/internal/exifhelper"
 )
@@ -67,14 +68,17 @@ func (b *magickBackend) doThumbnailing(
 		imgcfg, cfgfmt, ex = image.DecodeConfig(f)
 		if ex != nil {
 			// bail out on any decoder failure
+			b.t.log.LogPrintf(DEBUG, "magick: bailing out because of DecodeConfig err: %v", ex)
 			close_err()
 			return
 		}
 		switch cfgfmt {
 		case "jpeg", "png", "gif", "webp", "bmp":
 			// OK
+			b.t.log.LogPrintf(DEBUG, "magick: golang detected OK format %q", cfgfmt)
 		default:
 			// NAK
+			b.t.log.LogPrintf(DEBUG, "magick: golang detected NAK format %q", cfgfmt)
 			close_err()
 			return
 		}
@@ -92,6 +96,9 @@ func (b *magickBackend) doThumbnailing(
 		imgcfg.Width, imgcfg.Height =
 			exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
 
+		b.t.log.LogPrintf(
+			DEBUG, "magick: after orient size %dx%d", imgcfg.Width, imgcfg.Height)
+
 		// mark this as image and store config
 		fi.Kind = ftypes.FTypeImage
 		fi.DetectedType = "image/" + cfgfmt
@@ -104,6 +111,9 @@ func (b *magickBackend) doThumbnailing(
 				(b.t.cfg.MaxHeight > 0 && imgcfg.Height > b.t.cfg.MaxHeight) ||
 				(b.t.cfg.MaxPixels > 0 &&
 					imgcfg.Width*imgcfg.Height > b.t.cfg.MaxPixels)) {
+
+			b.t.log.LogPrintf(
+				DEBUG, "magick: bailing out because constrained by limits; cfg: %#v", b.t.cfg)
 
 			close_err()
 
@@ -188,15 +198,29 @@ func (b *magickBackend) doThumbnailing(
 
 	_, ex := cmd.Output()
 	if ex != nil {
+
+		b.t.log.LogPrintf(WARN, "magick: exec err'd: %v", ex)
+
 		if ee, _ := ex.(*exec.ExitError); ee != nil {
-			if ee.ProcessState.ExitCode() == 1 {
+
+			code := ee.ProcessState.ExitCode()
+
+			b.t.log.LogPrintf(WARN, "magick: exec err'd w/ exit code %d", code)
+
+			if len(ee.Stderr) != 0 {
+				b.t.log.LogPrintf(WARN, "magick: captured stderr:\n%s", ee.Stderr)
+			}
+
+			if code == 1 {
 				// 1 is used for invalid input I think
-				// XXX investigate err?
 				os.Remove(tfn)
 				return
 			}
+
+		} else {
+			b.t.log.LogPrintf(DEBUG, "magick: not ExitError type")
 		}
-		// XXX should log
+
 		// if file was bad status shouldve been 1
 		// otherwise this was unexpected err
 		// (file wasn't bad or it was so bad it killed IM/GM)

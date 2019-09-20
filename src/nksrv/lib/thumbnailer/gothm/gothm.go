@@ -16,6 +16,7 @@ import (
 
 	"nksrv/lib/fstore"
 	"nksrv/lib/ftypes"
+	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/internal/exifhelper"
 )
@@ -38,14 +39,15 @@ var DefaultConfig = Config{
 }
 
 func (c Config) BuildThumbnailer(
-	fs *fstore.FStore) (thumbnailer.Thumbnailer, error) {
+	fs *fstore.FStore, lx LoggerX) (thumbnailer.Thumbnailer, error) {
 
-	return &GoThumbnailer{cfg: c, fs: fs}, nil
+	return &GoThumbnailer{cfg: c, fs: fs, log: NewLogToX(lx, "gothm")}, nil
 }
 
 type GoThumbnailer struct {
 	cfg Config
 	fs  *fstore.FStore
+	log Logger
 }
 
 var errColorFormat = errors.New("unknown color format")
@@ -117,6 +119,8 @@ func (t *GoThumbnailer) ThumbProcess(
 		closed = true
 	}
 
+	t.log.LogPrintf(DEBUG, "ThumbProcess ext %q mime %q", ext, mimeType)
+
 	if t.cfg.MaxFileSize > 0 {
 		var st os.FileInfo
 		st, err = f.Stat()
@@ -124,6 +128,7 @@ func (t *GoThumbnailer) ThumbProcess(
 			return
 		}
 		if st.Size() > t.cfg.MaxFileSize {
+			t.log.LogPrintf(DEBUG, "bailing out because filesize limit")
 			close_err()
 			return
 		}
@@ -137,24 +142,24 @@ func (t *GoThumbnailer) ThumbProcess(
 	imgcfg, cfgfmt, ex := image.DecodeConfig(f)
 	if ex != nil {
 		// bail out on any decoder failure
+		t.log.LogPrintf(DEBUG, "bailing out because DecodeConfig err: %v", ex)
 		close_err()
 		return
 	}
 	switch cfgfmt {
 	case "jpeg", "png", "gif", "webp", "bmp":
 		// OK
+		t.log.LogPrintf(DEBUG, "detected OK format %q", cfgfmt)
 	default:
 		// NAK
+		t.log.LogPrintf(DEBUG, "detected NAK format %q", cfgfmt)
 		close_err()
 		return
 	}
 
 	// mark this as image & store current config as we know it
 	fi.Kind = ftypes.FTypeImage
-	fi.Attrib = make(map[string]interface{})
 	fi.DetectedType = "image/" + cfgfmt
-	fi.Attrib["width"] = imgcfg.Width
-	fi.Attrib["height"] = imgcfg.Height
 
 	// seek to start
 	_, err = f.Seek(0, 0)
@@ -169,11 +174,21 @@ func (t *GoThumbnailer) ThumbProcess(
 	imgcfg.Width, imgcfg.Height =
 		exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
 
+	fi.Attrib = make(map[string]interface{})
+	fi.Attrib["width"] = imgcfg.Width
+	fi.Attrib["height"] = imgcfg.Height
+
+	t.log.LogPrintf(
+		DEBUG, "after orient size %dx%d", imgcfg.Width, imgcfg.Height)
+
 	if (t.cfg.MaxWidth > 0 && imgcfg.Width > t.cfg.MaxWidth) ||
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||
 		(t.cfg.MaxPixels > 0 && imgcfg.Width*imgcfg.Height > t.cfg.MaxPixels) {
 
 		// too large, don't do decoding
+		t.log.LogPrintf(
+			DEBUG, "bailing out because constrained by limits; cfg: %#v", t.cfg)
+
 		close_err()
 		return
 	}
@@ -191,9 +206,10 @@ func (t *GoThumbnailer) ThumbProcess(
 	// and linking to lcms wouldn't be pure go
 	// and I aint going to make my own lib for that
 	// so I can't really fix this atm.
-	oimg, imgfmt, err := image.Decode(f)
-	if err != nil {
+	oimg, imgfmt, ex := image.Decode(f)
+	if ex != nil {
 		// bail out on any decoder failure
+		t.log.LogPrintf(DEBUG, "bailing out because Decode err: %v", ex)
 		close_err()
 		return
 	}

@@ -125,7 +125,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	if cfg.TBuilder != nil {
 
-		p.thumbnailer, err = cfg.TBuilder.BuildThumbnailer(&p.thm)
+		p.thumbnailer, err = cfg.TBuilder.BuildThumbnailer(&p.thm, *cfg.Logger)
 		if err != nil {
 			return nil, err
 		}

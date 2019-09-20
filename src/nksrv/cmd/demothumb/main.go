@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"nksrv/lib/emime"
+	fl "nksrv/lib/filelogger"
 	"nksrv/lib/fstore"
+	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/extthm"
 	"nksrv/lib/thumbnailer/gothm"
@@ -23,6 +25,12 @@ func main() {
 
 	flag.Parse()
 
+	lgr, err := fl.NewFileLogger(os.Stderr, DEBUG, fl.ColorAuto)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "fl.NewFileLogger error: %v\n", err)
+		os.Exit(1)
+	}
+
 	fs, err := fstore.OpenFStore(fstore.Config{Path: *thumbdir})
 	if err != nil {
 		fmt.Printf("err opening fstore: %v\n", err)
@@ -31,9 +39,9 @@ func main() {
 
 	var thm thumbnailer.Thumbnailer
 	if !*thumbext {
-		thm, err = gothm.DefaultConfig.BuildThumbnailer(&fs)
+		thm, err = gothm.DefaultConfig.BuildThumbnailer(&fs, lgr)
 	} else {
-		thm, err = extthm.DefaultConfig.BuildThumbnailer(&fs)
+		thm, err = extthm.DefaultConfig.BuildThumbnailer(&fs, lgr)
 	}
 	if err != nil {
 		fmt.Printf("err building thumbnailer: %v\n", err)

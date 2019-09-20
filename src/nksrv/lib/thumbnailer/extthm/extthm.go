@@ -9,6 +9,7 @@ import (
 	"github.com/gobwas/glob"
 
 	"nksrv/lib/fstore"
+	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
 )
 
@@ -36,7 +37,7 @@ var DefaultConfig = Config{
 }
 
 func (c Config) BuildThumbnailer(
-	fs *fstore.FStore) (_ thumbnailer.Thumbnailer, err error) {
+	fs *fstore.FStore, lx LoggerX) (_ thumbnailer.Thumbnailer, err error) {
 
 	// XXX customization
 	imt := new(magickBackend)
@@ -54,6 +55,7 @@ func (c Config) BuildThumbnailer(
 	t := &ExternalThumbnailer{
 		cfg: c,
 		fs:  fs,
+		log: NewLogToX(lx, "extthm"),
 		routes: []extExec{
 			extExec{t: imt, m_mime: glob.MustCompile("image/jpeg")},
 			extExec{t: imt, m_mime: glob.MustCompile("image/png")},
@@ -101,6 +103,7 @@ type extExec struct {
 type ExternalThumbnailer struct {
 	cfg    Config
 	fs     *fstore.FStore
+	log    Logger
 	routes []extExec
 }
 
@@ -125,9 +128,13 @@ func (t *ExternalThumbnailer) ThumbProcess(
 
 	mt, _, _ := mime.ParseMediaType(mimeType)
 
+	t.log.LogPrintf(DEBUG, "ThumbProcess ext %q mime %q", ext, mt)
+
 	for i := range t.routes {
 		if (t.routes[i].m_mime == nil || t.routes[i].m_mime.Match(mt)) &&
 			(t.routes[i].m_ext == nil || t.routes[i].m_ext.Match(ext)) {
+
+			t.log.LogPrintf(DEBUG, "ThumbProcess matched route %d", i)
 
 			// XXX fallbacks?
 			return t.routes[i].t.

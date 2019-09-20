@@ -5,6 +5,7 @@ import (
 
 	"nksrv/lib/fstore"
 	"nksrv/lib/ftypes"
+	. "nksrv/lib/logx"
 )
 
 // config
@@ -16,8 +17,8 @@ type ThumbConfig struct {
 	AudioWidth  int
 	AudioHeight int
 	// rest
-	Color         string // background color if needs to be hardcoded
-	Grayscale     bool   // makes images gray
+	Color     string // background color if needs to be hardcoded
+	Grayscale bool   // makes images gray
 }
 
 // plan: name + config
@@ -46,7 +47,7 @@ type FileInfo struct {
 }
 
 type ThumbnailerBuilder interface {
-	BuildThumbnailer(fs *fstore.FStore) (Thumbnailer, error)
+	BuildThumbnailer(fs *fstore.FStore, lx LoggerX) (Thumbnailer, error)
 }
 
 type Thumbnailer interface {
