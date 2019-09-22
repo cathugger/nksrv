@@ -217,7 +217,7 @@ RETURNING
 					(
 						SELECT
 							mod_id,
-							COUNT(mod_id) AS cnt
+							COUNT(*) AS cnt
 						FROM
 							(
 								SELECT mod_id FROM delbp
@@ -306,33 +306,62 @@ SELECT
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL::BIGINT
 FROM
 	(
-		-- minus 1 because snapshot isolation
+		-- minus currently deleting because snapshot isolation
 		SELECT
-			delf.fname,COUNT(xf.fname) - 1 AS fnum
+			delfnames.fname,
+			allfnames.cnt - delfnames.cnt AS fnum
 		FROM
-			delf
+			(
+				SELECT
+					fname,
+					COUNT(*) AS cnt
+				FROM
+					delf
+				GROUP BY
+					fname
+			) AS delfnames
 		LEFT JOIN
-			ib0.files xf
+			LATERAL (
+				SELECT
+					COUNT(*) AS cnt
+				FROM
+					ib0.files xf
+				WHERE
+					delfnames.fname = xf.fname
+			) AS allfnames
 		ON
-			delf.fname = xf.fname
-		GROUP BY
-			delf.fname
+			TRUE
 	) AS leftf
 FULL JOIN
 	(
-		-- minus 1 because snapshot isolation
+		-- minus currently deleting because snapshot isolation
 		SELECT
-			delf.fname,delf.thumb,COUNT(xf.thumb) - 1 AS tnum
+			delfnt.fname,
+			delfnt.thumb,
+			allfnt.cnt - delfnt.cnt AS tnum
 		FROM
-			delf
+			(
+				SELECT
+					fname,
+					thumb,
+					COUNT(*) AS cnt
+				FROM
+					delf
+				GROUP BY
+					fname,
+					thumb
+			) AS delfnt
 		LEFT JOIN
-			ib0.files xf
+			LATERAL (
+				SELECT
+					COUNT(*) AS cnt
+				FROM
+					ib0.files xf
+				WHERE
+					(delfnt.fname,delfnt.thumb) = (xf.fname,xf.thumb)
+			) AS allfnt
 		ON
-			delf.fname = xf.fname AND
-				delf.thumb = xf.thumb
-		GROUP BY
-			delf.fname,
-			delf.thumb
+			TRUE
 	) AS leftt
 ON
 	leftf.fname = leftt.fname
