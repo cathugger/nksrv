@@ -171,17 +171,31 @@ RETURNING
 			ib0.posts xp
 		USING
 			(
-				-- XXX is it even possible to have this false?
 				SELECT
-					delbcp.g_p_id,COUNT(xbp.g_p_id) > 1 AS hasrefs
+					x.g_p_id,
+					y.cnt > x.cnt AS hasrefs
 				FROM
-					delbcp
+					(
+						-- g_p_ids may duplicate
+						SELECT
+							g_p_id,
+							COUNT(g_p_id) AS cnt
+						FROM
+							delbcp
+						GROUP BY
+							g_p_id
+					) AS x
 				LEFT JOIN
-					ib0.bposts xbp
+					LATERAL (
+						SELECT
+							COUNT(*) AS cnt
+						FROM
+							ib0.bposts xbp
+						WHERE
+							x.g_p_id = xbp.g_p_id
+					) AS y
 				ON
-					delbcp.g_p_id = xbp.g_p_id
-				GROUP BY
-					delbcp.g_p_id
+					TRUE
 			) AS rcnts
 		WHERE
 			rcnts.hasrefs = FALSE AND
@@ -197,21 +211,35 @@ RETURNING
 		USING
 			(
 				SELECT
-					delmod.mod_id,COUNT(xbp.mod_id) > 1 AS hasrefs
+					delmod.mod_id,
+					allmod.cnt > delmod.cnt AS hasrefs
 				FROM
 					(
-						SELECT mod_id,b_id,b_p_id FROM delbp
-						UNION ALL
-						SELECT mod_id,b_id,b_p_id FROM delbcp
+						SELECT
+							mod_id,
+							COUNT(mod_id) AS cnt
+						FROM
+							(
+								SELECT mod_id FROM delbp
+								UNION ALL
+								SELECT mod_id FROM delbcp
+							) AS x
+						WHERE
+							mod_id IS NOT NULL
+						GROUP BY
+							mod_id
 					) AS delmod
 				LEFT JOIN
-					ib0.bposts xbp
+					LATERAL (
+						SELECT
+							COUNT(*) AS cnt
+						FROM
+							ib0.bposts xbp
+						WHERE
+							delmod.mod_id = xbp.mod_id
+					) AS allmod
 				ON
-					delmod.mod_id = xbp.mod_id
-				WHERE
-					delmod.mod_id IS NOT NULL
-				GROUP BY
-					delmod.mod_id
+					TRUE
 			) AS rcnts
 		WHERE
 			rcnts.hasrefs = FALSE AND
