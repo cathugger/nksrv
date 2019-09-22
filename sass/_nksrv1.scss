@@ -202,11 +202,13 @@ a.bref:link, a.bref:visited {
 	font-weight: bold;
 	unicode-bidi: embed;
 	display: inline-block;
+	word-break: break-all;
 }
 
 .name {
 	font-weight: bold;
 	unicode-bidi: embed;
+	word-break: break-all;
 }
 
 span.name {
