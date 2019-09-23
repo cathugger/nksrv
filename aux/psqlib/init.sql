@@ -6,20 +6,100 @@ CREATE SCHEMA ib0
 
 
 --- base stuff
+
+
+--- moderators/administrators things
 -- :next
-CREATE TYPE modpriv_t AS ENUM ('none', 'mod')
--- :next
--- design will (very) probably change in the future
+-- summary table to hold effective capabilities of moderator
 CREATE TABLE ib0.modlist (
 	mod_id     BIGINT     GENERATED ALWAYS AS IDENTITY,
 	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
-	automanage BOOLEAN                 NOT NULL,
-	mod_priv   modpriv_t               NOT NULL DEFAULT 'none',
+	automanage BOOLEAN                 NOT NULL, -- if true, then no modpriv is holding it
+	mod_priv   BIT(2)                  NOT NULL DEFAULT B'00',
+	mod_bpriv  JSONB,
 	mod_name   TEXT,
 
 	PRIMARY KEY (mod_id),
 	UNIQUE      (mod_pubkey)
 )
+
+-- :next
+-- table to log changes of modlist
+-- used to keep state for mod msg reprocessing
+CREATE TABLE ib0.modlist_changes (
+	mlc_id BIGINT NOT NULL,
+	mod_id BIGINT NOT NULL,
+	-- tracked state
+	t_pdate  TIMESTAMP WITH TIME ZONE,
+	t_g_p_id BIGINT,
+	t_b_id   INTEGER,
+
+	PRIMARY KEY (mlc_id),
+	UNIQUE      (mod_id),
+	FOREIGN KEY (mod_id)
+		REFERENCES ib0.modlist
+)
+
+-- :next
+CREATE FUNCTION
+	ib0.modlist_changepriv()
+RETURNS
+	TRIGGER
+AS
+$$
+BEGIN
+
+	INSERT INTO
+		ib0.modlist_changes (
+			mod_id,
+			t_pdate,
+			t_g_p_id,
+			t_b_id
+		)
+	VALUES
+		(
+			NEW.mod_id,
+			NULL,
+			NULL,
+			NULL
+		)
+	ON CONFLICT
+		(mod_id)
+	DO UPDATE
+		SET
+			t_pdate  = EXCLUDED.t_pdate,
+			t_g_p_id = EXCLUDED.t_g_p_id,
+			t_b_id   = EXCLUDED.t_b_id
+
+	NOTIFY ib0_modlist_changes;
+
+	RETURN NULL;
+END;
+$$
+LANGUAGE
+	plpgsql
+
+-- :next
+-- if delete, then there are no posts to invoke by now
+-- if insert, then there are no posts to invoke yet
+CREATE TRIGGER
+	modlist_changepriv
+AFTER
+	UPDATE OF
+		mod_priv,
+		mod_bpriv
+ON
+	ib0.modsets
+FOR EACH
+	ROW
+WHEN
+	(OLD.mod_priv,OLD.mod_bpriv) <> (NEW.mod_priv,NEW.mod_bpriv)
+EXECUTE PROCEDURE
+	ib0.modlist_changepriv()
+
+
+
+
 
 
 -- :next
@@ -223,6 +303,190 @@ CREATE INDEX ON ib0.files (g_p_id,f_id) -- f_id helps sorted retrieval
 CREATE INDEX ON ib0.files (fname,thumb)
 
 
+
+
+
+
+
+-- :next
+-- distinct capability grants
+CREATE TABLE ib0.modsets (
+	mod_pubkey TEXT COLLATE "C" NOT NULL,
+	mod_priv   BIT(2)           NOT NULL,
+	mod_group  TEXT COLLATE "C",
+	-- board post responsible for this ban (if any)
+	b_id     INTEGER,
+	b_p_id   BIGINT,
+
+	FOREIGN KEY (b_id,b_p_id)
+		REFERENCES ib0.bposts (b_id,b_p_id)
+		MATCH FULL
+		ON DELETE CASCADE    -- see trigger below
+)
+-- :next
+-- to be ran AFTER delet from modsets
+CREATE FUNCTION
+	ib0.modsets_compute()
+RETURNS
+	TRIGGER
+AS
+$$
+DECLARE
+	pubkey   TEXT;
+	r        RECORD;
+	u_mod_id BIGINT;
+BEGIN
+	-- setup pubkey var
+	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+		pubkey := NEW.mod_pubkey;
+	ELSIF TG_OP = 'DELETE' THEN
+		pubkey := OLD.mod_pubkey;
+	END;
+	-- recalc modlist val from modsets
+	WITH
+		comp_caps AS (
+			SELECT
+				mod_group,
+				bit_or(mod_priv) AS mod_calcpriv
+			FROM
+				ib0.modsets
+			WHERE
+				mod_pubkey = pubkey
+			GROUP BY
+				mod_group
+			ORDER BY
+				mod_group
+		)
+	SELECT
+		x.mod_priv,
+		y.mod_bpriv,
+		z.automanage
+	INTO STRICT
+		r
+	FROM
+		(
+			SELECT
+				mod_calcpriv AS mod_priv
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NULL
+		) AS x,
+		(
+			SELECT
+				jsonb_object(
+					array_agg(mod_group),
+					array_agg(mod_calcpriv::TEXT)) AS mod_bpriv
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NOT NULL
+		) AS y,
+		(
+			SELECT
+				COUNT(*) = 0 AS automanage
+			FROM
+				comp_caps
+		) AS z;
+
+	IF TG_OP = 'INSERT' THEN
+		-- insert or update
+		-- it may not exist yet
+		-- or it may be automanaged
+		INSERT INTO
+			ib0.modlist (
+				mod_pubkey,
+				mod_priv,
+				mod_bpriv,
+				automanage
+			)
+		VALUES (
+			pubkey,
+			r.mod_priv,
+			r.mod_bpriv,
+			r.automanage
+		)
+		ON CONFLICT
+			(mod_pubkey)
+		DO UPDATE
+			SET
+				mod_priv   = EXCLUDED.mod_priv,
+				mod_bpriv  = EXCLUDED.mod_bpriv,
+				automanage = EXCLUDED.automanage;
+
+	ELSIF TG_OP = 'UPDATE' THEN
+		-- only update existing (because at this point it will exist)
+		-- at this point it'll be automanaged too (because we're moding existing row)
+		UPDATE
+			ib0.modlist
+		SET
+			mod_priv  = r.mod_priv,
+			mod_bpriv = r.mod_bpriv
+		WHERE
+			mod_pubkey = pubkey;
+
+	ELSIF TG_OP = 'DELETE' THEN
+		-- update and possibly delete
+		UPDATE
+			ib0.modlist
+		SET
+			mod_priv   = r.mod_priv,
+			mod_bpriv  = r.mod_bpriv,
+			automanage = r.automanage
+		WHERE
+			mod_pubkey = pubkey
+		RETURNING
+			mod_id
+		INTO STRICT
+			u_mod_id;
+
+		IF r.automanage THEN
+			-- if it's automanaged, do GC incase no post refers to it
+			DELETE FROM
+				ib0.modlist mods
+			USING
+				(
+					SELECT
+						mod_id,
+						COUNT(*) <> 0 AS hasrefs
+					FROM
+						ib0.bposts
+					WHERE
+						mod_id = u_mod_id
+					GROUP BY
+						mod_id
+				) AS rcnts
+			WHERE
+				mods.mod_id = rcnts.mod_id AND
+					rcnts.hasrefs = FALSE
+		END IF;
+
+	END IF;
+
+	RETURN NULL;
+END;
+$$
+LANGUAGE
+	plpgsql
+
+-- :next
+CREATE TRIGGER
+	modsets_compute
+AFTER
+	INSERT OR UPDATE OR DELETE
+ON
+	ib0.modsets
+FOR EACH
+	ROW
+EXECUTE PROCEDURE
+	ib0.modsets_compute()
+
+
+
+
+
+
+
 -- :next
 -- index of references, so that we can pick them up and correct when we modify stuff
 -- references are rendered per-board, not per-post,
@@ -355,7 +619,7 @@ CREATE INDEX
 -- :next
 -- to be ran AFTER delet from banlist
 CREATE FUNCTION
-	ib0_gc_banposts_after()
+	ib0.banlist_after_del()
 RETURNS
 	TRIGGER
 AS
@@ -389,16 +653,14 @@ LANGUAGE
 	plpgsql
 -- :next
 CREATE TRIGGER
-	ib0_banlist_after_del
+	banlist_after_del
 AFTER
 	DELETE
 ON
 	ib0.banlist
-REFERENCING OLD TABLE AS oldrows
-FOR EACH STATEMENT
+REFERENCING
+	OLD TABLE AS oldrows
+FOR EACH
+	STATEMENT
 EXECUTE PROCEDURE
-	ib0_gc_banposts_after()
-
---- need table to hold partial processing results of setmodpriv
--- mod messages are processed backwards (by date)
--- it will hold: pdate,g_p_id,b_id x mod_id
+	ib0.banlist_after_del()

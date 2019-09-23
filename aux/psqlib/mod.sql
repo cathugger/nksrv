@@ -551,7 +551,9 @@ WITH
 -- :name mod_bname_topts_by_tid
 -- returns boardname and thread opts
 SELECT
-	xb.b_name,xb.thread_opts,xt.thread_opts
+	xb.b_name,
+	xb.thread_opts,
+	xt.thread_opts
 FROM
 	ib0.boards xb
 JOIN
