@@ -61,6 +61,7 @@ type ffprobeStream struct {
 	Profile       string  `json:"profile"`
 	Level         int     `json:"level"`
 	IsAVC         bool    `json:"is_avc,string"`
+	AvgFrameRate  string  `json:"avg_frame_rate"`
 
 	Disposition ffprobeDispotision `json:"disposition"`
 }
@@ -191,6 +192,13 @@ foundfmt:
 				}
 			} else {
 				// video
+
+				// videos having this aint actually valid
+				if ffproberes.Streams[i].AvgFrameRate == "0/0" {
+					gotBadVids = true
+					goto doneVid
+				}
+
 				switch {
 				// XXX h263, flv1?
 				case cname == "h264" && knownfmt == "mp4":
@@ -227,6 +235,7 @@ foundfmt:
 
 					// XXX AV1's format is even gayer than avc1 but don't bother yet
 					// https://aomediacodec.github.io/av1-isobmff/#codecsparam
+
 					// OK
 					gotVids++
 					if gotVids == 1 {
@@ -239,6 +248,7 @@ foundfmt:
 				default:
 					gotBadVids = true
 				}
+			doneVid:
 			}
 		} else if ctype == "audio" {
 			switch {
