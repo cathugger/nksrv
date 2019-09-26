@@ -14,10 +14,13 @@ CREATE SCHEMA ib0
 CREATE TABLE ib0.modlist (
 	mod_id     BIGINT     GENERATED ALWAYS AS IDENTITY,
 	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
-	automanage BOOLEAN                 NOT NULL, -- if true, then no modpriv is holding it
-	mod_priv   BIT(2)                  NOT NULL DEFAULT B'00',
-	mod_bpriv  JSONB,
 	mod_name   TEXT,
+	-- if true, then no modpriv is holding it [so can be GC'd]
+	automanage BOOLEAN  NOT NULL,
+	mod_cap    BIT(2),   -- global capabilities
+	mod_bcap   JSONB,    -- per-board capabilities
+	mod_dpriv  SMALLINT, -- global delete privilege
+	mod_bdpriv JSONB,    -- per-board delete privileges
 
 	PRIMARY KEY (mod_id),
 	UNIQUE      (mod_pubkey)
@@ -72,9 +75,11 @@ BEGIN
 			t_g_p_id = EXCLUDED.t_g_p_id,
 			t_b_id   = EXCLUDED.t_b_id
 
+	-- poke process which can act upon it
 	NOTIFY ib0_modlist_changes;
 
 	RETURN NULL;
+
 END;
 $$
 LANGUAGE
@@ -87,14 +92,17 @@ CREATE TRIGGER
 	modlist_changepriv
 AFTER
 	UPDATE OF
-		mod_priv,
-		mod_bpriv
+		mod_cap,
+		mod_bcap,
+		mod_dpriv,
+		mod_bdpriv
 ON
 	ib0.modsets
 FOR EACH
 	ROW
 WHEN
-	(OLD.mod_priv,OLD.mod_bpriv) <> (NEW.mod_priv,NEW.mod_bpriv)
+	(OLD.mod_cap,OLD.mod_bcap,OLD.mod_dpriv,OLD.mod_bdpriv) IS DISTINCT FROM
+		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_dpriv,NEW.mod_bdpriv)
 EXECUTE PROCEDURE
 	ib0.modlist_changepriv()
 
@@ -129,6 +137,9 @@ CREATE TABLE ib0.posts (
 	layout  JSON,
 	-- passive extra data
 	extras  JSONB,
+
+	-- for ban placeholders in ctl groups
+	ban_dpriv SMALLINT,
 
 	PRIMARY KEY (g_p_id),
 	UNIQUE      (msgid)
@@ -220,11 +231,24 @@ CREATE TABLE ib0.bposts (
 	msgid  TEXT     COLLATE "C"  NOT NULL, -- global external msgid
 
 	-- redundant w/ global but needed for efficient indexes
-	pdate  TIMESTAMP  WITH TIME ZONE  NOT NULL, -- real date field
-	padded TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date field used for sorting. will actually contain delivery date
+	pdate  TIMESTAMP  WITH TIME ZONE,           -- real date field
+	padded TIMESTAMP  WITH TIME ZONE,           -- date field used for sorting. will actually contain delivery date
 	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
 
-	mod_id BIGINT, -- ID of moderator identity (if ctl msg)
+	-- following fields are only used if this is mod msg
+	mod_id BIGINT,
+	-- used/wanted capabilities
+	mod_u_cap  BIT(2),
+	mod_w_cap  BIT(2),
+	mod_u_bcap JSONB,
+	mod_w_bcap JSONB,
+	-- used(effective) dprivs [we can't know wanted]
+	mod_u_dpriv  SMALLINT,
+	mod_u_bdpriv JSONB,
+
+	-- if this is ban placeholder, which priv lvl it'd need to break?
+	ban_dpriv SMALLINT,
+
 	-- attributes associated with board post and visible in webui
 	attrib JSON,
 	-- active references
@@ -313,7 +337,8 @@ CREATE INDEX ON ib0.files (fname,thumb)
 -- distinct capability grants
 CREATE TABLE ib0.modsets (
 	mod_pubkey TEXT COLLATE "C" NOT NULL,
-	mod_priv   BIT(2)           NOT NULL,
+	mod_cap    BIT(2)           NOT NULL,
+	mod_dpriv  SMALLINT,
 	mod_group  TEXT COLLATE "C",
 	-- board post responsible for this ban (if any)
 	b_id     INTEGER,
