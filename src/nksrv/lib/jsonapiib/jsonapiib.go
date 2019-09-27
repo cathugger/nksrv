@@ -13,7 +13,7 @@ import (
 )
 
 type JSONAPIIB struct {
-	c *http.Client
+	c http.Client
 	u string
 }
 
@@ -35,7 +35,7 @@ func (a *JSONAPIIB) Initialize(u string) {
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
 	}
-	a.c = &http.Client{Transport: tr}
+	a.c.Transport = tr
 	if len(u) != 0 && u[len(u)-1] == '/' {
 		u = u[:len(u)-1]
 	}
@@ -84,14 +84,14 @@ func fetchInto(
 }
 
 func (a *JSONAPIIB) IBGetBoardList(page *webib0.IBBoardList) (error, int) {
-	return fetchInto(a.c, a.u+"/boards/", page)
+	return fetchInto(&a.c, a.u+"/boards/", page)
 }
 
 func (a *JSONAPIIB) IBGetThreadListPage(
 	page *webib0.IBThreadListPage, board string, num uint32) (error, int) {
 
 	return fetchInto(
-		a.c,
+		&a.c,
 		a.u+"/boards/"+url.PathEscape(board)+"/"+strconv.FormatUint(uint64(num), 10),
 		page)
 }
@@ -100,7 +100,7 @@ func (a *JSONAPIIB) IBGetOverboardPage(
 	page *webib0.IBOverboardPage, num uint32) (error, int) {
 
 	return fetchInto(
-		a.c,
+		&a.c,
 		a.u+"/overboard/"+strconv.FormatUint(uint64(num), 10),
 		page)
 }
@@ -108,20 +108,20 @@ func (a *JSONAPIIB) IBGetOverboardPage(
 func (a *JSONAPIIB) IBGetThreadCatalog(
 	page *webib0.IBThreadCatalog, board string) (error, int) {
 
-	return fetchInto(a.c, a.u+"/boards/"+url.PathEscape(board)+"/catalog", page)
+	return fetchInto(&a.c, a.u+"/boards/"+url.PathEscape(board)+"/catalog", page)
 }
 
 func (a *JSONAPIIB) IBGetOverboardCatalog(
 	page *webib0.IBOverboardCatalog) (error, int) {
 
-	return fetchInto(a.c, a.u+"/overboard/catalog", page)
+	return fetchInto(&a.c, a.u+"/overboard/catalog", page)
 }
 
 func (a *JSONAPIIB) IBGetThread(
 	page *webib0.IBThreadPage, board string, threadid string) (error, int) {
 
 	return fetchInto(
-		a.c,
+		&a.c,
 		a.u+"/boards/"+url.PathEscape(board)+"/threads/"+threadid,
 		page)
 }
