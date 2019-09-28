@@ -29,11 +29,15 @@ type jsonError struct {
 	Err jsonErrorMsg `json:"error"`
 }
 
-func (a *JSONAPIIB) Initialize(u string) {
+func NewJSONAPIIB(u string) (a *JSONAPIIB) {
 	// some default settings idk if overriding these makes sense
-	a.t.MaxIdleConns = 10
-	a.t.IdleConnTimeout = 30 * time.Second
-	a.t.DisableCompression = true
+	a = &JSONAPIIB{
+		t: http.Transport{
+			MaxIdleConns:       10,
+			IdleConnTimeout:    30 * time.Second,
+			DisableCompression: true,
+		},
+	}
 
 	a.c.Transport = &a.t
 
@@ -41,6 +45,8 @@ func (a *JSONAPIIB) Initialize(u string) {
 		u = u[:len(u)-1]
 	}
 	a.u = u
+
+	return
 }
 
 func isJSONType(t string) bool {
