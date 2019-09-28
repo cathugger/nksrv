@@ -14,6 +14,7 @@ import (
 
 type JSONAPIIB struct {
 	c http.Client
+	t http.Transport
 	u string
 }
 
@@ -30,12 +31,12 @@ type jsonError struct {
 
 func (a *JSONAPIIB) Initialize(u string) {
 	// some default settings idk if overriding these makes sense
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: true,
-	}
-	a.c.Transport = tr
+	a.t.MaxIdleConns = 10
+	a.t.IdleConnTimeout = 30 * time.Second
+	a.t.DisableCompression = true
+
+	a.c.Transport = &a.t
+
 	if len(u) != 0 && u[len(u)-1] == '/' {
 		u = u[:len(u)-1]
 	}
@@ -55,8 +56,7 @@ func fetchInto(
 	}
 	defer resp.Body.Close()
 
-	ct := resp.Header.Get("Content-Type")
-	if !isJSONType(ct) {
+	if ct := resp.Header.Get("Content-Type"); !isJSONType(ct) {
 		return fmt.Errorf("API returned bad Content-Type %q", ct), 502
 	}
 
@@ -67,7 +67,8 @@ func fetchInto(
 		var je jsonError
 		err = jd.Decode(&je)
 		if err != nil {
-			return fmt.Errorf("error parsing json error on code %d: %v", resc, err), 502
+			return fmt.Errorf(
+				"error parsing json error on code %d: %v", resc, err), 502
 		}
 		if je.Err.Msg == "" {
 			return fmt.Errorf("empty err msg on code %d", resc), 502
