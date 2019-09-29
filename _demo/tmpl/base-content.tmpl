@@ -17,6 +17,7 @@
  type="text/css"
  href="{% static "blue.css" %}"
  title="Default / Selected"
+ id="theme"
 />
 <link
  rel="alternate stylesheet"
@@ -37,11 +38,9 @@
  title="Green Neko 1"
 />
 
-<script
- type="text/javascript"
- src="{% static "site.js" %}"
- async=""
-></script>
+<script type="text/javascript" src="{% static "base.js" %}"></script>
+<script type="text/javascript" src="{% static "site.js" %}" async=""></script>
+
 </head>
 
 <body>
