@@ -8,15 +8,18 @@ function switchToTheme(s) {
 		//e.disabled = true;
 		//s.disabled = false;
 
-		e.rel = 'alternate stylesheet';
-		s.rel = 'stylesheet';
+		//e.rel = 'alternate stylesheet';
+		//s.rel = 'stylesheet';
+
+		e.media = "none";
+		s.media = "";
 	}
 }
 
 function switchToThemeName(n) {
-	var alts = document.querySelectorAll('[rel="alternate stylesheet"]');
+	var alts = document.querySelectorAll('[rel="stylesheet"]');
 	for (var i = 0; i < alts.length; i++) {
-		if (alts[i].title == n) {
+		if (alts[i].dataset.theme == n) {
 			switchToTheme(alts[i]);
 			break;
 		}
