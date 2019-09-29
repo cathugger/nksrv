@@ -8,7 +8,7 @@ function switchToTheme(s) {
 function switchToThemeName(n) {
 	var alts = document.querySelectorAll('[rel="alternate stylesheet"]');
 	for (var i = 0; i < alts.length; i++) {
-		if (alts[i].title == currTheme) {
+		if (alts[i].title == n) {
 			switchToTheme(alts[i]);
 			break;
 		}
