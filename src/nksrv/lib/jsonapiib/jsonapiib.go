@@ -30,6 +30,12 @@ type jsonError struct {
 }
 
 func NewJSONAPIIB(u string) (a *JSONAPIIB) {
+
+	// cut off trailing /
+	if len(u) != 0 && u[len(u)-1] == '/' {
+		u = u[:len(u)-1]
+	}
+
 	// some default settings idk if overriding these makes sense
 	a = &JSONAPIIB{
 		t: http.Transport{
@@ -37,14 +43,10 @@ func NewJSONAPIIB(u string) (a *JSONAPIIB) {
 			IdleConnTimeout:    30 * time.Second,
 			DisableCompression: true,
 		},
+		u: u,
 	}
 
 	a.c.Transport = &a.t
-
-	if len(u) != 0 && u[len(u)-1] == '/' {
-		u = u[:len(u)-1]
-	}
-	a.u = u
 
 	return
 }

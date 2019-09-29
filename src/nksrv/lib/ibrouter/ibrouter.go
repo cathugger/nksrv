@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
-	"net/url"
 	"strconv"
 	"sync/atomic"
 	"unsafe"
@@ -34,6 +33,14 @@ type Cfg struct {
 	// fallback?
 }
 
+func localRedirect(w http.ResponseWriter, r *http.Request, newPath string) {
+	if q := r.URL.RawQuery; q != "" {
+		newPath += "?" + q
+	}
+	w.Header().Set("Location", newPath)
+	w.WriteHeader(http.StatusMovedPermanently)
+}
+
 func handlePageNum(
 	w http.ResponseWriter, r *http.Request, pn string) (ok bool, pni uint32) {
 
@@ -48,10 +55,9 @@ func handlePageNum(
 		}
 		if pnu <= 1 {
 			// redirect to have uniform url
-			// need to re-parse URL, because at this point it's modified
-			ru, _ := url.ParseRequestURI(r.RequestURI)
-			r.URL = ru
-			http.Redirect(w, r, "./", http.StatusTemporaryRedirect)
+			// not http.Redirect because it uses full path and
+			// we'd need reparse at this point as it's modified
+			localRedirect(w, r, "./")
 			return
 		}
 		// UI-visible stuff starts from 1, but internally from 0
