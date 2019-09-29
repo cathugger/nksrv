@@ -1,8 +1,12 @@
 
 function switchToTheme(s) {
 	var e = document.getElementById("theme");
-	if (e)
-		e.href = s.href;
+	if (e) {
+		//e.href = s.href;
+		// XXX non-default may be active one
+		e.disabled = true;
+		s.disabled = false;
+	}
 }
 
 function switchToThemeName(n) {
