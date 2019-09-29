@@ -3,9 +3,13 @@ function switchToTheme(s) {
 	var e = document.getElementById("theme");
 	if (e) {
 		//e.href = s.href;
-		// XXX non-default may be active one
-		e.disabled = true;
-		s.disabled = false;
+
+		//// XXX non-default may be active one
+		//e.disabled = true;
+		//s.disabled = false;
+
+		e.rel = 'alternate stylesheet';
+		s.rel = 'stylesheet';
 	}
 }
 
