@@ -21,6 +21,7 @@ import (
 )
 
 type Cfg struct {
+	Logger         *LoggerX
 	HTMLRenderer    renderer.Renderer // handles everything else?
 	StaticDir       *fsd.FServeDir
 	FileProvider    fp.HTTPFileProvider   // handles _src and _thm
@@ -82,6 +83,8 @@ var fileFieldsCheck = form.FieldsCheckFunc(ib0.IBWebFormFileFields)
 
 func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 
+	log := NewLogToX(*cfg.Logger, "ibrouter")
+
 	c := new(IBRouterCtl)
 	c.SetHTMLRenderer(cfg.HTMLRenderer)
 
@@ -100,12 +103,14 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 				http.HandlerFunc(
 					func(w http.ResponseWriter, r *http.Request) {
 						id := r.Context().Value("id").(string)
+						log.LogPrintf(DEBUG, "src %q", id)
 						cfg.FileProvider.ServeSrc(w, r, id)
 					})))
 		h_thm := handler.NewMethod().Handle("GET", handler.NewRegexPath().
 			Handle("/{{id:[^_./][^/]*}}", false, http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 					id := r.Context().Value("id").(string)
+					log.LogPrintf(DEBUG, "thm %q", id)
 					cfg.FileProvider.ServeThm(w, r, id)
 				})))
 		h.
@@ -121,6 +126,7 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 						w http.ResponseWriter, r *http.Request) {
 
 						id := r.Context().Value("id").(string)
+						log.LogPrintf(DEBUG, "static %q", id)
 						cfg.StaticDir.FServe(w, r, id)
 					})))
 		h.Handle("/_static", true, h_static)
@@ -151,12 +157,16 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 							return
 						}
 
+						log.LogPrintf(DEBUG, "overboard-page %d", pni)
+
 						c.GetHTMLRenderer().
 							ServeOverboardPage(w, r, pni)
 					})).
 				Handle("/catalog", false,
 					http.HandlerFunc(func(
 						w http.ResponseWriter, r *http.Request) {
+
+						log.LogPrintf(DEBUG, "overboard-catalog")
 
 						c.GetHTMLRenderer().
 							ServeOverboardCatalog(w, r)
@@ -178,11 +188,13 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 				if !ok {
 					return
 				}
+				log.LogPrintf(DEBUG, "board-page %q %d", b, pni)
 				c.GetHTMLRenderer().ServeThreadListPage(w, r, b, pni)
 			}))
 		h_getbr.Handle("/catalog", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
+				log.LogPrintf(DEBUG, "board-catalog %q", b)
 				c.GetHTMLRenderer().ServeThreadCatalog(w, r, b)
 			}))
 
@@ -192,6 +204,7 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 
 				b := r.Context().Value("b").(string)
 				t := r.Context().Value("t").(string)
+				log.LogPrintf(DEBUG, "board-thread %q %q", b, t)
 				c.GetHTMLRenderer().ServeThread(w, r, b, t)
 			}))
 	}
@@ -248,13 +261,21 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 				if len(f.Values["thread"]) == 0 ||
 					f.Values["thread"][0] == "" {
 
+					log.LogPrintf(DEBUG, "post-thread b:%q", board)
+
 					rInfo, err, code =
 						cfg.WebPostProvider.IBPostNewThread(w, r, f, board)
+
 					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, true, err, code)
 				} else {
+					thread := f.Values["thread"][0]
+
+					log.LogPrintf(DEBUG, "post-reply b:%q t:%q", board, thread)
+
 					rInfo, err, code = cfg.WebPostProvider.
-						IBPostNewReply(w, r, f, board, f.Values["thread"][0])
+						IBPostNewReply(w, r, f, board, thread)
+
 					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, false, err, code)
 				}

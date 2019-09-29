@@ -332,6 +332,7 @@ LIMIT
 -- :name nntp_over_msgid
 -- input: {msgid}
 -- string_agg(xb.b_name || ':' || xbp.b_p_id, ' ') -- unused
+-- TODO filter by xp.padded/xbp.padded
 SELECT
 	array_agg(xbp.b_id),
 	array_agg(xbp.b_p_id),

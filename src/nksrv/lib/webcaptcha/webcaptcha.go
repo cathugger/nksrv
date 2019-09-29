@@ -212,6 +212,7 @@ func (wc *WebCaptcha) CheckCaptcha(
 		http.SetCookie(w, &http.Cookie{
 			Name:   ib0.IBWebFormTextCaptchaKey,
 			Value:  "",
+			Path:   "/_post",
 			MaxAge: -1,
 		})
 	}
@@ -244,6 +245,7 @@ func (wc *WebCaptcha) ServeCaptchaPNG(
 		http.SetCookie(w, &http.Cookie{
 			Name:  ib0.IBWebFormTextCaptchaKey,
 			Value: keyenc.EncodeToString(ek),
+			Path: "/_post",
 		})
 		// make image uncacheable if cookie-based
 		w.Header().Set(

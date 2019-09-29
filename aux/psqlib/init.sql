@@ -11,108 +11,24 @@ CREATE SCHEMA ib0
 --- moderators/administrators things
 -- :next
 -- summary table to hold effective capabilities of moderator
+-- mod_cap/mod_bcap/mod_dpriv/mod_bdpriv changes are logged
 CREATE TABLE ib0.modlist (
-	mod_id     BIGINT     GENERATED ALWAYS AS IDENTITY,
-	mod_pubkey TEXT       COLLATE "C"  NOT NULL,
+	mod_id     BIGINT  GENERATED ALWAYS AS IDENTITY,
+	mod_pubkey TEXT    COLLATE "C"  NOT NULL,
 	mod_name   TEXT,
 	-- if true, then no modpriv is holding it [so can be GC'd]
-	automanage BOOLEAN  NOT NULL,
+	automanage BOOLEAN   NOT NULL,
 	mod_cap    BIT(2),   -- global capabilities
 	mod_bcap   JSONB,    -- per-board capabilities
 	mod_dpriv  SMALLINT, -- global delete privilege
 	mod_bdpriv JSONB,    -- per-board delete privileges
 
 	PRIMARY KEY (mod_id),
-	UNIQUE      (mod_pubkey)
+	UNIQUE (mod_pubkey)
 )
 
 -- :next
--- table to log changes of modlist
--- used to keep state for mod msg reprocessing
-CREATE TABLE ib0.modlist_changes (
-	mlc_id BIGINT NOT NULL,
-	mod_id BIGINT NOT NULL,
-	-- tracked state
-	t_pdate  TIMESTAMP WITH TIME ZONE,
-	t_g_p_id BIGINT,
-	t_b_id   INTEGER,
-
-	PRIMARY KEY (mlc_id),
-	UNIQUE      (mod_id),
-	FOREIGN KEY (mod_id)
-		REFERENCES ib0.modlist
-		ON CASCADE DELETE
-)
-
--- :next
-CREATE FUNCTION
-	ib0.modlist_changepriv()
-RETURNS
-	TRIGGER
-AS
-$$
-BEGIN
-
-	INSERT INTO
-		ib0.modlist_changes (
-			mod_id,
-			t_pdate,
-			t_g_p_id,
-			t_b_id
-		)
-	VALUES
-		(
-			NEW.mod_id,
-			NULL,
-			NULL,
-			NULL
-		)
-	ON CONFLICT
-		(mod_id)
-	DO UPDATE
-		SET
-			t_pdate  = EXCLUDED.t_pdate,
-			t_g_p_id = EXCLUDED.t_g_p_id,
-			t_b_id   = EXCLUDED.t_b_id
-
-	-- poke process which can act upon it
-	NOTIFY ib0_modlist_changes;
-
-	RETURN NULL;
-
-END;
-$$
-LANGUAGE
-	plpgsql
-
--- :next
--- if delete, then there are no posts to invoke by now
--- if insert, then there are no posts to invoke yet
-CREATE TRIGGER
-	modlist_changepriv
-AFTER
-	UPDATE OF
-		mod_cap,
-		mod_bcap,
-		mod_dpriv,
-		mod_bdpriv
-ON
-	ib0.modsets
-FOR EACH
-	ROW
-WHEN
-	(OLD.mod_cap,OLD.mod_bcap,OLD.mod_dpriv,OLD.mod_bdpriv) IS DISTINCT FROM
-		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_dpriv,NEW.mod_bdpriv)
-EXECUTE PROCEDURE
-	ib0.modlist_changepriv()
-
-
-
-
-
-
--- :next
-CREATE TABLE ib0.posts (
+CREATE TABLE ib0.gposts (
 	g_p_id BIGINT  GENERATED ALWAYS AS IDENTITY, -- global internal post ID
 	msgid  TEXT    COLLATE "C"  NOT NULL,        -- Message-ID
 
@@ -138,13 +54,29 @@ CREATE TABLE ib0.posts (
 	-- passive extra data
 	extras  JSONB,
 
-	-- for ban placeholders if mod_dpriv > 0
-	-- TODO
+	-- for ban placeholders
 	ban_dpriv SMALLINT,
 
 	PRIMARY KEY (g_p_id),
-	UNIQUE      (msgid)
+	UNIQUE (msgid)
 )
+
+
+-- :next
+CREATE TABLE ib0.gposts_boards (
+	g_p_id BIGINT               NOT NULL,
+	bname  TEXT    COLLATE "C"  NOT NULL,
+
+	FOREIGN KEY (g_p_id)
+		REFERENCES ib0.gposts
+		ON DELETE CASCADE
+)
+-- :next
+CREATE INDEX
+	ON ib0.gposts_boards (g_p_id)
+-- :next
+CREATE INDEX
+	ON ib0.gposts_boards (bname,g_p_id)
 
 
 -- :next
@@ -170,12 +102,13 @@ CREATE TABLE ib0.boards (
 	attrib           JSONB, -- board attributes
 
 	PRIMARY KEY (b_id),
-	UNIQUE      (b_name)
+	UNIQUE (b_name)
 )
 -- :next
 CREATE INDEX
 	ON ib0.boards (badded,b_id) -- NEWGROUPS
 -- :next
+-- for UI-visible board list
 CREATE INDEX
 	ON ib0.boards (b_name COLLATE "und-x-icu")
 
@@ -198,7 +131,7 @@ CREATE TABLE ib0.threads (
 	attrib       JSONB, -- extra attributes
 
 	PRIMARY KEY (b_id,b_t_id),
-	UNIQUE      (b_id,b_t_name),
+	UNIQUE (b_id,b_t_name),
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards
 )
@@ -206,17 +139,17 @@ CREATE TABLE ib0.threads (
 -- for board pages and catalog
 CREATE INDEX
 	ON ib0.threads (
-		b_id ASC,
-		bump DESC,
+		b_id   ASC,
+		bump   DESC,
 		b_t_id ASC
 	)
 -- :next
 -- for overboard
 CREATE INDEX
 	ON ib0.threads (
-		bump DESC,
+		bump   DESC,
 		g_t_id ASC,
-		b_id ASC
+		b_id   ASC
 	)
 	WHERE
 		skip_over IS NOT TRUE
@@ -258,13 +191,13 @@ CREATE TABLE ib0.bposts (
 	activ_refs JSON,
 
 	PRIMARY KEY (b_id,b_p_id),
-	UNIQUE      (g_p_id,b_id),
+	UNIQUE (g_p_id,b_id),
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards,
 	FOREIGN KEY (b_id,b_t_id)
 		REFERENCES ib0.threads,
 	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.posts,
+		REFERENCES ib0.gposts,
 	FOREIGN KEY (mod_id)
 		REFERENCES ib0.modlist
 		ON DELETE RESTRICT
@@ -273,36 +206,49 @@ CREATE TABLE ib0.bposts (
 -- in thread, for bump
 CREATE INDEX
 	ON ib0.bposts (
-		b_id,
-		b_t_id,
-		pdate ASC,
+		b_id   ASC,
+		b_t_id ASC,
+		pdate  ASC,
 		b_p_id ASC
 	)
 -- :next
--- for NEWNEWS (yeh, not in ib0.posts)
+-- for NEWNEWS (yeh, not in ib0.gposts)
 CREATE INDEX
-	ON ib0.bposts (padded,g_p_id,b_id)
+	ON ib0.bposts (
+		padded,
+		g_p_id,
+		b_id
+	)
 -- :next
 -- for post num lookup
 CREATE UNIQUE INDEX
-	ON ib0.bposts (p_name text_pattern_ops,b_id)
+	ON ib0.bposts (
+		p_name text_pattern_ops,
+		b_id
+	)
 -- :next
 -- mostly for boardban checks for now
 CREATE UNIQUE INDEX
-	ON ib0.bposts (b_id,msgid)
+	ON ib0.bposts (
+		b_id,
+		msgid
+	)
 -- :next
 -- FK
 CREATE INDEX
-	ON ib0.bposts (mod_id,pdate)
+	ON ib0.bposts (
+		mod_id,
+		pdate
+	)
 	WHERE mod_id IS NOT NULL
 
 
 -- :next
 CREATE TYPE ftype_t AS ENUM (
-	'file',
-	'msg',
-	'face',
-	'text',
+	'file',  -- normal unknown/fallback
+	'msg',   -- original message
+	'face',  -- decoded X-Face / Face hdr
+	'text',  -- .txt file
 	'image',
 	'audio',
 	'video'
@@ -323,27 +269,22 @@ CREATE TABLE ib0.files (
 
 	PRIMARY KEY (f_id),
 	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.posts
+		REFERENCES ib0.gposts
 )
 -- :next
 CREATE INDEX ON ib0.files (g_p_id,f_id) -- f_id helps sorted retrieval
 -- :next
 CREATE INDEX ON ib0.files (fname,thumb)
 
-
-
-
-
-
-
 -- :next
 -- distinct capability grants
+-- these would be deleted/reinserted if priv of mod behind them changes
 CREATE TABLE ib0.modsets (
 	mod_pubkey TEXT COLLATE "C" NOT NULL,
 	mod_cap    BIT(2)           NOT NULL,
 	mod_dpriv  SMALLINT,
 	mod_group  TEXT COLLATE "C",
-	-- board post responsible for this ban (if any)
+	-- board post responsible for this modset (if any)
 	b_id     INTEGER,
 	b_p_id   BIGINT,
 
@@ -352,204 +293,9 @@ CREATE TABLE ib0.modsets (
 		MATCH FULL
 		ON DELETE CASCADE    -- see trigger below
 )
--- :next
--- to be ran AFTER delet from modsets
-CREATE FUNCTION
-	ib0.modsets_compute()
-RETURNS
-	TRIGGER
-AS
-$$
-DECLARE
-	pubkey   TEXT;
-	r        RECORD;
-	u_mod_id BIGINT;
-BEGIN
-	-- setup pubkey var
-	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-		pubkey := NEW.mod_pubkey;
-	ELSIF TG_OP = 'DELETE' THEN
-		pubkey := OLD.mod_pubkey;
-	END;
-	-- recalc modlist val from modsets
-	WITH
-		comp_caps AS (
-			SELECT
-				mod_group,
-				bit_or(mod_cap) AS mod_calccap,
-				min(mod_dpriv) AS mod_calcdpriv
-			FROM
-				ib0.modsets
-			WHERE
-				mod_pubkey = pubkey
-			GROUP BY
-				mod_group
-			ORDER BY
-				mod_group
-		)
-	SELECT
-		a.mod_cap,
-		b.mod_bcap,
-		c.mod_dpriv,
-		d.mod_bdpriv,
-		z.automanage
-	INTO STRICT
-		r
-	FROM
-		(
-			SELECT
-				mod_calccap AS mod_cap
-			FROM
-				comp_caps
-			WHERE
-				mod_group IS NULL
-		) AS a,
-		(
-			SELECT
-				jsonb_object(
-					array_agg(mod_group),
-					array_agg(mod_calccap::TEXT)) AS mod_bcap
-			FROM
-				comp_caps
-			WHERE
-				mod_group IS NOT NULL
-		) AS b,
-		(
-			SELECT
-				mod_calcdpriv AS mod_dpriv
-			FROM
-				comp_caps
-			WHERE
-				mod_group IS NULL
-		) AS c,
-		(
-			SELECT
-				jsonb_object(
-					array_agg(mod_group),
-					array_agg(mod_calcdpriv::TEXT)) AS mod_bdpriv
-			FROM
-				comp_caps
-			WHERE
-				mod_group IS NOT NULL AND
-					mod_calcdpriv IS NOT NULL
-		) AS d,
-		(
-			SELECT
-				COUNT(*) = 0 AS automanage
-			FROM
-				comp_caps
-		) AS z;
-
-	IF TG_OP = 'INSERT' THEN
-		-- insert or update
-		-- it may not exist yet
-		-- or it may be automanaged
-		INSERT INTO
-			ib0.modlist (
-				mod_pubkey,
-				mod_cap,
-				mod_bcap,
-				mod_dpriv,
-				mod_bdpriv,
-				automanage
-			)
-		VALUES (
-			pubkey,
-			r.mod_cap,
-			r.mod_bcap,
-			r.mod_dpriv,
-			r.mod_bdpriv,
-			r.automanage
-		)
-		ON CONFLICT
-			(mod_pubkey)
-		DO UPDATE
-			SET
-				mod_cap    = EXCLUDED.mod_cap,
-				mod_bcap   = EXCLUDED.mod_bcap,
-				mod_dpriv  = EXCLUDED.mod_dpriv,
-				mod_bdpriv = EXCLUDED.mod_bdpriv,
-				automanage = EXCLUDED.automanage;
-
-	ELSIF TG_OP = 'UPDATE' THEN
-		-- only update existing (because at this point it will exist)
-		-- at this point it'll be automanaged too (because we're moding existing row)
-		UPDATE
-			ib0.modlist
-		SET
-			mod_cap    = r.mod_cap,
-			mod_bcap   = r.mod_bcap,
-			mod_dpriv  = r.mod_dpriv,
-			mod_bdpriv = r.mod_bdpriv
-		WHERE
-			mod_pubkey = pubkey;
-
-	ELSIF TG_OP = 'DELETE' THEN
-		-- update and possibly delete
-		UPDATE
-			ib0.modlist
-		SET
-			mod_cap    = r.mod_cap,
-			mod_bcap   = r.mod_bcap,
-			mod_dpriv  = r.mod_dpriv,
-			mod_bdpriv = r.mod_bdpriv,
-			automanage = r.automanage
-		WHERE
-			mod_pubkey = pubkey
-		RETURNING
-			mod_id
-		INTO STRICT
-			u_mod_id;
-
-		IF r.automanage THEN
-			-- if it's automanaged, do GC incase no post refers to it
-			DELETE FROM
-				ib0.modlist mods
-			USING
-				(
-					SELECT
-						mod_id,
-						COUNT(*) <> 0 AS hasrefs
-					FROM
-						ib0.bposts
-					WHERE
-						mod_id = u_mod_id
-					GROUP BY
-						mod_id
-				) AS rcnts
-			WHERE
-				mods.mod_id = rcnts.mod_id AND
-					rcnts.hasrefs = FALSE
-		END IF;
-
-	END IF;
-
-	RETURN NULL;
-END;
-$$
-LANGUAGE
-	plpgsql
 
 -- :next
-CREATE TRIGGER
-	modsets_compute
-AFTER
-	INSERT OR UPDATE OR DELETE
-ON
-	ib0.modsets
-FOR EACH
-	ROW
-EXECUTE PROCEDURE
-	ib0.modsets_compute()
-
-
-
-
-
-
-
--- :next
--- index of references, so that we can pick them up and correct when we modify stuff
+-- refers-refered relation. used only to awaken re-calculation.
 -- references are rendered per-board, not per-post,
 -- as multiboard posts may end up refering to odd things otherwise
 CREATE TABLE ib0.refs (
@@ -581,76 +327,6 @@ CREATE INDEX
 	ON ib0.refs (msgid)
 	WHERE msgid IS NOT NULL
 
-
---- puller stuff
--- :next
-CREATE TABLE ib0.puller_list (
-	sid      BIGINT  GENERATED ALWAYS AS IDENTITY,
-	sname    TEXT    COLLATE "C"  NOT NULL,
-	-- nonce, used to clean dead server trackings
-	last_use BIGINT               NOT NULL,
-
-	PRIMARY KEY (sid),
-	UNIQUE (sname)
-)
--- :next
-CREATE INDEX ON ib0.puller_list (last_use)
-
-
--- :next
--- last timestamp when we did NEWNEWS (per-server)
-CREATE TABLE ib0.puller_last_newnews (
-	sid          BIGINT NOT NULL,
-	last_newnews BIGINT NOT NULL,
-
-	PRIMARY KEY (sid),
-	FOREIGN KEY (sid)
-		REFERENCES ib0.puller_list
-		ON DELETE CASCADE
-)
-
-
--- :next
--- last timestamp when we did NEWGROUPS (per-server)
-CREATE TABLE ib0.puller_last_newgroups (
-	sid            BIGINT NOT NULL,
-	last_newgroups BIGINT NOT NULL,
-
-	PRIMARY KEY (sid),
-	FOREIGN KEY (sid)
-		REFERENCES ib0.puller_list
-		ON DELETE CASCADE
-)
-
-
--- :next
-CREATE TABLE ib0.puller_group_track (
-	sid      BIGINT  NOT NULL,
-	bid      INTEGER NOT NULL,
-	-- nonce, used to clean dead board trackings
-	last_use BIGINT  NOT NULL,
-	-- max id seen last time
-	last_max BIGINT  NOT NULL,
-	-- max id seen now
-	next_max BIGINT  NOT NULL,
-
-	PRIMARY KEY (sid,bid),
-	FOREIGN KEY (sid)
-		REFERENCES ib0.puller_list
-		ON DELETE CASCADE,
-	FOREIGN KEY (bid)
-		REFERENCES ib0.boards
-		ON DELETE CASCADE
-)
--- :next
-CREATE INDEX
-	ON ib0.puller_group_track (sid,last_use)
--- :next
-CREATE INDEX
-	ON ib0.puller_group_track (bid)
-
-
---- moderation stuff
 -- :next
 CREATE TABLE ib0.banlist (
 	ban_id   BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -660,7 +336,8 @@ CREATE TABLE ib0.banlist (
 	b_id     INTEGER,
 	b_p_id   BIGINT,
 
-	msgid  TEXT  COLLATE "C", -- msgid being banned (if any)
+	msgid  TEXT  COLLATE "C" NOT NULL, -- msgid being banned
+	bname  TEXT  COLLATE "C",          -- if per-board ban
 
 	PRIMARY KEY (ban_id),
 
@@ -676,52 +353,7 @@ CREATE INDEX
 -- :next
 CREATE INDEX
 	ON ib0.banlist (msgid)
-	WHERE msgid IS NOT NULL
 -- :next
--- to be ran AFTER delet from banlist
-CREATE FUNCTION
-	ib0.banlist_after_del()
-RETURNS
-	TRIGGER
-AS
-$$
-BEGIN
-	-- garbage collect void placeholder posts when all bans for them are lifted
-	DELETE FROM
-		ib0.posts xp
-	USING
-		(
-			SELECT
-				delbl.msgid,COUNT(exibl.msgid) > 0 AS hasrefs
-			FROM
-				oldrows AS delbl
-			LEFT JOIN
-				ib0.banlist exibl
-			ON
-				delbl.msgid = exibl.msgid
-			WHERE
-				delbl.msgid IS NOT NULL
-			GROUP BY
-				delbl.msgid
-		) AS delp
-	WHERE
-		delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
-
-	RETURN NULL;
-END;
-$$
-LANGUAGE
-	plpgsql
--- :next
-CREATE TRIGGER
-	banlist_after_del
-AFTER
-	DELETE
-ON
-	ib0.banlist
-REFERENCING
-	OLD TABLE AS oldrows
-FOR EACH
-	STATEMENT
-EXECUTE PROCEDURE
-	ib0.banlist_after_del()
+CREATE INDEX
+	ON ib0.banlist (bname,msgid)
+	WHERE bname IS NOT NULL
