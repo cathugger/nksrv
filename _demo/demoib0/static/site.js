@@ -136,12 +136,12 @@ function newembedcontrol(me) {
 	loopcb.addEventListener('input', function(e){
 		me.loop = e.target.checked;
 	});
-	loopcb.style.margin = '0px 2px';
+	loopcb.style.margin = '0px 1px';
 	loopcb.style.verticalAlign = 'middle';
 
 	// label which carries checkbox and text
 	var cloop = document.createElement('label');
-	cloop.style.paddingRight = '2px'; // compensate for checkbox margin
+	cloop.style.paddingRight = '1px'; // compensate for checkbox margin
 	cloop.appendChild(loopcb);
 	cloop.appendChild(document.createTextNode('Loop'));
 
