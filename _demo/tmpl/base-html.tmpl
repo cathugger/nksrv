@@ -11,33 +11,7 @@
 
 {% page "head" -%}
 
-<link
- rel="stylesheet"
- type="text/css"
- href="{% static "blue.css" %}"
- id="theme"
-/>
-<link
- rel="stylesheet"
- type="text/css"
- href="{% static "blue.css" %}"
- data-theme="Blue"
- media="none"
-/>
-<link
- rel="stylesheet"
- type="text/css"
- href="{% static "dark.css" %}"
- data-theme="Dark"
- media="none"
-/>
-<link
- rel="stylesheet"
- type="text/css"
- href="{% static "green_neko1.css" %}"
- data-theme="Green Neko 1"
- media="none"
-/>
+{% part "themes" -%}
 
 <script type="text/javascript" src="{% static "base.js" %}"></script>
 

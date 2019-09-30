@@ -17,3 +17,14 @@ $hr-fg:           #5d5d9d;
 $hr-poi-fg:       #BCBCE6;
 
 @import 'nksrv1';
+
+input[type="text"], textarea {
+	background-color: #383b3d;
+	color: white;
+	border: 1px solid #666;
+	padding: 1px 2px;
+	/* transition: all 125ms ease-in-out; */
+}
+input[type="text"]:focus, textarea:focus {
+	border: 1px solid #6A90FE;
+}
