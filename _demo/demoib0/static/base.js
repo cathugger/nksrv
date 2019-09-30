@@ -1,27 +1,25 @@
 
-function switchToTheme(s) {
-	var e = document.getElementById("theme");
-	if (e) {
-		//e.href = s.href;
+var theme_default = document.getElementById("theme");
+var theme_current = theme_default;
 
-		//// XXX non-default may be active one
-		//e.disabled = true;
-		//s.disabled = false;
-
-		//e.rel = 'alternate stylesheet';
-		//s.rel = 'stylesheet';
-
-		e.media = "none";
-		s.media = "";
+function switchToTheme(theme_new) {
+	if (theme_current) {
+		theme_current.media = "none";
+		theme_new.media = "";
+		theme_current = theme_new;
 	}
 }
 
 function switchToThemeName(n) {
+	if (n == "") {
+		switchToTheme(theme_default);
+		return;
+	}
 	var alts = document.querySelectorAll('[rel="stylesheet"]');
 	for (var i = 0; i < alts.length; i++) {
 		if (alts[i].dataset.theme == n) {
 			switchToTheme(alts[i]);
-			break;
+			return;
 		}
 	}
 }
