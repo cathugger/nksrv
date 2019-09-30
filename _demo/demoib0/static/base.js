@@ -1,4 +1,6 @@
 
+/* theme switching functionality */
+
 var theme_default = document.getElementById("theme");
 var theme_current = theme_default;
 
@@ -15,10 +17,10 @@ function switchToThemeName(n) {
 		switchToTheme(theme_default);
 		return;
 	}
-	var alts = document.querySelectorAll('[rel="stylesheet"]');
-	for (var i = 0; i < alts.length; i++) {
-		if (alts[i].dataset.theme == n) {
-			switchToTheme(alts[i]);
+	var styles = document.querySelectorAll('[rel="stylesheet"]');
+	for (var i = 0; i < styles.length; i++) {
+		if (styles[i].dataset.theme == n) {
+			switchToTheme(styles[i]);
 			return;
 		}
 	}

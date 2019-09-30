@@ -1,5 +1,59 @@
 // console.log("ohayo!");
 
+/* more of theme switching stuff */
+
+function selectThemeName(t) {
+	switchToThemeName(t);
+	if (t != "")
+		window.localStorage.setItem('site-theme-name', t);
+	else
+		window.localStorage.removeItem('site-theme-name');
+}
+
+function makeThemeSwitcher() {
+	var sel = document.createElement('select');
+
+	var styles = document.querySelectorAll('[rel="stylesheet"]');
+	for (var i = 0; i < styles.length; i++) {
+		var s = styles[i];
+
+		var opt = document.createElement('option');
+
+		if (s.id == "theme") {
+			opt.value = "";
+			opt.text = "(Default)";
+		}
+		else if (s.dataset.theme) {
+			opt.value = s.dataset.theme;
+			opt.text = s.dataset.theme;
+		}
+		else {
+			continue;
+		}
+
+		if (s === theme_current) {
+			opt.selected = true;
+		}
+
+		sel.add(opt);
+	}
+
+	sel.addEventListener('change', function(){ selectThemeName(this.value); });
+
+	return sel;
+}
+
+function addThemeSwitcher() {
+	var ll = document.documentElement.getElementsByTagName('hr');
+	var lhr = ll[ll.length - 1];
+
+	var sw = makeThemeSwitcher();
+	sw.style.float = "right";
+
+	lhr.parentNode.insertBefore(sw, lhr.nextSibling);
+}
+
+
 /* image expansion functionality */
 
 function finishimgexpansion(lnk, exp, thm) {
@@ -549,6 +603,8 @@ function ready() {
 			e.href = '#';
 		}
 	}
+	// add theme switcher
+	addThemeSwitcher();
 }
 
 // executed once page completed loading
