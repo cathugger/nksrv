@@ -45,6 +45,8 @@ function makeThemeSwitcher() {
 
 function addThemeSwitcher() {
 	var ll = document.documentElement.getElementsByTagName('hr');
+	if (ll.length <= 0)
+		return;
 	var lhr = ll[ll.length - 1];
 
 	var sw = makeThemeSwitcher();
