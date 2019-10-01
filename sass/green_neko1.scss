@@ -7,12 +7,24 @@ $quote-fg:        #407F10;
 $link-ref-fg:     #EF1000;
 $link-bref-fg:    #004070;
 $reply-bg:        #DDFFDD;
-$reply-border:    #99EEBB;
+$reply-border:    #A0E7BD;
 $subject-fg:      #0F0C5D;
 $name-span-fg:    #117743;
 $unitrip-fg:      #0055CC;
 $pnum-hover-fg:   #EE2222;
-$pf-label-bg:     #c7efbc;
+$pf-label-bg:     #d0f6c5;
 $hr-poi-fg:       #BCBCE6;
 
 @import 'nksrv1';
+
+input[type="text"], textarea {
+	background-color: #eaffe4;
+	color: black;
+	border: 1px solid #84DEA9;
+	padding: 1px 2px;
+	outline: 0;
+	/* transition: all 125ms ease-in-out; */
+}
+input[type="text"]:focus, textarea:focus {
+	border: 1px solid #EDE26B;
+}

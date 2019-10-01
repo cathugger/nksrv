@@ -12,7 +12,7 @@ $subject-fg:      #0F0C5D;
 $name-span-fg:    #117743;
 $unitrip-fg:      #0055CC;
 $pnum-hover-fg:   #EE2222;
-$pf-label-bg:     #c7efbc;
+$pf-label-bg:     #c3e1bb;
 $hr-poi-fg:       #BCBCE6;
 
 @import 'nksrv1';
@@ -26,5 +26,5 @@ input[type="text"], textarea {
 	/* transition: all 125ms ease-in-out; */
 }
 input[type="text"]:focus, textarea:focus {
-	border: 1px solid #55FF55;
+	border: 1px solid #F0E34B;
 }
