@@ -28,14 +28,18 @@ a:link, a:visited {
 	}
 }
 
-.cat_div {
-	float: left;
+.cat_contain {
 	text-align: center;
+}
+
+.cat_div {
+	display: inline-block;
+	vertical-align: middle;
 	width:  180px;
 	height: 250px;
-	margin:  2px 2px 2px 2px;
-	padding: 4px 2px 4px 2px;
-	/* border: 1px solid #EE6666; */
+	margin:  2px;
+	padding: 6px 2px;
+	/* border: 1px solid #333; -- for black theme */
 	overflow: hidden;
 	word-wrap: break-word;
 }
