@@ -9,7 +9,8 @@
 
   <hr />
 
-  {{- range $.D.Threads}}
+  <div class="cat_contain">
+  {{- range $.D.Threads -}}
    <div class="cat_div">
     <a href="thread/{{urlpath .ID}}">
      {{- if .Thumb.ID -}}
@@ -46,7 +47,8 @@
     {{- end -}}
     {{- fmtmsgcat $.R $.N . -}}
    </div>
-  {{- end}}
+  {{- end -}}
+  </div>
 
   <div style="clear: both;"></div>
 

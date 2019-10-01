@@ -7,7 +7,8 @@
 
   <hr />
 
-  {{- range $.D.Threads}}
+  <div class="cat_contain">
+  {{- range $.D.Threads -}}
    <div class="cat_div">
     <div><a href="{% (env).Root %}/{{escboard .BoardName}}/">/{{html .BoardName}}/</a></div>
     <a href="{% (env).Root %}/{{escboard .BoardName}}/thread/{{.ID}}">
@@ -45,7 +46,8 @@
     {{- end -}}
     {{- fmtmsgcat $.R $.N .IBThreadCatalogThread -}}
    </div>
-  {{- end}}
+  {{- end -}}
+  </div>
 
   <div style="clear: both;"></div>
 
