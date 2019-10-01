@@ -101,7 +101,7 @@ label {
 	max-width: 100%;
 	min-width: 215px;
 	position: relative;
-	margin-bottom: 12px;
+	margin-bottom: 4px; /* why this was 12 before? */
 
 	/* disable selection on doubleclick */
 	@include user-select-none;
