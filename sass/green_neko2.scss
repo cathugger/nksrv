@@ -16,3 +16,14 @@ $pf-label-bg:     #c7efbc;
 $hr-poi-fg:       #BCBCE6;
 
 @import 'nksrv1';
+
+input[type="text"], textarea {
+	background-color: #eaffe4;
+	color: black;
+	border: 1px solid #74B68F;
+	padding: 1px 2px;
+	/* transition: all 125ms ease-in-out; */
+}
+input[type="text"]:focus, textarea:focus {
+	border: 1px solid #55FF55;
+}
