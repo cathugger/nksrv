@@ -106,6 +106,7 @@ label {
 	min-width: 215px;
 	position: relative;
 	margin-bottom: 4px; /* why this was 12 before? */
+	display: inline-block;
 
 	/* disable selection on doubleclick */
 	@include user-select-none;
