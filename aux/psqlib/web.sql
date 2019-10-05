@@ -22,7 +22,7 @@ SELECT
 	xbp.p_name,
 	xbp.activ_refs,
 	xp.msgid,
-	xp.pdate,
+	xp.date_sent,
 	xp.sage,
 	xp.f_count AS xp_f_count,
 	xp.author,
@@ -91,7 +91,7 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate,
+			date_sent,
 			activ_refs
 		FROM
 			ib0.bposts AS op
@@ -106,7 +106,7 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate,
+			date_sent,
 			activ_refs
 		FROM (
 			SELECT
@@ -119,7 +119,7 @@ LEFT JOIN
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
-						rp.pdate,
+						rp.date_sent,
 						rp.activ_refs
 					FROM
 						ib0.bposts AS rp
@@ -128,13 +128,13 @@ LEFT JOIN
 							rp.b_t_id = xt.b_t_id AND
 							rp.b_p_id != xt.b_t_id
 					ORDER BY
-						rp.pdate DESC,
-						rp.b_p_id DESC
+						rp.date_sent DESC,
+						rp.b_p_id    DESC
 					LIMIT 5
 				) AS tt
 			ORDER BY
-				pdate ASC,
-				b_p_id ASC
+				date_sent ASC,
+				b_p_id    ASC
 		) AS ttt
 	) AS xbp
 ON
@@ -172,7 +172,7 @@ SELECT
 	xbp.p_name,
 	xbp.activ_refs,
 	xp.msgid,
-	xp.pdate,
+	xp.date_sent,
 	xp.sage,
 	xp.f_count AS xp_f_count,
 	xp.author,
@@ -243,7 +243,7 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate,
+			date_sent,
 			activ_refs
 		FROM
 			ib0.bposts AS op
@@ -258,7 +258,7 @@ LEFT JOIN
 			b_p_id,
 			g_p_id,
 			p_name,
-			pdate,
+			date_sent,
 			activ_refs
 		FROM (
 			SELECT
@@ -271,7 +271,7 @@ LEFT JOIN
 						rp.b_p_id,
 						rp.g_p_id,
 						rp.p_name,
-						rp.pdate,
+						rp.date_sent,
 						rp.activ_refs
 					FROM
 						ib0.bposts AS rp
@@ -280,13 +280,13 @@ LEFT JOIN
 							rp.b_t_id = xt.b_t_id AND
 							rp.b_p_id != xt.b_t_id
 					ORDER BY
-						rp.pdate DESC,
-						rp.b_p_id DESC
+						rp.date_sent DESC,
+						rp.b_p_id    DESC
 					LIMIT 5
 				) AS tt
 			ORDER BY
-				pdate ASC,
-				b_p_id ASC
+				date_sent ASC,
+				b_p_id    ASC
 		) AS ttt
 	) AS xbp
 ON
@@ -322,7 +322,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xt.bump,
 	xbp.b_p_id,
-	xp.pdate,
+	xp.date_sent,
 	xp.f_count AS xp_f_count,
 	xp.author,
 	xp.trip,
@@ -390,7 +390,7 @@ SELECT
 	xt.f_count AS xt_f_count,
 	xt.bump,
 	xbp.b_p_id,
-	xp.pdate,
+	xp.date_sent,
 	xp.f_count AS xp_f_count,
 	xp.author,
 	xp.trip,
@@ -471,7 +471,7 @@ SELECT
 	xbp.p_name,
 	xbp.activ_refs,
 	xp.msgid,
-	xp.pdate,
+	xp.date_sent,
 	xp.sage,
 	xp.f_count AS xp_f_count,
 	xp.author,
@@ -537,7 +537,8 @@ LEFT JOIN LATERAL
 		WHERE
 			xt.b_id = zbp.b_id AND xt.b_t_id = zbp.b_t_id
 		ORDER BY
-			zbp.pdate ASC,zbp.b_p_id ASC
+			zbp.date_sent ASC,
+			zbp.b_p_id    ASC
 	) AS xbp
 ON
 	TRUE
@@ -596,7 +597,7 @@ SELECT
 	xb.thread_opts,
 	xtp.thread_opts,
 	xtp.msgid,
-	xtp.pdate
+	xtp.date_sent
 FROM
 	xb
 LEFT JOIN LATERAL
@@ -607,7 +608,7 @@ LEFT JOIN LATERAL
 			xt.reply_limits,
 			xt.thread_opts,
 			xp.msgid,
-			xp.pdate
+			xp.date_sent
 		FROM
 			ib0.threads xt
 		JOIN

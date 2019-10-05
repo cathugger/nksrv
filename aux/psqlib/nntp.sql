@@ -12,7 +12,7 @@ WHERE
 -- input: cmsgid
 -- output: is_banned
 SELECT
-	(padded IS NULL) AS is_banned
+	(date_recv IS NULL) AS is_banned
 FROM
 	ib0.gposts
 WHERE
@@ -25,7 +25,7 @@ SELECT
 	xbp.b_id,
 	xbp.b_p_id,
 	xp.g_p_id,
-	(xp.padded IS NULL) AS is_banned
+	(xp.date_recv IS NULL) AS is_banned
 FROM
 	ib0.gposts AS xp
 JOIN
@@ -68,7 +68,7 @@ USING
 	(g_p_id)
 WHERE
 	-- ensure g_p_id points to valid post to prevent TOCTOU hazards
-	jp.g_p_id = $1 AND jp.padded IS NOT NULL
+	jp.g_p_id = $1 AND jp.date_recv IS NOT NULL
 ORDER BY
 	jf.f_id
 
@@ -190,14 +190,14 @@ LIMIT
 
 -- :name nntp_newnews_all
 -- input: {time since}
-SELECT DISTINCT ON (xbp.padded,xbp.g_p_id)
+SELECT DISTINCT ON (xbp.date_recv,xbp.g_p_id)
 	xbp.msgid
 FROM
 	ib0.bposts AS xbp
 WHERE
-	xbp.padded >= $1
+	xbp.date_recv >= $1
 ORDER BY
-	xbp.padded,
+	xbp.date_recv,
 	xbp.g_p_id
 
 -- :name nntp_newnews_one
@@ -211,10 +211,10 @@ JOIN
 USING
 	(b_id)
 WHERE
-	xbp.padded >= $1 AND
+	xbp.date_recv >= $1 AND
 		xb.b_name = $2
 ORDER BY
-	xbp.padded,
+	xbp.date_recv,
 	xbp.g_p_id
 
 -- :name nntp_newnews_all_group
@@ -230,9 +230,9 @@ JOIN
 USING
 	(b_id)
 WHERE
-	xbp.padded >= $1
+	xbp.date_recv >= $1
 ORDER BY
-	xbp.padded,
+	xbp.date_recv,
 	xbp.g_p_id
 
 
@@ -297,7 +297,7 @@ GROUP BY
 -- :name nntp_over_msgid
 -- input: {msgid}
 -- string_agg(xb.b_name || ':' || xbp.b_p_id, ' ') -- unused
--- TODO filter by xp.padded/xbp.padded
+-- TODO filter by xp.date_recv/xbp.date_recv
 SELECT
 	array_agg(xbp.b_id),
 	array_agg(xbp.b_p_id),
@@ -307,7 +307,7 @@ SELECT
 	xp.headers -> 'From' ->> 0,
 	xp.headers -> 'Date' ->> 0,
 	xp.headers -> 'References' ->> 0,
-	(xp.padded IS NULL)
+	(xp.date_recv IS NULL)
 FROM
 	ib0.boards AS xb
 JOIN
@@ -394,7 +394,7 @@ GROUP BY
 SELECT
 	xbp.b_id,
 	xbp.b_p_id,
-	(xp.padded IS NULL)
+	(xp.date_recv IS NULL)
 FROM
 	ib0.gposts AS xp
 JOIN
@@ -415,7 +415,7 @@ SELECT
 	xbp.b_p_id,
 	xp.title,
 	xp.headers -> 'Subject' ->> 0,
-	(xp.padded IS NULL)
+	(xp.date_recv IS NULL)
 FROM
 	ib0.gposts AS xp
 JOIN
@@ -435,7 +435,7 @@ SELECT
 	xbp.b_id,
 	xbp.b_p_id,
 	xp.headers -> $3 ->> 0,
-	(xp.padded IS NULL)
+	(xp.date_recv IS NULL)
 FROM
 	ib0.gposts AS xp
 JOIN
