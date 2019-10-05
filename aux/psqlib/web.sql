@@ -140,7 +140,7 @@ LEFT JOIN
 ON
 	TRUE
 LEFT JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN LATERAL
@@ -293,7 +293,7 @@ ON
 	TRUE
 -- XXX possibly misorder join, too annoy to move inside
 LEFT JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN LATERAL
@@ -354,7 +354,7 @@ LEFT JOIN
 ON
 	xt.b_id = xbp.b_id AND xt.b_t_id = xbp.b_p_id
 LEFT JOIN
-	ib0.posts xp
+	ib0.gposts xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN
@@ -431,7 +431,7 @@ LEFT JOIN
 ON
 	xt.b_id = xbp.b_id AND xt.b_t_id = xbp.b_p_id
 LEFT JOIN
-	ib0.posts xp
+	ib0.gposts xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN
@@ -542,7 +542,7 @@ LEFT JOIN LATERAL
 ON
 	TRUE
 LEFT JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
 LEFT JOIN LATERAL
@@ -615,7 +615,7 @@ LEFT JOIN LATERAL
 		ON
 			xt.b_id=xbp.b_id AND xt.b_t_id=xbp.b_p_id
 		JOIN
-			ib0.posts xp
+			ib0.gposts xp
 		ON
 			xbp.g_p_id = xp.g_p_id
 		WHERE

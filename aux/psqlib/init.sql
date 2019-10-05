@@ -28,19 +28,16 @@ CREATE TABLE ib0.gposts (
 	g_p_id BIGINT  GENERATED ALWAYS AS IDENTITY, -- global internal post ID
 	msgid  TEXT    COLLATE "C"  NOT NULL,        -- Message-ID
 
-	-- redundant
-	pdate  TIMESTAMP  WITH TIME ZONE, -- real date field
-	-- date field used for sorting. will actually contain delivery date
-	-- it's not indexed there because we sometimes want to select with board keying
-	padded TIMESTAMP  WITH TIME ZONE,
-	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
+	date_sent TIMESTAMP  WITH TIME ZONE,
+	date_recv TIMESTAMP  WITH TIME ZONE,
+	sage      BOOLEAN    NOT NULL,
 
 	f_count INTEGER NOT NULL, -- attachment count
 
-	author  TEXT                 NOT NULL, -- author name
-	trip    TEXT    COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
-	title   TEXT                 NOT NULL, -- message title/subject field
-	message TEXT                 NOT NULL, -- post message, in UTF-8
+	author  TEXT               NOT NULL, -- author name
+	trip    TEXT  COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
+	title   TEXT               NOT NULL, -- message title/subject field
+	message TEXT               NOT NULL, -- post message, in UTF-8
 	-- headers of msg root, map of lists of strings, needed for NNTP HDR
 	headers JSONB,
 	-- attributes associated with global post and visible in webui
@@ -160,10 +157,10 @@ CREATE TABLE ib0.bposts (
 	g_p_id BIGINT                NOT NULL, -- global internal post ID
 	msgid  TEXT     COLLATE "C"  NOT NULL, -- global external msgid
 
-	-- redundant w/ global but needed for efficient indexes
-	pdate  TIMESTAMP  WITH TIME ZONE,           -- real date field
-	padded TIMESTAMP  WITH TIME ZONE,           -- date field used for sorting. will actually contain delivery date
-	sage   BOOLEAN                    NOT NULL, -- if true this isn't bump
+	-- denormalized w/ global for efficient indexing
+	date_sent TIMESTAMP  WITH TIME ZONE,
+	date_recv TIMESTAMP  WITH TIME ZONE,
+	sage      BOOLEAN    NOT NULL,       -- if true this isn't bump
 
 	-- following fields are only used if this is mod msg
 	mod_id BIGINT,
@@ -202,16 +199,16 @@ CREATE TABLE ib0.bposts (
 -- in thread, for bump
 CREATE INDEX
 	ON ib0.bposts (
-		b_id   ASC,
-		b_t_id ASC,
-		pdate  ASC,
-		b_p_id ASC
+		b_id      ASC,
+		b_t_id    ASC,
+		date_sent ASC,
+		b_p_id    ASC
 	)
 -- :next
 -- for NEWNEWS (yeh, not in ib0.gposts)
 CREATE INDEX
 	ON ib0.bposts (
-		padded,
+		date_recv,
 		g_p_id,
 		b_id
 	)
@@ -234,7 +231,7 @@ CREATE UNIQUE INDEX
 CREATE INDEX
 	ON ib0.bposts (
 		mod_id,
-		pdate
+		date_sent
 	)
 	WHERE mod_id IS NOT NULL
 

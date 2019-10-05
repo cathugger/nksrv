@@ -449,7 +449,7 @@ WITH
 			ib0.gposts
 		WHERE
 			msgid = $1 AND
-				padded IS NOT NULL
+				date_recv IS NOT NULL
 		RETURNING
 			g_p_id,
 			f_count,
@@ -465,7 +465,7 @@ WITH
 			ib0.gposts
 		WHERE
 			g_p_id = $1 AND
-				padded IS NOT NULL
+				date_recv IS NOT NULL
 		RETURNING
 			g_p_id,
 			f_count,
@@ -496,8 +496,8 @@ WITH
 		INSERT INTO
 			ib0.gposts AS xp (
 				msgid,
-				pdate,
-				padded,
+				date_sent,
+				date_recv,
 				sage,
 				f_count,
 				author,
@@ -527,20 +527,20 @@ WITH
 			)
 		ON CONFLICT (msgid) DO UPDATE
 			SET
-				pdate   = excluded.pdate,
-				padded  = excluded.padded,
-				sage    = excluded.sage,
-				f_count = excluded.f_count,
-				author  = excluded.author,
-				trip    = excluded.trip,
-				title   = excluded.title,
-				message = excluded.message,
-				headers = excluded.headers,
-				attrib  = excluded.attrib,
-				layout  = excluded.layout,
-				extras  = excluded.extras
+				date_sent = excluded.date_sent,
+				date_recv = excluded.date_recv,
+				sage      = excluded.sage,
+				f_count   = excluded.f_count,
+				author    = excluded.author,
+				trip      = excluded.trip,
+				title     = excluded.title,
+				message   = excluded.message,
+				headers   = excluded.headers,
+				attrib    = excluded.attrib,
+				layout    = excluded.layout,
+				extras    = excluded.extras
 			WHERE
-				xp.padded IS NOT NULL
+				xp.date_recv IS NOT NULL
 		RETURNING
 			g_p_id,
 			f_count,
@@ -567,15 +567,15 @@ WHERE
 UPDATE
 	ib0.threads
 SET
-	bump = pdate
+	bump = date_sent
 FROM
 	(
 		SELECT
-			pdate
+			date_sent
 		FROM
 			(
 				SELECT
-					pdate,
+					date_sent,
 					b_p_id,
 					sage
 				FROM
@@ -585,8 +585,8 @@ FROM
 					-- because others do it like that :<
 					b_id = $1 AND b_t_id = $2
 				ORDER BY
-					pdate ASC,
-					b_p_id ASC
+					date_sent ASC,
+					b_p_id    ASC
 				LIMIT
 					$3
 				-- take bump posts, sorted by original date,
@@ -595,7 +595,8 @@ FROM
 		WHERE
 			sage != TRUE
 		ORDER BY
-			pdate DESC,b_p_id DESC
+			date_sent DESC,
+			b_p_id    DESC
 		LIMIT
 			1
 		-- and pick latest one
@@ -671,15 +672,15 @@ WITH
 			b_id,
 			b_p_id,
 			b_t_id,
-			pdate,
+			date_sent,
 			g_p_id
 		FROM
 			ib0.bposts
 		WHERE
 			mod_id = $1 AND
-				(pdate,g_p_id,b_id) < ($2,$3,$4)
+				(date_sent,g_p_id,b_id) < ($2,$3,$4)
 		ORDER BY
-			pdate DESC,
+			date_sent DESC,
 			g_p_id DESC,
 			b_id DESC
 		LIMIT
@@ -702,7 +703,7 @@ SELECT
 	yp.msgid,
 	ypp.msgid,
 	yp.title,
-	zbp.pdate,
+	zbp.date_sent,
 	yp.message,
 	yp.extras -> 'text_attach',
 	yf.fname
