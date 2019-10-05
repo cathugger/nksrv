@@ -4,11 +4,9 @@
 SELECT
 	1
 FROM
-	ib0.posts
+	ib0.gposts
 WHERE
 	msgid = $1
-LIMIT
-	1
 
 -- :name nntp_article_valid_and_banned_by_msgid
 -- input: cmsgid
@@ -16,11 +14,9 @@ LIMIT
 SELECT
 	(padded IS NULL) AS is_banned
 FROM
-	ib0.posts
+	ib0.gposts
 WHERE
 	msgid = $1
-LIMIT
-	1
 
 
 -- :name nntp_article_num_by_msgid
@@ -31,7 +27,7 @@ SELECT
 	xp.g_p_id,
 	(xp.padded IS NULL) AS is_banned
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -46,18 +42,12 @@ LIMIT
 -- :name nntp_article_msgid_by_num
 -- input: bid bpid
 SELECT
-	xp.msgid,
-	xp.g_p_id
+	xbp.msgid,
+	xbp.g_p_id
 FROM
-	ib0.posts AS xp
-JOIN
 	ib0.bposts AS xbp
-USING
-	(g_p_id)
 WHERE
 	xbp.b_id = $1 AND xbp.b_p_id = $2
-LIMIT
-	1
 
 
 
@@ -71,7 +61,7 @@ SELECT
 	jf.fname,
 	jf.fsize
 FROM
-	ib0.posts AS jp
+	ib0.gposts AS jp
 LEFT JOIN
 	ib0.files AS jf
 USING
@@ -119,39 +109,6 @@ ON
 
 -- :name nntp_select_and_list
 -- input: {board name} {min} {max}
-WITH
-	xbe AS (
-		SELECT
-			xb.b_id         AS b_id,
-			xb.p_count      AS p_count,
-			MIN(xbp.b_p_id) AS lo,
-			MAX(xbp.b_p_id) AS hi
-		FROM
-			ib0.boards AS xb
-		LEFT JOIN
-			ib0.bposts AS xbp
-		USING
-			(b_id)
-		WHERE
-			xb.b_name = $1
-		GROUP BY
-			xb.b_id
-		LIMIT 1
-	),
-	xbi AS (
-		SELECT
-			xbe.b_id    AS b_id,
-			xbe.p_count AS p_count,
-			xbe.lo      AS lo,
-			xbe.hi      AS hi,
-			xbp.g_p_id  AS g_lo
-		FROM
-			xbe
-		LEFT JOIN
-			ib0.bposts AS xbp
-		ON
-			xbe.b_id = xbp.b_id AND xbe.lo = xbp.b_p_id
-	)
 SELECT
 	xbi.b_id,
 	xbi.p_count,
@@ -160,13 +117,42 @@ SELECT
 	xbi.g_lo,
 	x3.b_p_id
 FROM
-	xbi
+	(
+		SELECT
+			xbe.b_id    AS b_id,
+			xbe.p_count AS p_count,
+			xbe.lo      AS lo,
+			xbe.hi      AS hi,
+			xbp.g_p_id  AS g_lo
+		FROM
+			(
+				SELECT
+					xb.b_id         AS b_id,
+					xb.p_count      AS p_count,
+					MIN(xbp.b_p_id) AS lo,
+					MAX(xbp.b_p_id) AS hi
+				FROM
+					ib0.boards AS xb
+				LEFT JOIN
+					ib0.bposts AS xbp
+				USING
+					(b_id)
+				WHERE
+					xb.b_name = $1
+				GROUP BY
+					xb.b_id
+			) AS xbe
+		LEFT JOIN
+			ib0.bposts AS xbp
+		ON
+			xbe.b_id = xbp.b_id AND xbe.lo = xbp.b_p_id
+	) AS xbi
 LEFT JOIN
 	ib0.bposts AS x3
-USING
-	(b_id)
-WHERE
-	(x3.b_p_id >= $2 AND ($3 < 0 OR x3.b_p_id <= $3)) OR (x3.b_p_id IS NULL)
+ON
+	xbi.b_id = x3.b_id AND
+		x3.b_p_id >= $2 AND
+		($3 < 0 OR x3.b_p_id <= $3)
 ORDER BY
 	x3.b_p_id
 
@@ -176,13 +162,9 @@ ORDER BY
 -- input: {board name} {old b_p_id}
 SELECT
 	xbp.b_p_id,
-	xp.msgid
+	xbp.msgid
 FROM
 	ib0.bposts AS xbp
-JOIN
-	ib0.posts AS xp
-USING
-	(g_p_id)
 WHERE
 	xbp.b_id = $1 AND xbp.b_p_id > $2
 ORDER BY
@@ -194,13 +176,9 @@ LIMIT
 -- input: {board name} {old b_p_id}
 SELECT
 	xbp.b_p_id,
-	xp.msgid
+	xbp.msgid
 FROM
 	ib0.bposts AS xbp
-JOIN
-	ib0.posts AS xp
-USING
-	(g_p_id)
 WHERE
 	xbp.b_id = $1 AND xbp.b_p_id < $2
 ORDER BY
@@ -213,13 +191,9 @@ LIMIT
 -- :name nntp_newnews_all
 -- input: {time since}
 SELECT DISTINCT ON (xbp.padded,xbp.g_p_id)
-	xp.msgid
+	xbp.msgid
 FROM
 	ib0.bposts AS xbp
-JOIN
-	ib0.posts AS xp
-USING
-	(g_p_id)
 WHERE
 	xbp.padded >= $1
 ORDER BY
@@ -229,19 +203,16 @@ ORDER BY
 -- :name nntp_newnews_one
 -- input: {time since} {board name}
 SELECT
-	xp.msgid
+	xbp.msgid
 FROM
 	ib0.boards AS xb
 JOIN
 	ib0.bposts AS xbp
 USING
 	(b_id)
-JOIN
-	ib0.posts AS xp
-USING
-	(g_p_id)
 WHERE
-	xbp.padded >= $1 AND xb.b_name = $2
+	xbp.padded >= $1 AND
+		xb.b_name = $2
 ORDER BY
 	xbp.padded,
 	xbp.g_p_id
@@ -250,7 +221,7 @@ ORDER BY
 -- input: {time since}
 -- clientside filtering of multiple posts to one board
 SELECT
-	xp.msgid,
+	xbp.msgid,
 	xb.b_name
 FROM
 	ib0.boards AS xb
@@ -258,10 +229,6 @@ JOIN
 	ib0.bposts AS xbp
 USING
 	(b_id)
-JOIN
-	ib0.posts AS xp
-USING
-	(g_p_id)
 WHERE
 	xbp.padded >= $1
 ORDER BY
@@ -324,8 +291,6 @@ WHERE
 	xb.b_name = $1
 GROUP BY
 	xb.b_id
-LIMIT
-	1
 
 
 
@@ -350,15 +315,13 @@ JOIN
 USING
 	(b_id)
 JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 USING
 	(g_p_id)
 WHERE
 	xp.msgid = $1
 GROUP BY
 	xp.g_p_id
-LIMIT
-	1
 
 -- :name nntp_over_range
 -- input: {bid} {min} {max}
@@ -376,7 +339,7 @@ SELECT
 FROM
 	ib0.bposts AS xbp
 JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id
 JOIN
@@ -388,9 +351,12 @@ JOIN
 ON
 	zbp.b_id = zb.b_id
 WHERE
-	xbp.b_id = $1 AND xbp.b_p_id >= $2 AND ($3 < 0 OR xbp.b_p_id <= $3)
+	xbp.b_id = $1 AND
+		xbp.b_p_id >= $2 AND
+		($3 < 0 OR xbp.b_p_id <= $3)
 GROUP BY
-	xp.g_p_id,xbp.b_p_id
+	xp.g_p_id,
+	xbp.b_p_id
 ORDER BY
 	xbp.b_p_id ASC
 
@@ -413,15 +379,13 @@ JOIN
 USING
 	(b_id)
 JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 USING
 	(g_p_id)
 WHERE
 	xp.g_p_id = $1
 GROUP BY
 	xp.g_p_id
-LIMIT
-	1
 
 
 
@@ -432,7 +396,7 @@ SELECT
 	xbp.b_p_id,
 	(xp.padded IS NULL)
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -453,7 +417,7 @@ SELECT
 	xp.headers -> 'Subject' ->> 0,
 	(xp.padded IS NULL)
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -473,7 +437,7 @@ SELECT
 	xp.headers -> $3 ->> 0,
 	(xp.padded IS NULL)
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -492,7 +456,7 @@ SELECT
 	xbp.b_p_id,
 	'<' || xp.msgid || '>'
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -510,7 +474,7 @@ SELECT
 	xp.title,
 	xp.headers -> 'Subject' ->> 0
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -527,7 +491,7 @@ SELECT
 	xbp.b_p_id,
 	xp.headers -> $4 ->> 0
 FROM
-	ib0.posts AS xp
+	ib0.gposts AS xp
 JOIN
 	ib0.bposts AS xbp
 USING
@@ -544,7 +508,7 @@ ORDER BY
 SELECT
 	'<' || msgid || '>'
 FROM
-	ib0.posts
+	ib0.gposts
 WHERE
 	g_p_id = $1
 LIMIT
@@ -556,7 +520,7 @@ SELECT
 	title,
 	headers -> 'Subject' ->> 0
 FROM
-	ib0.posts
+	ib0.gposts
 WHERE
 	g_p_id = $1
 LIMIT
@@ -567,7 +531,7 @@ LIMIT
 SELECT
 	headers -> $2 ->> 0
 FROM
-	ib0.posts
+	ib0.gposts
 WHERE
 	g_p_id = $1
 LIMIT

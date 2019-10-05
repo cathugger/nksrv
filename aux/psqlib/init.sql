@@ -4,10 +4,6 @@ demo8
 -- :name init
 CREATE SCHEMA ib0
 
-
---- base stuff
-
-
 --- moderators/administrators things
 -- :next
 -- summary table to hold effective capabilities of moderator

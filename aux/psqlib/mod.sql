@@ -71,7 +71,7 @@ JOIN
 ON
 	xbp.b_id = msgs.b_id AND xbp.b_p_id = msgs.b_p_id
 JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xp.g_p_id = xbp.g_p_id
 
@@ -168,7 +168,7 @@ RETURNING
 		-- (if they dont have refs from other boards)
 		-- XXX but how children of thread could have extra refs???
 		DELETE FROM
-			ib0.posts xp
+			ib0.gposts xp
 		USING
 			(
 				SELECT
@@ -446,7 +446,7 @@ WITH
 	delgp AS (
 		-- delete global post
 		DELETE FROM
-			ib0.posts
+			ib0.gposts
 		WHERE
 			msgid = $1 AND
 				padded IS NOT NULL
@@ -462,7 +462,7 @@ WITH
 	delgp AS (
 		-- delete global post
 		DELETE FROM
-			ib0.posts
+			ib0.gposts
 		WHERE
 			g_p_id = $1 AND
 				padded IS NOT NULL
@@ -494,7 +494,7 @@ WITH
 	delgp AS (
 		-- replace global post with ban post
 		INSERT INTO
-			ib0.posts AS xp (
+			ib0.gposts AS xp (
 				msgid,
 				pdate,
 				padded,
@@ -715,7 +715,7 @@ ON
 	zbp.b_id = yb.b_id
 -- global post
 JOIN
-	ib0.posts yp
+	ib0.gposts yp
 ON
 	zbp.g_p_id = yp.g_p_id
 -- files of global post
@@ -739,7 +739,7 @@ ON
 	zbp.b_id = ypbp.b_id AND zbp.b_t_id = ypbp.b_p_id AND zbp.b_t_id != zbp.b_p_id
 -- parent global post
 LEFT JOIN
-	ib0.posts ypp
+	ib0.gposts ypp
 ON
 	ypbp.g_p_id = ypp.g_p_id
 
