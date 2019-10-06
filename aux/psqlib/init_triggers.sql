@@ -12,7 +12,7 @@ BEGIN
 	INSERT INTO
 		ib0.modlist_changes (
 			mod_id,
-			t_pdate,
+			t_date_sent,
 			t_g_p_id,
 			t_b_id
 		)
@@ -27,9 +27,9 @@ BEGIN
 		(mod_id)
 	DO UPDATE
 		SET
-			t_pdate  = EXCLUDED.t_pdate,
-			t_g_p_id = EXCLUDED.t_g_p_id,
-			t_b_id   = EXCLUDED.t_b_id
+			t_date_sent = EXCLUDED.t_date_sent,
+			t_g_p_id    = EXCLUDED.t_g_p_id,
+			t_b_id      = EXCLUDED.t_b_id
 
 	-- poke process which can act upon it
 	NOTIFY ib0_modlist_changes;
@@ -284,7 +284,9 @@ BEGIN
 				delbl.msgid
 		) AS delp
 	WHERE
-		delp.hasrefs = FALSE AND delp.msgid = xp.msgid AND xp.padded IS NULL;
+		delp.hasrefs = FALSE AND
+			delp.msgid = xp.msgid AND
+			xp.date_recv IS NULL;
 
 	RETURN NULL;
 END;

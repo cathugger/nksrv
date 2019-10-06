@@ -7,9 +7,9 @@ CREATE TABLE ib0.modlist_changes (
 	mlc_id BIGINT NOT NULL,
 	mod_id BIGINT NOT NULL,
 	-- tracked state
-	t_pdate  TIMESTAMP WITH TIME ZONE,
-	t_g_p_id BIGINT,
-	t_b_id   INTEGER,
+	t_date_sent TIMESTAMP WITH TIME ZONE,
+	t_g_p_id    BIGINT,
+	t_b_id      INTEGER,
 
 	PRIMARY KEY (mlc_id),
 	UNIQUE      (mod_id),
