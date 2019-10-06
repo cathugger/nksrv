@@ -160,6 +160,7 @@ label {
 	max-width: 100%;
 	display: inline-block;
 	overflow: hidden;
+	white-space: pre-wrap;
 	@include border-box;
 }
 
