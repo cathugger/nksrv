@@ -527,18 +527,18 @@ WITH
 			)
 		ON CONFLICT (msgid) DO UPDATE
 			SET
-				date_sent = excluded.date_sent,
-				date_recv = excluded.date_recv,
-				sage      = excluded.sage,
-				f_count   = excluded.f_count,
-				author    = excluded.author,
-				trip      = excluded.trip,
-				title     = excluded.title,
-				message   = excluded.message,
-				headers   = excluded.headers,
-				attrib    = excluded.attrib,
-				layout    = excluded.layout,
-				extras    = excluded.extras
+				date_sent = EXCLUDED.date_sent,
+				date_recv = EXCLUDED.date_recv,
+				sage      = EXCLUDED.sage,
+				f_count   = EXCLUDED.f_count,
+				author    = EXCLUDED.author,
+				trip      = EXCLUDED.trip,
+				title     = EXCLUDED.title,
+				message   = EXCLUDED.message,
+				headers   = EXCLUDED.headers,
+				attrib    = EXCLUDED.attrib,
+				layout    = EXCLUDED.layout,
+				extras    = EXCLUDED.extras
 			WHERE
 				xp.date_recv IS NOT NULL
 		RETURNING

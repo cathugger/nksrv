@@ -47,9 +47,6 @@ CREATE TABLE ib0.gposts (
 	-- passive extra data
 	extras  JSONB,
 
-	-- for ban placeholders
-	ban_dpriv SMALLINT,
-
 	PRIMARY KEY (g_p_id),
 	UNIQUE (msgid)
 )
