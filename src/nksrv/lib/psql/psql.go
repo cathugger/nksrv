@@ -49,8 +49,9 @@ func OpenPSQL(cfg Config) (PSQL, error) {
 	}
 
 	if cfg.ConnMaxLifetime > 0.0 {
-		db.SetConnMaxLifetime(time.Duration(float64(time.Second) *
-			cfg.ConnMaxLifetime))
+		db.SetConnMaxLifetime(
+			time.Duration(float64(time.Second) *
+				cfg.ConnMaxLifetime))
 	}
 
 	if cfg.MaxIdleConns > 0 {
@@ -59,6 +60,12 @@ func OpenPSQL(cfg Config) (PSQL, error) {
 
 	if cfg.MaxOpenConns > 0 {
 		db.SetMaxOpenConns(int(cfg.MaxOpenConns))
+	}
+
+	err = db.Ping()
+	if err != nil {
+		db.Close()
+		return PSQL{}, err
 	}
 
 	p := PSQL{DB: db}
