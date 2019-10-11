@@ -41,7 +41,7 @@ func (p *PSQL) listenProcessor(cn <-chan *pq.Notification) {
 
 type ListenCB func(e string, rst bool)
 
-func (p *PSQL) Listen(n string, f ListenCB) error {
+func (p *PSQL) Listen(n string, f ListenCB) (err error) {
 	p.lii.Do(func() {
 		p.li = pq.NewListener(
 			p.connstr,
@@ -50,6 +50,7 @@ func (p *PSQL) Listen(n string, f ListenCB) error {
 			func(et pq.ListenerEventType, err error) {
 				p.listenEventCallback(et, err)
 			})
+		p.lim = make(map[string]ListenCB)
 		go p.listenProcessor(p.li.Notify)
 	})
 
@@ -64,7 +65,12 @@ func (p *PSQL) Listen(n string, f ListenCB) error {
 		return errors.New("something already listens on this channel")
 	}
 
+	err = p.li.Listen(n)
+	if err != nil {
+		return
+	}
+
 	p.lim[n] = f
 
-	return nil
+	return
 }
