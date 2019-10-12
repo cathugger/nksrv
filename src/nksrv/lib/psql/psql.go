@@ -101,6 +101,7 @@ func OpenAndPrepare(cfg Config) (db PSQL, err error) {
 		return
 	}
 	defer func() {
+		// XXX won't catch panic
 		if err != nil {
 			db.Close()
 		}

@@ -42,7 +42,9 @@ func (p *PSQL) listenProcessor(cn <-chan *pq.Notification) {
 type ListenCB func(e string, rst bool)
 
 func (p *PSQL) Listen(n string, f ListenCB) (err error) {
+
 	p.lii.Do(func() {
+
 		p.li = pq.NewListener(
 			p.connstr,
 			500*time.Millisecond,
@@ -50,8 +52,11 @@ func (p *PSQL) Listen(n string, f ListenCB) (err error) {
 			func(et pq.ListenerEventType, err error) {
 				p.listenEventCallback(et, err)
 			})
+
 		p.lim = make(map[string]ListenCB)
+
 		go p.listenProcessor(p.li.Notify)
+
 	})
 
 	if p.li == nil {
