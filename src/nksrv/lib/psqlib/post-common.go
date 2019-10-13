@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	xtypes "github.com/jmoiron/sqlx/types"
+
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
 	"nksrv/lib/thumbnailer"
@@ -35,11 +37,18 @@ func (sp *PSQLIB) registeredMod(
 
 	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
 
-	var privstr string
 	st := tx.Stmt(sp.st_prep[st_mod_autoregister_mod])
 	x := 0
 	for {
-		err = st.QueryRow(pubkeystr).Scan(&modid, &privstr)
+
+		var mcap string
+		var mbcap xtypes.JSONText
+		var mdpriv int
+		var mbdpriv xtypes.JSONText
+
+		err = st.QueryRow(pubkeystr).Scan(
+			&modid, &mcap, &mbcap, &mdpriv, &mbdpriv)
+
 		if err != nil {
 
 			if err == sql.ErrNoRows && x < 100 {
@@ -50,10 +59,13 @@ func (sp *PSQLIB) registeredMod(
 
 				continue
 			}
+
 			err = sp.sqlError("st_web_autoregister_mod queryrowscan", err)
 			return
 		}
-		priv, _ = StringToModPriv(privstr)
+
+		panic("TODO")
+		//priv, _ = StringToModPriv(privstr)
 		return
 	}
 }

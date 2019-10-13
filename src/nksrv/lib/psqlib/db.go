@@ -6,11 +6,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
+
+	"github.com/lib/pq"
 
 	"nksrv/lib/sqlbucket"
 )
 
-const currDbVersion = "demo7"
+const currDbVersion = "demo8"
 
 func (sp *PSQLIB) InitDB() (err error) {
 
@@ -52,10 +55,30 @@ func (sp *PSQLIB) InitDB() (err error) {
 			}
 		}
 
-		for j, s := range stmts["init"+initfs[i]] {
+		stmtn := "init" + initfs[i]
+		stmtss := stmts[stmtn]
+		for j, s := range stmtss {
 			_, err = tx.Exec(s)
 			if err != nil {
-				return fmt.Errorf("err on stmt %d: %v", j, err)
+
+				if pe, _ := err.(*pq.Error); pe != nil {
+
+					pos, _ := strconv.Atoi(pe.Position)
+					ss, se := pos, pos
+					for ss > 0 && s[ss-1] != '\n' {
+						ss--
+					}
+					for se < len(s) && s[se] != '\n' {
+						se++
+					}
+
+					return fmt.Errorf(
+						"err on %s stmt %d pos[%s] msg[%s] detail[%s] line[%s]",
+						stmtn, j, pe.Position, pe.Message, pe.Detail, s[ss:se])
+				}
+
+				return fmt.Errorf("err on %s stmt %d: %v", stmtn, j, err)
+
 			}
 		}
 	}

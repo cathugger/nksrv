@@ -15,7 +15,7 @@ CREATE TABLE ib0.modlist_changes (
 	UNIQUE      (mod_id),
 	FOREIGN KEY (mod_id)
 		REFERENCES ib0.modlist
-		ON CASCADE DELETE
+		ON DELETE CASCADE
 )
 
 -- :next

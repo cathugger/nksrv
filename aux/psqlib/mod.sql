@@ -96,7 +96,11 @@ VALUES (
 ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update something irrelevant as hack
 	SET automanage = ml.automanage
 RETURNING
-	mod_id, mod_priv
+	mod_id,
+	mod_cap,
+	mod_bcap,
+	mod_dpriv,
+	mod_bdpriv
 
 
 
@@ -139,7 +143,13 @@ RETURNING
 		SET
 			p_count = xt.p_count - 1,
 			f_count = xt.f_count - delbp.f_count,
-			fr_count = xt.fr_count - (CASE WHEN delbp.f_count > 0 THEN 1 ELSE 0)
+			fr_count = xt.fr_count - (
+				CASE
+					WHEN delbp.f_count > 0 THEN
+						1
+					ELSE
+						0
+				END)
 		FROM
 			delbp
 		WHERE
@@ -607,11 +617,12 @@ WHERE
 
 -- :name mod_set_mod_priv
 -- args: <pubkey> <newpriv>
+-- TODO
 INSERT INTO
 	ib0.modlist AS ml (
 		mod_pubkey,
 		automanage,
-		mod_priv
+		mod_dpriv
 	)
 VALUES
 	(
@@ -622,25 +633,26 @@ VALUES
 ON CONFLICT (mod_pubkey) DO UPDATE
 	SET
 		automanage = FALSE,
-		mod_priv = $2
+		mod_dpriv = $2
 	WHERE
-		ml.mod_priv <> $2 OR ml.automanage <> FALSE
+		ml.mod_dpriv <> $2 OR ml.automanage <> FALSE
 RETURNING -- inserted or modified
 	mod_id
 
 -- :name mod_unset_mod
 -- args: <pubkey>
+-- TODO
 WITH
 	-- do update there
 	upd_mod AS (
 		UPDATE
 			ib0.modlist
 		SET
-			mod_priv = 'none', -- don't see point having anything else there yet
+			mod_dpriv = 0, -- don't see point having anything else there yet
 			automanage = TRUE
 		WHERE
 			mod_pubkey = $1 AND
-			(mod_priv <> 'none' OR automanage <> TRUE)
+			(mod_dpriv <> 0 OR automanage <> TRUE)
 		RETURNING
 			mod_id
 	)

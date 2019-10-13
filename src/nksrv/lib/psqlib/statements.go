@@ -2,7 +2,10 @@ package psqlib
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
+
+	"github.com/lib/pq"
 
 	"nksrv/lib/sqlbucket"
 )
@@ -201,9 +204,28 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 		panic("already prepared")
 	}
 	for i := range st_listx {
-		sp.st_prep[i], err = sp.db.DB.Prepare(st_listx[i])
+
+		s := st_listx[i]
+		sp.st_prep[i], err = sp.db.DB.Prepare(s)
 		if err != nil {
-			return fmt.Errorf("error preparing %d %q statement: %v",
+
+			if pe, _ := err.(*pq.Error); pe != nil {
+
+				pos, _ := strconv.Atoi(pe.Position)
+				ss, se := pos, pos
+				for ss > 0 && s[ss-1] != '\n' {
+					ss--
+				}
+				for se < len(s) && s[se] != '\n' {
+					se++
+				}
+
+				return fmt.Errorf(
+					"err preparing %d %q stmt: pos[%s] msg[%s] detail[%s] line[%s]",
+					i, st_names[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se])
+			}
+
+			return fmt.Errorf("error preparing %d %q stmt: %v",
 				i, st_names[i].Name, err)
 		}
 	}

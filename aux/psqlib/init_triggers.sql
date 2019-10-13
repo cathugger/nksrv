@@ -29,7 +29,7 @@ BEGIN
 		SET
 			t_date_sent = EXCLUDED.t_date_sent,
 			t_g_p_id    = EXCLUDED.t_g_p_id,
-			t_b_id      = EXCLUDED.t_b_id
+			t_b_id      = EXCLUDED.t_b_id;
 
 	-- poke process which can act upon it
 	NOTIFY ib0_modlist_changes;
@@ -53,12 +53,13 @@ AFTER
 		mod_dpriv,
 		mod_bdpriv
 ON
-	ib0.modsets
+	ib0.modlist
 FOR EACH
 	ROW
 WHEN
-	(OLD.mod_cap,OLD.mod_bcap,OLD.mod_dpriv,OLD.mod_bdpriv) IS DISTINCT FROM
-		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_dpriv,NEW.mod_bdpriv)
+	((OLD.mod_cap,OLD.mod_bcap,OLD.mod_dpriv,OLD.mod_bdpriv)
+		IS DISTINCT FROM
+		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_dpriv,NEW.mod_bdpriv))
 EXECUTE PROCEDURE
 	ib0.modlist_changepriv()
 
@@ -82,7 +83,7 @@ BEGIN
 		pubkey := NEW.mod_pubkey;
 	ELSIF TG_OP = 'DELETE' THEN
 		pubkey := OLD.mod_pubkey;
-	END;
+	END IF;
 	-- recalc modlist val from modsets
 	WITH
 		comp_caps AS (
@@ -231,12 +232,14 @@ BEGIN
 				) AS rcnts
 			WHERE
 				mods.mod_id = rcnts.mod_id AND
-					rcnts.hasrefs = FALSE
+					rcnts.hasrefs = FALSE;
+
 		END IF;
 
 	END IF;
 
 	RETURN NULL;
+
 END;
 $$
 LANGUAGE
