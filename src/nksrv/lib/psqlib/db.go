@@ -13,14 +13,6 @@ import (
 const currDbVersion = "demo7"
 
 func (sp *PSQLIB) InitDB() (err error) {
-	stmts, err := sqlbucket.LoadFromFile("aux/psqlib/init.sql")
-	if err != nil {
-		return fmt.Errorf("err on sql loading: %v", err)
-	}
-	if stmts["version"][0] != currDbVersion {
-		return fmt.Errorf("wrong sql file version %v want %v",
-			stmts["version"][0], currDbVersion)
-	}
 
 	tx, err := sp.db.DB.BeginTx(context.Background(), &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
@@ -35,18 +27,36 @@ func (sp *PSQLIB) InitDB() (err error) {
 		}
 	}()
 
-	q := `INSERT INTO capabilities(component,version) VALUES ('ib0',$1)`
-	_, err = tx.Exec(q, currDbVersion)
-	if err != nil {
-		err = fmt.Errorf("err on version stmt: %v", err)
-		return
-	}
+	initfs := [...]string{"", "_jobstate", "_puller", "_triggers"}
+	for i := range initfs {
+		fn := "aux/psqlib/init" + initfs[i] + ".sql"
 
-	for i, s := range stmts["init"] {
-		_, err = tx.Exec(s)
-		if err != nil {
-			err = fmt.Errorf("err on stmt %d: %v", i, err)
+		stmts, ee := sqlbucket.LoadFromFile(fn)
+		if ee != nil {
+			err = fmt.Errorf("err on loading %q: %v", fn, ee)
 			return
+		}
+
+		if i == 0 {
+			fvr := stmts["version"][0]
+			if fvr != currDbVersion {
+				err = fmt.Errorf(
+					"wrong sql file version %v want %v",
+					fvr, currDbVersion)
+				return
+			}
+			q := `INSERT INTO capabilities(component,version) VALUES ('ib0',$1)`
+			_, err = tx.Exec(q, currDbVersion)
+			if err != nil {
+				return fmt.Errorf("err on version stmt: %v", err)
+			}
+		}
+
+		for j, s := range stmts["init"+initfs[i]] {
+			_, err = tx.Exec(s)
+			if err != nil {
+				return fmt.Errorf("err on stmt %d: %v", j, err)
+			}
 		}
 	}
 

@@ -107,8 +107,11 @@ func Scan(in *bufio.Scanner) Bucket {
 
 		if reNext.MatchString(line) {
 			finishcurrent()
-			queries[currtag] = append(queries[currtag], "")
-			curri++
+			// only increase if current non-empty
+			if queries[currtag][curri] != "" {
+				queries[currtag] = append(queries[currtag], "")
+				curri++
+			}
 			continue
 		}
 
