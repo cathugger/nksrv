@@ -14,6 +14,7 @@ import (
 	fsd "nksrv/lib/fservedir"
 	"nksrv/lib/handler"
 	fp "nksrv/lib/httpibfileprovider"
+	. "nksrv/lib/logx"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/renderer"
 	wc "nksrv/lib/webcaptcha"
@@ -21,7 +22,7 @@ import (
 )
 
 type Cfg struct {
-	Logger         *LoggerX
+	Logger          *LoggerX
 	HTMLRenderer    renderer.Renderer // handles everything else?
 	StaticDir       *fsd.FServeDir
 	FileProvider    fp.HTTPFileProvider   // handles _src and _thm

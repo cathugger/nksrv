@@ -41,7 +41,7 @@ func main() {
 		StaticDir:    di.StaticDir,
 		FileProvider: di.IBProviderDemo{},
 	}
-	rh := ir.NewIBRouter(rcfg)
+	rh, _ := ir.NewIBRouter(rcfg)
 
 	server := &http.Server{Addr: "127.0.0.1:1234", Handler: rh}
 

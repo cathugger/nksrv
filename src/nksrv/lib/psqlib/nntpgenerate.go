@@ -27,7 +27,7 @@ func (sp *PSQLIB) nntpGenerate(
 	w io.Writer, msgid CoreMsgIDStr, gpid postID) (err error) {
 
 	// fetch info about post. some of info we don't care about
-	rows, err := sp.st_prep[st_NNTP_articleGetByGPID].Query(gpid)
+	rows, err := sp.st_prep[st_nntp_article_get_gpid].Query(gpid)
 	if err != nil {
 		return sp.sqlError("posts x files query", err)
 	}

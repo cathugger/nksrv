@@ -8,42 +8,42 @@ import (
 )
 
 const (
-	st_NNTP_articleExistsOrBannedByMsgID = iota
-	st_NNTP_articleValidAndBannedByMsgID
+	st_nntp_article_exists_or_banned_by_msgid = iota
+	st_nntp_article_valid_and_banned_by_msgid
 
-	st_NNTP_articleNumByMsgID
-	st_NNTP_articleMsgIDByNum
+	st_nntp_article_num_by_msgid
+	st_nntp_article_msgid_by_num
 
-	st_NNTP_articleGetByGPID
+	st_nntp_article_get_gpid
 
-	st_NNTP_SelectGroup
-	st_NNTP_SelectAndListGroup
+	st_nntp_select
+	st_nntp_select_and_list
 
-	st_NNTP_SelectNextArticle
-	st_NNTP_SelectPrevArticle
+	st_nntp_next
+	st_nntp_last
 
-	st_NNTP_ListNewNews_all
-	st_NNTP_ListNewNews_one
-	st_NNTP_ListNewNews_all_group
+	st_nntp_newnews_all
+	st_nntp_newnews_one
+	st_nntp_newnews_all_group
 
-	st_NNTP_ListNewGroups
+	st_nntp_newgroups
 
-	st_NNTP_ListActiveGroups_all
-	st_NNTP_ListActiveGroups_one
+	st_nntp_listactive_all
+	st_nntp_listactive_one
 
-	st_NNTP_GetOverByMsgID
-	st_NNTP_GetOverByRange
-	st_NNTP_GetOverByCurr
+	st_nntp_over_msgid
+	st_nntp_over_range
+	st_nntp_over_curr
 
-	st_NNTP_GetHdrByMsgID_msgid
-	st_NNTP_GetHdrByMsgID_subject
-	st_NNTP_GetHdrByMsgID_any
-	st_NNTP_GetHdrByRange_msgid
-	st_NNTP_GetHdrByRange_subject
-	st_NNTP_GetHdrByRange_any
-	st_NNTP_GetHdrByCurr_msgid
-	st_NNTP_GetHdrByCurr_subject
-	st_NNTP_GetHdrByCurr_any
+	st_nntp_hdr_msgid_msgid
+	st_nntp_hdr_msgid_subject
+	st_nntp_hdr_msgid_any
+	st_nntp_hdr_range_msgid
+	st_nntp_hdr_range_subject
+	st_nntp_hdr_range_any
+	st_nntp_hdr_curr_msgid
+	st_nntp_hdr_curr_subject
+	st_nntp_hdr_curr_any
 
 	st_web_listboards
 	st_web_thread_list_page
@@ -205,6 +205,19 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 		if err != nil {
 			return fmt.Errorf("error preparing %d %q statement: %v",
 				i, st_names[i].Name, err)
+		}
+	}
+	return
+}
+
+func (sp *PSQLIB) closeStatements() (err error) {
+	for i := range st_listx {
+		if sp.st_prep[i] != nil {
+			ex := sp.st_prep[i].Close()
+			if err == nil {
+				err = ex
+			}
+			sp.st_prep[i] = nil
 		}
 	}
 	return

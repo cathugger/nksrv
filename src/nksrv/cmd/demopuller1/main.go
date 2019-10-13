@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"nksrv/lib/democonfigs"
-	"nksrv/lib/emime"
+	"nksrv/lib/demohelper"
 	fl "nksrv/lib/filelogger"
 	"nksrv/lib/logx"
 	. "nksrv/lib/logx"
@@ -36,9 +36,9 @@ func main() {
 	}
 	mlg := NewLogToX(lgr, "main")
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
-		mlg.LogPrintln(CRITICAL, "LoadMIMEDatabase err:", err)
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDB err:", err)
 		return
 	}
 

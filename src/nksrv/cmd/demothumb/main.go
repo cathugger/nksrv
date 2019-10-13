@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"nksrv/lib/demohelper"
 	"nksrv/lib/emime"
 	fl "nksrv/lib/filelogger"
 	"nksrv/lib/fstore"
@@ -48,7 +49,7 @@ func main() {
 		return
 	}
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
 		fmt.Printf("err loading mime db: %v\n", err)
 		return

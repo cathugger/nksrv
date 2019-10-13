@@ -49,7 +49,7 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(
 	var p_gpid postID
 	var p_isbanned bool
 
-	err := sp.st_prep[st_NNTP_articleNumByMsgID].
+	err := sp.st_prep[st_nntp_article_num_by_msgid].
 		QueryRow(string(msgid), cb_bid).
 		Scan(&p_bid, &p_bpid, &p_gpid, &p_isbanned)
 	if err != nil {
@@ -81,7 +81,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 	var p_msgid CoreMsgIDStr
 	var p_gpid postID
 
-	err := sp.st_prep[st_NNTP_articleMsgIDByNum].
+	err := sp.st_prep[st_nntp_article_msgid_by_num].
 		QueryRow(gs.bid, num).
 		Scan(&p_msgid, &p_gpid)
 	if err != nil {
@@ -110,7 +110,7 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	var msgid CoreMsgIDStr
 	var gpid postID
 
-	err := sp.st_prep[st_NNTP_articleMsgIDByNum].
+	err := sp.st_prep[st_nntp_article_msgid_by_num].
 		QueryRow(gs.bid, gs.bpid).
 		Scan(&msgid, &gpid)
 	if err != nil {

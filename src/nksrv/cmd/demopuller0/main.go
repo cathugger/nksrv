@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/proxy"
 
 	"nksrv/lib/democonfigs"
-	"nksrv/lib/emime"
+	"nksrv/lib/demohelper"
 	fl "nksrv/lib/filelogger"
 	"nksrv/lib/logx"
 	. "nksrv/lib/logx"
@@ -47,9 +47,9 @@ func main() {
 	mlg.LogPrint(ERROR, "testing ERROR log message")
 	mlg.LogPrint(CRITICAL, "testing CRITICAL log message")
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
-		mlg.LogPrintln(CRITICAL, "LoadMIMEDatabase err:", err)
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDB err:", err)
 		return
 	}
 

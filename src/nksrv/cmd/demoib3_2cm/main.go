@@ -14,8 +14,8 @@ import (
 	"nksrv/lib/captchastore/memstore"
 	"nksrv/lib/captchastore/psqlstore"
 	"nksrv/lib/democonfigs"
+	"nksrv/lib/demohelper"
 	di "nksrv/lib/demoib"
-	"nksrv/lib/emime"
 	fl "nksrv/lib/filelogger"
 	ir "nksrv/lib/ibrouter"
 	rj "nksrv/lib/jsonrenderer"
@@ -50,9 +50,9 @@ func main() {
 	mlg := logx.NewLogToX(lgr, "main")
 	mlg.LogPrint(logx.NOTICE, "initializing")
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDatabase err:", err)
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDB err:", err)
 		return
 	}
 

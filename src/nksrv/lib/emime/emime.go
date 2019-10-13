@@ -222,7 +222,7 @@ func MIMEExtensionsByType(mimeType string) (ext []string, err error) {
 // "!" alone can be used for empty non-canonical extension.
 // Prefered extension should be specified first.
 // Types like "application/octet-stream" should use non-canonical extensions.
-func LoadMIMEDatabase(dbfile ...string) (err error) {
+func LoadMIMEDatabase(dbfile ...string) (loadedall bool, err error) {
 	mimeLock.Lock()
 	defer mimeLock.Unlock()
 
@@ -232,9 +232,12 @@ func LoadMIMEDatabase(dbfile ...string) (err error) {
 	mimeExtensions = make(map[string][]string)
 	mimePrefExt = make(map[string]string)
 
+	loadedall = true
+
 	for _, fname := range dbfile {
 		err = loadMIMEDatabaseFromFileLocked(fname)
 		if err != nil {
+			loadedall = false
 			if os.IsNotExist(err) {
 				// ignore file doesn't exist error
 				err = nil

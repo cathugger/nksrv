@@ -11,8 +11,8 @@ import (
 
 	"nksrv/lib/apiproxy"
 	ar "nksrv/lib/apirouter"
+	"nksrv/lib/demohelper"
 	di "nksrv/lib/demoib"
-	"nksrv/lib/emime"
 	fl "nksrv/lib/filelogger"
 	"nksrv/lib/fileproxy"
 	ir "nksrv/lib/ibrouter"
@@ -45,9 +45,9 @@ func main() {
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
 	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDatabase err:", err)
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDB err:", err)
 		return
 	}
 

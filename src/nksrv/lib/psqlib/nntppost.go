@@ -247,7 +247,7 @@ func (sp *PSQLIB) nntpCheckArticleExistsOrBanned(
 
 	var dummy int64
 
-	err = sp.st_prep[st_NNTP_articleExistsOrBannedByMsgID].
+	err = sp.st_prep[st_nntp_article_exists_or_banned_by_msgid].
 		QueryRow(string(unsafe_sid)).Scan(&dummy)
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -262,7 +262,7 @@ func (sp *PSQLIB) nntpCheckArticleExistsOrBanned(
 func (sp *PSQLIB) nntpCheckArticleValidAndBanned(
 	unsafe_sid CoreMsgIDStr) (exists, isBanned bool, err error) {
 
-	err = sp.st_prep[st_NNTP_articleValidAndBannedByMsgID].
+	err = sp.st_prep[st_nntp_article_valid_and_banned_by_msgid].
 		QueryRow(string(unsafe_sid)).Scan(&isBanned)
 	if err != nil {
 		if err != sql.ErrNoRows {

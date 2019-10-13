@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"nksrv/lib/demohelper"
 	di "nksrv/lib/demoib"
-	"nksrv/lib/emime"
 	fl "nksrv/lib/filelogger"
 	ir "nksrv/lib/ibrouter"
 	"nksrv/lib/logx"
@@ -31,17 +31,18 @@ func main() {
 	mlg.LogPrint(logx.ERROR, "testing ERROR log message")
 	mlg.LogPrint(logx.CRITICAL, "testing CRITICAL log message")
 
-	err = emime.LoadMIMEDatabase("mime.types")
+	err = demohelper.LoadMIMEDB()
 	if err != nil {
-		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDatabase err:", err)
+		mlg.LogPrintln(logx.CRITICAL, "LoadMIMEDB err:", err)
 		return
 	}
 
-	rend, err := rt.NewTmplRenderer(di.IBProviderDemo{}, rt.TmplRendererCfg{
-		TemplateDir: "_demo/tmpl",
-		Logger:      lgr,
-		StaticDir:   di.StaticDir.Dir(),
-	})
+	rend, err := rt.NewTmplRenderer(
+		di.IBProviderDemo{}, rt.TmplRendererCfg{
+			TemplateDir: "_demo/tmpl",
+			Logger:      lgr,
+			StaticDir:   di.StaticDir.Dir(),
+		})
 	if err != nil {
 		mlg.LogPrintln(logx.CRITICAL, "rt.NewTmplRenderer error:", err)
 		os.Exit(1)
@@ -51,7 +52,7 @@ func main() {
 		StaticDir:    di.StaticDir,
 		FileProvider: di.IBProviderDemo{},
 	}
-	rh := ir.NewIBRouter(rcfg)
+	rh, _ := ir.NewIBRouter(rcfg)
 
 	server := &http.Server{Addr: "127.0.0.1:1234", Handler: rh}
 

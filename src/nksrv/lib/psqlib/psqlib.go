@@ -204,6 +204,10 @@ func (sp *PSQLIB) Prepare() (err error) {
 	return
 }
 
+func (sp *PSQLIB) Close() error {
+	return sp.closeStatements()
+}
+
 func (dbib *PSQLIB) InitAndPrepare() (err error) {
 	valid, err := dbib.CheckDB()
 	if err != nil {
