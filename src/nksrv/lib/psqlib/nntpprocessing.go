@@ -477,11 +477,16 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	isctlgrp := info.Newsgroup == "ctl"
 
 	var modid uint64
-	var priv ModPriv
+	var hascap bool
+	var modCap ModCap
+	var modBoardCap ModBoardCap
+
 	if isctlgrp && pubkeystr != "" {
+
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
 
-		modid, priv, err = sp.registeredMod(tx, pubkeystr)
+		modid, hascap, modCap, modBoardCap, err =
+			sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			unexpected = true
 			return
@@ -516,7 +521,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	}
 
 	// execute mod cmd
-	if priv > ModPrivNone {
+	if hascap {
 
 		err = sp.preModLockFiles(tx)
 		if err != nil {
@@ -537,8 +542,10 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 		// we should execute it
 		delmsgids, _, err, _ = sp.execModCmd(
-			tx, gpid, info.bid, bpid, modid, priv, pi, tmpfns,
-			pi.MessageID, cref, delmsgids, delModIDState{})
+			tx, gpid, info.bid, bpid,
+			modid, modCap, modBoardCap,
+			pi, tmpfns, pi.MessageID,
+			cref, delmsgids, delModIDState{})
 		if err != nil {
 			unexpected = true
 			return

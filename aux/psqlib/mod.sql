@@ -616,26 +616,31 @@ WHERE
 
 
 -- :name mod_set_mod_priv
--- args: <pubkey> <newpriv>
+-- args: <pubkey> <group> <capabilities> <delpriv>
 -- TODO
 INSERT INTO
-	ib0.modlist AS ml (
+	ib0.modsets AS ms (
 		mod_pubkey,
-		automanage,
+		mod_group,
+		mod_cap,
 		mod_dpriv
 	)
 VALUES
 	(
 		$1,
-		FALSE,
 		$2
+		$3,
+		$4
 	)
+-- XXX we can have either mod_pubkey or mod_pubkey,mod_group conflict.
+-- will this match in all cases??
 ON CONFLICT (mod_pubkey) DO UPDATE
 	SET
-		automanage = FALSE,
-		mod_dpriv = $2
+		mod_cap   = $3,
+		mod_dpriv = $4
 	WHERE
-		ml.mod_dpriv <> $2 OR ml.automanage <> FALSE
+		ms.mod_cap <> $3 OR
+			ms.mod_dpriv <> $4
 RETURNING -- inserted or modified
 	mod_id
 

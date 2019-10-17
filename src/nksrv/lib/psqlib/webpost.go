@@ -664,11 +664,16 @@ func (sp *PSQLIB) commonNewPost(
 	}()
 
 	var modid uint64
-	var priv ModPriv
+	var hascap bool
+	var modCap ModCap
+	var modBoardCap ModBoardCap
+
 	if isctlgrp && pubkeystr != "" {
+
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
 
-		modid, priv, err = sp.registeredMod(tx, pubkeystr)
+		modid, hascap, modCap, modBoardCap, err =
+			sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
 		}
@@ -701,7 +706,7 @@ func (sp *PSQLIB) commonNewPost(
 	}
 
 	// execute mod cmd
-	if priv > ModPrivNone {
+	if hascap {
 		// we should execute it
 		// we never put message in file when processing message
 
@@ -718,7 +723,9 @@ func (sp *PSQLIB) commonNewPost(
 
 		delmsgids, _, err, _ =
 			sp.execModCmd(
-				tx, gpid, bid, bpid, modid, priv, pInfo, nil, pInfo.MessageID,
+				tx, gpid, bid, bpid,
+				modid, modCap, modBoardCap,
+				pInfo, nil, pInfo.MessageID,
 				cref, delmsgids, delModIDState{})
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError

@@ -14,7 +14,7 @@ CREATE TABLE ib0.modlist (
 	mod_name   TEXT,
 	-- if true, then no modpriv is holding it [so can be GC'd]
 	automanage BOOLEAN   NOT NULL,
-	mod_cap    BIT(2),   -- global capabilities
+	mod_cap    BIT(12),  -- global capabilities
 	mod_bcap   JSONB,    -- per-board capabilities
 	mod_dpriv  SMALLINT, -- global delete privilege
 	mod_bdpriv JSONB,    -- per-board delete privileges
@@ -162,8 +162,8 @@ CREATE TABLE ib0.bposts (
 	-- following fields are only used if this is mod msg
 	mod_id BIGINT,
 	-- used/wanted capabilities
-	mod_u_cap  BIT(2),
-	mod_w_cap  BIT(2),
+	mod_u_cap  BIT(12),
+	mod_w_cap  BIT(12),
 	mod_u_bcap JSONB,
 	mod_w_bcap JSONB,
 	-- used(effective) dprivs [we can't know wanted]
@@ -271,7 +271,7 @@ CREATE INDEX ON ib0.files (fname,thumb)
 -- these would be deleted/reinserted if priv of mod behind them changes
 CREATE TABLE ib0.modsets (
 	mod_pubkey TEXT COLLATE "C" NOT NULL,
-	mod_cap    BIT(2)           NOT NULL,
+	mod_cap    BIT(12)          NOT NULL,
 	mod_dpriv  SMALLINT,
 	mod_group  TEXT COLLATE "C",
 	-- board post responsible for this modset (if any)
@@ -283,6 +283,20 @@ CREATE TABLE ib0.modsets (
 		MATCH FULL
 		ON DELETE CASCADE    -- see trigger below
 )
+-- :next
+CREATE UNIQUE INDEX
+	ON ib0.modsets (mod_pubkey)
+	WHERE
+		b_id IS NULL AND
+			b_p_id IS NULL AND
+			mod_group IS NULL
+-- :next
+CREATE UNIQUE INDEX
+	ON ib0.modsets (mod_pubkey,mod_group)
+	WHERE
+		b_id IS NULL AND
+			b_p_id IS NULL AND
+			mod_group IS NOT NULL
 
 -- :next
 -- refers-refered relation. used only to awaken re-calculation.

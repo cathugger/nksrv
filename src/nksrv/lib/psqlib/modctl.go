@@ -58,7 +58,7 @@ func getModCmdInput(
 
 func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	modid uint64, modpriv ModPriv,
+	modid uint64, modCap ModCap, modBoardCap ModBoardCap,
 	pi mailib.PostInfo, filenames []string,
 	selfid, ref CoreMsgIDStr,
 	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
@@ -113,7 +113,8 @@ func (sp *PSQLIB) execModCmd(
 			// TODO log commands we couldn't understand
 			switch cmd {
 			case "delete":
-				if modpriv >= ModPrivMod {
+				// TODO per-board stuff
+				if modCap.Cap & cap_delpost != 0 {
 					// global delete by msgid
 					out_delmsgids, out_delmodids, err =
 						sp.modCmdDelete(

@@ -24,7 +24,9 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 }
 
 func (sp *PSQLIB) registeredMod(
-	tx *sql.Tx, pubkeystr string) (modid uint64, priv ModPriv, err error) {
+	tx *sql.Tx, pubkeystr string) (
+	modid uint64, hascap bool, modCap ModCap, modBoardCap ModBoardCap,
+	err error) {
 
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
 	// at which point we're fucked because moddel posts also will exclusively block files table
@@ -41,13 +43,13 @@ func (sp *PSQLIB) registeredMod(
 	x := 0
 	for {
 
-		var mcap string
-		var mbcap xtypes.JSONText
-		var mdpriv int
-		var mbdpriv xtypes.JSONText
+		var mcap sql.NullString
+		var mbcap map[string]string, mbcapj xtypes.JSONText
+		var mdpriv sql.NullInt32
+		var mbdpriv map[string]string, mbdprivj xtypes.JSONText
 
 		err = st.QueryRow(pubkeystr).Scan(
-			&modid, &mcap, &mbcap, &mdpriv, &mbdpriv)
+			&modid, &mcap, &mbcapj, &mdpriv, &mbdprivj)
 
 		if err != nil {
 
@@ -64,18 +66,31 @@ func (sp *PSQLIB) registeredMod(
 			return
 		}
 
-		panic("TODO")
-		//priv, _ = StringToModPriv(privstr)
+		err = mbcapj.Unmarshal(&mbcap)
+		if err != nil { panic("mbcap.Unmarshal") }
+
+		err = mbdprivj.Unmarshal(&mbdpriv)
+		if err != nil { panic("mbdpriv.Unmarshal") }
+
+		hascap = mcap.Valid || len(mbcap) != 0 ||
+			mdpriv.Valid || len(mbdpriv) != 0
+
+		if mcap.Valid {
+			modCap.Cap = StrToCap(mcap.String)
+		}
+		if mdpriv.Valid {
+			modCap.DPriv = int16(mdpriv.Int32 & 0x7Fff)
+		}
+
+		modBoardCap = make(ModBoardCap)
+		modBoardCap.takeIn(mbcap, mbdpriv)
+
 		return
 	}
 }
 
-func (sp *PSQLIB) setModPriv(
-	tx *sql.Tx, pubkeystr string, newpriv ModPriv,
-	_in_delmsgids delMsgIDState) (
-	out_delmsgids delMsgIDState, err error) {
-
-	out_delmsgids = _in_delmsgids
+func (sp *PSQLIB) setModCap(
+	tx *sql.Tx, pubkeystr, group string, newcap ModCap) (err error) {
 
 	ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 	// do key update
@@ -83,7 +98,19 @@ func (sp *PSQLIB) setModPriv(
 	// this probably should lock relevant row.
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
-	err = ust.QueryRow(pubkeystr, newpriv.String()).Scan(&modid)
+	err = ust.QueryRow(
+		pubkeystr,
+		sql.NullString{
+			String: group,
+			Valid: group != "",
+		},
+		newcap.String(),
+		sql.NullInt32{
+			Int32: int32(newcap.DPriv),
+			Valid: newcap.DPriv >= 0,
+		}).
+		Scan(&modid)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we changed nothing so return now
@@ -97,6 +124,15 @@ func (sp *PSQLIB) setModPriv(
 
 	sp.log.LogPrintf(DEBUG,
 		"setmodpriv: %s priv changed, modid %d", pubkeystr, modid)
+
+	return
+}
+
+func (sp *PSQLIB) xxxx(
+	tx *sql.Tx, _in_delmsgids delMsgIDState) (
+	out_delmsgids delMsgIDState, err error) {
+
+	out_delmsgids = _in_delmsgids
 
 	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs])
@@ -201,7 +237,7 @@ requery:
 
 			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
-				newpriv, pi, posts[i].files, pi.MessageID,
+				newcap, pi, posts[i].files, pi.MessageID,
 				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
 
 			if err != nil {
@@ -252,7 +288,7 @@ requery:
 	return
 }
 
-func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
+func (sp *PSQLIB) DemoSetModCap(mods []string, newcap ModCap) {
 	var err error
 
 	for i, s := range mods {
@@ -280,9 +316,9 @@ func (sp *PSQLIB) DemoSetModPriv(mods []string, newpriv ModPriv) {
 	defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
 	for _, s := range mods {
-		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, newpriv.String())
+		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modcap.String())
 
-		delmsgids, err = sp.setModPriv(tx, s, newpriv, delmsgids)
+		delmsgids, err = sp.setModPriv(tx, s, modcap, delmsgids)
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
 			return
