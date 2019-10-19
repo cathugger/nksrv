@@ -114,7 +114,7 @@ func (sp *PSQLIB) execModCmd(
 			switch cmd {
 			case "delete":
 				// TODO per-board stuff
-				if modCap.Cap & cap_delpost != 0 {
+				if modCap.Cap&cap_delpost != 0 {
 					// global delete by msgid
 					out_delmsgids, out_delmodids, err =
 						sp.modCmdDelete(

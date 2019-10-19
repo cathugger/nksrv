@@ -1,5 +1,10 @@
 package psqlib
 
+import (
+	"fmt"
+	"strconv"
+)
+
 type cap_type uint16
 
 const (
@@ -16,17 +21,17 @@ const (
 	_
 	_
 
-	capx_bits int = iota
-	capx_del = cap_delpost | cap_delboard
-	capx_onlyglobal = cap_delboard
+	capx_bits       int = iota
+	capx_del            = cap_delpost | cap_delboard
+	capx_onlyglobal     = cap_delboard
 )
 
 func (c cap_type) String() string {
 	var buf [capx_bits]byte
 	for i := range buf {
-		buf[i] = "01"[(c >> i) & 1]
+		buf[i] = "01"[(c>>i)&1]
 	}
-	return string(buf)
+	return string(buf[:])
 }
 
 func StrToCap(s string) (c cap_type) {
@@ -65,7 +70,7 @@ func (c ModCap) String() string {
 // MorePriv tells whether o is privileged more by even
 // one relevant capability bit or relevant privilege level
 func (c ModCap) MorePriv(o ModCap, mask cap_type) bool {
-	cc, oc := c.Cap & mask, o.Cap & mask
+	cc, oc := c.Cap&mask, o.Cap&mask
 	if cc|oc != cc {
 		// oc filled in some cc gaps
 		return true
@@ -75,7 +80,7 @@ func (c ModCap) MorePriv(o ModCap, mask cap_type) bool {
 	// check relevant privs
 
 	// -1 means not set; lesser wins; therefore cast to uint to make -1 max val
-	if (mask & capx_del) && uint16(o.DPriv) < uint16(c.DPriv) {
+	if (mask&capx_del) != 0 && uint16(o.DPriv) < uint16(c.DPriv) {
 		return true
 	}
 
@@ -106,7 +111,11 @@ func (c ModBoardCap) TakeIn(
 		mc := ModCap{Cap: StrToCap(scap)}
 		sdpriv := dprivs[k]
 		if sdpriv != "" {
-			mc.DPriv = int16(strconv.ParseUint(sdpriv, 10, 15))
+			dpriv, err := strconv.ParseUint(sdpriv, 10, 15)
+			mc.DPriv = int16(dpriv)
+			if err != nil {
+				panic("strconv.ParseUint err: " + err.Error())
+			}
 		} else {
 			mc.DPriv = -1
 		}

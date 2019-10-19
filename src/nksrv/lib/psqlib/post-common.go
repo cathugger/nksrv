@@ -44,9 +44,11 @@ func (sp *PSQLIB) registeredMod(
 	for {
 
 		var mcap sql.NullString
-		var mbcap map[string]string, mbcapj xtypes.JSONText
+		var mbcap map[string]string
+		var mbcapj xtypes.JSONText
 		var mdpriv sql.NullInt32
-		var mbdpriv map[string]string, mbdprivj xtypes.JSONText
+		var mbdpriv map[string]string
+		var mbdprivj xtypes.JSONText
 
 		err = st.QueryRow(pubkeystr).Scan(
 			&modid, &mcap, &mbcapj, &mdpriv, &mbdprivj)
@@ -67,10 +69,14 @@ func (sp *PSQLIB) registeredMod(
 		}
 
 		err = mbcapj.Unmarshal(&mbcap)
-		if err != nil { panic("mbcap.Unmarshal") }
+		if err != nil {
+			panic("mbcap.Unmarshal")
+		}
 
 		err = mbdprivj.Unmarshal(&mbdpriv)
-		if err != nil { panic("mbdpriv.Unmarshal") }
+		if err != nil {
+			panic("mbdpriv.Unmarshal")
+		}
 
 		hascap = mcap.Valid || len(mbcap) != 0 ||
 			mdpriv.Valid || len(mbdpriv) != 0
@@ -83,7 +89,7 @@ func (sp *PSQLIB) registeredMod(
 		}
 
 		modBoardCap = make(ModBoardCap)
-		modBoardCap.takeIn(mbcap, mbdpriv)
+		modBoardCap.TakeIn(mbcap, mbdpriv)
 
 		return
 	}
@@ -102,7 +108,7 @@ func (sp *PSQLIB) setModCap(
 		pubkeystr,
 		sql.NullString{
 			String: group,
-			Valid: group != "",
+			Valid:  group != "",
 		},
 		newcap.String(),
 		sql.NullInt32{
@@ -129,7 +135,8 @@ func (sp *PSQLIB) setModCap(
 }
 
 func (sp *PSQLIB) xxxx(
-	tx *sql.Tx, _in_delmsgids delMsgIDState) (
+	tx *sql.Tx, _in_delmsgids delMsgIDState,
+	modid uint64, modCap ModCap, modBoardCap ModBoardCap) (
 	out_delmsgids delMsgIDState, err error) {
 
 	out_delmsgids = _in_delmsgids
@@ -236,8 +243,9 @@ requery:
 			var inputerr bool
 
 			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
-				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid, modid,
-				newcap, pi, posts[i].files, pi.MessageID,
+				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
+				modid, modCap, modBoardCap,
+				pi, posts[i].files, pi.MessageID,
 				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
 
 			if err != nil {
@@ -288,7 +296,7 @@ requery:
 	return
 }
 
-func (sp *PSQLIB) DemoSetModCap(mods []string, newcap ModCap) {
+func (sp *PSQLIB) DemoSetModCap(mods []string, modCap ModCap) {
 	var err error
 
 	for i, s := range mods {
@@ -316,9 +324,9 @@ func (sp *PSQLIB) DemoSetModCap(mods []string, newcap ModCap) {
 	defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
 	for _, s := range mods {
-		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modcap.String())
+		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modCap.String())
 
-		delmsgids, err = sp.setModPriv(tx, s, modcap, delmsgids)
+		err = sp.setModCap(tx, s, "", modCap)
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
 			return
