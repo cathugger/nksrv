@@ -40,3 +40,10 @@ func errTooBigFileSingle(limit int64) error {
 func errTooBigFileAll(limit int64) error {
 	return fmt.Errorf("files are too large (limit: %d bytes)", limit)
 }
+
+// indicates that psql error is deadlock
+type psqlDeadlockError struct {
+	error
+}
+
+func (x psqlDeadlockError) Unwrap() error { return x.error }

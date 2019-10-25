@@ -628,7 +628,7 @@ INSERT INTO
 VALUES
 	(
 		$1,
-		$2
+		$2,
 		$3,
 		$4
 	)
@@ -642,7 +642,7 @@ ON CONFLICT (mod_pubkey) DO UPDATE
 		ms.mod_cap <> $3 OR
 			ms.mod_dpriv <> $4
 RETURNING -- inserted or modified
-	mod_id
+	0
 
 -- :name mod_unset_mod
 -- args: <pubkey>
@@ -762,7 +762,7 @@ ON
 	ypbp.g_p_id = ypp.g_p_id
 
 
---:name mod_load_files
+-- :name mod_load_files
 -- loads all files w/ gpids for checking
 SELECT
 	fname,

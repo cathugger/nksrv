@@ -75,6 +75,14 @@ const (
 
 	st_mod_load_files
 
+	st_mod_joblist_modlist_changes_get
+	st_mod_joblist_modlist_changes_set
+	st_mod_joblist_modlist_changes_del
+
+	st_mod_joblist_refs_recalc_get
+	st_mod_joblist_refs_recalc_set
+	st_mod_joblist_refs_recalc_del
+
 	st_puller_get_last_newnews
 	st_puller_set_last_newnews
 	st_puller_get_last_newsgroups
@@ -159,6 +167,14 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_fetch_and_clear_mod_msgs"},
 
 	st_reference{"mod", "mod_load_files"},
+
+	st_reference{"mod_joblist", "mod_joblist_modlist_changes_get"},
+	st_reference{"mod_joblist", "mod_joblist_modlist_changes_set"},
+	st_reference{"mod_joblist", "mod_joblist_modlist_changes_del"},
+
+	st_reference{"mod_joblist", "mod_joblist_refs_recalc_get"},
+	st_reference{"mod_joblist", "mod_joblist_refs_recalc_set"},
+	st_reference{"mod_joblist", "mod_joblist_refs_recalc_del"},
 
 	st_reference{"puller", "puller_get_last_newnews"},
 	st_reference{"puller", "puller_set_last_newnews"},

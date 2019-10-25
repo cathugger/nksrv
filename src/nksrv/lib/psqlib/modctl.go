@@ -5,8 +5,10 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"nksrv/lib/bufreader"
+	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
 	mm "nksrv/lib/minimail"
 )
@@ -134,5 +136,167 @@ func (sp *PSQLIB) execModCmd(
 	}
 
 	err = nil
+	return
+}
+
+func (sp *PSQLIB) xxxx(
+	tx *sql.Tx, _in_delmsgids delMsgIDState,
+	modid uint64, modCap ModCap, modBoardCap ModBoardCap) (
+	out_delmsgids delMsgIDState, err error) {
+
+	out_delmsgids = _in_delmsgids
+
+	srcdir := sp.src.Main()
+	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs])
+
+	// 666 days in the future
+	off_pdate := time.Now().Add(time.Hour * 24 * 666).UTC()
+	off_g_p_id := uint64(0)
+	off_b_id := uint32(0)
+
+	type idt struct {
+		bid  boardID
+		bpid postID
+	}
+	type postinfo struct {
+		gpid    postID
+		xid     idt
+		bname   string
+		msgid   string
+		ref     string
+		title   string
+		pdate   time.Time
+		message string
+		txtidx  uint32
+		files   []string
+	}
+	var posts []postinfo
+	lastx := idt{0, 0}
+
+requery:
+	for {
+		var rows *sql.Rows
+		rows, err = xst.Query(modid, off_pdate, off_g_p_id, off_b_id)
+		if err != nil {
+			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
+			return
+		}
+
+		for rows.Next() {
+			/*
+				zbp.g_p_id,
+				zbp.b_id,
+				zbp.b_p_id,
+				yb.b_name,
+				yp.msgid,
+				ypp.msgid,
+				yp.title,
+				yp.pdate,
+				yp.message,
+				yp.extras -> 'text_attach',
+				yf.fname
+			*/
+			var p postinfo
+			var ref, fname sql.NullString
+			var txtidx sql.NullInt64
+
+			err = rows.Scan(
+				&p.gpid, &p.xid.bid, &p.xid.bpid, &p.bname, &p.msgid, &ref,
+				&p.title, &p.pdate, &p.message, &txtidx, &fname)
+			if err != nil {
+				rows.Close()
+				err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
+				return
+			}
+
+			if lastx != p.xid {
+				lastx = p.xid
+				p.ref = ref.String
+				p.txtidx = uint32(txtidx.Int64)
+				p.pdate = p.pdate.UTC()
+				posts = append(posts, p)
+			}
+			if fname.String != "" {
+				pp := &posts[len(posts)-1]
+				pp.files = append(pp.files, srcdir+fname.String)
+			}
+		}
+		if err = rows.Err(); err != nil {
+			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
+			return
+		}
+
+		for i := range posts {
+			// prepare postinfo good enough for execModCmd
+			pi := mailib.PostInfo{
+				MessageID: CoreMsgIDStr(posts[i].msgid),
+				Date:      posts[i].pdate,
+				MI: mailib.MessageInfo{
+					Title:   posts[i].title,
+					Message: posts[i].message,
+				},
+				E: mailib.PostExtraAttribs{
+					TextAttachment: posts[i].txtidx,
+				},
+			}
+
+			sp.log.LogPrintf(DEBUG,
+				"setmodpriv: executing <%s> from board[%s]",
+				posts[i].msgid, posts[i].bname)
+
+			var delmodids delModIDState
+			var inputerr bool
+
+			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
+				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
+				modid, modCap, modBoardCap,
+				pi, posts[i].files, pi.MessageID,
+				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
+
+			if err != nil {
+
+				if inputerr {
+					// mod msg is just fucked at this point
+					// this shouldn't happen
+					// XXX should we delete this bad msg??
+					sp.log.LogPrintf(ERROR,
+						"setmodpriv: [proceeding anyway] inputerr while execing <%s>: %v",
+						posts[i].msgid, err)
+					err = nil
+					continue
+				}
+
+				// return err directly
+				return
+			}
+
+			if delmodids.contain(modid) {
+				sp.log.LogPrintf(
+					DEBUG, "setmodpriv: delmodid %d is ours, requerying", modid)
+				// msg we just deleted was made by mod we just upp'd
+				// that means that it may be msg in query we just made
+				// it's unsafe to proceed with current cached query
+				off_pdate = posts[i].pdate
+				off_g_p_id = posts[i].gpid
+				off_b_id = posts[i].xid.bid
+				posts = posts[:0]
+				continue requery
+			}
+		}
+
+		if len(posts) < 4096 {
+			// if less than limit that means we dont need another query
+			break
+		} else {
+			// issue another query, there may be more data
+			i := len(posts) - 1
+			off_pdate = posts[i].pdate
+			off_g_p_id = posts[i].gpid
+			off_b_id = posts[i].xid.bid
+			posts = posts[:0]
+			continue requery
+		}
+	}
+
 	return
 }
