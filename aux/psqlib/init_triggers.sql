@@ -73,13 +73,13 @@ DECLARE
 	u_mod_id BIGINT;
 BEGIN
 	-- setup pubkey var
-	IF TG_OP = 'INSERT' THEN
+	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
 		pubkey := NEW.mod_pubkey;
-	ELSIF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+	ELSIF TG_OP = 'DELETE' THEN
 		pubkey := OLD.mod_pubkey;
 	END IF;
 
-	RAISE NOTICE 'OP % pubkey %', TG_OP, pubkey;
+	--RAISE WARNING 'OP % pubkey %', TG_OP, pubkey;
 
 	-- recalc modlist val from modsets
 	WITH
@@ -113,7 +113,8 @@ BEGIN
 				comp_caps
 			WHERE
 				mod_group IS NULL
-		) AS a,
+		) AS a
+	FULL JOIN
 		(
 			SELECT
 				jsonb_object(
@@ -123,7 +124,10 @@ BEGIN
 				comp_caps
 			WHERE
 				mod_group IS NOT NULL
-		) AS b,
+		) AS b
+	ON
+		TRUE
+	FULL JOIN
 		(
 			SELECT
 				mod_calcdpriv AS mod_dpriv
@@ -131,7 +135,10 @@ BEGIN
 				comp_caps
 			WHERE
 				mod_group IS NULL
-		) AS c,
+		) AS c
+	ON
+		TRUE
+	FULL JOIN
 		(
 			SELECT
 				jsonb_object(
@@ -142,13 +149,18 @@ BEGIN
 			WHERE
 				mod_group IS NOT NULL AND
 					mod_calcdpriv IS NOT NULL
-		) AS d,
+		) AS d
+	ON
+		TRUE
+	FULL JOIN
 		(
 			SELECT
 				COUNT(*) = 0 AS automanage
 			FROM
 				comp_caps
-		) AS z;
+		) AS z
+	ON
+		TRUE;
 
 	IF TG_OP = 'INSERT' THEN
 		-- insert or update

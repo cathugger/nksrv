@@ -151,9 +151,6 @@ func TestCalcPriv(t *testing.T) {
 		}
 	}()
 
-	//err = errors.New("benis")
-	//return
-
 	capsets := [...]struct {
 		Key    string
 		Group  string
@@ -170,6 +167,14 @@ func TestCalcPriv(t *testing.T) {
 		{Key: "1", ModCap: ModCap{DPriv: -1}},
 
 		{Key: "2", ModCap: ModCap{Cap: cap_delpost}},
+
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
+
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
 	}
 	for i, cs := range capsets {
 		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap)
@@ -183,7 +188,7 @@ func TestCalcPriv(t *testing.T) {
 SELECT
 	mod_pubkey,
 	automanage,
-	mod_cap::TEXT,
+	mod_cap,
 	mod_bcap,
 	mod_dpriv,
 	mod_bdpriv
@@ -208,7 +213,20 @@ ORDER BY
 	expres := [...]res_t{
 		{PubKey: "0", ModCap: nullcap, ModDPriv: zeropriv},
 		{PubKey: "1", ModCap: nullcap},
-		{PubKey: "2", ModCap: sql.NullString{String: "010000000000", Valid: true}, ModDPriv: zeropriv},
+		{
+			PubKey:   "2",
+			ModCap:   sql.NullString{String: "010000000000", Valid: true},
+			ModDPriv: zeropriv,
+		},
+		{
+			PubKey:    "3",
+			ModBCap:   sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+			ModBDPriv: sql.NullString{String: "{\"test\": \"0\"}", Valid: true},
+		},
+		{
+			PubKey:  "4",
+			ModBCap: sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+		},
 	}
 	for rows.Next() {
 		var x res_t
@@ -217,8 +235,8 @@ ORDER BY
 			&x.ModCap, &x.ModBCap, &x.ModDPriv, &x.ModBDPriv)
 		panicErr(err, "rows.Scan err: ")
 		if i >= len(expres) {
-			t.Errorf("res: too many rows")
-			break
+			t.Errorf("res: too many rows: %#v", x)
+			continue
 		}
 		if x != expres[i] {
 			t.Errorf("res: %d not equal, got: %#v", i, x)
@@ -240,6 +258,8 @@ ORDER BY
 	var expcl = [...]cl_t{
 		{j_id: 1, mod_id: 1},
 		{j_id: 4, mod_id: 2},
+		{j_id: 5, mod_id: 4},
+		{j_id: 6, mod_id: 5},
 	}
 	checkexp := func(i int) {
 		tx, err := db.DB.Begin()
@@ -273,7 +293,7 @@ ORDER BY
 		}
 
 		if i >= len(expcl) {
-			t.Errorf("cl: too many rows")
+			t.Errorf("cl: too many rows: %#v", x)
 		} else if x != expcl[i] {
 			t.Errorf("cl: %d not equal, got: %#v", i, x)
 		}
