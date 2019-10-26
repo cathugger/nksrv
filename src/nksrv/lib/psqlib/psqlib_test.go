@@ -1,6 +1,8 @@
 package psqlib
 
 import (
+	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 
@@ -98,5 +100,124 @@ func TestInit(t *testing.T) {
 	err = dbib.Close()
 	if err != nil {
 		panic("dbib close err: " + err.Error())
+	}
+}
+
+func panicErr(err error, str string) {
+	if err != nil {
+		panic(str + err.Error())
+	}
+}
+
+func TestCalcPriv(t *testing.T) {
+	dbn := testutil.MakeTestDB()
+	defer testutil.DropTestDB(dbn)
+
+	lgr := newLogger()
+
+	db, err := psql.OpenAndPrepare(psql.Config{
+		ConnStr: "user=" + testutil.TestUser +
+			" dbname=" + dbn +
+			" host=" + testutil.PSQLHost,
+		Logger: lgr,
+	})
+	panicErr(err, "OAP err: ")
+
+	defer func() {
+		err = db.Close()
+		//panicErr(err, "db close err: ")
+	}()
+
+	psqlibcfg := cfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
+
+	dbib, err := NewInitAndPrepare(psqlibcfg)
+	panicErr(err, "NewInitAndPrepare err: ")
+
+	defer func() {
+		err = dbib.Close()
+		//panicErr(err, "dbib close err: ")
+	}()
+
+	tx, err := db.DB.Begin()
+	panicErr(err, "db.DB.Begin err: ")
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	//err = errors.New("benis")
+	//return
+
+	capsets := [...]struct {
+		Key    string
+		Group  string
+		ModCap ModCap
+	}{
+		{Key: "0", ModCap: ModCap{DPriv: -1}},
+		{Key: "0", ModCap: ModCap{DPriv: -1}},
+		{Key: "0", ModCap: ModCap{DPriv: 0}},
+
+		{Key: "1", ModCap: ModCap{DPriv: 0}},
+		{Key: "1", ModCap: ModCap{DPriv: 0}},
+		{Key: "1", ModCap: ModCap{DPriv: -1}},
+
+		{Key: "2", ModCap: ModCap{Cap: cap_delpost}},
+	}
+	for i, cs := range capsets {
+		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap)
+		panicErr(err, fmt.Sprintf("capset %d: ", i))
+	}
+
+	err = tx.Commit()
+	panicErr(err, "tx.Commit err: ")
+
+	q := `
+SELECT
+	mod_pubkey,
+	automanage,
+	mod_cap::TEXT,
+	mod_bcap,
+	mod_dpriv,
+	mod_bdpriv
+FROM
+	ib0.modlist
+ORDER BY
+	mod_pubkey
+`
+	rows, err := db.DB.Query(q)
+	panicErr(err, "db.DB.Query err: ")
+	i := 0
+	type res_t struct {
+		PubKey     string
+		AutoManage bool
+		ModCap     sql.NullString
+		ModBCap    sql.NullString
+		ModDPriv   sql.NullInt32
+		ModBDPriv  sql.NullString
+	}
+	nullcap := sql.NullString{String: "000000000000", Valid: true}
+	expres := [...]res_t{
+		{PubKey: "0", ModCap: nullcap},
+		{PubKey: "1", ModCap: nullcap},
+		{PubKey: "2", ModCap: sql.NullString{String: "000000000001", Valid: true}},
+	}
+	for rows.Next() {
+		var x res_t
+		err = rows.Scan(
+			&x.PubKey, &x.AutoManage,
+			&x.ModCap, &x.ModBCap, &x.ModDPriv, &x.ModBDPriv)
+		panicErr(err, "rows.Scan err: ")
+		if i >= len(expres) {
+			t.Errorf("too many rows")
+			break
+		}
+		if x != expres[i] {
+			t.Errorf("%d not equal, got: %#v", i, x)
+		}
+		i++
 	}
 }

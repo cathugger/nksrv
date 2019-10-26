@@ -79,9 +79,9 @@ DECLARE
 	u_mod_id BIGINT;
 BEGIN
 	-- setup pubkey var
-	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+	IF TG_OP = 'INSERT' THEN
 		pubkey := NEW.mod_pubkey;
-	ELSIF TG_OP = 'DELETE' THEN
+	ELSIF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
 		pubkey := OLD.mod_pubkey;
 	END IF;
 	-- recalc modlist val from modsets

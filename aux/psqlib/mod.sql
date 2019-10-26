@@ -616,8 +616,34 @@ WHERE
 
 
 -- :name mod_set_mod_priv
+-- args: <pubkey> <capabilities> <delpriv>
+INSERT INTO
+	ib0.modsets AS ms (
+		mod_pubkey,
+		mod_cap,
+		mod_dpriv
+	)
+VALUES
+	(
+		$1,
+		$2,
+		$3
+	)
+ON CONFLICT (mod_pubkey)
+WHERE
+	b_id IS NULL AND b_p_id IS NULL AND
+		mod_group IS NULL
+DO UPDATE
+	SET
+		mod_cap   = $2,
+		mod_dpriv = $3
+	WHERE
+		(ms.mod_cap,ms.mod_dpriv) IS DISTINCT FROM ($2,$3)
+RETURNING -- inserted or modified
+	0
+
+-- :name mod_set_mod_priv_group
 -- args: <pubkey> <group> <capabilities> <delpriv>
--- TODO
 INSERT INTO
 	ib0.modsets AS ms (
 		mod_pubkey,
@@ -632,17 +658,19 @@ VALUES
 		$3,
 		$4
 	)
--- XXX we can have either mod_pubkey or mod_pubkey,mod_group conflict.
--- will this match in all cases??
-ON CONFLICT (mod_pubkey) DO UPDATE
+ON CONFLICT (mod_pubkey,mod_group)
+WHERE
+	b_id IS NULL AND b_p_id IS NULL AND
+		mod_group IS NOT NULL
+DO UPDATE
 	SET
 		mod_cap   = $3,
 		mod_dpriv = $4
 	WHERE
-		ms.mod_cap <> $3 OR
-			ms.mod_dpriv <> $4
+		(ms.mod_cap,ms.mod_dpriv) IS DISTINCT FROM ($3,$4)
 RETURNING -- inserted or modified
 	0
+
 
 -- :name mod_unset_mod
 -- args: <pubkey>

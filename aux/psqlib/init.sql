@@ -281,7 +281,7 @@ CREATE TABLE ib0.modsets (
 	FOREIGN KEY (b_id,b_p_id)
 		REFERENCES ib0.bposts (b_id,b_p_id)
 		MATCH FULL
-		ON DELETE CASCADE    -- see trigger below
+		ON DELETE CASCADE    -- trigger corrects stuff
 )
 -- :next
 CREATE UNIQUE INDEX

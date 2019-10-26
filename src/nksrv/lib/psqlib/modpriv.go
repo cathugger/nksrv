@@ -60,7 +60,7 @@ type ModCap struct {
 }
 
 func (c ModCap) String() string {
-	x := map[string]interface{}{"cap": c.String()}
+	x := map[string]interface{}{"cap": c.Cap.String()}
 	if c.DPriv >= 0 {
 		x["dpriv"] = c.DPriv
 	}

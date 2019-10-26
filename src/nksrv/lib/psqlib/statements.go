@@ -70,6 +70,7 @@ const (
 	st_mod_refresh_bump_by_tid
 
 	st_mod_set_mod_priv
+	st_mod_set_mod_priv_group
 	st_mod_unset_mod
 	st_mod_fetch_and_clear_mod_msgs
 
@@ -163,6 +164,7 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_refresh_bump_by_tid"},
 
 	st_reference{"mod", "mod_set_mod_priv"},
+	st_reference{"mod", "mod_set_mod_priv_group"},
 	st_reference{"mod", "mod_unset_mod"},
 	st_reference{"mod", "mod_fetch_and_clear_mod_msgs"},
 

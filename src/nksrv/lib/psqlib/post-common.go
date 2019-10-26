@@ -96,24 +96,33 @@ func (sp *PSQLIB) registeredMod(
 func (sp *PSQLIB) setModCap(
 	tx *sql.Tx, pubkeystr, group string, newcap ModCap) (err error) {
 
-	ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 	// do key update
 	var dummy int32
 	// this probably should lock relevant row.
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
-	err = ust.QueryRow(
-		pubkeystr,
-		sql.NullString{
-			String: group,
-			Valid:  group != "",
-		},
-		newcap.String(),
-		sql.NullInt32{
-			Int32: int32(newcap.DPriv),
-			Valid: newcap.DPriv >= 0,
-		}).
-		Scan(&dummy)
+	var r *sql.Row
+	if group == "" {
+		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
+		r = ust.QueryRow(
+			pubkeystr,
+			newcap.Cap.String(),
+			sql.NullInt32{
+				Int32: int32(newcap.DPriv),
+				Valid: newcap.DPriv >= 0,
+			})
+	} else {
+		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv_group])
+		r = ust.QueryRow(
+			pubkeystr,
+			group,
+			newcap.Cap.String(),
+			sql.NullInt32{
+				Int32: int32(newcap.DPriv),
+				Valid: newcap.DPriv >= 0,
+			})
+	}
+	err = r.Scan(&dummy)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
