@@ -175,6 +175,9 @@ func TestCalcPriv(t *testing.T) {
 		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
 		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
 		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
+
+		{Key: "5", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
+		{Key: "5", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
 	}
 	for i, cs := range capsets {
 		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap)
@@ -227,6 +230,13 @@ ORDER BY
 			PubKey:  "4",
 			ModBCap: sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
 		},
+		{
+			PubKey:    "5",
+			ModCap:    sql.NullString{String: "010000000000", Valid: true},
+			ModDPriv:  zeropriv,
+			ModBCap:   sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+			ModBDPriv: sql.NullString{String: "{\"test\": \"0\"}", Valid: true},
+		},
 	}
 	for rows.Next() {
 		var x res_t
@@ -260,6 +270,7 @@ ORDER BY
 		{j_id: 4, mod_id: 2},
 		{j_id: 5, mod_id: 4},
 		{j_id: 6, mod_id: 5},
+		{j_id: 7, mod_id: 6},
 	}
 	checkexp := func(i int) {
 		tx, err := db.DB.Begin()
