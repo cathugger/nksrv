@@ -200,10 +200,11 @@ ORDER BY
 		ModBDPriv  sql.NullString
 	}
 	nullcap := sql.NullString{String: "000000000000", Valid: true}
+	zeropriv := sql.NullInt32{Int32: 0, Valid: true}
 	expres := [...]res_t{
-		{PubKey: "0", ModCap: nullcap},
+		{PubKey: "0", ModCap: nullcap, ModDPriv: zeropriv},
 		{PubKey: "1", ModCap: nullcap},
-		{PubKey: "2", ModCap: sql.NullString{String: "000000000001", Valid: true}},
+		{PubKey: "2", ModCap: sql.NullString{String: "010000000000", Valid: true}, ModDPriv: zeropriv},
 	}
 	for rows.Next() {
 		var x res_t

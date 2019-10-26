@@ -22,14 +22,7 @@ BEGIN
 			NULL,
 			NULL,
 			NULL
-		)
-	ON CONFLICT
-		(mod_id)
-	DO UPDATE
-		SET
-			t_date_sent = EXCLUDED.t_date_sent,
-			t_g_p_id    = EXCLUDED.t_g_p_id,
-			t_b_id      = EXCLUDED.t_b_id;
+		);
 
 	-- poke process which can act upon it
 	NOTIFY ib0_modlist_changes;
@@ -84,6 +77,9 @@ BEGIN
 	ELSIF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
 		pubkey := OLD.mod_pubkey;
 	END IF;
+
+	RAISE NOTICE 'OP % pubkey %', TG_OP, pubkey;
+
 	-- recalc modlist val from modsets
 	WITH
 		comp_caps AS (

@@ -102,25 +102,23 @@ func (sp *PSQLIB) setModCap(
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
 	var r *sql.Row
+	dpriv := sql.NullInt32{
+		Int32: int32(newcap.DPriv),
+		Valid: newcap.DPriv >= 0,
+	}
 	if group == "" {
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 		r = ust.QueryRow(
 			pubkeystr,
 			newcap.Cap.String(),
-			sql.NullInt32{
-				Int32: int32(newcap.DPriv),
-				Valid: newcap.DPriv >= 0,
-			})
+			dpriv)
 	} else {
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv_group])
 		r = ust.QueryRow(
 			pubkeystr,
 			group,
 			newcap.Cap.String(),
-			sql.NullInt32{
-				Int32: int32(newcap.DPriv),
-				Valid: newcap.DPriv >= 0,
-			})
+			dpriv)
 	}
 	err = r.Scan(&dummy)
 
