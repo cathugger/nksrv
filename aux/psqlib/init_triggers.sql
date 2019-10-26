@@ -40,6 +40,7 @@ LANGUAGE
 CREATE TRIGGER
 	modlist_changepriv
 AFTER
+	-- NOTE: inserts aren't logged, because no new messages would be awakened by them
 	UPDATE OF
 		mod_cap,
 		mod_bcap,

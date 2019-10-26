@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/lib/pq"
+
 	"nksrv/lib/altthumber"
 	"nksrv/lib/demoib"
 	"nksrv/lib/emime"
@@ -160,6 +162,8 @@ func TestCalcPriv(t *testing.T) {
 		{Key: "0", ModCap: ModCap{DPriv: -1}},
 		{Key: "0", ModCap: ModCap{DPriv: -1}},
 		{Key: "0", ModCap: ModCap{DPriv: 0}},
+		{Key: "0", ModCap: ModCap{DPriv: -1}},
+		{Key: "0", ModCap: ModCap{DPriv: 0}},
 
 		{Key: "1", ModCap: ModCap{DPriv: 0}},
 		{Key: "1", ModCap: ModCap{DPriv: 0}},
@@ -213,12 +217,75 @@ ORDER BY
 			&x.ModCap, &x.ModBCap, &x.ModDPriv, &x.ModBDPriv)
 		panicErr(err, "rows.Scan err: ")
 		if i >= len(expres) {
-			t.Errorf("too many rows")
+			t.Errorf("res: too many rows")
 			break
 		}
 		if x != expres[i] {
-			t.Errorf("%d not equal, got: %#v", i, x)
+			t.Errorf("res: %d not equal, got: %#v", i, x)
 		}
 		i++
 	}
+	if i != len(expres) {
+		t.Errorf("res: too little rows")
+	}
+
+	// check if changes list properly reflect changes
+	type cl_t struct {
+		j_id        int64
+		mod_id      int64
+		t_date_sent pq.NullTime
+		t_g_p_id    sql.NullInt64
+		t_b_id      sql.NullInt32
+	}
+	var expcl = [...]cl_t{
+		{j_id: 1, mod_id: 1},
+		{j_id: 4, mod_id: 2},
+	}
+	checkexp := func(i int) {
+		tx, err := db.DB.Begin()
+		panicErr(err, "db.DB.Begin err: ")
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback()
+			}
+		}()
+		cmt := func() {
+			err = tx.Commit()
+			panicErr(err, "cl tx.Commit err: ")
+		}
+
+		var x cl_t
+
+		err = dbib.
+			st_prep[st_mod_joblist_modlist_changes_get].
+			QueryRow().
+			Scan(&x.j_id, &x.mod_id, &x.t_date_sent, &x.t_g_p_id, &x.t_b_id)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				if i < len(expcl) {
+					// it shouldn't have ended yet
+					t.Errorf("cl: too little rows")
+				}
+				cmt()
+				return
+			}
+			panicErr(err, "cl queryrowscan: ")
+		}
+
+		if i >= len(expcl) {
+			t.Errorf("cl: too many rows")
+		} else if x != expcl[i] {
+			t.Errorf("cl: %d not equal, got: %#v", i, x)
+		}
+
+		_, err = dbib.st_prep[st_mod_joblist_modlist_changes_del].Exec(x.j_id)
+		panicErr(err, "cl del exec: ")
+
+		cmt()
+	}
+
+	for i := range expcl {
+		checkexp(i)
+	}
+	checkexp(i)
 }
