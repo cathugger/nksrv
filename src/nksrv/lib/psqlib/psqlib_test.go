@@ -170,7 +170,7 @@ func TestCalcPriv(t *testing.T) {
 		{Key: "5", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
 	}
 	for i, cs := range capsets {
-		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap)
+		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap, noneModCap)
 		panicErr(err, fmt.Sprintf("capset %d", i))
 	}
 

@@ -478,14 +478,13 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 
 	var modid uint64
 	var hascap bool
-	var modCap ModCap
-	var modBoardCap ModBoardCap
+	var modCC ModCombinedCaps
 
 	if isctlgrp && pubkeystr != "" {
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
 
-		modid, hascap, modCap, modBoardCap, err =
+		modid, hascap, modCC, err =
 			sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			unexpected = true
@@ -543,7 +542,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		// we should execute it
 		delmsgids, _, err, _ = sp.execModCmd(
 			tx, gpid, info.bid, bpid,
-			modid, modCap, modBoardCap,
+			modid, modCC,
 			pi, tmpfns, pi.MessageID,
 			cref, delmsgids, delModIDState{})
 		if err != nil {

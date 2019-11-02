@@ -60,7 +60,7 @@ func getModCmdInput(
 
 func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	modid uint64, modCap ModCap, modBoardCap ModBoardCap,
+	modid uint64, modCC ModCombinedCaps,
 	pi mailib.PostInfo, filenames []string,
 	selfid, ref CoreMsgIDStr,
 	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
@@ -116,7 +116,8 @@ func (sp *PSQLIB) execModCmd(
 			switch cmd {
 			case "delete":
 				// TODO per-board stuff
-				if modCap.Cap&cap_delpost != 0 {
+				// TODO TODO TODO
+				if modCC.ModCap.Cap&cap_delpost != 0 {
 					// global delete by msgid
 					out_delmsgids, out_delmodids, err =
 						sp.modCmdDelete(
@@ -141,7 +142,7 @@ func (sp *PSQLIB) execModCmd(
 
 func (sp *PSQLIB) xxxx(
 	tx *sql.Tx, _in_delmsgids delMsgIDState,
-	modid uint64, modCap ModCap, modBoardCap ModBoardCap) (
+	modid uint64, modCC ModCombinedCaps) (
 	out_delmsgids delMsgIDState, err error) {
 
 	out_delmsgids = _in_delmsgids
@@ -249,7 +250,7 @@ requery:
 
 			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
-				modid, modCap, modBoardCap,
+				modid, modCC,
 				pi, posts[i].files, pi.MessageID,
 				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
 

@@ -67,6 +67,11 @@ type ModCap struct {
 	CapLevel [caplvlx_num]int16 // -1 = unset
 }
 
+var noneModCap = ModCap{
+	Cap:      0,
+	CapLevel: [caplvlx_num]int16{-1},
+}
+
 func (c ModCap) String() string {
 	x := map[string]interface{}{
 		"cap":       c.Cap.String(),
@@ -117,6 +122,13 @@ func (c ModCap) Merge(o ModCap) (r ModCap) {
 }
 
 type ModBoardCap map[string]ModCap
+
+type ModCombinedCaps struct {
+	ModCap             ModCap
+	ModBoardCap        ModBoardCap
+	ModInheritCap      ModCap
+	ModInheritBoardCap ModBoardCap
+}
 
 func processCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
 	for i := range mc.CapLevel {

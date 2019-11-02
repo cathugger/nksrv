@@ -13,11 +13,17 @@ CREATE TABLE ib0.modlist (
 	mod_pubkey TEXT    COLLATE "C"  NOT NULL,
 	mod_name   TEXT,
 	-- if true, then no modsets refer to it [so can be GC'd if no posts refer to it too]
-	automanage  BOOLEAN   NOT NULL,
+	automanage BOOLEAN NOT NULL,
+	-- usable capabilities
 	mod_cap     BIT(12),        -- global capabilities
 	mod_bcap    JSONB,          -- per-board capabilities
 	mod_caplvl  SMALLINT ARRAY, -- global cap levels
 	mod_bcaplvl JSONB,          -- per-board cap levels
+	-- inheritable capabilities
+	modi_cap     BIT(12),        -- global capabilities
+	modi_bcap    JSONB,          -- per-board capabilities
+	modi_caplvl  SMALLINT ARRAY, -- global cap levels
+	modi_bcaplvl JSONB,          -- per-board cap levels
 
 	PRIMARY KEY (mod_id),
 	UNIQUE (mod_pubkey)
@@ -271,9 +277,14 @@ CREATE INDEX ON ib0.files (fname,thumb)
 -- these would be deleted/reinserted if priv of mod behind them changes
 CREATE TABLE ib0.modsets (
 	mod_pubkey TEXT COLLATE "C" NOT NULL,
+	-- if limited to single group
+	mod_group  TEXT COLLATE "C",
+	-- usable
 	mod_cap    BIT(12)          NOT NULL,
 	mod_caplvl SMALLINT ARRAY,
-	mod_group  TEXT COLLATE "C",
+	-- inheritable
+	modi_cap    BIT(12)         NOT NULL,
+	modi_caplvl SMALLINT ARRAY,
 	-- board post responsible for this modset (if any)
 	b_id     INTEGER,
 	b_p_id   BIGINT,

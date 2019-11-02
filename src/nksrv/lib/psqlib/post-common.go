@@ -22,9 +22,16 @@ func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
 	}
 }
 
+func mustUnmarshal(x interface{}, j xtypes.JSONText) {
+	err := j.Unmarshal(&x)
+	if err != nil {
+		panic("json unmarshal")
+	}
+}
+
 func (sp *PSQLIB) registeredMod(
 	tx *sql.Tx, pubkeystr string) (
-	modid uint64, hascap bool, modCap ModCap, modBoardCap ModBoardCap,
+	modid uint64, hascap bool, mcc ModCombinedCaps,
 	err error) {
 
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
@@ -42,15 +49,36 @@ func (sp *PSQLIB) registeredMod(
 	x := 0
 	for {
 
-		var mcap sql.NullString
-		var mbcap map[string]string
-		var mbcapj xtypes.JSONText
-		var mcaplvl *[]sql.NullInt32
-		var mbcaplvl map[string]string
-		var mbcaplvlj xtypes.JSONText
+		var (
+			m_g_cap   sql.NullString
+			m_b_cap   map[string]string
+			m_b_cap_j xtypes.JSONText
+
+			m_g_caplvl   *[]sql.NullInt32
+			m_b_caplvl   map[string]string
+			m_b_caplvl_j xtypes.JSONText
+
+			mi_g_cap   sql.NullString
+			mi_b_cap   map[string]string
+			mi_b_cap_j xtypes.JSONText
+
+			mi_g_caplvl   *[]sql.NullInt32
+			mi_b_caplvl   map[string]string
+			mi_b_caplvl_j xtypes.JSONText
+		)
 
 		err = st.QueryRow(pubkeystr).Scan(
-			&modid, &mcap, &mbcapj, pq.Array(&mcaplvl), &mbcaplvlj)
+			&modid,
+
+			&m_g_cap,
+			&m_b_cap_j,
+			pq.Array(&m_g_caplvl),
+			&m_b_caplvl_j,
+
+			&mi_g_cap,
+			&mi_b_cap_j,
+			pq.Array(&mi_g_caplvl),
+			&mi_b_caplvl_j)
 
 		if err != nil {
 
@@ -67,28 +95,34 @@ func (sp *PSQLIB) registeredMod(
 			return
 		}
 
-		err = mbcapj.Unmarshal(&mbcap)
-		if err != nil {
-			panic("mbcap.Unmarshal")
+		mustUnmarshal(&m_b_cap, m_b_cap_j)
+		mustUnmarshal(&m_b_caplvl, m_b_caplvl_j)
+		mustUnmarshal(&mi_b_cap, mi_b_cap_j)
+		mustUnmarshal(&mi_b_caplvl, mi_b_caplvl_j)
+
+		// enough to check only usable flags
+		hascap = m_g_cap.Valid || len(m_b_cap) != 0 ||
+			m_g_caplvl != nil || len(m_b_caplvl) != 0
+
+		if m_g_cap.Valid {
+			mcc.ModCap.Cap = StrToCap(m_g_cap.String)
+		}
+		if m_g_caplvl != nil {
+			mcc.ModCap = processCapLevel(mcc.ModCap, *m_g_caplvl)
 		}
 
-		err = mbcaplvlj.Unmarshal(&mbcaplvl)
-		if err != nil {
-			panic("mbdpriv.Unmarshal")
+		if mi_g_cap.Valid {
+			mcc.ModInheritCap.Cap = StrToCap(mi_g_cap.String)
+		}
+		if mi_g_caplvl != nil {
+			mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, *mi_g_caplvl)
 		}
 
-		hascap = mcap.Valid || len(mbcap) != 0 ||
-			mcaplvl != nil || len(mbcaplvl) != 0
+		mcc.ModBoardCap = make(ModBoardCap)
+		mcc.ModBoardCap.TakeIn(m_b_cap, m_b_caplvl)
 
-		if mcap.Valid {
-			modCap.Cap = StrToCap(mcap.String)
-		}
-		if mcaplvl != nil {
-			modCap = processCapLevel(modCap, *mcaplvl)
-		}
-
-		modBoardCap = make(ModBoardCap)
-		modBoardCap.TakeIn(mbcap, mbcaplvl)
+		mcc.ModInheritBoardCap = make(ModBoardCap)
+		mcc.ModInheritBoardCap.TakeIn(mi_b_cap, mi_b_caplvl)
 
 		return
 	}
@@ -104,7 +138,7 @@ func makeCapLvlArray(mc ModCap) interface{} {
 }
 
 func (sp *PSQLIB) setModCap(
-	tx *sql.Tx, pubkeystr, group string, newcap ModCap) (err error) {
+	tx *sql.Tx, pubkeystr, group string, m_cap, mi_cap ModCap) (err error) {
 
 	// do key update
 	var dummy int32
@@ -112,21 +146,41 @@ func (sp *PSQLIB) setModCap(
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
 	var r *sql.Row
-	caplvl := makeCapLvlArray(newcap)
+
+	m_caplvl := makeCapLvlArray(m_cap)
+	mi_caplvl := makeCapLvlArray(mi_cap)
+
 	if group == "" {
+
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
+
 		r = ust.QueryRow(
+
 			pubkeystr,
-			newcap.Cap.String(),
-			caplvl)
+
+			m_cap.Cap.String(),
+			m_caplvl,
+
+			mi_cap.Cap.String(),
+			mi_caplvl)
+
 	} else {
+
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv_group])
+
 		r = ust.QueryRow(
+
 			pubkeystr,
 			group,
-			newcap.Cap.String(),
-			caplvl)
+
+			m_cap.Cap.String(),
+			m_caplvl,
+
+			mi_cap.Cap.String(),
+			mi_caplvl)
+
 	}
+
 	err = r.Scan(&dummy)
 
 	if err != nil {
@@ -176,7 +230,7 @@ func (sp *PSQLIB) DemoSetModCap(mods []string, modCap ModCap) {
 	for _, s := range mods {
 		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modCap.String())
 
-		err = sp.setModCap(tx, s, "", modCap)
+		err = sp.setModCap(tx, s, "", modCap, noneModCap)
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
 			return

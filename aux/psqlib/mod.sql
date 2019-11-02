@@ -97,10 +97,16 @@ ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update so
 	SET automanage = ml.automanage
 RETURNING
 	mod_id,
+
 	mod_cap,
 	mod_bcap,
 	mod_caplvl,
-	mod_bcaplvl
+	mod_bcaplvl,
+
+	modi_cap,
+	modi_bcap,
+	modi_caplvl,
+	modi_bcaplvl
 
 
 
@@ -618,16 +624,23 @@ WHERE
 -- :name mod_set_mod_priv
 -- args: <pubkey> <capabilities> <delpriv>
 INSERT INTO
-	ib0.modsets AS ms (
+	ib0.modsets AS ms
+	(
 		mod_pubkey,
+
 		mod_cap,
-		mod_caplvl
+		mod_caplvl,
+		modi_cap,
+		modi_caplvl
 	)
 VALUES
 	(
 		$1,
+
 		$2,
-		$3
+		$3,
+		$4,
+		$5
 	)
 ON CONFLICT (mod_pubkey)
 WHERE
@@ -635,28 +648,49 @@ WHERE
 		mod_group IS NULL
 DO UPDATE
 	SET
-		mod_cap    = $2,
-		mod_caplvl = $3
+		mod_cap     = $2,
+		mod_caplvl  = $3,
+		modi_cap    = $4,
+		modi_caplvl = $5
 	WHERE
-		(ms.mod_cap,ms.mod_caplvl) IS DISTINCT FROM ($2,$3)
+		(
+			ms.mod_cap,
+			ms.mod_caplvl,
+			ms.modi_cap,
+			ms.modi_caplvl
+		)
+		IS DISTINCT FROM
+		(
+			$2,
+			$3,
+			$4,
+			$5
+		)
 RETURNING -- inserted or modified
 	0
 
 -- :name mod_set_mod_priv_group
 -- args: <pubkey> <group> <capabilities> <delpriv>
 INSERT INTO
-	ib0.modsets AS ms (
+	ib0.modsets AS ms
+	(
 		mod_pubkey,
 		mod_group,
+
 		mod_cap,
-		mod_caplvl
+		mod_caplvl,
+		modi_cap,
+		modi_caplvl
 	)
 VALUES
 	(
 		$1,
 		$2,
+
 		$3,
-		$4
+		$4,
+		$5,
+		$6
 	)
 ON CONFLICT (mod_pubkey,mod_group)
 WHERE
@@ -664,10 +698,24 @@ WHERE
 		mod_group IS NOT NULL
 DO UPDATE
 	SET
-		mod_cap    = $3,
-		mod_caplvl = $4
+		mod_cap     = $3,
+		mod_caplvl  = $4,
+		modi_cap    = $5,
+		modi_caplvl = $6
 	WHERE
-		(ms.mod_cap,ms.mod_caplvl) IS DISTINCT FROM ($3,$4)
+		(
+			ms.mod_cap,
+			ms.mod_caplvl,
+			ms.modi_cap,
+			ms.modi_caplvl
+		)
+		IS DISTINCT FROM
+		(
+			$3,
+			$4,
+			$5,
+			$6
+		)
 RETURNING -- inserted or modified
 	0
 

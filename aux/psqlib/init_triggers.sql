@@ -45,15 +45,29 @@ AFTER
 		mod_cap,
 		mod_bcap,
 		mod_caplvl,
-		mod_bcaplvl
+		mod_bcaplvl,
+		modi_cap,
+		modi_bcap,
+		modi_caplvl,
+		modi_bcaplvl
 ON
 	ib0.modlist
 FOR EACH
 	ROW
 WHEN
-	((OLD.mod_cap,OLD.mod_bcap,OLD.mod_caplvl,OLD.mod_bcaplvl)
-		IS DISTINCT FROM
-		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_caplvl,NEW.mod_bcaplvl))
+	(
+		(
+			(OLD.mod_cap,OLD.mod_bcap,OLD.mod_caplvl,OLD.mod_bcaplvl)
+			IS DISTINCT FROM
+			(NEW.mod_cap,NEW.mod_bcap,NEW.mod_caplvl,NEW.mod_bcaplvl)
+		)
+		OR
+		(
+			(OLD.modi_cap,OLD.modi_bcap,OLD.modi_caplvl,OLD.modi_bcaplvl)
+			IS DISTINCT FROM
+			(NEW.modi_cap,NEW.modi_bcap,NEW.modi_caplvl,NEW.modi_bcaplvl)
+		)
+	)
 EXECUTE PROCEDURE
 	ib0.modlist_changepriv()
 
@@ -86,8 +100,13 @@ BEGIN
 		comp_caps AS (
 			SELECT
 				mod_group,
+
 				bit_or(mod_cap) AS calc_mod_cap,
-				ARRAY[min(mod_caplvl[1])] AS calc_mod_caplvl
+				ARRAY[min(mod_caplvl[1])] AS calc_mod_caplvl,
+
+				bit_or(modi_cap) AS calc_modi_cap,
+				ARRAY[min(modi_caplvl[1])] AS calc_modi_caplvl
+
 			FROM
 				ib0.modsets
 			WHERE
@@ -102,9 +121,17 @@ BEGIN
 		b.mod_bcap,
 		c.mod_caplvl,
 		d.mod_bcaplvl,
+
+		ai.modi_cap,
+		bi.modi_bcap,
+		ci.modi_caplvl,
+		di.modi_bcaplvl,
+
 		z.automanage
+
 	INTO STRICT
 		r
+
 	FROM
 		(
 			SELECT
@@ -152,6 +179,57 @@ BEGIN
 		) AS d
 	ON
 		TRUE
+
+	FULL JOIN
+		(
+			SELECT
+				calc_modi_cap AS modi_cap
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NULL
+		) AS ai
+	ON
+		TRUE
+	FULL JOIN
+		(
+			SELECT
+				jsonb_object(
+					array_agg(mod_group),
+					array_agg(calc_modi_cap::TEXT)) AS modi_bcap
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NOT NULL
+		) AS bi
+	ON
+		TRUE
+	FULL JOIN
+		(
+			SELECT
+				calc_modi_caplvl AS modi_caplvl
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NULL
+		) AS ci
+	ON
+		TRUE
+	FULL JOIN
+		(
+			SELECT
+				jsonb_object(
+					array_agg(mod_group),
+					array_agg(calc_modi_caplvl::TEXT)) AS modi_bcaplvl
+			FROM
+				comp_caps
+			WHERE
+				mod_group IS NOT NULL AND
+					calc_modi_caplvl IS NOT NULL
+		) AS di
+	ON
+		TRUE
+
 	FULL JOIN
 		(
 			SELECT
@@ -169,18 +247,32 @@ BEGIN
 		INSERT INTO
 			ib0.modlist (
 				mod_pubkey,
+
 				mod_cap,
 				mod_bcap,
 				mod_caplvl,
 				mod_bcaplvl,
+
+				modi_cap,
+				modi_bcap,
+				modi_caplvl,
+				modi_bcaplvl,
+
 				automanage
 			)
 		VALUES (
 			pubkey,
+
 			r.mod_cap,
 			r.mod_bcap,
 			r.mod_caplvl,
 			r.mod_bcaplvl,
+
+			r.modi_cap,
+			r.modi_bcap,
+			r.modi_caplvl,
+			r.modi_bcaplvl,
+
 			r.automanage
 		)
 		ON CONFLICT
@@ -191,7 +283,13 @@ BEGIN
 				mod_bcap    = EXCLUDED.mod_bcap,
 				mod_caplvl  = EXCLUDED.mod_caplvl,
 				mod_bcaplvl = EXCLUDED.mod_bcaplvl,
-				automanage  = EXCLUDED.automanage;
+
+				modi_cap     = EXCLUDED.modi_cap,
+				modi_bcap    = EXCLUDED.modi_bcap,
+				modi_caplvl  = EXCLUDED.modi_caplvl,
+				modi_bcaplvl = EXCLUDED.modi_bcaplvl,
+
+				automanage = EXCLUDED.automanage;
 
 	ELSIF TG_OP = 'UPDATE' THEN
 		-- only update existing (because at this point it will exist)
@@ -202,7 +300,13 @@ BEGIN
 			mod_cap     = r.mod_cap,
 			mod_bcap    = r.mod_bcap,
 			mod_caplvl  = r.mod_caplvl,
-			mod_bcaplvl = r.mod_bcaplvl
+			mod_bcaplvl = r.mod_bcaplvl,
+
+			modi_cap     = r.modi_cap,
+			modi_bcap    = r.modi_bcap,
+			modi_caplvl  = r.modi_caplvl,
+			modi_bcaplvl = r.modi_bcaplvl
+
 		WHERE
 			mod_pubkey = pubkey;
 
@@ -215,7 +319,14 @@ BEGIN
 			mod_bcap    = r.mod_bcap,
 			mod_caplvl  = r.mod_caplvl,
 			mod_bcaplvl = r.mod_bcaplvl,
+
+			modi_cap     = r.modi_cap,
+			modi_bcap    = r.modi_bcap,
+			modi_caplvl  = r.modi_caplvl,
+			modi_bcaplvl = r.modi_bcaplvl,
+
 			automanage  = r.automanage
+
 		WHERE
 			mod_pubkey = pubkey
 		RETURNING

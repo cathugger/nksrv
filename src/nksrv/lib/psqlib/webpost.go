@@ -665,14 +665,13 @@ func (sp *PSQLIB) commonNewPost(
 
 	var modid uint64
 	var hascap bool
-	var modCap ModCap
-	var modBoardCap ModBoardCap
+	var modCC ModCombinedCaps
 
 	if isctlgrp && pubkeystr != "" {
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
 
-		modid, hascap, modCap, modBoardCap, err =
+		modid, hascap, modCC, err =
 			sp.registeredMod(tx, pubkeystr)
 		if err != nil {
 			return rInfo, err, http.StatusInternalServerError
@@ -724,7 +723,7 @@ func (sp *PSQLIB) commonNewPost(
 		delmsgids, _, err, _ =
 			sp.execModCmd(
 				tx, gpid, bid, bpid,
-				modid, modCap, modBoardCap,
+				modid, modCC,
 				pInfo, nil, pInfo.MessageID,
 				cref, delmsgids, delModIDState{})
 		if err != nil {
