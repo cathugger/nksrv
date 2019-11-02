@@ -7,17 +7,17 @@ CREATE SCHEMA ib0
 --- moderators/administrators things
 -- :next
 -- summary table to hold effective capabilities of moderator
--- mod_cap/mod_bcap/mod_dpriv/mod_bdpriv changes are logged
+-- mod_cap/mod_bcap/mod_caplvl/mod_bcaplvl changes are logged
 CREATE TABLE ib0.modlist (
 	mod_id     BIGINT  GENERATED ALWAYS AS IDENTITY,
 	mod_pubkey TEXT    COLLATE "C"  NOT NULL,
 	mod_name   TEXT,
-	-- if true, then no modpriv is holding it [so can be GC'd]
-	automanage BOOLEAN   NOT NULL,
-	mod_cap    BIT(12),  -- global capabilities
-	mod_bcap   JSONB,    -- per-board capabilities
-	mod_dpriv  SMALLINT, -- global delete privilege
-	mod_bdpriv JSONB,    -- per-board delete privileges
+	-- if true, then no modsets refer to it [so can be GC'd if no posts refer to it too]
+	automanage  BOOLEAN   NOT NULL,
+	mod_cap     BIT(12),        -- global capabilities
+	mod_bcap    JSONB,          -- per-board capabilities
+	mod_caplvl  SMALLINT ARRAY, -- global cap levels
+	mod_bcaplvl JSONB,          -- per-board cap levels
 
 	PRIMARY KEY (mod_id),
 	UNIQUE (mod_pubkey)
@@ -166,9 +166,9 @@ CREATE TABLE ib0.bposts (
 	mod_w_cap  BIT(12),
 	mod_u_bcap JSONB,
 	mod_w_bcap JSONB,
-	-- used(effective) dprivs [we can't know wanted]
-	mod_u_dpriv  SMALLINT,
-	mod_u_bdpriv JSONB,
+	-- used(effective) cap lvls [we can't know wanted]
+	mod_u_caplvl  SMALLINT ARRAY,
+	mod_u_bcaplvl JSONB,
 
 	-- if this is ban placeholder, which priv lvl it'd need to break?
 	-- shd b >0 and only used for ctl groups
@@ -272,7 +272,7 @@ CREATE INDEX ON ib0.files (fname,thumb)
 CREATE TABLE ib0.modsets (
 	mod_pubkey TEXT COLLATE "C" NOT NULL,
 	mod_cap    BIT(12)          NOT NULL,
-	mod_dpriv  SMALLINT,
+	mod_caplvl SMALLINT ARRAY,
 	mod_group  TEXT COLLATE "C",
 	-- board post responsible for this modset (if any)
 	b_id     INTEGER,

@@ -99,8 +99,8 @@ RETURNING
 	mod_id,
 	mod_cap,
 	mod_bcap,
-	mod_dpriv,
-	mod_bdpriv
+	mod_caplvl,
+	mod_bcaplvl
 
 
 
@@ -621,7 +621,7 @@ INSERT INTO
 	ib0.modsets AS ms (
 		mod_pubkey,
 		mod_cap,
-		mod_dpriv
+		mod_caplvl
 	)
 VALUES
 	(
@@ -635,10 +635,10 @@ WHERE
 		mod_group IS NULL
 DO UPDATE
 	SET
-		mod_cap   = $2,
-		mod_dpriv = $3
+		mod_cap    = $2,
+		mod_caplvl = $3
 	WHERE
-		(ms.mod_cap,ms.mod_dpriv) IS DISTINCT FROM ($2,$3)
+		(ms.mod_cap,ms.mod_caplvl) IS DISTINCT FROM ($2,$3)
 RETURNING -- inserted or modified
 	0
 
@@ -649,7 +649,7 @@ INSERT INTO
 		mod_pubkey,
 		mod_group,
 		mod_cap,
-		mod_dpriv
+		mod_caplvl
 	)
 VALUES
 	(
@@ -664,49 +664,23 @@ WHERE
 		mod_group IS NOT NULL
 DO UPDATE
 	SET
-		mod_cap   = $3,
-		mod_dpriv = $4
+		mod_cap    = $3,
+		mod_caplvl = $4
 	WHERE
-		(ms.mod_cap,ms.mod_dpriv) IS DISTINCT FROM ($3,$4)
+		(ms.mod_cap,ms.mod_caplvl) IS DISTINCT FROM ($3,$4)
 RETURNING -- inserted or modified
 	0
 
 
 -- :name mod_unset_mod
 -- args: <pubkey>
--- TODO
-WITH
-	-- do update there
-	upd_mod AS (
-		UPDATE
-			ib0.modlist
-		SET
-			mod_dpriv = 0, -- don't see point having anything else there yet
-			automanage = TRUE
-		WHERE
-			mod_pubkey = $1 AND
-			(mod_dpriv <> 0 OR automanage <> TRUE)
-		RETURNING
-			mod_id
-	)
--- garbage collect moderator list
 DELETE FROM
-	ib0.modlist mods
-USING
-	(
-		SELECT
-			delmod.mod_id,COUNT(xbp.mod_id) > 0 AS hasrefs
-		FROM
-			upd_mod AS delmod
-		LEFT JOIN
-			ib0.bposts xbp
-		ON
-			delmod.mod_id = xbp.mod_id
-		GROUP BY
-			delmod.mod_id
-	) AS rcnts
+	ib0.modsets
 WHERE
-	rcnts.hasrefs = FALSE AND rcnts.mod_id = mods.mod_id
+	mod_pubkey = $1 AND
+		mod_group IS NULL AND
+		b_id IS NULL AND
+		b_p_id IS NULL
 
 -- :name mod_fetch_and_clear_mod_msgs
 -- args: <modid> <off_pdate> <off_gpid> <off_bid>

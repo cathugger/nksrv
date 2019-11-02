@@ -1,14 +1,16 @@
 package psqlib
 
 import (
+	"database/sql"
 	"fmt"
-	"strconv"
+
+	"github.com/lib/pq"
 )
 
 type cap_type uint16
 
 const (
-	cap_setpriv cap_type = 1 << iota
+	cap_reserved0 = 1 << iota
 	cap_delpost
 	cap_delboardpost
 	cap_delboard
@@ -22,7 +24,6 @@ const (
 	_
 
 	capx_bits       int = iota
-	capx_del            = cap_delpost | cap_delboard
 	capx_onlyglobal     = cap_delboard
 )
 
@@ -52,17 +53,24 @@ func StrToCap(s string) (c cap_type) {
 	return
 }
 
+const (
+	caplvl_delpost = iota
+
+	caplvlx_num
+)
+
+var caplvlx_mask = [caplvlx_num]cap_type{cap_delpost}
+
 type ModCap struct {
 	Cap cap_type
 
-	// power for D commands
-	DPriv int16
+	CapLevel [caplvlx_num]int16 // -1 = unset
 }
 
 func (c ModCap) String() string {
-	x := map[string]interface{}{"cap": c.Cap.String()}
-	if c.DPriv >= 0 {
-		x["dpriv"] = c.DPriv
+	x := map[string]interface{}{
+		"cap":       c.Cap.String(),
+		"cap_level": c.CapLevel,
 	}
 	return fmt.Sprintf("%#v", x)
 }
@@ -79,9 +87,13 @@ func (c ModCap) MorePriv(o ModCap, mask cap_type) bool {
 	// now, they can be the same, or oc can be lesser
 	// check relevant privs
 
-	// -1 means not set; lesser wins; therefore cast to uint to make -1 max val
-	if (mask&capx_del) != 0 && uint16(o.DPriv) < uint16(c.DPriv) {
-		return true
+	for i := range c.CapLevel {
+		// -1 becomes max val when converted to uint
+		if (mask&caplvlx_mask[i]) != 0 &&
+			uint16(o.CapLevel[i]) < uint16(c.CapLevel[i]) {
+
+			return true
+		}
 	}
 
 	// well, we failed to prove that o is more at this point
@@ -92,11 +104,13 @@ func (c ModCap) Merge(o ModCap) (r ModCap) {
 
 	r.Cap = c.Cap | o.Cap
 
-	// XXX move out to its own func if we have more of these
-	if uint16(c.DPriv) <= uint16(o.DPriv) {
-		r.DPriv = c.DPriv
-	} else {
-		r.DPriv = o.DPriv
+	for i := range r.CapLevel {
+		// -1 becomes max val when converted to uint
+		if uint16(c.CapLevel[i]) <= uint16(o.CapLevel[i]) {
+			r.CapLevel[i] = c.CapLevel[i]
+		} else {
+			r.CapLevel[i] = o.CapLevel[i]
+		}
 	}
 
 	return
@@ -104,21 +118,45 @@ func (c ModCap) Merge(o ModCap) (r ModCap) {
 
 type ModBoardCap map[string]ModCap
 
+func processCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
+	for i := range mc.CapLevel {
+		if i < len(arr) && arr[i].Valid {
+			if uint32(arr[i].Int32) > 0x7Fff {
+				panic("too large val")
+			}
+			mc.CapLevel[i] = int16(arr[i].Int32)
+		} else {
+			mc.CapLevel[i] = -1
+		}
+	}
+	return mc
+}
+
+// DB-specific func
 func (c ModBoardCap) TakeIn(
-	caps map[string]string, dprivs map[string]string) {
+	caps map[string]string, caplvls map[string]string) {
 
 	for k, scap := range caps {
+
 		mc := ModCap{Cap: StrToCap(scap)}
-		sdpriv := dprivs[k]
-		if sdpriv != "" {
-			dpriv, err := strconv.ParseUint(sdpriv, 10, 15)
-			mc.DPriv = int16(dpriv)
+
+		scaplvl := caplvls[k]
+
+		var arr []sql.NullInt32
+
+		if scaplvl != "" {
+			err := pq.Array(&arr).Scan(scaplvl)
 			if err != nil {
-				panic("strconv.ParseUint err: " + err.Error())
+				panic("pq.Array scan err: " + err.Error())
 			}
-		} else {
-			mc.DPriv = -1
+			// XXX is this check needed?
+			if len(arr) != len(mc.CapLevel) {
+				panic("lengths don't match")
+			}
 		}
+
+		mc = processCapLevel(mc, arr)
+
 		c[k] = mc
 	}
 }

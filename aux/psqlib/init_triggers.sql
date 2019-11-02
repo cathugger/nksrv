@@ -44,16 +44,16 @@ AFTER
 	UPDATE OF
 		mod_cap,
 		mod_bcap,
-		mod_dpriv,
-		mod_bdpriv
+		mod_caplvl,
+		mod_bcaplvl
 ON
 	ib0.modlist
 FOR EACH
 	ROW
 WHEN
-	((OLD.mod_cap,OLD.mod_bcap,OLD.mod_dpriv,OLD.mod_bdpriv)
+	((OLD.mod_cap,OLD.mod_bcap,OLD.mod_caplvl,OLD.mod_bcaplvl)
 		IS DISTINCT FROM
-		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_dpriv,NEW.mod_bdpriv))
+		(NEW.mod_cap,NEW.mod_bcap,NEW.mod_caplvl,NEW.mod_bcaplvl))
 EXECUTE PROCEDURE
 	ib0.modlist_changepriv()
 
@@ -86,8 +86,8 @@ BEGIN
 		comp_caps AS (
 			SELECT
 				mod_group,
-				bit_or(mod_cap) AS mod_calccap,
-				min(mod_dpriv) AS mod_calcdpriv
+				bit_or(mod_cap) AS calc_mod_cap,
+				ARRAY[min(mod_caplvl[1])] AS calc_mod_caplvl
 			FROM
 				ib0.modsets
 			WHERE
@@ -100,15 +100,15 @@ BEGIN
 	SELECT
 		a.mod_cap,
 		b.mod_bcap,
-		c.mod_dpriv,
-		d.mod_bdpriv,
+		c.mod_caplvl,
+		d.mod_bcaplvl,
 		z.automanage
 	INTO STRICT
 		r
 	FROM
 		(
 			SELECT
-				mod_calccap AS mod_cap
+				calc_mod_cap AS mod_cap
 			FROM
 				comp_caps
 			WHERE
@@ -119,7 +119,7 @@ BEGIN
 			SELECT
 				jsonb_object(
 					array_agg(mod_group),
-					array_agg(mod_calccap::TEXT)) AS mod_bcap
+					array_agg(calc_mod_cap::TEXT)) AS mod_bcap
 			FROM
 				comp_caps
 			WHERE
@@ -130,7 +130,7 @@ BEGIN
 	FULL JOIN
 		(
 			SELECT
-				mod_calcdpriv AS mod_dpriv
+				calc_mod_caplvl AS mod_caplvl
 			FROM
 				comp_caps
 			WHERE
@@ -143,12 +143,12 @@ BEGIN
 			SELECT
 				jsonb_object(
 					array_agg(mod_group),
-					array_agg(mod_calcdpriv::TEXT)) AS mod_bdpriv
+					array_agg(calc_mod_caplvl::TEXT)) AS mod_bcaplvl
 			FROM
 				comp_caps
 			WHERE
 				mod_group IS NOT NULL AND
-					mod_calcdpriv IS NOT NULL
+					calc_mod_caplvl IS NOT NULL
 		) AS d
 	ON
 		TRUE
@@ -171,27 +171,27 @@ BEGIN
 				mod_pubkey,
 				mod_cap,
 				mod_bcap,
-				mod_dpriv,
-				mod_bdpriv,
+				mod_caplvl,
+				mod_bcaplvl,
 				automanage
 			)
 		VALUES (
 			pubkey,
 			r.mod_cap,
 			r.mod_bcap,
-			r.mod_dpriv,
-			r.mod_bdpriv,
+			r.mod_caplvl,
+			r.mod_bcaplvl,
 			r.automanage
 		)
 		ON CONFLICT
 			(mod_pubkey)
 		DO UPDATE
 			SET
-				mod_cap    = EXCLUDED.mod_cap,
-				mod_bcap   = EXCLUDED.mod_bcap,
-				mod_dpriv  = EXCLUDED.mod_dpriv,
-				mod_bdpriv = EXCLUDED.mod_bdpriv,
-				automanage = EXCLUDED.automanage;
+				mod_cap     = EXCLUDED.mod_cap,
+				mod_bcap    = EXCLUDED.mod_bcap,
+				mod_caplvl  = EXCLUDED.mod_caplvl,
+				mod_bcaplvl = EXCLUDED.mod_bcaplvl,
+				automanage  = EXCLUDED.automanage;
 
 	ELSIF TG_OP = 'UPDATE' THEN
 		-- only update existing (because at this point it will exist)
@@ -199,10 +199,10 @@ BEGIN
 		UPDATE
 			ib0.modlist
 		SET
-			mod_cap    = r.mod_cap,
-			mod_bcap   = r.mod_bcap,
-			mod_dpriv  = r.mod_dpriv,
-			mod_bdpriv = r.mod_bdpriv
+			mod_cap     = r.mod_cap,
+			mod_bcap    = r.mod_bcap,
+			mod_caplvl  = r.mod_caplvl,
+			mod_bcaplvl = r.mod_bcaplvl
 		WHERE
 			mod_pubkey = pubkey;
 
@@ -211,11 +211,11 @@ BEGIN
 		UPDATE
 			ib0.modlist
 		SET
-			mod_cap    = r.mod_cap,
-			mod_bcap   = r.mod_bcap,
-			mod_dpriv  = r.mod_dpriv,
-			mod_bdpriv = r.mod_bdpriv,
-			automanage = r.automanage
+			mod_cap     = r.mod_cap,
+			mod_bcap    = r.mod_bcap,
+			mod_caplvl  = r.mod_caplvl,
+			mod_bcaplvl = r.mod_bcaplvl,
+			automanage  = r.automanage
 		WHERE
 			mod_pubkey = pubkey
 		RETURNING

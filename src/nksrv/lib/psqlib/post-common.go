@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	xtypes "github.com/jmoiron/sqlx/types"
+	"github.com/lib/pq"
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
@@ -44,12 +45,12 @@ func (sp *PSQLIB) registeredMod(
 		var mcap sql.NullString
 		var mbcap map[string]string
 		var mbcapj xtypes.JSONText
-		var mdpriv sql.NullInt32
-		var mbdpriv map[string]string
-		var mbdprivj xtypes.JSONText
+		var mcaplvl *[]sql.NullInt32
+		var mbcaplvl map[string]string
+		var mbcaplvlj xtypes.JSONText
 
 		err = st.QueryRow(pubkeystr).Scan(
-			&modid, &mcap, &mbcapj, &mdpriv, &mbdprivj)
+			&modid, &mcap, &mbcapj, pq.Array(&mcaplvl), &mbcaplvlj)
 
 		if err != nil {
 
@@ -71,26 +72,35 @@ func (sp *PSQLIB) registeredMod(
 			panic("mbcap.Unmarshal")
 		}
 
-		err = mbdprivj.Unmarshal(&mbdpriv)
+		err = mbcaplvlj.Unmarshal(&mbcaplvl)
 		if err != nil {
 			panic("mbdpriv.Unmarshal")
 		}
 
 		hascap = mcap.Valid || len(mbcap) != 0 ||
-			mdpriv.Valid || len(mbdpriv) != 0
+			mcaplvl != nil || len(mbcaplvl) != 0
 
 		if mcap.Valid {
 			modCap.Cap = StrToCap(mcap.String)
 		}
-		if mdpriv.Valid {
-			modCap.DPriv = int16(mdpriv.Int32 & 0x7Fff)
+		if mcaplvl != nil {
+			modCap = processCapLevel(modCap, *mcaplvl)
 		}
 
 		modBoardCap = make(ModBoardCap)
-		modBoardCap.TakeIn(mbcap, mbdpriv)
+		modBoardCap.TakeIn(mbcap, mbcaplvl)
 
 		return
 	}
+}
+
+func makeCapLvlArray(mc ModCap) interface{} {
+	var x [caplvlx_num]sql.NullInt32
+	for i := range x {
+		x[i].Int32 = int32(mc.CapLevel[i])
+		x[i].Valid = mc.CapLevel[i] >= 0
+	}
+	return pq.Array(x)
 }
 
 func (sp *PSQLIB) setModCap(
@@ -102,23 +112,20 @@ func (sp *PSQLIB) setModCap(
 	// that should block reads of this row I think?
 	// which would mean no further new mod posts for this key
 	var r *sql.Row
-	dpriv := sql.NullInt32{
-		Int32: int32(newcap.DPriv),
-		Valid: newcap.DPriv >= 0,
-	}
+	caplvl := makeCapLvlArray(newcap)
 	if group == "" {
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
 		r = ust.QueryRow(
 			pubkeystr,
 			newcap.Cap.String(),
-			dpriv)
+			caplvl)
 	} else {
 		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv_group])
 		r = ust.QueryRow(
 			pubkeystr,
 			group,
 			newcap.Cap.String(),
-			dpriv)
+			caplvl)
 	}
 	err = r.Scan(&dummy)
 

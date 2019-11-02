@@ -53,15 +53,17 @@ func newLogger() (lgr logx.LoggerX) {
 	return
 }
 
+func panicErr(err error, str string) {
+	if err != nil {
+		panic(str + ": " + err.Error())
+	}
+}
+
 func init() {
 	err := os.Chdir("../../../..")
-	if err != nil {
-		panic("chdir failed: " + err.Error())
-	}
+	panicErr(err, "chdir failed")
 	ok, err := emime.LoadMIMEDatabase("mime.types")
-	if err != nil {
-		panic("can't load mime: " + err.Error())
-	}
+	panicErr(err, "can't load mime")
 	if !ok {
 		panic("didn't find mime.types")
 	}
@@ -79,15 +81,11 @@ func TestInit(t *testing.T) {
 			" host=" + testutil.PSQLHost,
 		Logger: lgr,
 	})
-	if err != nil {
-		panic("OAP err: " + err.Error())
-	}
+	panicErr(err, "OAP err")
 
 	defer func() {
 		err = db.Close()
-		if err != nil {
-			panic("db close err: " + err.Error())
-		}
+		panicErr(err, "db close err")
 	}()
 
 	psqlibcfg := cfgPSQLIB
@@ -95,20 +93,10 @@ func TestInit(t *testing.T) {
 	psqlibcfg.Logger = &lgr
 
 	dbib, err := NewInitAndPrepare(psqlibcfg)
-	if err != nil {
-		panic("NewInitAndPrepare err: " + err.Error())
-	}
+	panicErr(err, "NewInitAndPrepare err")
 
 	err = dbib.Close()
-	if err != nil {
-		panic("dbib close err: " + err.Error())
-	}
-}
-
-func panicErr(err error, str string) {
-	if err != nil {
-		panic(str + err.Error())
-	}
+	panicErr(err, "dbib close err")
 }
 
 func TestCalcPriv(t *testing.T) {
@@ -123,11 +111,11 @@ func TestCalcPriv(t *testing.T) {
 			" host=" + testutil.PSQLHost,
 		Logger: lgr,
 	})
-	panicErr(err, "OAP err: ")
+	panicErr(err, "OAP err")
 
 	defer func() {
 		err = db.Close()
-		//panicErr(err, "db close err: ")
+		panicErr(err, "db close err")
 	}()
 
 	psqlibcfg := cfgPSQLIB
@@ -135,15 +123,15 @@ func TestCalcPriv(t *testing.T) {
 	psqlibcfg.Logger = &lgr
 
 	dbib, err := NewInitAndPrepare(psqlibcfg)
-	panicErr(err, "NewInitAndPrepare err: ")
+	panicErr(err, "NewInitAndPrepare err")
 
 	defer func() {
 		err = dbib.Close()
-		//panicErr(err, "dbib close err: ")
+		panicErr(err, "dbib close err")
 	}()
 
 	tx, err := db.DB.Begin()
-	panicErr(err, "db.DB.Begin err: ")
+	panicErr(err, "db.DB.Begin err")
 
 	defer func() {
 		if err != nil {
@@ -151,41 +139,43 @@ func TestCalcPriv(t *testing.T) {
 		}
 	}()
 
+	lvl_none := [caplvlx_num]int16{-1}
+	lvl_one := [caplvlx_num]int16{0}
 	capsets := [...]struct {
 		Key    string
 		Group  string
 		ModCap ModCap
 	}{
-		{Key: "0", ModCap: ModCap{DPriv: -1}},
-		{Key: "0", ModCap: ModCap{DPriv: -1}},
-		{Key: "0", ModCap: ModCap{DPriv: 0}},
-		{Key: "0", ModCap: ModCap{DPriv: -1}},
-		{Key: "0", ModCap: ModCap{DPriv: 0}},
+		{Key: "0", ModCap: ModCap{CapLevel: lvl_none}},
+		{Key: "0", ModCap: ModCap{CapLevel: lvl_none}},
+		{Key: "0", ModCap: ModCap{CapLevel: lvl_one}},
+		{Key: "0", ModCap: ModCap{CapLevel: lvl_none}},
+		{Key: "0", ModCap: ModCap{CapLevel: lvl_one}},
 
-		{Key: "1", ModCap: ModCap{DPriv: 0}},
-		{Key: "1", ModCap: ModCap{DPriv: 0}},
-		{Key: "1", ModCap: ModCap{DPriv: -1}},
+		{Key: "1", ModCap: ModCap{CapLevel: lvl_one}},
+		{Key: "1", ModCap: ModCap{CapLevel: lvl_one}},
+		{Key: "1", ModCap: ModCap{CapLevel: lvl_none}},
 
 		{Key: "2", ModCap: ModCap{Cap: cap_delpost}},
 
-		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
-		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
-		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_none}},
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_none}},
+		{Key: "3", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
 
-		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
-		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
-		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: -1}},
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_none}},
+		{Key: "4", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_none}},
 
-		{Key: "5", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
-		{Key: "5", Group: "test", ModCap: ModCap{Cap: cap_delpost, DPriv: 0}},
+		{Key: "5", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
+		{Key: "5", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
 	}
 	for i, cs := range capsets {
 		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap)
-		panicErr(err, fmt.Sprintf("capset %d: ", i))
+		panicErr(err, fmt.Sprintf("capset %d", i))
 	}
 
 	err = tx.Commit()
-	panicErr(err, "tx.Commit err: ")
+	panicErr(err, "tx.Commit err")
 
 	q := `
 SELECT
@@ -193,57 +183,59 @@ SELECT
 	automanage,
 	mod_cap,
 	mod_bcap,
-	mod_dpriv,
-	mod_bdpriv
+	mod_caplvl,
+	mod_bcaplvl
 FROM
 	ib0.modlist
 ORDER BY
 	mod_pubkey
 `
 	rows, err := db.DB.Query(q)
-	panicErr(err, "db.DB.Query err: ")
+	panicErr(err, "db.DB.Query err")
 	i := 0
 	type res_t struct {
 		PubKey     string
 		AutoManage bool
 		ModCap     sql.NullString
 		ModBCap    sql.NullString
-		ModDPriv   sql.NullInt32
-		ModBDPriv  sql.NullString
+		ModCapLvl  sql.NullString
+		ModBCapLvl sql.NullString
 	}
 	nullcap := sql.NullString{String: "000000000000", Valid: true}
-	zeropriv := sql.NullInt32{Int32: 0, Valid: true}
+	zeropriv := sql.NullString{String: "{0}", Valid: true}
+	nullpriv := sql.NullString{String: "{NULL}", Valid: true}
 	expres := [...]res_t{
-		{PubKey: "0", ModCap: nullcap, ModDPriv: zeropriv},
-		{PubKey: "1", ModCap: nullcap},
+		{PubKey: "0", ModCap: nullcap, ModCapLvl: zeropriv},
+		{PubKey: "1", ModCap: nullcap, ModCapLvl: nullpriv},
 		{
-			PubKey:   "2",
-			ModCap:   sql.NullString{String: "010000000000", Valid: true},
-			ModDPriv: zeropriv,
-		},
-		{
-			PubKey:    "3",
-			ModBCap:   sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
-			ModBDPriv: sql.NullString{String: "{\"test\": \"0\"}", Valid: true},
-		},
-		{
-			PubKey:  "4",
-			ModBCap: sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
-		},
-		{
-			PubKey:    "5",
+			PubKey:    "2",
 			ModCap:    sql.NullString{String: "010000000000", Valid: true},
-			ModDPriv:  zeropriv,
-			ModBCap:   sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
-			ModBDPriv: sql.NullString{String: "{\"test\": \"0\"}", Valid: true},
+			ModCapLvl: zeropriv,
+		},
+		{
+			PubKey:     "3",
+			ModBCap:    sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+			ModBCapLvl: sql.NullString{String: "{\"test\": \"{0}\"}", Valid: true},
+		},
+		{
+			PubKey:     "4",
+			ModBCap:    sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+			ModBCapLvl: sql.NullString{String: "{\"test\": \"{NULL}\"}", Valid: true},
+		},
+		{
+			PubKey:     "5",
+			ModCap:     sql.NullString{String: "010000000000", Valid: true},
+			ModCapLvl:  zeropriv,
+			ModBCap:    sql.NullString{String: "{\"test\": \"010000000000\"}", Valid: true},
+			ModBCapLvl: sql.NullString{String: "{\"test\": \"{0}\"}", Valid: true},
 		},
 	}
 	for rows.Next() {
 		var x res_t
 		err = rows.Scan(
 			&x.PubKey, &x.AutoManage,
-			&x.ModCap, &x.ModBCap, &x.ModDPriv, &x.ModBDPriv)
-		panicErr(err, "rows.Scan err: ")
+			&x.ModCap, &x.ModBCap, &x.ModCapLvl, &x.ModBCapLvl)
+		panicErr(err, "rows.Scan err")
 		if i >= len(expres) {
 			t.Errorf("res: too many rows: %#v", x)
 			continue
@@ -274,7 +266,7 @@ ORDER BY
 	}
 	checkexp := func(i int) {
 		tx, err := db.DB.Begin()
-		panicErr(err, "db.DB.Begin err: ")
+		panicErr(err, "db.DB.Begin err")
 		defer func() {
 			if err != nil {
 				_ = tx.Rollback()
@@ -282,7 +274,7 @@ ORDER BY
 		}()
 		cmt := func() {
 			err = tx.Commit()
-			panicErr(err, "cl tx.Commit err: ")
+			panicErr(err, "cl tx.Commit err")
 		}
 
 		var x cl_t
@@ -300,7 +292,7 @@ ORDER BY
 				cmt()
 				return
 			}
-			panicErr(err, "cl queryrowscan: ")
+			panicErr(err, "cl queryrowscan err")
 		}
 
 		if i >= len(expcl) {
@@ -310,7 +302,7 @@ ORDER BY
 		}
 
 		_, err = dbib.st_prep[st_mod_joblist_modlist_changes_del].Exec(x.j_id)
-		panicErr(err, "cl del exec: ")
+		panicErr(err, "cl del exec err")
 
 		cmt()
 	}
