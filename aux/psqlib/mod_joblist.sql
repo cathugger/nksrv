@@ -52,21 +52,41 @@ WITH
 		WHERE
 			mc.j_id = ds.j_id
 	)
+
 SELECT
 	x.j_id,
-
 	x.mod_id,
 
+	-- pointer to previous actions, if any
 	-- if we deleted something, replace with NULL
 	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_date_sent END),
 	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_g_p_id    END),
-	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_b_id      END)
+	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_b_id      END),
+
+	-- mod caps
+	m.mod_cap,
+	m.mod_bcap,
+	m.mod_caplvl,
+	m.mod_bcaplvl,
+
+	m.modi_cap,
+	m.modi_bcap,
+	m.modi_caplvl,
+	m.modi_bcaplvl
+
 FROM
 	x
+
 FULL JOIN
 	ds
 ON
 	TRUE
+
+JOIN
+	ib0.modlist m
+ON
+	x.mod_id = m.mod_id
+
 
 -- :name mod_joblist_modlist_changes_set
 UPDATE

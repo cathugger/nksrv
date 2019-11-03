@@ -73,8 +73,8 @@ func (sp *PSQLIB) InitDB() (err error) {
 					}
 
 					return fmt.Errorf(
-						"err on %s stmt %d pos[%s] msg[%s] detail[%s] line[%s]",
-						stmtn, j, pe.Position, pe.Message, pe.Detail, s[ss:se])
+						"err on %s stmt %d pos[%s] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
+						stmtn, j, pe.Position, pe.Message, pe.Detail, s[ss:se], s)
 				}
 
 				return fmt.Errorf("err on %s stmt %d: %v", stmtn, j, err)

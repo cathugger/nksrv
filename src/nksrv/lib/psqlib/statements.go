@@ -72,7 +72,8 @@ const (
 	st_mod_set_mod_priv
 	st_mod_set_mod_priv_group
 	st_mod_unset_mod
-	st_mod_fetch_and_clear_mod_msgs
+	st_mod_fetch_and_clear_mod_msgs_start
+	st_mod_fetch_and_clear_mod_msgs_continue
 
 	st_mod_load_files
 
@@ -166,7 +167,8 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_set_mod_priv"},
 	st_reference{"mod", "mod_set_mod_priv_group"},
 	st_reference{"mod", "mod_unset_mod"},
-	st_reference{"mod", "mod_fetch_and_clear_mod_msgs"},
+	st_reference{"mod", "mod_fetch_and_clear_mod_msgs_start"},
+	st_reference{"mod", "mod_fetch_and_clear_mod_msgs_continue"},
 
 	st_reference{"mod", "mod_load_files"},
 
@@ -239,8 +241,8 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 				}
 
 				return fmt.Errorf(
-					"err preparing %d %q stmt: pos[%s] msg[%s] detail[%s] line[%s]",
-					i, st_names[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se])
+					"err preparing %d %q stmt: pos[%s] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
+					i, st_names[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se], s)
 			}
 
 			return fmt.Errorf("error preparing %d %q stmt: %v",

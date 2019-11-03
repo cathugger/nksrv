@@ -18,3 +18,21 @@ func unsafeStrToBytes(s string) []byte {
 func unsafeBytesToStr(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
+
+// fuck golang
+
+func maxInt(a, b int) int {
+	if a >= b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func minInt(a, b int) int {
+	if a <= b {
+		return a
+	} else {
+		return b
+	}
+}

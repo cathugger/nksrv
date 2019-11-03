@@ -278,11 +278,29 @@ ORDER BY
 		}
 
 		var x cl_t
+		var f modPrivFetch
 
 		err = dbib.
 			st_prep[st_mod_joblist_modlist_changes_get].
 			QueryRow().
-			Scan(&x.j_id, &x.mod_id, &x.t_date_sent, &x.t_g_p_id, &x.t_b_id)
+			Scan(
+				&x.j_id,
+				&x.mod_id,
+
+				&x.t_date_sent,
+				&x.t_g_p_id,
+				&x.t_b_id,
+
+				&f.m_g_cap,
+				&f.m_b_cap_j,
+				pq.Array(&f.m_g_caplvl),
+				&f.m_b_caplvl_j,
+
+				&f.mi_g_cap,
+				&f.mi_b_cap_j,
+				pq.Array(&f.mi_g_caplvl),
+				&f.mi_b_caplvl_j)
+
 		if err != nil {
 			if err == sql.ErrNoRows {
 				if i < len(expcl) {

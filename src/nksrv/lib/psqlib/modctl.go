@@ -148,7 +148,7 @@ func (sp *PSQLIB) xxxx(
 	out_delmsgids = _in_delmsgids
 
 	srcdir := sp.src.Main()
-	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs])
+	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs_continue])
 
 	// 666 days in the future
 	off_pdate := time.Now().Add(time.Hour * 24 * 666).UTC()
@@ -160,16 +160,16 @@ func (sp *PSQLIB) xxxx(
 		bpid postID
 	}
 	type postinfo struct {
-		gpid    postID
-		xid     idt
-		bname   string
-		msgid   string
-		ref     string
-		title   string
-		pdate   time.Time
-		message string
-		txtidx  uint32
-		files   []string
+		gpid      postID
+		xid       idt
+		bname     string
+		msgid     string
+		ref       string
+		title     string
+		date_sent time.Time
+		message   string
+		txtidx    uint32
+		files     []string
 	}
 	var posts []postinfo
 	lastx := idt{0, 0}
@@ -185,14 +185,16 @@ requery:
 
 		for rows.Next() {
 			/*
+				zbp.date_sent,
 				zbp.g_p_id,
 				zbp.b_id,
 				zbp.b_p_id,
+
 				yb.b_name,
 				yp.msgid,
-				ypp.msgid,
+				ypbp.msgid,
+
 				yp.title,
-				yp.pdate,
 				yp.message,
 				yp.extras -> 'text_attach',
 				yf.fname
@@ -202,8 +204,9 @@ requery:
 			var txtidx sql.NullInt64
 
 			err = rows.Scan(
-				&p.gpid, &p.xid.bid, &p.xid.bpid, &p.bname, &p.msgid, &ref,
-				&p.title, &p.pdate, &p.message, &txtidx, &fname)
+				&p.date_sent, &p.gpid, &p.xid.bid, &p.xid.bpid,
+				&p.bname, &p.msgid, &ref,
+				&p.title, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
 				err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
@@ -214,7 +217,7 @@ requery:
 				lastx = p.xid
 				p.ref = ref.String
 				p.txtidx = uint32(txtidx.Int64)
-				p.pdate = p.pdate.UTC()
+				p.date_sent = p.date_sent.UTC()
 				posts = append(posts, p)
 			}
 			if fname.String != "" {
@@ -231,7 +234,7 @@ requery:
 			// prepare postinfo good enough for execModCmd
 			pi := mailib.PostInfo{
 				MessageID: CoreMsgIDStr(posts[i].msgid),
-				Date:      posts[i].pdate,
+				Date:      posts[i].date_sent,
 				MI: mailib.MessageInfo{
 					Title:   posts[i].title,
 					Message: posts[i].message,
@@ -277,7 +280,7 @@ requery:
 				// msg we just deleted was made by mod we just upp'd
 				// that means that it may be msg in query we just made
 				// it's unsafe to proceed with current cached query
-				off_pdate = posts[i].pdate
+				off_pdate = posts[i].date_sent
 				off_g_p_id = posts[i].gpid
 				off_b_id = posts[i].xid.bid
 				posts = posts[:0]
@@ -291,7 +294,7 @@ requery:
 		} else {
 			// issue another query, there may be more data
 			i := len(posts) - 1
-			off_pdate = posts[i].pdate
+			off_pdate = posts[i].date_sent
 			off_g_p_id = posts[i].gpid
 			off_b_id = posts[i].xid.bid
 			posts = posts[:0]

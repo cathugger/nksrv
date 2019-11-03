@@ -730,10 +730,9 @@ WHERE
 		b_id IS NULL AND
 		b_p_id IS NULL
 
--- :name mod_fetch_and_clear_mod_msgs
--- args: <modid> <off_pdate> <off_gpid> <off_bid>
--- fetches all messages of mod, and also clears all their actions
+-- :namet mod_fetch_and_clear_mod_msgs_common_a
 WITH
+	-- fetch messages
 	zbp AS (
 		SELECT
 			b_id,
@@ -743,49 +742,53 @@ WITH
 			g_p_id
 		FROM
 			ib0.bposts
-		WHERE
-			mod_id = $1 AND
-				(date_sent,g_p_id,b_id) < ($2,$3,$4)
+-- :namet mod_fetch_and_clear_mod_msgs_common_b
 		ORDER BY
 			date_sent DESC,
 			g_p_id DESC,
 			b_id DESC
 		LIMIT
-			4096
+			$2
 	),
+	-- delete from banlist
 	zd AS (
 		DELETE FROM
 			ib0.banlist bl
 		USING
 			zbp
 		WHERE
-			bl.b_id = zbp.b_id AND
-				bl.b_p_id = zbp.b_p_id
+			(bl.b_id,bl.b_p_id) = (zbp.b_id,zbp.b_p_id)
 	)
+
 SELECT
+	zbp.date_sent,
 	zbp.g_p_id,
 	zbp.b_id,
 	zbp.b_p_id,
+
 	yb.b_name,
-	yp.msgid,
-	ypp.msgid,
-	yp.title,
-	zbp.date_sent,
-	yp.message,
-	yp.extras -> 'text_attach',
-	yf.fname
+	y_gp.msgid,
+	yp_bp.msgid,
+
+	y_gp.title,
+	y_gp.message,
+	y_gp.extras -> 'text_attach',
+	y_gp_f.fname
 FROM
 	zbp
+
 -- board
 JOIN
 	ib0.boards yb
 ON
 	zbp.b_id = yb.b_id
+
 -- global post
 JOIN
-	ib0.gposts yp
+	ib0.gposts y_gp
 ON
-	zbp.g_p_id = yp.g_p_id
+	zbp.g_p_id = y_gp.g_p_id
+
 -- files of global post
 LEFT JOIN LATERAL
 	(
@@ -794,22 +797,36 @@ LEFT JOIN LATERAL
 		FROM
 			ib0.files xf
 		WHERE
-			yp.g_p_id = xf.g_p_id
+			y_gp.g_p_id = xf.g_p_id
 		ORDER BY
 			xf.f_id -- important
-	) AS yf
+	) AS y_gp_f
 ON
 	TRUE
+
 -- parent board post
 LEFT JOIN
-	ib0.bposts ypbp
+	ib0.bposts yp_bp
 ON
-	zbp.b_id = ypbp.b_id AND zbp.b_t_id = ypbp.b_p_id AND zbp.b_t_id != zbp.b_p_id
--- parent global post
-LEFT JOIN
-	ib0.gposts ypp
-ON
-	ypbp.g_p_id = ypp.g_p_id
+	-- only activates if zbp was child post
+	zbp.b_t_id <> zbp.b_p_id AND
+		(zbp.b_id,zbp.b_t_id) = (yp_bp.b_id,yp_bp.b_p_id)
+
+-- :name mod_fetch_and_clear_mod_msgs_start
+-- args: <modid> <limit>
+{{ .mod_fetch_and_clear_mod_msgs_common_a }}
+		WHERE
+			mod_id = $1
+{{ .mod_fetch_and_clear_mod_msgs_common_b }}
+
+-- :name mod_fetch_and_clear_mod_msgs_continue
+-- args: <modid> <limit> <off_pdate> <off_gpid> <off_bid>
+{{ .mod_fetch_and_clear_mod_msgs_common_a }}
+		WHERE
+			mod_id = $1 AND
+				(date_sent,g_p_id,b_id) < ($3,$4,$5)
+{{ .mod_fetch_and_clear_mod_msgs_common_b }}
+
 
 
 -- :name mod_load_files

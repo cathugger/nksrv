@@ -29,6 +29,55 @@ func mustUnmarshal(x interface{}, j xtypes.JSONText) {
 	}
 }
 
+type modPrivFetch struct {
+	m_g_cap   sql.NullString
+	m_b_cap   map[string]string
+	m_b_cap_j xtypes.JSONText
+
+	m_g_caplvl   []sql.NullInt32
+	m_b_caplvl   map[string]string
+	m_b_caplvl_j xtypes.JSONText
+
+	mi_g_cap   sql.NullString
+	mi_b_cap   map[string]string
+	mi_b_cap_j xtypes.JSONText
+
+	mi_g_caplvl   []sql.NullInt32
+	mi_b_caplvl   map[string]string
+	mi_b_caplvl_j xtypes.JSONText
+}
+
+func (f *modPrivFetch) unmarshalJSON() {
+	mustUnmarshal(&f.m_b_cap, f.m_b_cap_j)
+	mustUnmarshal(&f.m_b_caplvl, f.m_b_caplvl_j)
+	mustUnmarshal(&f.mi_b_cap, f.mi_b_cap_j)
+	mustUnmarshal(&f.mi_b_caplvl, f.mi_b_caplvl_j)
+}
+
+func (f *modPrivFetch) parse() (mcc ModCombinedCaps) {
+	if f.m_g_cap.Valid {
+		mcc.ModCap.Cap = StrToCap(f.m_g_cap.String)
+	}
+	if f.m_g_caplvl != nil {
+		mcc.ModCap = processCapLevel(mcc.ModCap, f.m_g_caplvl)
+	}
+
+	if f.mi_g_cap.Valid {
+		mcc.ModInheritCap.Cap = StrToCap(f.mi_g_cap.String)
+	}
+	if f.mi_g_caplvl != nil {
+		mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, f.mi_g_caplvl)
+	}
+
+	mcc.ModBoardCap = make(ModBoardCap)
+	mcc.ModBoardCap.TakeIn(f.m_b_cap, f.m_b_caplvl)
+
+	mcc.ModInheritBoardCap = make(ModBoardCap)
+	mcc.ModInheritBoardCap.TakeIn(f.mi_b_cap, f.mi_b_caplvl)
+
+	return
+}
+
 func (sp *PSQLIB) registeredMod(
 	tx *sql.Tx, pubkeystr string) (
 	modid uint64, hascap bool, mcc ModCombinedCaps,
@@ -49,36 +98,20 @@ func (sp *PSQLIB) registeredMod(
 	x := 0
 	for {
 
-		var (
-			m_g_cap   sql.NullString
-			m_b_cap   map[string]string
-			m_b_cap_j xtypes.JSONText
-
-			m_g_caplvl   *[]sql.NullInt32
-			m_b_caplvl   map[string]string
-			m_b_caplvl_j xtypes.JSONText
-
-			mi_g_cap   sql.NullString
-			mi_b_cap   map[string]string
-			mi_b_cap_j xtypes.JSONText
-
-			mi_g_caplvl   *[]sql.NullInt32
-			mi_b_caplvl   map[string]string
-			mi_b_caplvl_j xtypes.JSONText
-		)
+		var f modPrivFetch
 
 		err = st.QueryRow(pubkeystr).Scan(
 			&modid,
 
-			&m_g_cap,
-			&m_b_cap_j,
-			pq.Array(&m_g_caplvl),
-			&m_b_caplvl_j,
+			&f.m_g_cap,
+			&f.m_b_cap_j,
+			pq.Array(&f.m_g_caplvl),
+			&f.m_b_caplvl_j,
 
-			&mi_g_cap,
-			&mi_b_cap_j,
-			pq.Array(&mi_g_caplvl),
-			&mi_b_caplvl_j)
+			&f.mi_g_cap,
+			&f.mi_b_cap_j,
+			pq.Array(&f.mi_g_caplvl),
+			&f.mi_b_caplvl_j)
 
 		if err != nil {
 
@@ -95,34 +128,13 @@ func (sp *PSQLIB) registeredMod(
 			return
 		}
 
-		mustUnmarshal(&m_b_cap, m_b_cap_j)
-		mustUnmarshal(&m_b_caplvl, m_b_caplvl_j)
-		mustUnmarshal(&mi_b_cap, mi_b_cap_j)
-		mustUnmarshal(&mi_b_caplvl, mi_b_caplvl_j)
+		f.unmarshalJSON()
 
 		// enough to check only usable flags
-		hascap = m_g_cap.Valid || len(m_b_cap) != 0 ||
-			m_g_caplvl != nil || len(m_b_caplvl) != 0
+		hascap = f.m_g_cap.Valid || len(f.m_b_cap) != 0 ||
+			f.m_g_caplvl != nil || len(f.m_b_caplvl) != 0
 
-		if m_g_cap.Valid {
-			mcc.ModCap.Cap = StrToCap(m_g_cap.String)
-		}
-		if m_g_caplvl != nil {
-			mcc.ModCap = processCapLevel(mcc.ModCap, *m_g_caplvl)
-		}
-
-		if mi_g_cap.Valid {
-			mcc.ModInheritCap.Cap = StrToCap(mi_g_cap.String)
-		}
-		if mi_g_caplvl != nil {
-			mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, *mi_g_caplvl)
-		}
-
-		mcc.ModBoardCap = make(ModBoardCap)
-		mcc.ModBoardCap.TakeIn(m_b_cap, m_b_caplvl)
-
-		mcc.ModInheritBoardCap = make(ModBoardCap)
-		mcc.ModInheritBoardCap.TakeIn(mi_b_cap, mi_b_caplvl)
+		mcc = f.parse()
 
 		return
 	}
