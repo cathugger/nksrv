@@ -1,5 +1,6 @@
 -- :name mod_joblist_modlist_changes_get
 WITH
+	-- pick oldest change
 	x AS (
 		SELECT
 			j_id,
@@ -17,6 +18,7 @@ WITH
 			1
 		FOR UPDATE
 	),
+	-- delete other changes against same mod_id
 	d AS (
 		DELETE FROM
 			ib0.modlist_changes AS mc
@@ -28,6 +30,7 @@ WITH
 		RETURNING
 			x.j_id
 	),
+	-- filter: return just j_id, but only if something was deleted
 	ds AS (
 		SELECT
 			j_id
@@ -36,6 +39,7 @@ WITH
 		LIMIT
 			1
 	),
+	-- refresh current job if we deleted something
 	u AS (
 		UPDATE
 			ib0.modlist_changes AS mc
@@ -53,9 +57,10 @@ SELECT
 
 	x.mod_id,
 
-	(CASE ds.j_id WHEN x.j_id THEN x.t_date_sent ELSE NULL END),
-	(CASE ds.j_id WHEN x.j_id THEN x.t_g_p_id    ELSE NULL END),
-	(CASE ds.j_id WHEN x.j_id THEN x.t_b_id      ELSE NULL END)
+	-- if we deleted something, replace with NULL
+	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_date_sent END),
+	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_g_p_id    END),
+	(CASE ds.j_id WHEN x.j_id THEN NULL ELSE x.t_b_id      END)
 FROM
 	x
 FULL JOIN
