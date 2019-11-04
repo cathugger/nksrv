@@ -121,12 +121,12 @@ WHERE b_name=$1`
 SELECT
 	xb.b_id,xb.post_limits,xb.reply_limits,
 	xtp.b_id,xtp.b_t_id,xtp.reply_limits,xb.thread_opts,xtp.thread_opts,
-	xtp.title,xtp.pdate
+	xtp.title,xtp.date_sent
 FROM
 	xb
 FULL JOIN (
 	SELECT
-		xt.b_id,xt.b_t_id,xt.reply_limits,xt.thread_opts,xp.title,xp.pdate
+		xt.b_id,xt.b_t_id,xt.reply_limits,xt.thread_opts,xp.title,xp.date_sent
 	FROM
 		ib0.threads xt
 	JOIN
@@ -134,7 +134,7 @@ FULL JOIN (
 	ON
 		xt.b_id=xbp.b_id AND xt.b_t_id=xbp.b_t_id
 	JOIN
-		ib0.posts xp
+		ib0.gposts xp
 	ON
 		xbp.g_p_id = xp.g_p_id
 	WHERE

@@ -46,9 +46,9 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	st1 := `WITH
 	ugp AS (
 		INSERT INTO
-			ib0.posts (
-				pdate,         -- 1
-				padded,        -- NOW()
+			ib0.gposts (
+				date_sent,     -- 1
+				date_recv,     -- NOW()
 				sage,          -- 2
 				f_count,       -- 3
 				msgid,         -- 4
@@ -63,8 +63,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			)
 		VALUES
 			(
-				$1,        -- pdate
-				NOW(),     -- padded
+				$1,        -- date_sent
+				NOW(),     -- date_recv
 				$2,        -- sage
 				$3,        -- f_count
 				$4,        -- msgid
@@ -78,7 +78,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				$12        -- extras
 			)
 		RETURNING
-			g_p_id,pdate,padded,sage
+			g_p_id,
+			date_sent,
+			date_recv,
+			sage
 	),
 	ub AS (
 		UPDATE
@@ -103,16 +106,16 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		UPDATE
 			ib0.threads
 		SET
-			bump = pdate,
+			bump = date_sent,
 			p_count = p_count + 1,
 			f_count = f_count + $3
 		FROM
 			(
 				SELECT
-					pdate
+					date_sent
 				FROM (
 					SELECT
-						pdate,
+						date_sent,
 						b_p_id,
 						sage
 					FROM
@@ -129,7 +132,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 					FROM
 						ub
 					ORDER BY
-						pdate ASC,
+						date_sent ASC,
 						b_p_id ASC
 					LIMIT
 						$15
@@ -139,7 +142,8 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				WHERE
 					sage != TRUE
 				ORDER BY
-					pdate DESC,b_p_id DESC
+					date_sent DESC,
+					b_p_id DESC
 				LIMIT
 					1
 				-- and pick latest one
@@ -179,24 +183,24 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 				p_name,
 				g_p_id,
 				msgid,
-				pdate,
-				padded,
+				date_sent,
+				date_recv,
 				sage,
 				mod_id,
 				attrib
 			)
 		SELECT
-			$13,        -- b_id
-			$14,        -- b_t_id
-			ub.last_id, -- b_p_id
-			$16,        -- p_name
-			ugp.g_p_id, -- g_p_id
-			$4,         -- msgid
-			ugp.pdate,  -- pdate
-			ugp.padded, -- padded
-			ugp.sage,   -- sage
-			$17,        -- mod_id
-			$18         -- attrib
+			$13,           -- b_id
+			$14,           -- b_t_id
+			ub.last_id,    -- b_p_id
+			$16,           -- p_name
+			ugp.g_p_id,    -- g_p_id
+			$4,            -- msgid
+			ugp.date_sent, -- date_sent
+			ugp.date_recv, -- date_recv
+			ugp.sage,      -- sage
+			$17,           -- mod_id
+			$18            -- attrib
 		FROM
 			ub
 		CROSS JOIN

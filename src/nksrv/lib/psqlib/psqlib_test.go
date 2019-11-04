@@ -330,3 +330,71 @@ ORDER BY
 	}
 	checkexp(i)
 }
+
+func submitFromFile(dbib *PSQLIB, name string) (error, bool) {
+
+	f, e := os.Open("testdata/msg/" + name + ".eml")
+	panicErr(e, "open")
+	defer f.Close()
+
+	return dbib.netnewsHandleSubmissionDirectly(f, false)
+}
+
+func TestPost(t *testing.T) {
+
+	dbn := testutil.MakeTestDB()
+	defer testutil.DropTestDB(dbn)
+
+	lgr := newLogger()
+
+	db, err := psql.OpenAndPrepare(psql.Config{
+		ConnStr: "user=" + testutil.TestUser +
+			" dbname=" + dbn +
+			" host=" + testutil.PSQLHost,
+		Logger: lgr,
+	})
+	panicErr(err, "OAP err")
+
+	defer func() {
+		err = db.Close()
+		panicErr(err, "db close err")
+	}()
+
+	psqlibcfg := cfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
+	psqlibcfg.NGPGlobal = "*"
+
+	dbib, err := NewInitAndPrepare(psqlibcfg)
+	panicErr(err, "NewInitAndPrepare err")
+
+	defer func() {
+		err = dbib.Close()
+		panicErr(err, "dbib close err")
+	}()
+
+	tests := [...]struct{
+		name string
+		shouldsucceed bool
+	}{
+		{"msg1", true},
+		{"msg2", true},
+		{"msg3", false},
+	}
+	for i := range tests {
+		ee, exp := submitFromFile(dbib, tests[i].name)
+		if ee != nil {
+			if tests[i].shouldsucceed {
+				t.Errorf("! submission error when should succeed, exp(%v) err: %v", exp, ee)
+			} else {
+				t.Logf("+ submission error when should error, exp(%v) err: %v", exp, ee)
+			}
+		} else {
+			if !tests[i].shouldsucceed {
+				t.Errorf("! submission succeed when should error")
+			} else {
+				t.Logf("+ submission succeed when should succeed")
+			}
+		}
+	}
+}

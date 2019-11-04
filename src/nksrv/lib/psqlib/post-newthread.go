@@ -39,9 +39,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	sth := `WITH
 	ugp AS (
 		INSERT INTO
-			ib0.posts (
-				pdate,         -- 1
-				padded,        -- NOW()
+			ib0.gposts (
+				date_sent,     -- 1
+				date_recv,     -- NOW()
 				sage,          -- FALSE
 				f_count,       -- 2
 				msgid,         -- 3
@@ -56,8 +56,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			)
 		VALUES
 			(
-				$1,        -- pdate
-				NOW(),     -- padded
+				$1,        -- date_sent
+				NOW(),     -- date_recv
 				FALSE,     -- sage
 				$2,        -- f_count
 				$3,        -- msgid
@@ -71,7 +71,9 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				$11        -- extras
 			)
 		RETURNING
-			g_p_id,pdate,padded
+			g_p_id,
+			date_sent,
+			date_recv
 	),
 	ub AS (
 		UPDATE
@@ -103,7 +105,7 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			ub.last_id, -- b_t_id
 			ugp.g_p_id, -- g_t_id
 			$13,        -- b_t_name
-			$1,         -- pdate
+			$1,         -- date_sent
 			1,          -- p_count
 			$2,         -- f_count
 			0,          -- fr_count
@@ -122,24 +124,24 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				p_name,
 				g_p_id,
 				msgid,
-				pdate,
-				padded,
+				date_sent,
+				date_recv,
 				sage,
 				mod_id,
 				attrib
 			)
 		SELECT
-			$12,        -- b_id
-			ub.last_id, -- b_t_id
-			ub.last_id, -- b_p_id
-			$13,        -- p_name
-			ugp.g_p_id, -- g_p_id
-			$3,         -- msgid
-			ugp.pdate,  -- pdate
-			ugp.padded, -- padded
-			FALSE,      -- sage
-			$15,        -- mod_id
-			$16         -- attrib
+			$12,           -- b_id
+			ub.last_id,    -- b_t_id
+			ub.last_id,    -- b_p_id
+			$13,           -- p_name
+			ugp.g_p_id,    -- g_p_id
+			$3,            -- msgid
+			ugp.date_sent, -- date_sent
+			ugp.date_recv, -- date_recv
+			FALSE,         -- sage
+			$15,           -- mod_id
+			$16            -- attrib
 		FROM
 			ub
 		CROSS JOIN
