@@ -389,7 +389,7 @@ func TestPost(t *testing.T) {
 	for i := range tests {
 		ee, exp := submitFromFile(dbib, tests[i].name)
 		if ee != nil {
-			if tests[i].shouldsucceed {
+			if tests[i].shouldsucceed || !exp {
 				t.Errorf("! submission error when should succeed, exp(%v) err: %v", exp, ee)
 			} else {
 				t.Logf("+ submission error when should error, exp(%v) err: %v", exp, ee)
@@ -412,7 +412,7 @@ func TestPost(t *testing.T) {
 	n_proc := 0
 	for {
 		hadw, e := dbib.modset_processJobOnce(1, 1)
-		panicErr(e, "x")
+		panicErr(e, "modset_processJobOnce")
 		if !hadw {
 			break
 		}
