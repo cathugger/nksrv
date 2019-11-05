@@ -36,7 +36,7 @@ JOIN
 ON
 	xbp.b_id = xb.b_id
 JOIN
-	ib0.posts AS xp
+	ib0.gposts AS xp
 ON
 	xbp.g_p_id = xp.g_p_id`
 

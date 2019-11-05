@@ -7,8 +7,8 @@ import (
 	"github.com/lib/pq"
 	"golang.org/x/xerrors"
 
-	"nksrv/lib/mailib"
 	. "nksrv/lib/logx"
+	"nksrv/lib/mailib"
 )
 
 func (sp *PSQLIB) modset_processJobObce(

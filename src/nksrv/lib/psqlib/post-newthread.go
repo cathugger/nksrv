@@ -39,7 +39,8 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 	sth := `WITH
 	ugp AS (
 		INSERT INTO
-			ib0.gposts (
+			ib0.gposts
+			(
 				date_sent,     -- 1
 				date_recv,     -- NOW()
 				sage,          -- FALSE

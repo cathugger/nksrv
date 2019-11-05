@@ -373,13 +373,17 @@ func TestPost(t *testing.T) {
 		panicErr(err, "dbib close err")
 	}()
 
-	tests := [...]struct{
-		name string
+	tests := [...]struct {
+		name          string
 		shouldsucceed bool
 	}{
 		{"msg1", true},
 		{"msg2", true},
 		{"msg3", false},
+
+		{"mod1", true},
+		{"mod2", true},
+		{"mod3", true},
 	}
 	for i := range tests {
 		ee, exp := submitFromFile(dbib, tests[i].name)
@@ -397,4 +401,5 @@ func TestPost(t *testing.T) {
 			}
 		}
 	}
+
 }
