@@ -11,7 +11,7 @@ import (
 	"nksrv/lib/mailib"
 )
 
-func (sp *PSQLIB) modset_processJobObce(
+func (sp *PSQLIB) modset_processJobOnce(
 	fetchMsgsOnce, fetchMsgsTotal int) (hadwork bool, err error) {
 
 	for {
@@ -93,16 +93,16 @@ func (sp *PSQLIB) modset_processJobOnce_tx(
 
 		if err == sql.ErrNoRows {
 			// overwrite err
-			err = tx.Commit()
-			if err != nil {
-				err = sp.sqlError("commit tx", err)
-			}
+			err = nil
 			return
 		}
 
 		err = sp.sqlError("queryrowscan", err)
 		return
 	}
+
+	// we got some work
+	hadwork = true
 
 	// eat caps
 	f.unmarshalJSON()

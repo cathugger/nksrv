@@ -212,7 +212,9 @@ func (sp *PSQLIB) setModCap(
 	return
 }
 
-func (sp *PSQLIB) DemoSetModCap(mods []string, modCap ModCap) {
+func (sp *PSQLIB) DemoSetModCap(
+	mods []string, group string, modCap, modInheritCap ModCap) {
+
 	var err error
 
 	for i, s := range mods {
@@ -239,10 +241,13 @@ func (sp *PSQLIB) DemoSetModCap(mods []string, modCap ModCap) {
 	var delmsgids delMsgIDState
 	defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
 
+	// inheritable priv implies usable priv
+	modCap = modCap.Merge(modInheritCap)
+
 	for _, s := range mods {
 		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modCap.String())
 
-		err = sp.setModCap(tx, s, "", modCap, noneModCap)
+		err = sp.setModCap(tx, s, group, modCap, modInheritCap)
 		if err != nil {
 			sp.log.LogPrintf(ERROR, "%v", err)
 			return

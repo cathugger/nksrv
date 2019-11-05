@@ -99,6 +99,9 @@ func TestInit(t *testing.T) {
 	panicErr(err, "dbib close err")
 }
 
+var lvl_none = [caplvlx_num]int16{-1}
+var lvl_one = [caplvlx_num]int16{0}
+
 func TestCalcPriv(t *testing.T) {
 	dbn := testutil.MakeTestDB()
 	defer testutil.DropTestDB(dbn)
@@ -139,8 +142,6 @@ func TestCalcPriv(t *testing.T) {
 		}
 	}()
 
-	lvl_none := [caplvlx_num]int16{-1}
-	lvl_one := [caplvlx_num]int16{0}
 	capsets := [...]struct {
 		Key    string
 		Group  string
@@ -402,4 +403,25 @@ func TestPost(t *testing.T) {
 		}
 	}
 
+	dbib.DemoSetModCap(
+		[]string{"2d2ca0ed8361b5569786e41b8fd7a39de8fc064270966b57510b0c7a8d1a7215"},
+		"",
+		ModCap{Cap: cap_delpost, CapLevel: lvl_none},
+		noneModCap)
+
+	n_proc := 0
+	for {
+		hadw, e := dbib.modset_processJobOnce(1, 1)
+		panicErr(e, "x")
+		if !hadw {
+			break
+		}
+		n_proc++
+	}
+
+	if n_proc != 4 {
+		t.Errorf("! n_proc doesn't match got: %v", n_proc)
+	} else {
+		t.Logf("+ n_proc matches")
+	}
 }
