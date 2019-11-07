@@ -387,12 +387,14 @@ func TestPost(t *testing.T) {
 		{"mod3", true},
 	}
 	for i := range tests {
-		ee, exp := submitFromFile(dbib, tests[i].name)
+		ee, unexp := submitFromFile(dbib, tests[i].name)
 		if ee != nil {
-			if tests[i].shouldsucceed || !exp {
-				t.Errorf("! submission error when should succeed, exp(%v) err: %v", exp, ee)
+			if unexp {
+				t.Errorf("! unexpected submission err: %v", ee)
+			} else if tests[i].shouldsucceed {
+				t.Errorf("! submission error when should succeed, err: %v", ee)
 			} else {
-				t.Logf("+ submission error when should error, exp(%v) err: %v", exp, ee)
+				t.Logf("+ submission error when should error, err: %v", ee)
 			}
 		} else {
 			if !tests[i].shouldsucceed {
