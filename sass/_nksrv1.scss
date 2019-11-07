@@ -74,6 +74,14 @@ tr.blist:hover td {
 	display: block;
 }
 
+/* >=IE10 */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+	.imgexp {
+		/* IE hax: max-width 100% doesn't work */
+		width: 100%;
+	}
+}
+
 .imgexp {
 	display: block;
 	height: auto;
