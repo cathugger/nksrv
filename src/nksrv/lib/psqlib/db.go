@@ -32,7 +32,7 @@ func (sp *PSQLIB) InitDB() (err error) {
 
 	initfs := [...]string{"", "_jobstate", "_puller", "_triggers"}
 	for i := range initfs {
-		fn := "aux/psqlib/init" + initfs[i] + ".sql"
+		fn := "etc/psqlib/init" + initfs[i] + ".sql"
 
 		stmts, ee := sqlbucket.LoadFromFile(fn)
 		if ee != nil {

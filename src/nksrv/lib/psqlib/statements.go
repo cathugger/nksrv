@@ -198,7 +198,7 @@ func loadStatements() {
 	for i := range st_names {
 		sn := st_names[i]
 		if bm[sn.Bucket] == nil {
-			fn := "aux/psqlib/" + sn.Bucket + ".sql"
+			fn := "etc/psqlib/" + sn.Bucket + ".sql"
 			stmts, err := sqlbucket.LoadFromFile(fn)
 			if err != nil {
 				st_loaderr = fmt.Errorf("err loading %s: %v", fn, err)
