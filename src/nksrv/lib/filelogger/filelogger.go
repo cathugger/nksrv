@@ -69,16 +69,29 @@ type FileLogger struct {
 	n bool
 }
 
-func nowTime() time.Time {
-	return time.Now()
+func (l *FileLogger) nowTime() time.Time {
+	// TODO configure timezone
+	return time.Now().UTC()
+}
+
+func hasEnv(key string) (has bool) {
+	_, has = os.LookupEnv(key)
+	return
+}
+
+func shouldColorableTerm(c useColor, fd uintptr) bool {
+	return c != ColorOff &&
+		!(c == ColorAuto && hasEnv("NO_COLOR")) &&
+		(isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd))
 }
 
 func NewFileLogger(
 	f *os.File, logLevel logx.Level, c useColor) (logx.LoggerX, error) {
 
 	l := &FileLogger{f: f, t: uint(c) & 1, m: logLevel}
-	fd := f.Fd()
-	if c != ColorOff && (isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)) {
+	if shouldColorableTerm(c, f.Fd()) {
+		// if it's windows terminal, colorable will make color codes work
+		// if output is file it'd do nothing
 		l.w.w = bufio.NewWriter(colorable.NewColorable(f))
 		l.t = 1
 	} else {
@@ -118,7 +131,7 @@ func (l *FileLogger) LogPrintX(section string, lvl logx.Level, v ...interface{})
 		return
 	}
 
-	t := time.Now().UTC()
+	t := l.nowTime()
 
 	l.l.Lock()
 	defer l.l.Unlock()
@@ -133,7 +146,7 @@ func (l *FileLogger) LogPrintlnX(section string, lvl logx.Level, v ...interface{
 		return
 	}
 
-	t := time.Now().UTC()
+	t := l.nowTime()
 
 	l.l.Lock()
 	defer l.l.Unlock()
@@ -148,7 +161,7 @@ func (l *FileLogger) LogPrintfX(section string, lvl logx.Level, fmts string, v .
 		return
 	}
 
-	t := time.Now().UTC()
+	t := l.nowTime()
 
 	l.l.Lock()
 	defer l.l.Unlock()
@@ -163,7 +176,7 @@ func (l *FileLogger) LockWriteX(section string, lvl logx.Level) bool {
 		return false
 	}
 
-	t := nowTime()
+	t := l.nowTime()
 
 	l.l.Lock()
 
