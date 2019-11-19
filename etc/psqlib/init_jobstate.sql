@@ -15,6 +15,7 @@ CREATE TABLE ib0.modlist_changes (
 	t_g_p_id    BIGINT,
 	t_b_id      INTEGER,
 
+
 	FOREIGN KEY (mod_id)
 		REFERENCES ib0.modlist
 		ON DELETE CASCADE

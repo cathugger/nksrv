@@ -64,7 +64,6 @@ const (
 
 	st_mod_autoregister_mod
 	st_mod_delete_by_msgid
-	st_mod_delete_by_gpid
 	st_mod_ban_by_msgid
 	st_mod_bname_topts_by_tid
 	st_mod_refresh_bump_by_tid
@@ -159,7 +158,6 @@ var st_names = [st_max]st_reference{
 
 	st_reference{"mod", "mod_autoregister_mod"},
 	st_reference{"mod", "mod_delete_by_msgid"},
-	st_reference{"mod", "mod_delete_by_gpid"},
 	st_reference{"mod", "mod_ban_by_msgid"},
 	st_reference{"mod", "mod_bname_topts_by_tid"},
 	st_reference{"mod", "mod_refresh_bump_by_tid"},

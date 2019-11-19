@@ -157,6 +157,11 @@ requery:
 
 		}
 
+		if err != nil {
+			err = sp.sqlError("query", err)
+			return
+		}
+
 		for rows.Next() {
 			var p postinfo
 			var ref, fname sql.NullString

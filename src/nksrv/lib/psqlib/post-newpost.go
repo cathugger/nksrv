@@ -17,7 +17,7 @@ type npTuple struct {
 	sage bool
 }
 
-const postRQMsgArgCount = 18
+const postRQMsgArgCount = 17
 const postRQFileArgCount = 8
 
 func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
@@ -81,97 +81,10 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			g_p_id,
 			date_sent,
 			date_recv,
-			sage
-	),
-	ub AS (
-		UPDATE
-			ib0.boards
-		SET
-			last_id = last_id + 1,
-			p_count = p_count + 1
-		WHERE
-			-- TODO insert into multiple boards
-			b_id = $13
-		RETURNING
-			last_id
+			sage,
+			f_count
 	),`
 	b.WriteString(st1)
-
-	if !t.sage {
-		// bump algo:
-		// sages are still counted against bump limit
-		// (currently, idk if ok) OP is counted against bump limit
-		st_bump := `
-	ut AS (
-		UPDATE
-			ib0.threads
-		SET
-			bump = date_sent,
-			p_count = p_count + 1,
-			f_count = f_count + $3
-		FROM
-			(
-				SELECT
-					date_sent
-				FROM (
-					SELECT
-						date_sent,
-						b_p_id,
-						sage
-					FROM
-						ib0.bposts
-					WHERE
-						-- count sages against bump limit.
-						-- because others do it like that :<
-						b_id = $13 AND b_t_id = $14
-					UNION ALL
-					SELECT
-						$1,
-						last_id,
-						FALSE
-					FROM
-						ub
-					ORDER BY
-						date_sent ASC,
-						b_p_id ASC
-					LIMIT
-						$15
-					-- take bump posts, sorted by original date,
-					-- only upto bump limit
-				) AS tt
-				WHERE
-					sage != TRUE
-				ORDER BY
-					date_sent DESC,
-					b_p_id DESC
-				LIMIT
-					1
-				-- and pick latest one
-			) as xbump
-		WHERE
-			b_id = $13 AND b_t_id = $14
-	),`
-		b.WriteString(st_bump)
-	} else {
-		st_nobump := `
-	ut AS (
-		UPDATE
-			ib0.threads
-		SET
-			p_count = p_count + 1,
-			f_count = f_count + $3,
-			fr_count = fr_count + (CASE WHEN $3 > 0 THEN 1 ELSE 0)
-		WHERE
-			b_id = $13 AND b_t_id = $14
-	),
-	utx AS (
-		SELECT
-			1
-		LIMIT
-			$15
-	),`
-		b.WriteString(st_nobump)
-	}
 
 	st2 := `
 	ubp AS (
@@ -179,31 +92,29 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 			ib0.bposts (
 				b_id,
 				b_t_id,
-				b_p_id,
 				p_name,
 				g_p_id,
 				msgid,
 				date_sent,
 				date_recv,
 				sage,
+				f_count,
 				mod_id,
 				attrib
 			)
 		SELECT
 			$13,           -- b_id
 			$14,           -- b_t_id
-			ub.last_id,    -- b_p_id
-			$16,           -- p_name
+			$15,           -- p_name
 			ugp.g_p_id,    -- g_p_id
 			$4,            -- msgid
 			ugp.date_sent, -- date_sent
 			ugp.date_recv, -- date_recv
 			ugp.sage,      -- sage
-			$17,           -- mod_id
-			$18            -- attrib
+			ugp.f_count,   -- f_count
+			$16,           -- mod_id
+			$17            -- attrib
 		FROM
-			ub
-		CROSS JOIN
 			ugp
 		RETURNING
 			g_p_id,b_p_id
@@ -335,7 +246,6 @@ func (sp *PSQLIB) insertNewReply(
 
 			rti.bid,
 			rti.tid,
-			rti.bumpLimit,
 
 			pInfo.ID,
 			smodid,
@@ -361,11 +271,10 @@ func (sp *PSQLIB) insertNewReply(
 
 		args[12] = rti.bid
 		args[13] = rti.tid
-		args[14] = rti.bumpLimit
 
-		args[15] = pInfo.ID
-		args[16] = smodid
-		args[17] = BAjson
+		args[14] = pInfo.ID
+		args[15] = smodid
+		args[16] = BAjson
 
 		for i := range pInfo.FI {
 

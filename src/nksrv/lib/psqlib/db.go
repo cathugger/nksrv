@@ -30,7 +30,18 @@ func (sp *PSQLIB) InitDB() (err error) {
 		}
 	}()
 
-	initfs := [...]string{"", "_jobstate", "_puller", "_triggers"}
+	initfs := [...]string{
+		"", "_jobstate", "_puller",
+		"_triggers",
+		"_triggers_banlist",
+		"_triggers_boards",
+		"_triggers_bposts",
+		"_triggers_files",
+		"_triggers_gposts",
+		"_triggers_modlist",
+		"_triggers_modsets",
+		"_triggers_threads",
+	}
 	for i := range initfs {
 		fn := "etc/psqlib/init" + initfs[i] + ".sql"
 

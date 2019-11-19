@@ -94,7 +94,8 @@ VALUES (
 	TRUE
 )
 ON CONFLICT (mod_pubkey) DO UPDATE -- DO NOTHING returns nothing so we update something irrelevant as hack
-	SET automanage = ml.automanage
+SET
+	automanage = ml.automanage
 RETURNING
 	mod_id,
 
@@ -108,461 +109,57 @@ RETURNING
 	modi_caplvl,
 	modi_bcaplvl
 
-
-
--- :namet mod_delete_msgid_common
-	delbp AS (
-		-- delete all board posts of that
-		DELETE FROM
-			ib0.bposts xbp
-		USING
-			delgp
-		WHERE
-			xbp.g_p_id = delgp.g_p_id
-		RETURNING
-			xbp.b_id,
-			xbp.b_t_id,
-			xbp.b_p_id,
-			xbp.p_name,
-			xbp.msgid,
-			xbp.mod_id,
-			delgp.f_count
-	),
-	delbt AS (
-		-- delete thread(s) incase we nuked OP(s)
-		DELETE FROM
-			ib0.threads xt
-		USING
-			delbp
-		WHERE
-			xt.b_id = delbp.b_id AND
-				xt.b_t_id = delbp.b_p_id
-		RETURNING
-			xt.b_id,
-			xt.b_t_id
-	),
-	updbt AS (
-		-- update thread(s) counters incase we haven't deleted thread(s) earlier
-		-- un-bump is done adhoc
-		UPDATE
-			ib0.threads xt
-		SET
-			p_count = xt.p_count - 1,
-			f_count = xt.f_count - delbp.f_count,
-			fr_count = xt.fr_count - (
-				CASE
-					WHEN delbp.f_count > 0 THEN
-						1
-					ELSE
-						0
-				END)
-		FROM
-			delbp
-		WHERE
-			delbp.b_id = xt.b_id AND
-				delbp.b_t_id = xt.b_t_id
-	),
-	delbcp AS (
-		-- delete board child posts incase we nuked thread(s)
-		DELETE FROM
-			ib0.bposts xbp
-		USING
-			delbt
-		WHERE
-			xbp.b_id = delbt.b_id AND
-				xbp.b_t_id = delbt.b_t_id
-		RETURNING
-			xbp.b_id,
-			xbp.b_p_id,
-			xbp.p_name,
-			xbp.msgid,
-			xbp.g_p_id,
-			xbp.mod_id
-	),
-	delgcp AS (
-		-- delete global child posts (from above)
-		-- (if they dont have refs from other boards)
-		-- XXX but how children of thread could have extra refs???
-		DELETE FROM
-			ib0.gposts xp
-		USING
-			(
-				SELECT
-					x.g_p_id,
-					y.cnt > x.cnt AS hasrefs
-				FROM
-					(
-						-- g_p_ids may duplicate
-						SELECT
-							g_p_id,
-							COUNT(g_p_id) AS cnt
-						FROM
-							delbcp
-						GROUP BY
-							g_p_id
-					) AS x
-				LEFT JOIN
-					LATERAL (
-						SELECT
-							COUNT(*) AS cnt
-						FROM
-							ib0.bposts xbp
-						WHERE
-							x.g_p_id = xbp.g_p_id
-					) AS y
-				ON
-					TRUE
-			) AS rcnts
-		WHERE
-			rcnts.hasrefs = FALSE AND
-				rcnts.g_p_id = xp.g_p_id
-		RETURNING
-			xp.g_p_id,
-			xp.msgid
-	),
-	clean_mods AS (
-		-- garbage collect moderator list (maybe we nuked mod post(s))
-		DELETE FROM
-			ib0.modlist mods
-		USING
-			(
-				SELECT
-					delmod.mod_id,
-					allmod.cnt > delmod.cnt AS hasrefs
-				FROM
-					(
-						SELECT
-							mod_id,
-							COUNT(*) AS cnt
-						FROM
-							(
-								SELECT mod_id FROM delbp
-								UNION ALL
-								SELECT mod_id FROM delbcp
-							) AS x
-						WHERE
-							mod_id IS NOT NULL
-						GROUP BY
-							mod_id
-					) AS delmod
-				LEFT JOIN
-					LATERAL (
-						SELECT
-							COUNT(*) AS cnt
-						FROM
-							ib0.bposts xbp
-						WHERE
-							delmod.mod_id = xbp.mod_id
-					) AS allmod
-				ON
-					TRUE
-			) AS rcnts
-		WHERE
-			rcnts.hasrefs = FALSE AND
-				rcnts.mod_id = mods.mod_id AND
-				mods.automanage = TRUE
-	),
-	updb AS (
-		-- update boards post and thread counts
-		UPDATE
-			ib0.boards xb
-		SET
-			p_count = xb.p_count - xtp.p_count,
-			t_count = xb.t_count - xtp.t_count
-		FROM
-			(
-				SELECT
-					xx.b_id,
-					SUM(xx.p_count) AS p_count,
-					COUNT(delbt.b_id) AS t_count
-				FROM
-					(
-						SELECT
-							delbpx.b_id,
-							COUNT(delbpx.b_id) AS p_count
-						FROM
-							(
-								SELECT b_id FROM delbp
-								UNION ALL
-								SELECT b_id FROM delbcp
-							) AS delbpx
-						GROUP BY
-							delbpx.b_id
-					) AS xx
-				LEFT JOIN
-					delbt
-				ON
-					xx.b_id = delbt.b_id
-				GROUP BY
-					xx.b_id
-			) AS xtp
-		WHERE
-			xb.b_id = xtp.b_id
-	),
-	delf AS (
-		-- delete relevant files
-		DELETE FROM
-			ib0.files xf
-		USING
-			(
-				SELECT g_p_id FROM delgp
-				UNION ALL
-				SELECT g_p_id FROM delgcp
-			) AS xgpids
-		WHERE
-			xgpids.g_p_id = xf.g_p_id
-		RETURNING
-			xf.f_id,
-			xf.fname,
-			xf.thumb
-	)
-
-SELECT
-	leftf.fname,leftf.fnum,leftt.thumb,leftt.tnum,
-	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL::BIGINT
-FROM
-	(
-		-- minus currently deleting because snapshot isolation
-		SELECT
-			delfnames.fname,
-			allfnames.cnt - delfnames.cnt AS fnum
-		FROM
-			(
-				SELECT
-					fname,
-					COUNT(*) AS cnt
-				FROM
-					delf
-				GROUP BY
-					fname
-			) AS delfnames
-		LEFT JOIN
-			LATERAL (
-				SELECT
-					COUNT(*) AS cnt
-				FROM
-					ib0.files xf
-				WHERE
-					delfnames.fname = xf.fname
-			) AS allfnames
-		ON
-			TRUE
-	) AS leftf
-FULL JOIN
-	(
-		-- minus currently deleting because snapshot isolation
-		SELECT
-			delfnt.fname,
-			delfnt.thumb,
-			allfnt.cnt - delfnt.cnt AS tnum
-		FROM
-			(
-				SELECT
-					fname,
-					thumb,
-					COUNT(*) AS cnt
-				FROM
-					delf
-				GROUP BY
-					fname,
-					thumb
-			) AS delfnt
-		LEFT JOIN
-			LATERAL (
-				SELECT
-					COUNT(*) AS cnt
-				FROM
-					ib0.files xf
-				WHERE
-					(delfnt.fname,delfnt.thumb) = (xf.fname,xf.thumb)
-			) AS allfnt
-		ON
-			TRUE
-	) AS leftt
-ON
-	leftf.fname = leftt.fname
-
-UNION ALL
-
-SELECT
-	'',0,'',0,xt.b_id,xt.b_t_id,xto.t_pos,NULL,NULL,NULL,NULL,NULL
-FROM
-	delbp AS xt
-LEFT JOIN
-	LATERAL (
-		SELECT
-			*
-		FROM
-			(
-				SELECT
-					b_id,
-					b_t_id,
-					row_number() OVER (
-						ORDER BY
-							bump DESC,
-							b_t_id ASC
-					) AS t_pos
-				FROM
-					ib0.threads qt
-				WHERE
-					qt.b_id = xt.b_id
-			) AS zt
-		WHERE
-			xt.b_id = zt.b_id AND xt.b_t_id = zt.b_t_id
-		LIMIT
-			1
-	) AS xto
-ON
-	TRUE
-WHERE
-	xt.b_t_id != xt.b_p_id
-
-UNION ALL
-
-SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
-FROM
-	delgp
-
-UNION ALL
-
-SELECT
-	'',0,'',0,NULL,NULL,NULL,msgid,NULL,NULL,NULL,NULL
-FROM
-	delgcp
-
-UNION ALL
-
-SELECT
-	'',0,'',0,NULL,NULL,NULL,NULL,
-	xb.b_name,delbpx.p_name,delbpx.msgid,delbpx.mod_id
-FROM
-	(
-		SELECT b_id,p_name,msgid,mod_id FROM delbp
-		UNION ALL
-		SELECT b_id,p_name,msgid,mod_id FROM delbcp
-	) AS delbpx
-JOIN
-	ib0.boards xb
-ON
-	delbpx.b_id = xb.b_id
-
-
 -- :name mod_delete_by_msgid
-/*
-IMPORTANT:
-https://www.postgresql.org/docs/9.6/queries-with.html
-All the statements are executed with the same snapshot (see Chapter 13),
-so they cannot "see" one another's effects on the target tables.
-This alleviates the effects of the unpredictability of the actual order
-of row updates, and means that RETURNING data is the only way to
-communicate changes between different WITH sub-statements and the main query.
-*/
+-- lazyness: delete and then reinsert, this will fire foreign key cascades
+-- XXX could probably just update and do proper triggers
 WITH
-	delgp AS (
-		-- delete global post
+	dgp AS (
 		DELETE FROM
 			ib0.gposts
 		WHERE
-			msgid = $1 AND
-				date_recv IS NOT NULL
+			msgid = $1 AND date_recv IS NOT NULL
 		RETURNING
-			g_p_id,
-			f_count,
-			msgid
-	),
-	{{- .mod_delete_msgid_common }}
+			msgid,
+			has_ph,
+			ph_ban,
+			ph_banpriv
+	)
+INSERT INTO
+	ib0.gposts
+	(
+		msgid,
+		has_ph,
+		ph_ban,
+		ph_banpriv
+	)
+SELECT
+	msgid,
+	has_ph,
+	ph_ban,
+	ph_banpriv
+FROM
+	dgp
+WHERE
+	has_ph IS TRUE
 
--- :name mod_delete_by_gpid
-WITH
-	delgp AS (
-		-- delete global post
-		DELETE FROM
-			ib0.gposts
-		WHERE
-			g_p_id = $1 AND
-				date_recv IS NOT NULL
-		RETURNING
-			g_p_id,
-			f_count,
-			msgid
-	),
-	{{- .mod_delete_msgid_common }}
 
 -- :name mod_ban_by_msgid
-WITH
-	insban AS (
-		INSERT INTO
-			ib0.banlist (
-				msgid,
-				b_id,
-				b_p_id,
-				ban_info
-			)
-		VALUES
-			(
-				$1,
-				$2,
-				$3,
-				$4
-			)
-	),
-	delgp AS (
-		-- replace global post with ban post
-		INSERT INTO
-			ib0.gposts AS xp (
-				msgid,
-				date_sent,
-				date_recv,
-				sage,
-				f_count,
-				author,
-				trip,
-				title,
-				message,
-				headers,
-				attrib,
-				layout,
-				extras
-			)
-		VALUES
-			(
-				$1,
-				NULL,
-				NULL,
-				FALSE,
-				0,
-				'',
-				'',
-				'',
-				'',
-				NULL,
-				NULL,
-				NULL,
-				NULL
-			)
-		ON CONFLICT (msgid) DO UPDATE
-			SET
-				date_sent = EXCLUDED.date_sent,
-				date_recv = EXCLUDED.date_recv,
-				sage      = EXCLUDED.sage,
-				f_count   = EXCLUDED.f_count,
-				author    = EXCLUDED.author,
-				trip      = EXCLUDED.trip,
-				title     = EXCLUDED.title,
-				message   = EXCLUDED.message,
-				headers   = EXCLUDED.headers,
-				attrib    = EXCLUDED.attrib,
-				layout    = EXCLUDED.layout,
-				extras    = EXCLUDED.extras
-			WHERE
-				xp.date_recv IS NOT NULL
-		RETURNING
-			g_p_id,
-			f_count,
-			msgid
-	),
-	{{- .mod_delete_msgid_common }}
+-- trigger will do its job
+INSERT INTO
+	ib0.banlist
+	(
+		msgid,
+		b_id,
+		b_p_id,
+		ban_info
+	)
+VALUES
+	(
+		$1,
+		$2,
+		$3,
+		$4
+	)
 
 -- :name mod_bname_topts_by_tid
 -- returns boardname and thread opts

@@ -19,7 +19,9 @@ CREATE TABLE ib0.puller_last_newnews (
 	sid          BIGINT NOT NULL,
 	last_newnews BIGINT NOT NULL,
 
+
 	PRIMARY KEY (sid),
+
 	FOREIGN KEY (sid)
 		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
@@ -31,7 +33,9 @@ CREATE TABLE ib0.puller_last_newgroups (
 	sid            BIGINT NOT NULL,
 	last_newgroups BIGINT NOT NULL,
 
+
 	PRIMARY KEY (sid),
+
 	FOREIGN KEY (sid)
 		REFERENCES ib0.puller_list
 		ON DELETE CASCADE
@@ -48,7 +52,9 @@ CREATE TABLE ib0.puller_group_track (
 	-- max id seen now
 	next_max BIGINT  NOT NULL,
 
+
 	PRIMARY KEY (sid,bid),
+
 	FOREIGN KEY (sid)
 		REFERENCES ib0.puller_list
 		ON DELETE CASCADE,

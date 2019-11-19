@@ -4,6 +4,7 @@ demo8
 -- :name init
 CREATE SCHEMA ib0
 
+
 --- moderators/administrators things
 -- :next
 -- summary table to hold effective capabilities of moderator
@@ -16,18 +17,20 @@ CREATE TABLE ib0.modlist (
 	automanage BOOLEAN NOT NULL,
 	-- usable capabilities
 	mod_cap     BIT(12),        -- global capabilities
-	mod_bcap    JSONB,          -- per-board capabilities
 	mod_caplvl  SMALLINT ARRAY, -- global cap levels
+	mod_bcap    JSONB,          -- per-board capabilities
 	mod_bcaplvl JSONB,          -- per-board cap levels
 	-- inheritable capabilities
 	modi_cap     BIT(12),        -- global capabilities
-	modi_bcap    JSONB,          -- per-board capabilities
 	modi_caplvl  SMALLINT ARRAY, -- global cap levels
+	modi_bcap    JSONB,          -- per-board capabilities
 	modi_bcaplvl JSONB,          -- per-board cap levels
 
+
 	PRIMARY KEY (mod_id),
-	UNIQUE (mod_pubkey)
+	UNIQUE      (mod_pubkey)
 )
+
 
 -- :next
 CREATE TABLE ib0.gposts (
@@ -36,43 +39,52 @@ CREATE TABLE ib0.gposts (
 
 	date_sent TIMESTAMP  WITH TIME ZONE,
 	date_recv TIMESTAMP  WITH TIME ZONE,
-	sage      BOOLEAN    NOT NULL,
+	sage      BOOLEAN    NOT NULL        DEFAULT FALSE,
 
-	f_count INTEGER NOT NULL, -- attachment count
+	-- attachment count
+	f_count INTEGER NOT NULL             DEFAULT 0,
 
-	author  TEXT               NOT NULL, -- author name
-	trip    TEXT  COLLATE "C"  NOT NULL, -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
-	title   TEXT               NOT NULL, -- message title/subject field
-	message TEXT               NOT NULL, -- post message, in UTF-8
-	-- headers of msg root, map of lists of strings, needed for NNTP HDR
-	headers JSONB,
-	-- attributes associated with global post and visible in webui
-	attrib  JSON,
-	-- article layout, needed to reconstruct original article
-	layout  JSON,
-	-- passive extra data
-	extras  JSONB,
+	author  TEXT               NOT NULL  DEFAULT '', -- author name
+	trip    TEXT  COLLATE "C"  NOT NULL  DEFAULT '', -- XXX should we have it there and not in attrib? probably yes, we could benefit from search
+	title   TEXT               NOT NULL  DEFAULT '', -- message title/subject field
+	message TEXT               NOT NULL  DEFAULT '', -- post message, in UTF-8
+
+	headers JSONB, -- headers of msg root, map of lists of strings, needed for NNTP HDR
+	attrib  JSON,  -- attributes associated with global post and visible in webui
+	layout  JSON,  -- article layout, needed to reconstruct original article
+	extras  JSONB, -- passive extra data
+
+	mod_dpriv SMALLINT, -- calc'd from bposts
+
+	-- does it have placeholder-related data?
+	has_ph BOOLEAN,
+
+	ph_ban     BOOLEAN,
+	ph_banpriv SMALLINT,
+
 
 	PRIMARY KEY (g_p_id),
-	UNIQUE (msgid)
+	UNIQUE      (msgid)
 )
 
 
 -- :next
 CREATE TABLE ib0.gposts_boards (
 	g_p_id BIGINT               NOT NULL,
-	bname  TEXT    COLLATE "C"  NOT NULL,
+	b_name  TEXT    COLLATE "C"  NOT NULL,
+
 
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.gposts
 		ON DELETE CASCADE
+		ON UPDATE CASCADE
 )
 -- :next
 CREATE INDEX
 	ON ib0.gposts_boards (g_p_id)
 -- :next
 CREATE INDEX
-	ON ib0.gposts_boards (bname,g_p_id)
+	ON ib0.gposts_boards (b_name,g_p_id)
 
 
 -- :next
@@ -91,14 +103,16 @@ CREATE TABLE ib0.boards (
 	max_active_pages INTEGER, -- <=0 - all existing pages are active
 	max_pages        INTEGER, -- <=0 - unlimited, archive mode
 
+	cfg_t_bump_limit INTEGER, -- bump limit, can be NULL
 	post_limits      JSONB, -- allowed properties of post, sorta common for both OPs and replies
 	newthread_limits JSONB, -- same as post_limits but for new threads. inherits from post_limits
 	reply_limits     JSONB, -- same as post_limits but for replies. inherits from post_limits
 	thread_opts      JSONB, -- options common for all threads. stuff like bump/file limits
 	attrib           JSONB, -- board attributes
 
+
 	PRIMARY KEY (b_id),
-	UNIQUE (b_name)
+	UNIQUE      (b_name)
 )
 -- :next
 CREATE INDEX
@@ -118,18 +132,21 @@ CREATE TABLE ib0.threads (
 
 	bump      TIMESTAMP  WITH TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
 	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
-	p_count   BIGINT                     NOT NULL, -- post count (including OP)
-	f_count   BIGINT                     NOT NULL, -- sum of posts' (including OP) f_count
-	fr_count  BIGINT                     NOT NULL, -- file-replies count (not including OP)
+	p_count   BIGINT                     NOT NULL DEFAULT 0, -- post count (including OP)
+	f_count   BIGINT                     NOT NULL DEFAULT 0, -- sum of posts' (including OP) f_count
+	fr_count  BIGINT                     NOT NULL DEFAULT 0, -- file-replies count (not including OP)
 
 	reply_limits JSONB, -- inherits from reply_limits of ib0.boards
 	thread_opts  JSONB, -- inherits from thread_opts of ib0.boards
 	attrib       JSONB, -- extra attributes
 
+
 	PRIMARY KEY (b_id,b_t_id),
-	UNIQUE (b_id,b_t_name),
+	UNIQUE      (b_id,b_t_name),
+
 	FOREIGN KEY (b_id)
 		REFERENCES ib0.boards
+		ON UPDATE CASCADE
 )
 -- :next
 -- for board pages and catalog
@@ -155,15 +172,22 @@ CREATE INDEX
 CREATE TABLE ib0.bposts (
 	b_id   INTEGER               NOT NULL, -- internal board ID this post belongs to
 	b_p_id BIGINT                NOT NULL, -- internal post ID of this post. if pid==tid then this is OP
-	p_name TEXT     COLLATE "C"  NOT NULL, -- external post identifier
-	b_t_id BIGINT                NOT NULL, -- internal thread ID this post belongs to
-	g_p_id BIGINT                NOT NULL, -- global internal post ID
 	msgid  TEXT     COLLATE "C"  NOT NULL, -- global external msgid
+	p_name TEXT     COLLATE "C",           -- external post identifier
+	b_t_id BIGINT,                         -- internal thread ID this post belongs to
+	g_p_id BIGINT,                         -- global internal post ID
 
 	-- denormalized w/ global for efficient indexing
 	date_sent TIMESTAMP  WITH TIME ZONE,
 	date_recv TIMESTAMP  WITH TIME ZONE,
-	sage      BOOLEAN    NOT NULL,       -- if true this isn't bump
+	sage      BOOLEAN    NOT NULL DEFAULT FALSE, -- if true this isn't bump
+	f_count   BIGINT,
+
+	-- attributes associated with board post and visible in webui
+	attrib JSON,
+	-- active references
+	activ_refs JSON,
+
 
 	-- following fields are only used if this is mod msg
 	mod_id BIGINT,
@@ -175,28 +199,35 @@ CREATE TABLE ib0.bposts (
 	-- used(effective) cap lvls [we can't know wanted]
 	mod_u_caplvl  SMALLINT ARRAY,
 	mod_u_bcaplvl JSONB,
+	-- self-defensive calculate effective for this board
+	mod_dpriv     BIGINT,
 
-	-- if this is ban placeholder, which priv lvl it'd need to break?
-	-- shd b >0 and only used for ctl groups
-	-- TODO
-	ban_dpriv SMALLINT,
 
-	-- attributes associated with board post and visible in webui
-	attrib JSON,
-	-- active references
-	activ_refs JSON,
+	-- placeholder stuff
+	has_ph BOOLEAN,
+
+	ph_ban     BOOLEAN,
+	ph_banpriv SMALLINT,
+
 
 	PRIMARY KEY (b_id,b_p_id),
-	UNIQUE (g_p_id,b_id),
+	UNIQUE      (g_p_id,b_id),
+
 	FOREIGN KEY (b_id)
-		REFERENCES ib0.boards,
+		REFERENCES ib0.boards
+		ON UPDATE CASCADE,
 	FOREIGN KEY (b_id,b_t_id)
-		REFERENCES ib0.threads,
+		REFERENCES ib0.threads
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
 	FOREIGN KEY (g_p_id)
-		REFERENCES ib0.gposts,
+		REFERENCES ib0.gposts
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
 	FOREIGN KEY (mod_id)
 		REFERENCES ib0.modlist
 		ON DELETE RESTRICT
+		ON UPDATE CASCADE
 )
 -- :next
 -- in thread, for bump
@@ -226,8 +257,8 @@ CREATE UNIQUE INDEX
 -- mostly for boardban checks for now
 CREATE UNIQUE INDEX
 	ON ib0.bposts (
-		b_id,
-		msgid
+		msgid,
+		b_id
 	)
 -- :next
 -- FK
@@ -237,6 +268,20 @@ CREATE INDEX
 		date_sent
 	)
 	WHERE mod_id IS NOT NULL
+
+
+-- :next
+-- if OP gets nuked we want to nuke whole thread
+-- NOTE: OP may get replaced with ban
+ALTER TABLE
+	ib0.threads
+ADD CONSTRAINT
+	fk_bposts
+FOREIGN KEY (b_id,b_t_id)
+	REFERENCES ib0.bposts (b_id,b_p_id)
+	MATCH FULL
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
 
 
 -- :next
@@ -263,14 +308,19 @@ CREATE TABLE ib0.files (
 	thumbcfg JSON,                           -- additional info about thumbnail. like width/height
 	extras   JSON,                           -- extra info not used for display but sometimes useful. undecided.
 
+
 	PRIMARY KEY (f_id),
+
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib0.gposts
+		ON DELETE CASCADE
+		ON UPDATE CASCADE
 )
 -- :next
 CREATE INDEX ON ib0.files (g_p_id,f_id) -- f_id helps sorted retrieval
 -- :next
 CREATE INDEX ON ib0.files (fname,thumb)
+
 
 -- :next
 -- distinct capability grants
@@ -290,7 +340,7 @@ CREATE TABLE ib0.modsets (
 	b_p_id   BIGINT,
 
 	FOREIGN KEY (b_id,b_p_id)
-		REFERENCES ib0.bposts (b_id,b_p_id)
+		REFERENCES ib0.bposts
 		MATCH FULL
 		ON DELETE CASCADE    -- trigger corrects stuff
 )
@@ -308,6 +358,7 @@ CREATE UNIQUE INDEX
 		b_id IS NULL AND
 			b_p_id IS NULL AND
 			mod_group IS NOT NULL
+
 
 -- :next
 -- refers-refered relation. used only to awaken re-calculation.
@@ -342,6 +393,7 @@ CREATE INDEX
 	ON ib0.refs (msgid)
 	WHERE msgid IS NOT NULL
 
+
 -- :next
 CREATE TABLE ib0.banlist (
 	ban_id   BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -350,25 +402,35 @@ CREATE TABLE ib0.banlist (
 	-- board post responsible for this ban (if any)
 	b_id     INTEGER,
 	b_p_id   BIGINT,
+	-- del power of this ban
+	dpriv    SMALLINT,
 
-	msgid  TEXT  COLLATE "C" NOT NULL, -- msgid being banned
-	bname  TEXT  COLLATE "C",          -- if per-board ban
+	-- msgid being banned
+	msgid  TEXT  COLLATE "C" NOT NULL,
+	-- if per-board ban [board may not exist yet therefore TEXT]
+	b_name  TEXT  COLLATE "C",
+
 
 	PRIMARY KEY (ban_id),
 
 	FOREIGN KEY (b_id,b_p_id)
-		REFERENCES ib0.bposts (b_id,b_p_id)
+		REFERENCES ib0.bposts
 		MATCH FULL
 		ON DELETE CASCADE    -- see trigger below
 )
 -- :next
+-- for foreign key, efficient delete
 CREATE INDEX
 	ON ib0.banlist (b_id,b_p_id)
 	WHERE b_id IS NOT NULL AND b_p_id IS NOT NULL
 -- :next
+-- for non-board ban aggregation
 CREATE INDEX
 	ON ib0.banlist (msgid)
+	WHERE b_name IS NULL
 -- :next
+-- for board ban aggregation
+-- TODO idk how exactly they'll be aggregated yet so bit early
 CREATE INDEX
-	ON ib0.banlist (bname,msgid)
-	WHERE bname IS NOT NULL
+	ON ib0.banlist (b_name,msgid)
+	WHERE b_name IS NOT NULL

@@ -137,6 +137,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
+
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(
@@ -381,6 +382,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
+
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(
@@ -567,6 +569,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 			&pdate, &p_f_count, &author, &trip, &title, &message,
 
 			&f_id, &fname, &ftype, &thumb, &thumbcfg_j)
+
 		if err != nil {
 			rows.Close()
 			return sp.sqlError("Web_catalog query rows scan", err),
@@ -704,6 +707,7 @@ func (sp *PSQLIB) IBGetOverboardCatalog(
 			&pdate, &p_f_count, &author, &trip, &title, &message,
 
 			&f_id, &fname, &ftype, &thumb, &thumbcfg_j)
+
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(
@@ -841,6 +845,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 			&f_id, &fname, &ftype, &fsize, &thumb, &oname,
 			&filecfg_j, &thumbcfg_j)
+
 		if err != nil {
 			rows.Close()
 			return sp.sqlError(

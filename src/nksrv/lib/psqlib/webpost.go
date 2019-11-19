@@ -843,7 +843,8 @@ func (sp *PSQLIB) addNewBoard(
 		bdesc,
 		threads_per_page,
 		max_active_pages,
-		max_pages
+		max_pages,
+		cfg_t_bump_limit
 	)
 VALUES
 	(
@@ -852,7 +853,8 @@ VALUES
 		$2,
 		$3,
 		$4,
-		$5
+		$5,
+		$6
 	)
 ON CONFLICT
 	DO NOTHING
@@ -860,8 +862,13 @@ RETURNING
 	b_id`
 
 	var bid boardID
-	e := sp.db.DB.QueryRow(q, bi.Name, bi.Description,
-		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages).Scan(&bid)
+	e := sp.db.DB.
+		QueryRow(
+			q, bi.Name, bi.Description,
+			bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages,
+			defaultThreadOptions.BumpLimit).
+		Scan(&bid)
+
 	if e != nil {
 		if e == sql.ErrNoRows {
 			duplicate = true

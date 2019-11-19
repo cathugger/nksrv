@@ -43,7 +43,6 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			(
 				date_sent,     -- 1
 				date_recv,     -- NOW()
-				sage,          -- FALSE
 				f_count,       -- 2
 				msgid,         -- 3
 				title,         -- 4
@@ -59,7 +58,6 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 			(
 				$1,        -- date_sent
 				NOW(),     -- date_recv
-				FALSE,     -- sage
 				$2,        -- f_count
 				$3,        -- msgid
 				$4,        -- title
@@ -74,47 +72,28 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 		RETURNING
 			g_p_id,
 			date_sent,
-			date_recv
-	),
-	ub AS (
-		UPDATE
-			ib0.boards
-		SET
-			last_id = last_id + 1,
-			t_count = t_count + 1,
-			p_count = p_count + 1
-		WHERE
-			b_id = $12
-		RETURNING
-			last_id
+			date_recv,
+			f_count
 	),
 	ut AS (
 		INSERT INTO
 			ib0.threads (
 				b_id,
-				b_t_id,
 				g_t_id,
 				b_t_name,
 				bump,
-				p_count,
-				f_count,
-				fr_count,
 				skip_over
 			)
 		SELECT
 			$12,        -- b_id
-			ub.last_id, -- b_t_id
 			ugp.g_p_id, -- g_t_id
 			$13,        -- b_t_name
 			$1,         -- date_sent
-			1,          -- p_count
-			$2,         -- f_count
-			0,          -- fr_count
 			$14         -- skip_over
 		FROM
-			ub
-		CROSS JOIN
 			ugp
+		RETURNING
+			b_t_id
 	),
 	ubp AS (
 		INSERT INTO
@@ -128,32 +107,36 @@ func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
 				date_sent,
 				date_recv,
 				sage,
+				f_count,
 				mod_id,
 				attrib
 			)
 		SELECT
 			$12,           -- b_id
-			ub.last_id,    -- b_t_id
-			ub.last_id,    -- b_p_id
+			ut.b_t_id,     -- b_t_id
+			ut.b_t_id,     -- b_p_id
 			$13,           -- p_name
 			ugp.g_p_id,    -- g_p_id
 			$3,            -- msgid
 			ugp.date_sent, -- date_sent
 			ugp.date_recv, -- date_recv
 			FALSE,         -- sage
+			ugp.f_count,   -- f_count
 			$15,           -- mod_id
 			$16            -- attrib
 		FROM
-			ub
+			ut
 		CROSS JOIN
 			ugp
 		RETURNING
-			g_p_id,b_p_id
+			g_p_id,
+			b_p_id
 	)`
 	// footer
 	stf := `
 SELECT
-	g_p_id,b_p_id
+	g_p_id,
+	b_p_id
 FROM
 	ubp`
 
