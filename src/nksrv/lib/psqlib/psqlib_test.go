@@ -102,46 +102,7 @@ func TestInit(t *testing.T) {
 var lvl_none = [caplvlx_num]int16{-1}
 var lvl_one = [caplvlx_num]int16{0}
 
-func TestCalcPriv(t *testing.T) {
-	dbn := testutil.MakeTestDB()
-	defer testutil.DropTestDB(dbn)
-
-	lgr := newLogger()
-
-	db, err := psql.OpenAndPrepare(psql.Config{
-		ConnStr: "user=" + testutil.TestUser +
-			" dbname=" + dbn +
-			" host=" + testutil.PSQLHost,
-		Logger: lgr,
-	})
-	panicErr(err, "OAP err")
-
-	defer func() {
-		err = db.Close()
-		panicErr(err, "db close err")
-	}()
-
-	psqlibcfg := cfgPSQLIB
-	psqlibcfg.DB = &db
-	psqlibcfg.Logger = &lgr
-
-	dbib, err := NewInitAndPrepare(psqlibcfg)
-	panicErr(err, "NewInitAndPrepare err")
-
-	defer func() {
-		err = dbib.Close()
-		panicErr(err, "dbib close err")
-	}()
-
-	tx, err := db.DB.Begin()
-	panicErr(err, "db.DB.Begin err")
-
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
+func setModCaps1tx(dbib *PSQLIB, tx *sql.Tx) {
 	capsets := [...]struct {
 		Key    string
 		Group  string
@@ -171,13 +132,28 @@ func TestCalcPriv(t *testing.T) {
 		{Key: "5", Group: "test", ModCap: ModCap{Cap: cap_delpost, CapLevel: lvl_one}},
 	}
 	for i, cs := range capsets {
-		err = dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap, noneModCap)
+		err := dbib.setModCap(tx, cs.Key, cs.Group, cs.ModCap, noneModCap)
 		panicErr(err, fmt.Sprintf("capset %d", i))
 	}
+}
+
+func setModCaps1(dbib *PSQLIB) {
+	tx, err := dbib.db.DB.Begin()
+	panicErr(err, "db.DB.Begin err")
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	setModCaps1tx(dbib, tx)
 
 	err = tx.Commit()
 	panicErr(err, "tx.Commit err")
+}
 
+func validateModCaps1(t *testing.T, dbib *PSQLIB) {
 	q := `
 SELECT
 	mod_pubkey,
@@ -191,7 +167,7 @@ FROM
 ORDER BY
 	mod_pubkey
 `
-	rows, err := db.DB.Query(q)
+	rows, err := dbib.db.DB.Query(q)
 	panicErr(err, "db.DB.Query err")
 	i := 0
 	type res_t struct {
@@ -249,7 +225,9 @@ ORDER BY
 	if i != len(expres) {
 		t.Errorf("res: too little rows")
 	}
+}
 
+func validateChangeList1(t *testing.T, dbib *PSQLIB) {
 	// check if changes list properly reflect changes
 	type cl_t struct {
 		j_id        int64
@@ -266,7 +244,7 @@ ORDER BY
 		{j_id: 7, mod_id: 6},
 	}
 	checkexp := func(i int) {
-		tx, err := db.DB.Begin()
+		tx, err := dbib.db.DB.Begin()
 		panicErr(err, "db.DB.Begin err")
 		defer func() {
 			if err != nil {
@@ -326,10 +304,49 @@ ORDER BY
 		cmt()
 	}
 
-	for i := range expcl {
+	i := 0
+	for ; i < len(expcl); i++ {
 		checkexp(i)
 	}
 	checkexp(i)
+}
+
+func TestCalcPriv(t *testing.T) {
+	dbn := testutil.MakeTestDB()
+	defer testutil.DropTestDB(dbn)
+
+	lgr := newLogger()
+
+	db, err := psql.OpenAndPrepare(psql.Config{
+		ConnStr: "user=" + testutil.TestUser +
+			" dbname=" + dbn +
+			" host=" + testutil.PSQLHost,
+		Logger: lgr,
+	})
+	panicErr(err, "OAP err")
+
+	defer func() {
+		err = db.Close()
+		panicErr(err, "db close err")
+	}()
+
+	psqlibcfg := cfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
+
+	dbib, err := NewInitAndPrepare(psqlibcfg)
+	panicErr(err, "NewInitAndPrepare err")
+
+	defer func() {
+		err = dbib.Close()
+		panicErr(err, "dbib close err")
+	}()
+
+	setModCaps1(dbib)
+
+	validateModCaps1(t, dbib)
+
+	validateChangeList1(t, dbib)
 }
 
 func submitFromFile(dbib *PSQLIB, name string) (error, bool) {
@@ -339,6 +356,39 @@ func submitFromFile(dbib *PSQLIB, name string) (error, bool) {
 	defer f.Close()
 
 	return dbib.netnewsHandleSubmissionDirectly(f, false)
+}
+
+func insertFiles1(t *testing.T, dbib *PSQLIB) {
+	tests := [...]struct {
+		name          string
+		shouldsucceed bool
+	}{
+		{"msg1", true},
+		{"msg2", true},
+		{"msg3", false},
+
+		{"mod1", true},
+		{"mod2", true},
+		{"mod3", true},
+	}
+	for i := range tests {
+		ee, unexp := submitFromFile(dbib, tests[i].name)
+		if ee != nil {
+			if unexp {
+				t.Errorf("! unexpected submission err: %v", ee)
+			} else if tests[i].shouldsucceed {
+				t.Errorf("! submission error when should succeed, err: %v", ee)
+			} else {
+				t.Logf("+ submission error when should error, err: %v", ee)
+			}
+		} else {
+			if !tests[i].shouldsucceed {
+				t.Errorf("! submission succeed when should error")
+			} else {
+				t.Logf("+ submission succeed when should succeed")
+			}
+		}
+	}
 }
 
 func TestPost(t *testing.T) {
@@ -374,36 +424,7 @@ func TestPost(t *testing.T) {
 		panicErr(err, "dbib close err")
 	}()
 
-	tests := [...]struct {
-		name          string
-		shouldsucceed bool
-	}{
-		{"msg1", true},
-		{"msg2", true},
-		{"msg3", false},
-
-		{"mod1", true},
-		{"mod2", true},
-		{"mod3", true},
-	}
-	for i := range tests {
-		ee, unexp := submitFromFile(dbib, tests[i].name)
-		if ee != nil {
-			if unexp {
-				t.Errorf("! unexpected submission err: %v", ee)
-			} else if tests[i].shouldsucceed {
-				t.Errorf("! submission error when should succeed, err: %v", ee)
-			} else {
-				t.Logf("+ submission error when should error, err: %v", ee)
-			}
-		} else {
-			if !tests[i].shouldsucceed {
-				t.Errorf("! submission succeed when should error")
-			} else {
-				t.Logf("+ submission succeed when should succeed")
-			}
-		}
-	}
+	insertFiles1(t, dbib)
 
 	dbib.DemoSetModCap(
 		[]string{"2d2ca0ed8361b5569786e41b8fd7a39de8fc064270966b57510b0c7a8d1a7215"},
@@ -422,6 +443,63 @@ func TestPost(t *testing.T) {
 	}
 
 	if n_proc != 4 {
+		t.Errorf("! n_proc doesn't match got: %v", n_proc)
+	} else {
+		t.Logf("+ n_proc matches")
+	}
+}
+
+func TestPost2(t *testing.T) {
+	dbn := testutil.MakeTestDB()
+	defer testutil.DropTestDB(dbn)
+
+	lgr := newLogger()
+
+	db, err := psql.OpenAndPrepare(psql.Config{
+		ConnStr: "user=" + testutil.TestUser +
+			" dbname=" + dbn +
+			" host=" + testutil.PSQLHost,
+		Logger: lgr,
+	})
+	panicErr(err, "OAP err")
+
+	defer func() {
+		err = db.Close()
+		panicErr(err, "db close err")
+	}()
+
+	psqlibcfg := cfgPSQLIB
+	psqlibcfg.DB = &db
+	psqlibcfg.Logger = &lgr
+	psqlibcfg.NGPGlobal = "*"
+
+	dbib, err := NewInitAndPrepare(psqlibcfg)
+	panicErr(err, "NewInitAndPrepare err")
+
+	defer func() {
+		err = dbib.Close()
+		panicErr(err, "dbib close err")
+	}()
+
+	dbib.DemoSetModCap(
+		[]string{"2d2ca0ed8361b5569786e41b8fd7a39de8fc064270966b57510b0c7a8d1a7215"},
+		"",
+		ModCap{Cap: cap_delpost, CapLevel: lvl_none},
+		noneModCap)
+
+	insertFiles1(t, dbib)
+
+	n_proc := 0
+	for {
+		hadw, e := dbib.modset_processJobOnce(1, 1)
+		panicErr(e, "modset_processJobOnce")
+		if !hadw {
+			break
+		}
+		n_proc++
+	}
+
+	if n_proc != 0 {
 		t.Errorf("! n_proc doesn't match got: %v", n_proc)
 	} else {
 		t.Logf("+ n_proc matches")
