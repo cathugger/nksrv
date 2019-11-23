@@ -7,14 +7,16 @@ CREATE FUNCTION ib0.banlist_after_ins() RETURNS TRIGGER
 AS $$
 BEGIN
 
+	RAISE WARNING 'banlist_after_ins msgid <%> b_name %', NEW.msgid, NEW.b_name;
+
 	IF NEW.b_name IS NULL THEN
 
 		WITH
 			changeban AS (
 				SELECT
 					NEW.msgid AS msgid,
-					(COUNT(exibl.ban_id) <> 0) AS ph_ban,
-					MIN(exibl.dpriv)           AS ph_banpriv
+					COUNT(exibl.ban_id) <> 0 AS ph_ban,
+					MIN(exibl.dpriv)         AS ph_banpriv
 				FROM
 					ib0.banlist exibl
 				WHERE
@@ -51,7 +53,7 @@ BEGIN
 				SELECT
 					NEW.msgid,
 					COUNT(exibl.ban_id) <> 0 AS ph_ban,
-					MIN(exibl.dpriv) AS ph_banpriv
+					MIN(exibl.dpriv)         AS ph_banpriv
 				FROM
 					ib0.banlist exibl
 				WHERE

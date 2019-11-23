@@ -226,7 +226,7 @@ func (sp *PSQLIB) insertNewReply(
 
 	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
-	sp.log.LogPrintf(DEBUG, "NEWPOST %s start", pInfo.ID)
+	sp.log.LogPrintf(DEBUG, "NEWPOST %s start <%s>", pInfo.ID, pInfo.MessageID)
 
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {

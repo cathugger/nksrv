@@ -4,7 +4,7 @@
 
 -- :next
 CREATE FUNCTION
-	ib0.bposts_insert_counts() RETURNS TRIGGER
+	ib0.bposts_after_real_insert() RETURNS TRIGGER
 AS $$
 BEGIN
 
@@ -29,21 +29,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql
 -- :next
-CREATE TRIGGER x10_insert_counts
+CREATE TRIGGER x10_after_real_insert
 AFTER INSERT
 ON ib0.bposts
 FOR EACH ROW
 WHEN (NEW.date_recv IS NOT NULL)
-EXECUTE PROCEDURE ib0.bposts_insert_counts()
+EXECUTE PROCEDURE ib0.bposts_after_real_insert()
 
 
 
 -- :next
 CREATE FUNCTION
-	ib0.bposts_delete_counts() RETURNS TRIGGER
+	ib0.bposts_after_real_delete() RETURNS TRIGGER
 AS $$
 BEGIN
 
+	-- correct post count in board
 	UPDATE
 		ib0.boards
 	SET
@@ -51,6 +52,7 @@ BEGIN
 	WHERE
 		b_id = OLD.b_id;
 
+	-- correct post count in thread
 	UPDATE
 		ib0.threads
 	SET
@@ -60,17 +62,32 @@ BEGIN
 	WHERE
 		(b_id,b_t_id) = (OLD.b_id,OLD.b_t_id);
 
+	-- ref recalc will want this
+	INSERT INTO
+		t_del_bposts
+		(
+			b_id,
+			msgid,
+			p_name
+		)
+	VALUES
+		(
+			OLD.b_id,
+			OLD.msgid,
+			OLD.p_name
+		);
+
 	RETURN NULL;
 
 END;
 $$ LANGUAGE plpgsql
 -- :next
-CREATE TRIGGER x10_delete_counts
+CREATE TRIGGER x10_after_real_delete
 AFTER DELETE
 ON ib0.bposts
 FOR EACH ROW
 WHEN (OLD.date_recv IS NOT NULL)
-EXECUTE PROCEDURE ib0.bposts_delete_counts()
+EXECUTE PROCEDURE ib0.bposts_after_real_delete()
 
 
 
@@ -464,7 +481,7 @@ END;
 $$ LANGUAGE plpgsql
 -- :next
 CREATE TRIGGER before_update
-BEFORE INSERT
+BEFORE UPDATE
 ON ib0.bposts
 FOR EACH ROW
 EXECUTE PROCEDURE ib0.bposts_before_update()

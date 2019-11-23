@@ -663,6 +663,11 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
+	err = sp.makeDelTables(tx)
+	if err != nil {
+		return rInfo, err, http.StatusInternalServerError
+	}
+
 	var modid uint64
 	var hascap bool
 	var modCC ModCombinedCaps

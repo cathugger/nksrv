@@ -22,6 +22,11 @@ func (sp *PSQLIB) modset_processJobOnce(
 			return
 		}
 
+		err = sp.makeDelTables(tx)
+		if err != nil {
+			return
+		}
+
 		var delmsgids delMsgIDState
 		hadwork, delmsgids, err =
 			sp.modset_processJobOnce_tx(tx, fetchMsgsOnce, fetchMsgsTotal)

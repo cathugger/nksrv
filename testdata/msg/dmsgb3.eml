@@ -1,0 +1,21 @@
+Message-ID: <3delete@me>
+Subject: to be deleted 3
+Date: Tue, 05 Nov 2019 00:20:33 +0000
+From: <poster@nekochan>
+Newsgroups: overchan.test
+Path: nekochan!.POSTED!not-for-mail
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary=bepis
+
+--bepis
+Content-Type: text/plain; charset=US-ASCII
+
+msg to be deleted 3
+
+--bepis
+Content-Type: text/plain; charset=US-ASCII
+Content-Disposition: attachment; filename="beep.txt"
+
+attachment to be deleted
+
+--bepis--

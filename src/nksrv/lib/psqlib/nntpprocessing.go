@@ -474,6 +474,12 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		}
 	}()
 
+	err = sp.makeDelTables(tx)
+	if err != nil {
+		unexpected = true
+		return
+	}
+
 	isctlgrp := info.Newsgroup == "ctl"
 
 	var modid uint64

@@ -26,7 +26,7 @@ BEGIN
 			LEFT JOIN
 				LATERAL (
 					SELECT
-						(COUNT(*) == 0) AS cangc
+						(COUNT(*) = (0 :: BIGINT)) AS cangc
 					FROM
 						ib0.files xf
 					WHERE
@@ -47,7 +47,7 @@ BEGIN
 			SELECT
 				delfnt.fname,
 				delfnt.thumb,
-				allfnames.cangc
+				allfnt.cangc
 			FROM
 				(
 					SELECT DISTINCT
@@ -55,11 +55,13 @@ BEGIN
 						thumb
 					FROM
 						oldrows
+					WHERE
+						thumb <> ''
 				) AS delfnt
 			LEFT JOIN
 				LATERAL (
 					SELECT
-						(COUNT(*) == 0) AS cangc
+						(COUNT(*) = (0 :: BIGINT)) AS cangc
 					FROM
 						ib0.files xf
 					WHERE

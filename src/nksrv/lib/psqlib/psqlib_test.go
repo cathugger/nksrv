@@ -358,18 +358,29 @@ func submitFromFile(dbib *PSQLIB, name string) (error, bool) {
 	return dbib.netnewsHandleSubmissionDirectly(f, false)
 }
 
-func insertFiles1(t *testing.T, dbib *PSQLIB) {
-	tests := [...]struct {
-		name          string
-		shouldsucceed bool
-	}{
-		{"msg1", true},
-		{"msg2", true},
-		{"msg3", false},
+type fileInsertType1 struct {
+	name          string
+	shouldsucceed bool
+	msgid         string
+}
 
-		{"mod1", true},
-		{"mod2", true},
-		{"mod3", true},
+func insertFiles1(t *testing.T, dbib *PSQLIB) {
+	tests := [...]fileInsertType1{
+		{"msg1", true, ""},
+		{"msg2", true, ""},
+		{"msg3", false, ""},
+
+		{"dmsgb1", true, "1delete@me"},
+		{"dmsgb2", true, "1delete$reply1@me"},
+		{"dmsgb3", true, "3delete@me"},
+
+		{"mod1", true, ""},
+		{"mod2", true, ""},
+		{"mod3", true, ""},
+
+		//{"dmsga1", true},
+		//{"dmsga2", true},
+		//{"dmsga3", true},
 	}
 	for i := range tests {
 		ee, unexp := submitFromFile(dbib, tests[i].name)
@@ -386,6 +397,20 @@ func insertFiles1(t *testing.T, dbib *PSQLIB) {
 				t.Errorf("! submission succeed when should error")
 			} else {
 				t.Logf("+ submission succeed when should succeed")
+
+				if tests[i].msgid != "" {
+					var x bool
+					ee = dbib.db.DB.QueryRow("SELECT date_recv IS NOT NULL FROM ib0.gposts WHERE msgid = $1", tests[i].msgid).Scan(&x)
+					if ee != nil {
+						t.Errorf("! msgid check failed: %v", ee)
+					} else {
+						if !x {
+							t.Errorf("! msgid check returned NULL date_recv")
+						} else {
+							t.Logf("+ msgid check OK")
+						}
+					}
+				}
 			}
 		}
 	}

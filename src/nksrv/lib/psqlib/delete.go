@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"os"
 
-	xtypes "github.com/jmoiron/sqlx/types"
-
 	"nksrv/lib/cacheengine"
 	. "nksrv/lib/logx"
 	mm "nksrv/lib/minimail"
@@ -77,7 +75,7 @@ func (sp *PSQLIB) deleteByMsgID(
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
 	delst := tx.Stmt(sp.st_prep[st_mod_delete_by_msgid])
-	rows, err := delst.Query(string(cmsgids))
+	_, err = delst.Exec(string(cmsgids))
 	if err != nil {
 		err = sp.sqlError("delete by msgid query", err)
 		return
@@ -85,7 +83,7 @@ func (sp *PSQLIB) deleteByMsgID(
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> processing", cmsgids)
 	out_delmsgids, out_delmodids, err =
-		sp.postDelete(tx, rows, in_delmsgids, in_delmodids)
+		sp.postDelete(tx, in_delmsgids, in_delmodids)
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> end", cmsgids)
 	return
 }
@@ -109,7 +107,7 @@ func (sp *PSQLIB) banByMsgID(
 	sp.log.LogPrintf(
 		DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
 	banst := tx.Stmt(sp.st_prep[st_mod_ban_by_msgid])
-	rows, err := banst.Query(string(cmsgids), bidn, bpidn, reason)
+	_, err = banst.Exec(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
 		err = sp.sqlError("ban by msgid query", err)
 		return
@@ -117,13 +115,29 @@ func (sp *PSQLIB) banByMsgID(
 
 	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids)
 	out_delmsgids, out_delmodids, err =
-		sp.postDelete(tx, rows, in_delmsgids, in_delmodids)
+		sp.postDelete(tx, in_delmsgids, in_delmodids)
 	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
 	return
 }
 
+func (sp *PSQLIB) removeSrcFile(fname string) (err error) {
+	err = os.Remove(sp.src.Main() + fname)
+	if err != nil && os.IsNotExist(err) {
+		err = nil
+	}
+	return
+}
+
+func (sp *PSQLIB) removeThmFile(fname, tname string) (err error) {
+	err = os.Remove(sp.thm.Main() + fname + "." + tname)
+	if err != nil && os.IsNotExist(err) {
+		err = nil
+	}
+	return
+}
+
 func (sp *PSQLIB) postDelete(
-	tx *sql.Tx, rows *sql.Rows,
+	tx *sql.Tx,
 	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
 	err error) {
@@ -131,171 +145,154 @@ func (sp *PSQLIB) postDelete(
 	out_delmsgids = _in_delmsgids
 	out_delmodids = _in_delmodids
 
-	type affThr struct {
-		b   boardID
-		t   postID
-		loc int64
-	}
-	var thr_aff []affThr
+	var rows *sql.Rows
 
-	type affBPosts struct {
-		bn string
-		pn string
-		mi CoreMsgIDStr
+	// global msgids for cached netnews messages invalidation
+	rows, err = sp.drainDelGPosts(tx)
+	if err != nil {
+		return
 	}
-	var bp_aff []affBPosts
-
 	for rows.Next() {
-		var fname, tname string
-		var fnum, tnum int64
-		var xb_id, xt_id sql.NullInt64
-		var xt_loc sql.NullInt64
-		var msgid sql.NullString
-		var b_name sql.NullString
-		var p_name sql.NullString
-		var p_msgid sql.NullString
-		var mod_id sql.NullInt64
+		var msgid string
 
-		err = rows.Scan(
-			&fname, &fnum, &tname, &tnum,
-			&xb_id, &xt_id, &xt_loc,
-			&msgid, &b_name, &p_name, &p_msgid, &mod_id)
+		err = rows.Scan(&msgid)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("delete by msgid rows scan", err)
+			err = sp.sqlError("rows.Scan", err)
 			return
 		}
-		// file and thumb names
-		if fname != "" {
-			sp.log.LogPrintf(DEBUG, "MAYB DELET file %q num %d", fname, fnum)
-		}
-		if fname != "" && fnum == 0 {
-			sp.log.LogPrintf(DEBUG, "DELET file %q", fname)
-			err = os.Remove(sp.src.Main() + fname)
-			if err != nil && os.IsNotExist(err) {
-				err = nil
-			}
+
+		if out_delmsgids.isNotPresent(msgid) {
+			sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid)
+
+			var h *cacheengine.CacheObj
+			h, err = sp.nntpce.RemoveItemStart(msgid)
 			if err != nil {
+				// XXX wrap error?
 				rows.Close()
 				return
 			}
-		}
-		if tname != "" {
-			sp.log.LogPrintf(DEBUG, "MAYB DELET thumb %q num %d", tname, tnum)
-		}
-		if tname != "" && tnum == 0 {
-			sp.log.LogPrintf(DEBUG, "DELET thumb %q", tname)
-			err = os.Remove(sp.thm.Main() + tname)
-			if err != nil && os.IsNotExist(err) {
-				err = nil
-			}
-			if err != nil {
-				rows.Close()
-				return
-			}
-		}
-		// affected thread(s) which will need bump recalculated
-		if xb_id.Int64 != 0 && xt_id.Int64 != 0 {
-			// this won't grow large as crosspost aint so allowing
-			thr_aff = append(thr_aff, affThr{
-				b:   boardID(xb_id.Int64),
-				t:   postID(xt_id.Int64),
-				loc: xt_loc.Int64,
-			})
-		}
-		// message-ids which were delet'd, we need to delet them from cache too
-		if msgid.String != "" {
-
-			if out_delmsgids.isNotPresent(msgid.String) {
-
-				sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid.String)
-
-				var h *cacheengine.CacheObj
-				h, err = sp.nntpce.RemoveItemStart(msgid.String)
-				if err != nil {
-					// XXX wrap error?
-					rows.Close()
-					return
-				}
-				// XXX can grow large (DoS vector?)
-				out_delmsgids.delmsgids = append(out_delmsgids.delmsgids,
-					delMsgHandle{
-						id: msgid.String,
-						h:  h,
-					})
-			} else {
-				sp.log.LogPrintf(
-					DEBUG,
-					"DELET cached NNTP <%s> (ignored duplicate)", msgid.String)
-			}
-		}
-		// deleted publicboardposts
-		if b_name.String != "" && p_name.String != "" {
-			bp_aff = append(bp_aff, affBPosts{
-				bn: b_name.String,
-				pn: p_name.String,
-				mi: CoreMsgIDStr(p_msgid.String),
-			})
-		}
-		if mod_id.Int64 != 0 {
-			sp.log.LogPrintf(DEBUG, "DETEL add modid %d", mod_id.Int64)
-			out_delmodids.add(uint64(mod_id.Int64))
+			// XXX can grow large (DoS vector?)
+			out_delmsgids.delmsgids = append(out_delmsgids.delmsgids,
+				delMsgHandle{
+					id: msgid,
+					h:  h,
+				})
+		} else {
+			// XXX this shouldn't happen
+			sp.log.LogPrintf(
+				DEBUG,
+				"DELET cached NNTP <%s> (ignored duplicate)", msgid)
 		}
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("delete by msgid rows err", err)
+		err = sp.sqlError("drainDelMsgIDs rows", err)
 		return
 	}
 
-	// thread opts, refresh bump statements
-	var toptsst, refbump *sql.Stmt
+	// board post infos for references invalidation
+	// XXX maybe we could just queue job for this inside trigger?
 
-	// now de-bump affected threads
-	for _, ta := range thr_aff {
-		sp.log.LogPrintf(DEBUG, "DEBUMP board %d thread %d", ta.b, ta.t)
+	type affBPost struct {
+		bn string
+		pn string
+		mi string
+	}
+	var bp_affs []affBPost
 
-		if toptsst == nil {
-			toptsst = tx.Stmt(sp.st_prep[st_mod_bname_topts_by_tid])
-			refbump = tx.Stmt(sp.st_prep[st_mod_refresh_bump_by_tid])
-		}
+	rows, err = sp.drainDelGPosts(tx)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var aff affBPost
 
-		var bname string
-		var jbTO xtypes.JSONText // board threads options
-		var jtTO xtypes.JSONText // thread options
-		threadOpts := defaultThreadOptions
-
-		// first obtain thread opts to figure out bump limit
-		err = toptsst.
-			QueryRow(ta.b, ta.t).
-			Scan(&bname, &jbTO, &jtTO)
+		err = rows.Scan(&aff.bn, &aff.pn, &aff.mi)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				sp.log.LogPrintf(DEBUG, "DEBUMP boardthread missing wtf")
-				// just skip it
-				continue
-			}
-			err = sp.sqlError("board x thread row query scan", err)
+			rows.Close()
+			err = sp.sqlError("rows.Scan", err)
 			return
 		}
 
-		err = sp.unmarshalBoardThreadOpts(&threadOpts, jbTO, jtTO)
-		if err != nil {
-			return
-		}
-		sp.applyInstanceThreadOptions(&threadOpts, bname)
+		bp_affs = append(bp_affs, aff)
+	}
+	if err = rows.Err(); err != nil {
+		err = sp.sqlError("drainDelGPosts rows", err)
+		return
+	}
 
-		// perform bump refresh
-		_, err = refbump.Exec(ta.b, ta.t, threadOpts.BumpLimit)
+	// file deletion
+	rows, err = sp.drainDelFiles(tx)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var fname string
+
+		err = rows.Scan(&fname)
 		if err != nil {
-			err = sp.sqlError("thread debump exec", err)
+			rows.Close()
+			err = sp.sqlError("rows.Scan", err)
 			return
 		}
+
+		sp.log.LogPrintf(DEBUG, "DELET file %q", fname)
+		err = sp.removeSrcFile(fname)
+		if err != nil {
+			rows.Close()
+			return
+		}
+	}
+
+	// thumbnail deletion
+	rows, err = sp.drainDelFThumbs(tx)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var fname, tname string
+
+		err = rows.Scan(&fname, &tname)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("rows.Scan", err)
+			return
+		}
+
+		sp.log.LogPrintf(DEBUG, "DELET thumb %q %q", fname, tname)
+		err = sp.removeThmFile(fname, tname)
+		if err != nil {
+			rows.Close()
+			return
+		}
+	}
+
+	// modids of nuked bposts
+	rows, err = sp.drainDelModIDs(tx)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var mod_id uint64
+
+		err = rows.Scan(&mod_id)
+		if err != nil {
+			rows.Close()
+			err = sp.sqlError("rows.Scan", err)
+			return
+		}
+
+		out_delmodids.add(mod_id)
+	}
+	if err = rows.Err(); err != nil {
+		err = sp.sqlError("drainDelGPosts rows", err)
+		return
 	}
 
 	// re-calculate affected references
 	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
-	for _, bpa := range bp_aff {
-		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, bpa.mi, xref_up_st)
+	for _, bpa := range bp_affs {
+		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, CoreMsgIDStr(bpa.mi), xref_up_st)
 		if err != nil {
 			return
 		}
@@ -336,6 +333,11 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 			_ = tx.Rollback()
 		}
 	}()
+
+	err = sp.makeDelTables(tx)
+	if err != nil {
+		return
+	}
 
 	err = sp.preModLockFiles(tx)
 	if err != nil {
