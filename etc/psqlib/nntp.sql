@@ -8,15 +8,15 @@ FROM
 WHERE
 	msgid = $1
 
--- :name nntp_article_valid_and_banned_by_msgid
+-- :name nntp_article_valid_by_msgid
 -- input: cmsgid
--- output: is_banned
+-- output: dummy 1
 SELECT
-	(date_recv IS NULL) AS is_banned
+	1
 FROM
 	ib0.gposts
 WHERE
-	msgid = $1
+	msgid = $1 AND date_recv IS NOT NULL
 
 
 -- :name nntp_article_num_by_msgid

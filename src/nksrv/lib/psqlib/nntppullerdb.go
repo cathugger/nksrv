@@ -252,7 +252,7 @@ func (s *PullerDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
 func (s *PullerDB) DoesReferenceExist(
 	ref FullMsgIDStr) (exists bool, err error) {
 
-	exists, _, err = s.sp.nntpCheckArticleValidAndBanned(cutMsgID(ref))
+	exists, err = s.sp.nntpCheckArticleValid(cutMsgID(ref))
 	return
 }
 
