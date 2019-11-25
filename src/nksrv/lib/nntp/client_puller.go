@@ -37,7 +37,8 @@ type PullerDatabase interface {
 	StoreTempGroup(group []byte) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
-	IsArticleWanted(msgid FullMsgIDStr) (bool, interface{}, error)
+	IsArticleWanted(
+		msgid FullMsgIDStr, ingroup string) (bool, interface{}, error)
 	DoesReferenceExist(ref FullMsgIDStr) (bool, error)
 
 	ReadArticle(
@@ -387,7 +388,7 @@ func (c *NNTPPuller) doGroup(
 }
 
 func (c *NNTPPuller) eatArticle(
-	msgid FullMsgIDStr, expectedgroup string) (
+	msgid FullMsgIDStr, ingroup string, wdata interface{}) (
 	err error, fatal bool, wantroot FullMsgIDStr) {
 
 	dr := c.openDotReader()
@@ -400,7 +401,7 @@ func (c *NNTPPuller) eatArticle(
 	//c.log.LogPrintf(DEBUG, "eatArticle: inside")
 
 	err, fatal, wantroot = c.db.ReadArticle(
-		dr, CutMsgIDStr(msgid), expectedgroup)
+		dr, CutMsgIDStr(msgid), ingroup, wdata)
 
 	if err != nil {
 		if fatal {
@@ -413,7 +414,7 @@ func (c *NNTPPuller) eatArticle(
 }
 
 func (c *NNTPPuller) handleArticleResponse(
-	msgid FullMsgIDStr, group string) (
+	msgid FullMsgIDStr, group string, wdata interface{}) (
 	normalok bool, err error, fatal bool, wantroot FullMsgIDStr) {
 
 	var code uint
@@ -452,7 +453,7 @@ func (c *NNTPPuller) handleArticleResponse(
 		return
 	}
 	// process article
-	err, fatal, wantroot = c.eatArticle(msgid, group)
+	err, fatal, wantroot = c.eatArticle(msgid, group, wdata)
 	if err != nil {
 		if fatal {
 			return
@@ -493,9 +494,10 @@ func (c *NNTPPuller) processTODOList(
 	var maxidMu sync.Mutex
 
 	responseHandler := func(
-		id int64, msgid FullMsgIDStr) (err error, fatal bool) {
+		id int64, msgid FullMsgIDStr, wdata interface{}) (
+		err error, fatal bool) {
 
-		normalok, err, fatal, _ := c.handleArticleResponse(msgid, group)
+		normalok, err, fatal, _ := c.handleArticleResponse(msgid, group, wdata)
 		if err != nil {
 			return
 		}
@@ -514,11 +516,12 @@ func (c *NNTPPuller) processTODOList(
 	type todoLoopArticle struct {
 		msgid FullMsgIDStr
 		id    int64
+		wdata interface{}
 	}
 
 	responseLoop := func(ch <-chan todoLoopArticle, endch chan<- error) {
 		for a := range ch {
-			err, fatal := responseHandler(a.id, a.msgid)
+			err, fatal := responseHandler(a.id, a.msgid, a.wdata)
 			if err != nil {
 				if fatal {
 					endch <- err
@@ -574,10 +577,13 @@ func (c *NNTPPuller) processTODOList(
 		default:
 		}
 
-		var wanted bool
-		var e error
+		var (
+			wanted bool
+			wdata  interface{}
+			e      error
+		)
 		if c.todoList[i].msgid != "" {
-			wanted, e = c.db.IsArticleWanted(c.todoList[i].msgid)
+			wanted, wdata, e = c.db.IsArticleWanted(c.todoList[i].msgid, group)
 		} else {
 			wanted = true
 		}
@@ -646,6 +652,7 @@ func (c *NNTPPuller) processTODOList(
 		tla := todoLoopArticle{
 			id:    int64(c.todoList[i].id),
 			msgid: c.todoList[i].msgid,
+			wdata: wdata,
 		}
 
 		select {

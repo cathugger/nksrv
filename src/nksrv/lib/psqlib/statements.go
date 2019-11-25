@@ -76,6 +76,10 @@ const (
 
 	st_mod_load_files
 
+	st_mod_check_article_for_push
+	st_mod_delete_ph_for_push
+	st_mod_add_ph_after_push
+
 	st_mod_joblist_modlist_changes_get
 	st_mod_joblist_modlist_changes_set
 	st_mod_joblist_modlist_changes_del
@@ -169,6 +173,10 @@ var st_names = [st_max]st_reference{
 	st_reference{"mod", "mod_fetch_and_clear_mod_msgs_continue"},
 
 	st_reference{"mod", "mod_load_files"},
+
+	st_reference{"mod", "mod_check_article_for_push"},
+	st_reference{"mod", "mod_delete_ph_for_push"},
+	st_reference{"mod", "mod_add_ph_after_push"},
 
 	st_reference{"mod_joblist", "mod_joblist_modlist_changes_get"},
 	st_reference{"mod_joblist", "mod_joblist_modlist_changes_set"},

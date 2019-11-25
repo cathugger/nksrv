@@ -268,22 +268,21 @@ func (sp *PSQLIB) checkFiles() {
 }
 
 type phdata struct {
-	ph_ban bool
+	ph_ban     bool
 	ph_banpriv caplvl_type
 }
 
 type articlecheckinfo struct {
-	g_p_id uint64
+	g_p_id   uint64
 	has_real bool
-	has_ph bool
+	has_ph   bool
 	phdata
 }
 
 type savephdata struct {
-	ph_ban sql.NullBool
+	ph_ban     sql.NullBool
 	ph_banpriv sql.NullInt32
 }
-
 
 func (sp *PSQLIB) checkArticleForPush(
 	cmsgids CoreMsgIDStr) (i articlecheckinfo, e error) {
@@ -329,7 +328,10 @@ func (sp *PSQLIB) deletePHForPush(
 
 	st := sp.st_prep[st_mod_delete_ph_for_push]
 
-	banpriv := sql.NullInt32{Valid: phd.ph_banpriv >= 0, Int32: phd.ph_banpriv}
+	banpriv := sql.NullInt32{
+		Valid: phd.ph_banpriv >= 0,
+		Int32: int32(phd.ph_banpriv),
+	}
 	e = st.
 		QueryRow(
 			g_p_id,

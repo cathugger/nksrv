@@ -62,6 +62,7 @@ const (
 var caplvlx_mask = [caplvlx_num]cap_type{cap_delpost}
 
 type caplvl_type = int16
+
 const caplvl_maxval = 0x7Fff
 
 type ModCap struct {

@@ -286,11 +286,12 @@ var (
 )
 
 func (s *PullerDB) ReadArticle(
-	r io.Reader, msgid CoreMsgIDStr, expectgroup string) (
+	r io.Reader,
+	msgid CoreMsgIDStr, ingroup string, wdata interface{}) (
 	err error, unexpected bool, wantroot FullMsgIDStr) {
 
 	info, newname, H, err, unexpected, wantroot :=
-		s.sp.handleIncoming(r, msgid, expectgroup, nntpPullerDir, s.notrace)
+		s.sp.handleIncoming(r, msgid, ingroup, nntpPullerDir, s.notrace)
 	if err != nil {
 		return
 	}
