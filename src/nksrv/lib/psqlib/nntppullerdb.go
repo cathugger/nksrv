@@ -239,14 +239,39 @@ func (s *PullerDB) LoadTempGroup() (
 	return
 }
 
-func (s *PullerDB) IsArticleWanted(msgid FullMsgIDStr) (bool, error) {
-	cmsgid := cutMsgID(msgid)
+func (s *PullerDB) IsArticleWanted(
+	fmsgid FullMsgIDStr, ingroup string) (
+	wanted bool, wdata interface{}, err error) {
+
+	cmsgid := cutMsgID(fmsgid)
 	// check if we already have it
-	exists, err := s.sp.nntpCheckArticleExistsOrBanned(cmsgid)
+	// XXX
+	i, err := s.sp.checkArticleForPush(cmsgid)
 	if err != nil {
-		return false, err
+		return
 	}
-	return !exists, nil
+
+	// TODO check board maybe once we pull boardbans from there
+
+	if i.has_real ||
+		(i.ph_ban && (i.ph_banpriv == 0 || !isGlobalCtl(ingroup))) {
+
+		// not wanted
+		return
+	}
+
+	// possibly wanted at this point
+	wanted = true
+	if i.has_ph {
+		// we have some placeholder data to preserve
+		wdata = i
+	}
+
+	return
+}
+
+func isGlobalCtl(group string) bool {
+	return group == "ctl"
 }
 
 func (s *PullerDB) DoesReferenceExist(

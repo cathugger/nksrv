@@ -37,10 +37,12 @@ type PullerDatabase interface {
 	StoreTempGroup(group []byte) error
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
-	IsArticleWanted(msgid FullMsgIDStr) (bool, error)
+	IsArticleWanted(msgid FullMsgIDStr) (bool, interface{}, error)
 	DoesReferenceExist(ref FullMsgIDStr) (bool, error)
 
-	ReadArticle(r io.Reader, msgid CoreMsgIDStr, expectedgroup string) (
+	ReadArticle(
+		r io.Reader,
+		msgid CoreMsgIDStr, fromgroup string, wdata interface{}) (
 		err error, unexpected bool, wantedroot FullMsgIDStr)
 }
 

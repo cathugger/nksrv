@@ -447,3 +447,52 @@ ORDER BY
 	fsize
 LIMIT
 	200
+
+
+
+-- :name mod_check_article_for_push
+-- extract stuff important to know on push
+-- input: msgid
+SELECT
+	g_p_id,
+	date_recv IS NOT NULL,
+	has_ph IS TRUE,
+	ph_ban IS TRUE,
+	ph_banpriv
+FROM
+	ib0.gposts
+WHERE
+	msgid = $1
+
+-- :name mod_delete_ph_for_push
+-- incase there's only ph data in there, delete returning all of it
+-- also recheck values and don't delete if there's inconsistency
+DELETE FROM
+	ib0.gposts
+WHERE
+(
+	g_p_id,
+	date_recv IS NOT NULL,
+	has_ph IS TRUE,
+	ph_ban IS TRUE,
+	ph_banpriv
+) = (
+	$1,
+	FALSE,
+	TRUE,
+	$2,
+	$3
+)
+RETURNING
+	-- all of ph data
+	ph_ban,
+	ph_banpriv
+
+-- :name mod_add_ph_after_push
+UPDATE
+	ib0.gposts
+SET
+	ph_ban = $2,
+	ph_banpriv = $3
+WHERE
+	g_p_id = $1

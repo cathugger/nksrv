@@ -262,7 +262,105 @@ func (sp *PSQLIB) DemoSetModCap(
 	}
 }
 
-func checkFiles() {
+func (sp *PSQLIB) checkFiles() {
 	//
 	//sp.st_prep[st_mod_load_files].
+}
+
+type phdata struct {
+	ph_ban bool
+	ph_banpriv caplvl_type
+}
+
+type articlecheckinfo struct {
+	g_p_id uint64
+	has_real bool
+	has_ph bool
+	phdata
+}
+
+type savephdata struct {
+	ph_ban sql.NullBool
+	ph_banpriv sql.NullInt32
+}
+
+
+func (sp *PSQLIB) checkArticleForPush(
+	cmsgids CoreMsgIDStr) (i articlecheckinfo, e error) {
+
+	st := sp.st_prep[st_mod_check_article_for_push]
+
+	var banpriv sql.NullInt32
+	e = st.QueryRow(cmsgids).
+		Scan(
+			&i.g_p_id,
+			&i.has_real,
+			&i.has_ph,
+			&i.ph_ban,
+			&banpriv)
+
+	if e != nil {
+		if e == sql.ErrNoRows {
+			e = nil
+			return
+		}
+		e = sp.sqlError("", e)
+		return
+	}
+
+	if !i.has_real && !i.has_ph {
+		panic("empty")
+	}
+
+	if banpriv.Valid {
+		if uint32(banpriv.Int32) > caplvl_maxval {
+			panic("too big")
+		}
+		i.ph_banpriv = caplvl_type(banpriv.Int32)
+	} else {
+		i.ph_banpriv = -1
+	}
+
+	return
+}
+
+func (sp *PSQLIB) deletePHForPush(
+	g_p_id uint64, phd phdata) (ok bool, sphd savephdata, e error) {
+
+	st := sp.st_prep[st_mod_delete_ph_for_push]
+
+	banpriv := sql.NullInt32{Valid: phd.ph_banpriv >= 0, Int32: phd.ph_banpriv}
+	e = st.
+		QueryRow(
+			g_p_id,
+			phd.ph_ban,
+			banpriv).
+		Scan(
+			&sphd.ph_ban,
+			&sphd.ph_banpriv)
+	if e != nil {
+		if e == sql.ErrNoRows {
+			e = nil
+			return
+		}
+		e = sp.sqlError("", e)
+		return
+	}
+	ok = true
+	return
+}
+
+func (sp *PSQLIB) addPHAfterPush(g_p_id uint64, sphd savephdata) (e error) {
+
+	st := sp.st_prep[st_mod_add_ph_after_push]
+
+	_, e = st.
+		Exec(
+			g_p_id,
+			sphd.ph_ban,
+			sphd.ph_banpriv)
+	if e != nil {
+		e = sp.sqlError("", e)
+	}
+	return
 }

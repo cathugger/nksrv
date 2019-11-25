@@ -61,15 +61,18 @@ const (
 
 var caplvlx_mask = [caplvlx_num]cap_type{cap_delpost}
 
+type caplvl_type = int16
+const caplvl_maxval = 0x7Fff
+
 type ModCap struct {
 	Cap cap_type
 
-	CapLevel [caplvlx_num]int16 // -1 = unset
+	CapLevel [caplvlx_num]caplvl_type // -1 = unset
 }
 
 var noneModCap = ModCap{
 	Cap:      0,
-	CapLevel: [caplvlx_num]int16{-1},
+	CapLevel: [caplvlx_num]caplvl_type{-1},
 }
 
 func (c ModCap) String() string {
@@ -83,6 +86,7 @@ func (c ModCap) String() string {
 // MorePriv tells whether o is privileged more by even
 // one relevant capability bit or relevant privilege level
 func (c ModCap) MorePriv(o ModCap, mask cap_type) bool {
+
 	cc, oc := c.Cap&mask, o.Cap&mask
 	if cc|oc != cc {
 		// oc filled in some cc gaps
@@ -133,10 +137,10 @@ type ModCombinedCaps struct {
 func processCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
 	for i := range mc.CapLevel {
 		if i < len(arr) && arr[i].Valid {
-			if uint32(arr[i].Int32) > 0x7Fff {
+			if uint32(arr[i].Int32) > caplvl_maxval {
 				panic("too large val")
 			}
-			mc.CapLevel[i] = int16(arr[i].Int32)
+			mc.CapLevel[i] = caplvl_type(arr[i].Int32)
 		} else {
 			mc.CapLevel[i] = -1
 		}
