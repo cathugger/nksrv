@@ -590,6 +590,7 @@ func (sp *PSQLIB) commonNewPost(
 	srefs, irefs := ibref_nntp.ParseReferences(pInfo.MI.Message)
 	var inreplyto []string
 	// we need to build In-Reply-To beforehand
+	// best-effort basis, in most cases it'll be okay
 	inreplyto, err = sp.processReferencesOnPost(
 		sp.db.DB, srefs, bid, postID(tid.Int64), isctlgrp)
 	if err != nil {
@@ -733,6 +734,12 @@ func (sp *PSQLIB) commonNewPost(
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pInfo.MessageID)
 	}
 
+	// NOTE
+	// current method may sometimes fail finding stuff in highly concurrent conditions
+	// we're inside transaction, therefore we won't see messages being added in other transactions
+	// messages in other thransactions also won't be able to see our new message so they wont be able to notify
+	// in idea, after-tx job should find us, but only if it runs after we have commited (not guaranteed)
+	// TODO implement job doing after-processing for this; initial best-effort scan can still be handy
 	err = sp.processRefsAfterPost(
 		tx,
 		srefs, irefs, inreplyto,

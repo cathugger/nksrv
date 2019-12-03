@@ -76,3 +76,26 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql
+
+
+
+-- :next
+CREATE FUNCTION
+	ib0.bposts_recalc_refs(r RECORD) RETURNS VOID
+AS $$
+BEGIN
+
+	INSERT INTO
+		ib0.refs_deps_recalc (p_name,b_name,msgid)
+	SELECT
+		r.p_name,b.b_name,r.msgid
+	FROM
+		ib0.boards b
+	WHERE
+		r.b_id = b.b_id;
+
+	-- poke process which can act upon it
+	NOTIFY ib0_refs_deps_recalc;
+
+END;
+$$ LANGUAGE plpgsql

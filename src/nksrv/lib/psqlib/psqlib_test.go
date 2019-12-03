@@ -394,7 +394,6 @@ var testsOutput1 = []fileInsertOutputType1{
 	{true, ""},
 }
 
-
 func insertFiles1(t *testing.T, dbib *PSQLIB, files []fileInsertInputType1, results []fileInsertOutputType1) {
 	for i := range files {
 		ee, unexp := submitFromFile(dbib, files[i].name)

@@ -20,9 +20,13 @@ BEGIN
 	SET
 		p_count = p_count + 1,
 		f_count = f_count + NEW.f_count,
-		fr_count = fr_count + ((NEW.f_count > 0 AND NEW.b_p_id != NEW.b_t_id) :: INTEGER)
+		fr_count = fr_count +
+			((NEW.f_count > 0 AND NEW.b_p_id != NEW.b_t_id) :: INTEGER)
 	WHERE
 		(b_id,b_t_id) = (NEW.b_id,NEW.b_t_id);
+
+	-- recalc refs for this bpost
+	PERFORM ib0.bposts_recalc_refs(NEW);
 
 	RETURN NULL;
 
@@ -58,24 +62,13 @@ BEGIN
 	SET
 		p_count = p_count - 1,
 		f_count = f_count - OLD.f_count,
-		fr_count = fr_count - ((OLD.f_count > 0 AND OLD.b_p_id != OLD.b_t_id) :: INTEGER)
+		fr_count = fr_count -
+			((OLD.f_count > 0 AND OLD.b_p_id != OLD.b_t_id) :: INTEGER)
 	WHERE
 		(b_id,b_t_id) = (OLD.b_id,OLD.b_t_id);
 
-	-- ref recalc will want this
-	INSERT INTO
-		t_del_bposts
-		(
-			b_id,
-			msgid,
-			p_name
-		)
-	VALUES
-		(
-			OLD.b_id,
-			OLD.msgid,
-			OLD.p_name
-		);
+	-- recalc refs for this bpost
+	PERFORM ib0.bposts_recalc_refs(OLD);
 
 	RETURN NULL;
 

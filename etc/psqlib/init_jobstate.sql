@@ -8,7 +8,7 @@ CREATE TABLE ib0.modlist_changes (
 	j_id   BIGINT   GENERATED ALWAYS AS IDENTITY   PRIMARY KEY,
 
 	-- what caused this change
-	mod_id  BIGINT  NOT NULL,
+	mod_id   BIGINT   NOT NULL,
 
 	-- change state
 	t_date_sent TIMESTAMP WITH TIME ZONE,
@@ -20,11 +20,16 @@ CREATE TABLE ib0.modlist_changes (
 		REFERENCES ib0.modlist
 		ON DELETE CASCADE
 )
+-- :next
+CREATE INDEX ON ib0.modlist_changes (mod_id)
+
+
+
 
 -- :next
--- table used to hold state of bpost ref recalculations
--- bpost refs are recalc'd from the bottom to the top
-CREATE TABLE ib0.refs_recalc (
+-- table used to hold state of bpost backrefs processing
+-- bpost backrefs are processed from the bottom to the top
+CREATE TABLE ib0.refs_deps_recalc (
 
 	j_id   BIGINT   GENERATED ALWAYS AS IDENTITY   PRIMARY KEY,
 
@@ -37,3 +42,22 @@ CREATE TABLE ib0.refs_recalc (
 	b_id   INTEGER,
 	b_p_id BIGINT
 )
+
+
+-- :next
+-- table used to hold bpost ids TODO'd for recalc
+CREATE TABLE ib0.refs_recalc (
+
+	j_id   BIGINT   GENERATED ALWAYS AS IDENTITY   PRIMARY KEY,
+
+	b_id   INTEGER NOT NULL,
+	b_p_id BIGINT  NOT NULL,
+
+
+	FOREIGN KEY (b_id,b_p_id)
+		REFERENCES ib0.bposts
+		MATCH FULL
+		ON DELETE CASCADE
+)
+-- :next
+CREATE INDEX ON ib0.refs_recalc (b_id,b_p_id)
