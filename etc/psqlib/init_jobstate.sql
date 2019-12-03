@@ -34,6 +34,6 @@ CREATE TABLE ib0.refs_recalc (
 	msgid  TEXT  COLLATE "C",
 
 	-- change state
-	b_id   INTEGER NOT NULL,
-	b_p_id BIGINT  NOT NULL
+	b_id   INTEGER,
+	b_p_id BIGINT
 )

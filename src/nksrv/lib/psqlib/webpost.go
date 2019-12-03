@@ -714,11 +714,6 @@ func (sp *PSQLIB) commonNewPost(
 		// we should execute it
 		// we never put message in file when processing message
 
-		err = sp.preModLockFiles(tx)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
-
 		// msgid deletion state
 		var delmsgids delMsgIDState
 		defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()

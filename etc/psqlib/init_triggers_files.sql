@@ -3,80 +3,79 @@
 
 
 -- :next
-CREATE FUNCTION ib0.files_after_delete() RETURNS TRIGGER
+CREATE FUNCTION ib0.files_after_insert() RETURNS TRIGGER
 AS $$
 BEGIN
 
 	INSERT INTO
-		t_del_files (fname)
+		ib0.files_uniq_fname AS uf (fname,cnt)
 	SELECT
-		fname
+		fname,1
 	FROM
-		(
-			SELECT
-				delfnames.fname,
-				allfnames.cangc
-			FROM
-				(
-					SELECT DISTINCT
-						fname
-					FROM
-						oldrows
-				) AS delfnames
-			LEFT JOIN
-				LATERAL (
-					SELECT
-						(COUNT(*) = (0 :: BIGINT)) AS cangc
-					FROM
-						ib0.files xf
-					WHERE
-						delfnames.fname = xf.fname
-				) AS allfnames
-			ON
-				TRUE
-		) AS gcf
-	WHERE
-		cangc IS NOT FALSE;
+		newrows
+	ON CONFLICT (fname)
+	DO UPDATE
+	SET
+		cnt = uf.cnt + 1;
 
 	INSERT INTO
-		t_del_fthumbs (fname,thumb)
+		ib0.files_uniq_thumb AS ut (fname,thumb,cnt)
 	SELECT
-		fname,thumb
+		fname,thumb,1
 	FROM
-		(
-			SELECT
-				delfnt.fname,
-				delfnt.thumb,
-				allfnt.cangc
-			FROM
-				(
-					SELECT DISTINCT
-						fname,
-						thumb
-					FROM
-						oldrows
-					WHERE
-						thumb <> ''
-				) AS delfnt
-			LEFT JOIN
-				LATERAL (
-					SELECT
-						(COUNT(*) = (0 :: BIGINT)) AS cangc
-					FROM
-						ib0.files xf
-					WHERE
-						(delfnt.fname,delfnt.thumb) = (xf.fname,xf.thumb)
-				) AS allfnt
-			ON
-				TRUE
-		) AS gcft
+		newrows
 	WHERE
-		cangc IS NOT FALSE;
+		thumb <> ''
+	ON CONFLICT (fname,thumb)
+	DO UPDATE
+	SET
+		cnt = ut.cnt + 1;
 
 	RETURN NULL;
 
 END;
 $$ LANGUAGE plpgsql
+
+-- :next
+CREATE TRIGGER after_insert
+AFTER INSERT
+ON ib0.files
+REFERENCING NEW TABLE AS newrows
+FOR EACH STATEMENT
+EXECUTE PROCEDURE ib0.files_after_insert()
+
+
+
+
+-- :next
+CREATE FUNCTION ib0.files_after_delete() RETURNS TRIGGER
+AS $$
+BEGIN
+
+	UPDATE
+		ib0.files_uniq_fname uf
+	SET
+		cnt = uf.cnt - 1
+	FROM
+		oldrows
+	WHERE
+		uf.fname = oldrows.fname;
+
+	UPDATE
+		ib0.files_uniq_thumb ut
+	SET
+		cnt = ut.cnt - 1
+	FROM
+		oldrows
+	WHERE
+		oldrows.thumb <> '' AND
+			(ut.fname,ut.thumb) = (oldrows.fname,oldrows.thumb);
+
+	RETURN NULL;
+
+END;
+$$ LANGUAGE plpgsql
+
 -- :next
 CREATE TRIGGER after_delete
 AFTER DELETE
@@ -84,3 +83,69 @@ ON ib0.files
 REFERENCING OLD TABLE AS oldrows
 FOR EACH STATEMENT
 EXECUTE PROCEDURE ib0.files_after_delete()
+
+
+-- :next
+CREATE FUNCTION ib0.files_uniq_fname_update_delete() RETURNS TRIGGER
+AS $$
+BEGIN
+
+	-- delete instead of updating
+	DELETE FROM
+		ib0.files_uniq_fname uf
+	WHERE
+		uf.fname = NEW.fname;
+
+	-- mark that we deleted
+	INSERT INTO
+		t_del_files (fname)
+	VALUES
+		(NEW.fname);
+
+	-- do not update
+	RETURN NULL;
+
+END;
+$$ LANGUAGE plpgsql
+
+-- :next
+CREATE TRIGGER update_delete
+BEFORE UPDATE
+ON ib0.files_uniq_fname
+FOR EACH ROW
+WHEN (NEW.cnt = 0)
+EXECUTE PROCEDURE ib0.files_uniq_fname_update_delete()
+
+
+
+
+-- :next
+CREATE FUNCTION ib0.files_uniq_thumb_update_delete() RETURNS TRIGGER
+AS $$
+BEGIN
+
+	-- delete instead of updating
+	DELETE FROM
+		ib0.files_uniq_thumb ut
+	WHERE
+		(ut.fname,ut.thumb) = (NEW.fname,NEW.thumb);
+
+	-- mark that we deleted
+	INSERT INTO
+		t_del_fthumbs (fname,thumb)
+	VALUES
+		(NEW.fname,NEW.thumb);
+
+	-- do not update
+	RETURN NULL;
+
+END;
+$$ LANGUAGE plpgsql
+
+-- :next
+CREATE TRIGGER update_delete
+BEFORE UPDATE
+ON ib0.files_uniq_thumb
+FOR EACH ROW
+WHEN (NEW.cnt = 0)
+EXECUTE PROCEDURE ib0.files_uniq_thumb_update_delete()

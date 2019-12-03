@@ -528,12 +528,6 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 	// execute mod cmd
 	if hascap {
 
-		err = sp.preModLockFiles(tx)
-		if err != nil {
-			unexpected = true
-			return
-		}
-
 		var cref CoreMsgIDStr
 		if info.FRef != "" {
 			cref = cutMsgID(info.FRef)

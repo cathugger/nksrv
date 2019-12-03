@@ -317,10 +317,39 @@ CREATE TABLE ib0.files (
 		ON UPDATE CASCADE
 )
 -- :next
-CREATE INDEX ON ib0.files (g_p_id,f_id) -- f_id helps sorted retrieval
+-- "lookup by g_p_id"
+-- f_id helps sorted retrieval
+CREATE INDEX ON ib0.files (g_p_id,f_id)
 -- :next
+-- XXX is this used by something?
 CREATE INDEX ON ib0.files (fname,thumb)
 
+
+-- :next
+-- for fnames GC
+CREATE TABLE ib0.files_uniq_fname (
+	-- key
+	fname  TEXT    COLLATE "C"  NOT NULL,
+
+	-- count
+	cnt    BIGINT               NOT NULL,
+
+
+	PRIMARY KEY (fname)
+)
+-- :next
+-- for thumbs GC
+CREATE TABLE ib0.files_uniq_thumb (
+	-- key
+	fname  TEXT    COLLATE "C"  NOT NULL,
+	thumb  TEXT    COLLATE "C"  NOT NULL,
+
+	-- count
+	cnt    BIGINT               NOT NULL,
+
+
+	PRIMARY KEY (fname,thumb)
+)
 
 -- :next
 -- distinct capability grants

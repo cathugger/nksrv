@@ -10,6 +10,7 @@ import (
 )
 
 // NOTE: nuking OP also nukes whole thread
+// OLD {{{
 // NOTE:
 // because of file dedup we do,
 // we must write-lock whole table to avoid new posts adding new entries
@@ -21,17 +22,9 @@ import (
 // that would then provide row-level locks?
 // idk if and how really that'd work.
 // or we could just not bother with it and leave it for filesystem.
-
-func (sp *PSQLIB) preModLockFiles(tx *sql.Tx) (err error) {
-
-	sp.log.LogPrintf(DEBUG, "pre-mod LOCK of ib0.files")
-
-	_, err = tx.Exec("LOCK ib0.files IN SHARE ROW EXCLUSIVE MODE")
-	if err != nil {
-		err = sp.sqlError("lock files query", err)
-	}
-	return
-}
+// }}}
+//
+// we don't need locking because we do dedup counting inside database now
 
 type delMsgHandle struct {
 	id string
@@ -336,12 +329,6 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 
 	err = sp.makeDelTables(tx)
 	if err != nil {
-		return
-	}
-
-	err = sp.preModLockFiles(tx)
-	if err != nil {
-		sp.log.LogPrintf(ERROR, "%v", err)
 		return
 	}
 
