@@ -107,9 +107,9 @@ arguments list:
       href="{% (env).FRoot %}/_src/{{urlpath .ID}}/{{urlpath .Original}}"
       target="_blank"
       rel="noopener"
-     >{{html (truncatefn .Original 24)}}</a>
+     >{{html (truncatefn .Original 24)}}</a> {{/**/ -}}
 
-     ({{fileinfo .}})
+     ({{fileinfo .}}) {{- /**/ -}}
     </p>
 
     <a

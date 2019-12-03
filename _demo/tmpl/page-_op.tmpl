@@ -106,9 +106,9 @@ arguments list:
      rel="noopener"
     >
      {{- html (truncatefn .Original 24) -}}
-    </a>
+    </a> {{/**/ -}}
 
-    ({{fileinfo .}})
+    ({{fileinfo .}}) {{- /**/ -}}
    </p>
 
    <a

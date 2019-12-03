@@ -358,49 +358,63 @@ func submitFromFile(dbib *PSQLIB, name string) (error, bool) {
 	return dbib.netnewsHandleSubmissionDirectly(f, false)
 }
 
-type fileInsertType1 struct {
-	name          string
+type fileInsertInputType1 struct {
+	name string
+}
+
+type fileInsertOutputType1 struct {
 	shouldsucceed bool
 	msgid         string
 }
 
-func insertFiles1(t *testing.T, dbib *PSQLIB) {
-	tests := [...]fileInsertType1{
-		{"msg1", true, ""},
-		{"msg2", true, ""},
-		{"msg3", false, ""},
+var testsInput1 = []fileInsertInputType1{
+	{"msg1"},
+	{"msg2"},
+	{"msg3"},
 
-		{"dmsgb1", true, "1delete@me"},
-		{"dmsgb2", true, "1delete$reply1@me"},
-		{"dmsgb3", true, "3delete@me"},
+	{"dmsgb1"},
+	{"dmsgb2"},
+	{"dmsgb3"},
 
-		{"mod1", true, ""},
-		{"mod2", true, ""},
-		{"mod3", true, ""},
+	{"mod1"},
+	{"mod2"},
+	{"mod3"},
+}
+var testsOutput1 = []fileInsertOutputType1{
+	{true, ""},
+	{true, ""},
+	{false, ""},
 
-		//{"dmsga1", true},
-		//{"dmsga2", true},
-		//{"dmsga3", true},
-	}
-	for i := range tests {
-		ee, unexp := submitFromFile(dbib, tests[i].name)
+	{true, "1delete@me"},
+	{true, "1delete$reply1@me"},
+	{true, "3delete@me"},
+
+	{true, ""},
+	{true, ""},
+	{true, ""},
+}
+
+
+func insertFiles1(t *testing.T, dbib *PSQLIB, files []fileInsertInputType1, results []fileInsertOutputType1) {
+	for i := range files {
+		ee, unexp := submitFromFile(dbib, files[i].name)
 		if ee != nil {
 			if unexp {
 				t.Errorf("! unexpected submission err: %v", ee)
-			} else if tests[i].shouldsucceed {
+			} else if results[i].shouldsucceed {
 				t.Errorf("! submission error when should succeed, err: %v", ee)
 			} else {
 				t.Logf("+ submission error when should error, err: %v", ee)
 			}
 		} else {
-			if !tests[i].shouldsucceed {
+			if !results[i].shouldsucceed {
 				t.Errorf("! submission succeed when should error")
 			} else {
 				t.Logf("+ submission succeed when should succeed")
 
-				if tests[i].msgid != "" {
+				if results[i].msgid != "" {
 					var x bool
-					ee = dbib.db.DB.QueryRow("SELECT date_recv IS NOT NULL FROM ib0.gposts WHERE msgid = $1", tests[i].msgid).Scan(&x)
+					ee = dbib.db.DB.QueryRow("SELECT date_recv IS NOT NULL FROM ib0.gposts WHERE msgid = $1", results[i].msgid).Scan(&x)
 					if ee != nil {
 						t.Errorf("! msgid check failed: %v", ee)
 					} else {
@@ -449,7 +463,7 @@ func TestPost(t *testing.T) {
 		panicErr(err, "dbib close err")
 	}()
 
-	insertFiles1(t, dbib)
+	insertFiles1(t, dbib, testsInput1, testsOutput1)
 
 	dbib.DemoSetModCap(
 		[]string{"2d2ca0ed8361b5569786e41b8fd7a39de8fc064270966b57510b0c7a8d1a7215"},
@@ -512,7 +526,7 @@ func TestPost2(t *testing.T) {
 		ModCap{Cap: cap_delpost, CapLevel: lvl_none},
 		noneModCap)
 
-	insertFiles1(t, dbib)
+	insertFiles1(t, dbib, testsInput1, testsOutput1)
 
 	n_proc := 0
 	for {
