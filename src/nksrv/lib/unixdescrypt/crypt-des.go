@@ -165,9 +165,7 @@ var bits24 = bits28[4:]
 
 var bits8 = [8]byte{0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01}
 
-var saltbits uint32
 var init_perm, final_perm [64]byte
-var en_keysl, en_keysr [16]uint32
 var m_sbox [4][4096]byte
 var psbox [4][256]uint32
 var ip_maskl, ip_maskr [8][256]uint32
@@ -202,6 +200,11 @@ func ascii_to_bin(ch byte) byte {
 	return 0
 }
 
+type des_context struct {
+	en_keysl, en_keysr [16]uint32
+	saltbits uint32
+}
+
 func des_init() {
 	var i, j, b, k int
 	var inbit int
@@ -226,8 +229,7 @@ func des_init() {
 		for i = 0; i < 64; i++ {
 			for j = 0; j < 64; j++ {
 				m_sbox[b][(i<<6)|j] =
-					(u_sbox[(b << 1)][i] << 4) |
-						u_sbox[(b<<1)+1][j]
+					(u_sbox[(b << 1)][i] << 4) | u_sbox[(b<<1)+1][j]
 			}
 		}
 	}
@@ -350,23 +352,23 @@ func des_init() {
 	}
 }
 
-func setup_salt(salt uint32) {
+func (ctx *des_context) setup_salt(salt uint32) {
 
 	var obit, saltbit uint32
 
-	saltbits = 0
+	ctx.saltbits = 0
 	saltbit = 1
 	obit = 0x800000
 	for i := 0; i < 24; i++ {
 		if (salt & saltbit) != 0 {
-			saltbits |= obit
+			ctx.saltbits |= obit
 		}
 		saltbit <<= 1
 		obit >>= 1
 	}
 }
 
-func des_setkey(key [8]byte) {
+func (ctx *des_context) des_setkey(key [8]byte) {
 
 	rawkey0 := binary.BigEndian.Uint32(key[:4])
 	rawkey1 := binary.BigEndian.Uint32(key[4:])
@@ -374,7 +376,8 @@ func des_setkey(key [8]byte) {
 	/*
 	 * Do key permutation and split into two 28-bit subkeys.
 	 */
-	k0 := key_perm_maskl[0][rawkey0>>25] |
+	k0 :=
+		key_perm_maskl[0][rawkey0>>25] |
 		key_perm_maskl[1][(rawkey0>>17)&0x7f] |
 		key_perm_maskl[2][(rawkey0>>9)&0x7f] |
 		key_perm_maskl[3][(rawkey0>>1)&0x7f] |
@@ -383,7 +386,8 @@ func des_setkey(key [8]byte) {
 		key_perm_maskl[6][(rawkey1>>9)&0x7f] |
 		key_perm_maskl[7][(rawkey1>>1)&0x7f]
 
-	k1 := key_perm_maskr[0][rawkey0>>25] |
+	k1 :=
+		key_perm_maskr[0][rawkey0>>25] |
 		key_perm_maskr[1][(rawkey0>>17)&0x7f] |
 		key_perm_maskr[2][(rawkey0>>9)&0x7f] |
 		key_perm_maskr[3][(rawkey0>>1)&0x7f] |
@@ -403,7 +407,8 @@ func des_setkey(key [8]byte) {
 		t0 := (k0 << shifts) | (k0 >> (28 - shifts))
 		t1 := (k1 << shifts) | (k1 >> (28 - shifts))
 
-		en_keysl[round] = comp_maskl[0][(t0>>21)&0x7f] |
+		ctx.en_keysl[round] =
+			comp_maskl[0][(t0>>21)&0x7f] |
 			comp_maskl[1][(t0>>14)&0x7f] |
 			comp_maskl[2][(t0>>7)&0x7f] |
 			comp_maskl[3][t0&0x7f] |
@@ -412,7 +417,8 @@ func des_setkey(key [8]byte) {
 			comp_maskl[6][(t1>>7)&0x7f] |
 			comp_maskl[7][t1&0x7f]
 
-		en_keysr[round] = comp_maskr[0][(t0>>21)&0x7f] |
+		ctx.en_keysr[round] =
+			comp_maskr[0][(t0>>21)&0x7f] |
 			comp_maskr[1][(t0>>14)&0x7f] |
 			comp_maskr[2][(t0>>7)&0x7f] |
 			comp_maskr[3][t0&0x7f] |
@@ -423,7 +429,7 @@ func des_setkey(key [8]byte) {
 	}
 }
 
-func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
+func (ctx *des_context) do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 	/*
 	 * l_in, r_in, l_out, and r_out are in pseudo-"big-endian" format.
 	 */
@@ -434,7 +440,8 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 	/*
 	 * Do initial permutation (IP).
 	 */
-	l = ip_maskl[0][l_in>>24] |
+	l =
+		ip_maskl[0][l_in>>24] |
 		ip_maskl[1][(l_in>>16)&0xff] |
 		ip_maskl[2][(l_in>>8)&0xff] |
 		ip_maskl[3][l_in&0xff] |
@@ -442,7 +449,8 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 		ip_maskl[5][(r_in>>16)&0xff] |
 		ip_maskl[6][(r_in>>8)&0xff] |
 		ip_maskl[7][r_in&0xff]
-	r = ip_maskr[0][l_in>>24] |
+	r =
+		ip_maskr[0][l_in>>24] |
 		ip_maskr[1][(l_in>>16)&0xff] |
 		ip_maskr[2][(l_in>>8)&0xff] |
 		ip_maskr[3][l_in&0xff] |
@@ -459,13 +467,15 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 			/*
 			 * Expand R to 48 bits (simulate the E-box).
 			 */
-			r48l = ((r & 0x00000001) << 23) |
+			r48l =
+				((r & 0x00000001) << 23) |
 				((r & 0xf8000000) >> 9) |
 				((r & 0x1f800000) >> 11) |
 				((r & 0x01f80000) >> 13) |
 				((r & 0x001f8000) >> 15)
 
-			r48r = ((r & 0x0001f800) << 7) |
+			r48r =
+				((r & 0x0001f800) << 7) |
 				((r & 0x00001f80) << 5) |
 				((r & 0x000001f8) << 3) |
 				((r & 0x0000001f) << 1) |
@@ -475,15 +485,16 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 			 * Do salting for crypt() and friends, and
 			 * XOR with the permuted key.
 			 */
-			f = (r48l ^ r48r) & saltbits
-			r48l ^= f ^ en_keysl[i]
-			r48r ^= f ^ en_keysr[i]
+			f = (r48l ^ r48r) & ctx.saltbits
+			r48l ^= f ^ ctx.en_keysl[i]
+			r48r ^= f ^ ctx.en_keysr[i]
 
 			/*
 			 * Do sbox lookups (which shrink it back to 32 bits)
 			 * and do the pbox permutation at the same time.
 			 */
-			f = psbox[0][m_sbox[0][r48l>>12]] |
+			f =
+				psbox[0][m_sbox[0][r48l>>12]] |
 				psbox[1][m_sbox[1][r48l&0xfff]] |
 				psbox[2][m_sbox[2][r48r>>12]] |
 				psbox[3][m_sbox[3][r48r&0xfff]]
@@ -503,7 +514,8 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 	/*
 	 * Do final permutation (inverse of IP).
 	 */
-	l_out = fp_maskl[0][l>>24] |
+	l_out =
+		fp_maskl[0][l>>24] |
 		fp_maskl[1][(l>>16)&0xff] |
 		fp_maskl[2][(l>>8)&0xff] |
 		fp_maskl[3][l&0xff] |
@@ -511,7 +523,8 @@ func do_des(l_in, r_in uint32, count int) (l_out, r_out uint32) {
 		fp_maskl[5][(r>>16)&0xff] |
 		fp_maskl[6][(r>>8)&0xff] |
 		fp_maskl[7][r&0xff]
-	r_out = fp_maskr[0][l>>24] |
+	r_out =
+		fp_maskr[0][l>>24] |
 		fp_maskr[1][(l>>16)&0xff] |
 		fp_maskr[2][(l>>8)&0xff] |
 		fp_maskr[3][l&0xff] |
@@ -540,7 +553,9 @@ func CryptDES(key []byte, saltstr [2]byte, outbuf []byte) []byte {
 		keybuf[i] = key[i] << 1
 	}
 
-	des_setkey(keybuf)
+	var ctx des_context
+
+	ctx.des_setkey(keybuf)
 
 	/*
 	 * "old"-style:
@@ -553,12 +568,12 @@ func CryptDES(key []byte, saltstr [2]byte, outbuf []byte) []byte {
 	outbuf = append(outbuf, saltstr[0])
 	outbuf = append(outbuf, saltstr[1])
 
-	setup_salt(salt)
+	ctx.setup_salt(salt)
 
 	/*
 	 * Do it.
 	 */
-	r0, r1 := do_des(0, 0, 25)
+	r0, r1 := ctx.do_des(0, 0, 25)
 
 	/*
 	 * Now encode the result...
