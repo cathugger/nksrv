@@ -6,6 +6,7 @@ import (
 )
 
 // this package implements unicode tripcode
+// it simply translates pubkey bytes to unicode chars
 
 func MakeUnicodeTrip(pubkey string, length int) string {
 	var b strings.Builder
