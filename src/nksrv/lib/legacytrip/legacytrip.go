@@ -11,18 +11,21 @@ import (
 	tr "golang.org/x/text/transform"
 )
 
-func encodeSJIS(src, dst []byte) []byte {
+func encodeSJIS(src, dst []byte) ([]byte, error) {
 	enc := ej.ShiftJIS.NewEncoder()
 	var ndst int
 	for {
 		var err error
 		ndst, _, err = enc.Transform(dst, src, true)
-		if err == tr.ErrShortDst {
-			dst = make([]byte, 2*len(dst))
-			enc.Reset()
-			continue
+		if err != nil {
+			if err == tr.ErrShortDst {
+				dst = make([]byte, 2*len(dst))
+				enc.Reset()
+				continue
+			}
+			return nil, err
 		}
-		return dst[:ndst]
+		return dst[:ndst], nil
 	}
 }
 
@@ -41,10 +44,13 @@ var saltsuffix = []byte("H..")
 var saltregexp = regexp.MustCompile("[^.-z]")
 var saltreplacement = []byte{'.'}
 
-func MakeLegacyTrip(src string) string {
+func MakeLegacyTrip(src string) (string, error) {
 	// encode in Shift_JIS
 	var ss [16]byte
-	trip := encodeSJIS([]byte(src), ss[:])
+	trip, err := encodeSJIS([]byte(src), ss[:])
+	if err != nil {
+		return "", err
+	}
 	// """salt""" preparation
 	salt1 := append(trip, saltsuffix...)[1:3]
 	salt2 := saltregexp.ReplaceAll(salt1, saltreplacement)
@@ -56,5 +62,5 @@ func MakeLegacyTrip(src string) string {
 	res := ud.CryptDES(trip, salt, buf[:0])
 	// take last 10 bytes from that
 	// this results in 64^10 variations which tbh isn't much
-	return string(res[len(res)-10:])
+	return string(res[len(res)-10:]), nil
 }

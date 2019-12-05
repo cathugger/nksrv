@@ -13,8 +13,10 @@ func TestMakeTrip(t *testing.T) {
 		{"猫に哲学", "tcVgirItgw"},
 	}
 	for i := range tests {
-		trip := MakeLegacyTrip(tests[i].src)
-		if trip != tests[i].trip {
+		trip, err := MakeLegacyTrip(tests[i].src)
+		if err != nil {
+			t.Errorf("%d got error: %v\n", i, err)
+		} else if trip != tests[i].trip {
 			t.Errorf("%d expected %q got %q\n", i, tests[i].trip, trip)
 		}
 	}
