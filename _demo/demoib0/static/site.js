@@ -186,6 +186,9 @@ function newembedcontrol(me) {
 	// XXX it doesn't seem like media elements have event for loop var change
 	// so we can't do reliable back notification
 
+	// space before cloop
+	cspan.appendChild(document.createTextNode(' '));
+
 	// checkbox
 	var loopcb = document.createElement('input');
 	loopcb.type = 'checkbox';
