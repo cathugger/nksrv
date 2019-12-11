@@ -512,7 +512,7 @@ func (sp *PSQLIB) netnewsSubmitArticle(
 		gpid, bpid, duplicate, err =
 			sp.insertNewReply(
 				tx, gstmt,
-				replyTargetInfo{info.bid, info.tid, info.threadOpts.BumpLimit},
+				replyTargetInfo{info.bid, info.tid},
 				pi, modid)
 	}
 	if err != nil {

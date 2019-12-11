@@ -60,9 +60,17 @@ func optimiseFormLine(line string) (s string) {
 	return
 }
 
+func badWebRequest(err error) error {
+	return &ib0.WebPostError{Err: err, Code: http.StatusBadRequest}
+}
+
+func webNotFound(err error) error {
+	return &ib0.WebPostError{Err: err, Code: http.StatusNotFound}
+}
+
 func commonNewPost(
 	w http.ResponseWriter, r *http.Request, f form.Form, board, thread string, isReply bool) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	defer func() {
 		if err != nil {
@@ -77,7 +85,8 @@ func commonNewPost(
 	if len(f.Values[fntitle]) != 1 ||
 		len(f.Values[fnmessage]) != 1 {
 
-		return rInfo, errInvalidSubmission, http.StatusBadRequest
+		err = badWebRequest(errInvalidSubmission)
+		return
 	}
 
 	xftitle := f.Values[fntitle][0]
@@ -89,23 +98,27 @@ func commonNewPost(
 	if !utf8.ValidString(xftitle) ||
 		!utf8.ValidString(xfmessage) {
 
-		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
+		err = badWebRequest(errBadSubmissionEncoding)
+		return
 	}
 
 	// get info about board, its limits and shit. does it even exists?
 	if !isReply {
 		if board != "test" {
-			return rInfo, errNoSuchBoard, http.StatusNotFound
+			err = webNotFound(errNoSuchBoard)
+			return
 		}
 		rInfo.Board = board
 	} else {
 		if board != "test" {
-			return rInfo, errNoSuchBoard, http.StatusNotFound
+			err = webNotFound(errNoSuchBoard)
+			return
 		}
 		rInfo.Board = board
 
 		if len(thread) < 4 || thread[:4] != "0123" {
-			return rInfo, errNoSuchThread, http.StatusNotFound
+			err = webNotFound(errNoSuchThread)
+			return
 		}
 		rInfo.ThreadID = thread
 	}
@@ -156,19 +169,19 @@ func (IBProviderDemo) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 
 func (IBProviderDemo) IBPostNewBoard(
 	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
-	err error, code int) {
+	err error) {
 
 	if bi.Name != "test" {
-		return nil, 0
+		return nil
 	} else {
-		return errors.New("board already exists"), http.StatusConflict
+		return &ib0.WebPostError{errors.New("board already exists"), http.StatusConflict}
 	}
 }
 
 func (IBProviderDemo) IBPostNewThread(
 	w http.ResponseWriter, r *http.Request,
 	f form.Form, board string) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	return commonNewPost(w, r, f, board, "", false)
 }
@@ -176,44 +189,44 @@ func (IBProviderDemo) IBPostNewThread(
 func (IBProviderDemo) IBPostNewReply(
 	w http.ResponseWriter, r *http.Request,
 	f form.Form, board, thread string) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	return commonNewPost(w, r, f, board, thread, true)
 }
 
 func (IBProviderDemo) IBUpdateBoard(
 	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
-	err error, code int) {
+	err error) {
 
 	if bi.Name == "test" {
-		return nil, 0
+		return
 	} else {
-		return errors.New("board not found"), http.StatusNotFound
+		return webNotFound(errors.New("board not found"))
 	}
 }
 
 func (IBProviderDemo) IBDeleteBoard(
 	w http.ResponseWriter, r *http.Request, board string) (
-	err error, code int) {
+	err error) {
 
 	if board == "test" {
-		return nil, 0
+		return
 	} else {
-		return errors.New("board not found"), http.StatusNotFound
+		return webNotFound(errors.New("board not found"))
 	}
 }
 
 func (IBProviderDemo) IBDeletePost(
 	w http.ResponseWriter, r *http.Request, board, post string) (
-	err error, code int) {
+	err error) {
 
 	if board != "test" {
-		return errors.New("board not found"), http.StatusNotFound
+		return webNotFound(errors.New("board not found"))
 	}
 	if len(post) < 4 || post[:4] != "0123" {
-		return errors.New("post not found"), http.StatusNotFound
+		return webNotFound(errors.New("post not found"))
 	}
-	return nil, 0
+	return
 }
 
 var _ ib0.IBWebPostProvider = IBProviderDemo{}

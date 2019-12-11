@@ -264,8 +264,11 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 
 					log.LogPrintf(DEBUG, "post-thread b:%q", board)
 
-					rInfo, err, code =
+					rInfo, err =
 						cfg.WebPostProvider.IBPostNewThread(w, r, f, board)
+					if err != nil {
+						err, code = ib0.UnpackWebPostError(err)
+					}
 
 					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, true, err, code)
@@ -274,8 +277,11 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 
 					log.LogPrintf(DEBUG, "post-reply b:%q t:%q", board, thread)
 
-					rInfo, err, code = cfg.WebPostProvider.
+					rInfo, err = cfg.WebPostProvider.
 						IBPostNewReply(w, r, f, board, thread)
+					if err != nil {
+						err, code = ib0.UnpackWebPostError(err)
+					}
 
 					c.GetHTMLRenderer().DressPostResult(
 						w, rInfo, false, err, code)

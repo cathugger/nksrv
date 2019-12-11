@@ -15,7 +15,10 @@ var (
 	errFileTypeNotAllowed    = errors.New("file type not allowed")
 	errTooLongTitle          = errors.New("too long title")
 	errTooLongName           = errors.New("too long name")
+	errInvalidTripcode       = errors.New("invalid tripcode syntax (we expected 64 hex chars)")
 	errDuplicateArticle      = errors.New("article with this ID already exists")
+	errEmptyMsg              = errors.New("posting empty messages isn't allowed")
+	errInvalidOptions        = errors.New("invalid options")
 )
 
 func errTooLongMessage(limit uint32) error {

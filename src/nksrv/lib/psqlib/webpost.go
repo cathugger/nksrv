@@ -8,19 +8,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"unicode/utf8"
 
-	xtypes "github.com/jmoiron/sqlx/types"
-	"github.com/lib/pq"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/text/unicode/norm"
 
-	au "nksrv/lib/asciiutils"
 	"nksrv/lib/date"
-	"nksrv/lib/emime"
 	fu "nksrv/lib/fileutil"
-	"nksrv/lib/fstore"
-	ht "nksrv/lib/hashtools"
 	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
@@ -33,18 +25,6 @@ import (
 )
 
 // TODO make this file less messy
-
-var FileFields = ib0.IBWebFormFileFields
-
-type formFileOpener struct {
-	*fstore.FStore
-}
-
-var _ form.FileOpener = formFileOpener{}
-
-func (o formFileOpener) OpenFile() (*os.File, error) {
-	return o.FStore.TempFile("webpost-", "")
-}
 
 // FIXME: this probably in future should go thru some sort of abstractation
 
@@ -67,211 +47,20 @@ func (sp *PSQLIB) IBGetPostParams() (
 	return &sp.fpp, sp.ffo, sp.textPostParamFunc
 }
 
-func matchExtension(fn, ext string) bool {
-	return len(fn) > len(ext) &&
-		au.EndsWithFoldString(fn, ext) &&
-		fn[len(fn)-len(ext)-1] == '.'
-}
-
-func allowedFileName(fname string, slimits *submissionLimits, reply bool) bool {
-	if strings.IndexByte(fname, '.') < 0 {
-		// we care only about extension anyway so fix that if theres none
-		fname = "."
-	}
-	iffound := slimits.ExtWhitelist
-	var list []string
-	if !slimits.ExtWhitelist {
-		list = slimits.ExtDeny
-	} else {
-		list = slimits.ExtAllow
-	}
-	for _, e := range list {
-		if matchExtension(fname, e) {
-			return iffound
-		}
-	}
-	return !iffound
-}
-
-func checkFileLimits(slimits *submissionLimits, reply bool, f form.Form) (err error, c int) {
-	var onesz, allsz int64
-	for _, fieldname := range FileFields {
-		files := f.Files[fieldname]
-		c += len(files)
-		if c > int(slimits.FileMaxNum) {
-			err = errTooMuchFiles(slimits.FileMaxNum)
-			return
-		}
-		for i := range files {
-			onesz = files[i].Size
-			if slimits.FileMaxSizeSingle > 0 && onesz > slimits.FileMaxSizeSingle {
-				err = errTooBigFileSingle(slimits.FileMaxSizeSingle)
-				return
-			}
-
-			allsz += onesz
-			if slimits.FileMaxSizeAll > 0 && allsz > slimits.FileMaxSizeAll {
-				err = errTooBigFileAll(slimits.FileMaxSizeAll)
-				return
-			}
-
-			if !allowedFileName(files[i].FileName, slimits, reply) {
-				err = errFileTypeNotAllowed
-				return
-			}
-		}
-	}
-	if c < int(slimits.FileMinNum) {
-		err = errNotEnoughFiles(slimits.FileMinNum)
-		return
-	}
-	return
-}
-
-func checkSubmissionLimits(slimits *submissionLimits, reply bool,
-	f form.Form, mInfo mailib.MessageInfo) (err error, c int) {
-
-	err, c = checkFileLimits(slimits, reply, f)
-	if err != nil {
-		return
-	}
-
-	if len(mInfo.Title) > int(slimits.MaxTitleLength) {
-		err = errTooLongTitle
-		return
-	}
-	if len(mInfo.Author) > int(slimits.MaxNameLength) {
-		err = errTooLongName
-		return
-	}
-	if len(mInfo.Message) > int(slimits.MaxMessageLength) {
-		err = errTooLongMessage(slimits.MaxMessageLength)
-		return
-	}
-
-	return
-}
-
-func (sp *PSQLIB) applyInstanceSubmissionLimits(
-	slimits *submissionLimits, reply bool, board string) {
-
-	// TODO
-
-	// hardcoded instance limits, TODO make configurable
-
-	if slimits.MaxTitleLength == 0 || slimits.MaxTitleLength > maxSubjectSize {
-		slimits.MaxTitleLength = maxSubjectSize
-	}
-
-	if slimits.MaxNameLength == 0 || slimits.MaxNameLength > maxNameSize {
-		slimits.MaxNameLength = maxNameSize
-	}
-
-	const maxMessageLength = mailib.DefaultMaxTextLen
-	if slimits.MaxMessageLength == 0 ||
-		slimits.MaxMessageLength > maxMessageLength {
-
-		slimits.MaxMessageLength = maxMessageLength
-	}
-}
-
-func (sp *PSQLIB) applyInstanceThreadOptions(
-	threadOpts *threadOptions, board string) {
-
-	// TODO
-}
-
-// expects file to be seeked at 0
-func generateFileConfig(
-	f *os.File, ct string, fi mailib.FileInfo) (
-	_ mailib.FileInfo, ext string, err error) {
-
-	hash, hashtype, err := ht.MakeFileHash(f)
-	if err != nil {
-		return
-	}
-	s := hash + "-" + hashtype
-
-	// prefer info from file name, try figuring out content-type from it
-	// if that fails, try looking into content-type, try figure out filename
-	// if both fail, just use given type and given filename
-
-	// append extension, if any
-	oname := fi.Original
-
-	ext = fu.SafeExt(oname)
-
-	ctype := emime.MIMECanonicalTypeByExtension(ext)
-	if ctype == "" && ct != "" {
-		mexts, e := emime.MIMEExtensionsByType(ct)
-		if e == nil {
-			if len(mexts) != 0 {
-				ext = mexts[0]
-			}
-		} else {
-			// bad ct
-			ct = ""
-		}
-	}
-	if ctype == "" {
-		if ct != "" {
-			ctype = ct
-		} else {
-			ctype = "application/octet-stream"
-		}
-	}
-
-	if len(ext) != 0 {
-		ext = emime.MIMEPreferedExtension(ext)
-		s += "." + ext
-	}
-
-	fi.ID = s
-	fi.ContentType = ctype
-	// yeh this is actually possible
-	if oname == "" {
-		fi.Original = s
-	}
-
-	return fi, ext, err
-}
-
 type postedInfo = ib0.IBPostedInfo
 
-func readableText(s string) bool {
-	for _, c := range s {
-		if (c < 32 && c != '\n' && c != '\r' && c != '\t') || c == 127 {
-			return false
-		}
-	}
-	return true
+func badWebRequest(err error) error {
+	return &ib0.WebPostError{Err: err, Code: http.StatusBadRequest}
 }
 
-var lineReplacer = strings.NewReplacer(
-	"\r", "",
-	"\n", " ",
-	"\t", " ",
-	"\000", "")
-
-func optimiseFormLine(line string) (s string) {
-	s = lineReplacer.Replace(line)
-	s = norm.NFC.String(s)
-	return
-}
-
-func countRealFiles(FI []mailib.FileInfo) (FC int) {
-	for i := range FI {
-		if FI[i].Type.Normal() {
-			FC++
-		}
-	}
-	return
+func webNotFound(err error) error {
+	return &ib0.WebPostError{Err: err, Code: http.StatusNotFound}
 }
 
 func (sp *PSQLIB) commonNewPost(
 	w http.ResponseWriter, r *http.Request,
 	f form.Form, board, thread string, isReply bool) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	var pInfo mailib.PostInfo
 
@@ -292,169 +81,39 @@ func (sp *PSQLIB) commonNewPost(
 		}
 	}()
 
-	fntitle := ib0.IBWebFormTextTitle
-	fnname := ib0.IBWebFormTextName
-	fnmessage := ib0.IBWebFormTextMessage
-	fnoptions := ib0.IBWebFormTextOptions
-
-	// XXX more fields
-	if len(f.Values[fntitle]) > 1 ||
-		len(f.Values[fnname]) != 1 ||
-		len(f.Values[fnmessage]) != 1 ||
-		len(f.Values[fnoptions]) > 1 {
-
-		return rInfo, errInvalidSubmission, http.StatusBadRequest
+	// do text inputs processing/checking
+	xf, err := sp.processTextFields(f)
+	if err != nil {
+		err = badWebRequest(err)
+		return
 	}
 
-	xftitle := ""
-	if len(f.Values[fntitle]) != 0 {
-		xftitle = f.Values[fntitle][0]
-	}
-	xfname := f.Values[fnname][0]
-	xfmessage := f.Values[fnmessage][0]
-	xfoptions := ""
-	if len(f.Values[fnoptions]) != 0 {
-		xfoptions = f.Values[fnoptions][0]
-	}
-
+	// web captcha checking
 	if sp.webcaptcha != nil {
 		var code int
 		if err, code = sp.webcaptcha.CheckCaptcha(w, r, f.Values); err != nil {
-			return rInfo, err, code
+			err = &ib0.WebPostError{Err: err, Code: code}
+			return
 		}
 	}
 
-	sp.log.LogPrintf(DEBUG,
-		"post: board %q thread %q xftitle %q xfmessage %q xfoptions %q",
-		board, thread, xftitle, xfmessage, xfoptions)
-
-	if !utf8.ValidString(xftitle) ||
-		!utf8.ValidString(xfname) ||
-		!utf8.ValidString(xfmessage) ||
-		!utf8.ValidString(xfoptions) {
-
-		return rInfo, errBadSubmissionEncoding, http.StatusBadRequest
-	}
-
-	if !readableText(xftitle) ||
-		!readableText(xfname) ||
-		!readableText(xfmessage) ||
-		!readableText(xfoptions) {
-
-		return rInfo, errBadSubmissionChars, http.StatusBadRequest
-	}
-
-	var jbPL xtypes.JSONText // board post limits
-	var jbXL xtypes.JSONText // board newthread/reply limits
-	var jtRL xtypes.JSONText // thread reply limits
-	var jbTO xtypes.JSONText // board threads options
-	var jtTO xtypes.JSONText // thread options
-	var bid boardID
-	var tid sql.NullInt64
-	var ref sql.NullString
-	var opdate pq.NullTime
-
-	var postLimits submissionLimits
-	threadOpts := defaultThreadOptions
-
-	// get info about board, its limits and shit. does it even exists?
-	if !isReply {
-
-		// new thread
-
-		//sp.log.LogPrintf(DEBUG, "executing commonNewPost board query:\n%s\n", q)
-
-		err = sp.st_prep[st_web_prepost_newthread].
-			QueryRow(board).
-			Scan(&bid, &jbPL, &jbXL)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return rInfo, errNoSuchBoard, http.StatusNotFound
-			}
-			return rInfo,
-				sp.sqlError("board row query scan", err),
-				http.StatusInternalServerError
-		}
-
-		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) post_limits(%q) newthread_limits(%q)",
-			bid, jbPL, jbXL)
-
-		rInfo.Board = board
-
-		postLimits = defaultNewThreadSubmissionLimits
-
-	} else {
-
-		// new post
-
-		//sp.log.LogPrintf(DEBUG, "executing board x thread query:\n%s\n", q)
-
-		err = sp.st_prep[st_web_prepost_newpost].
-			QueryRow(board, thread).
-			Scan(
-				&bid, &jbPL, &jbXL, &tid, &jtRL,
-				&jbTO, &jtTO, &ref, &opdate)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return rInfo, errNoSuchBoard, http.StatusNotFound
-			}
-			return rInfo,
-				sp.sqlError("board x thread row query scan", err),
-				http.StatusInternalServerError
-		}
-
-		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
-				"t.reply_limits(%q) b.thread_opts(%q) t.thread_opts(%q) p.msgid(%#v)",
-			bid, jbPL, jbXL, tid, jtRL, jbTO, jtTO, ref)
-
-		rInfo.Board = board
-
-		if tid.Int64 <= 0 {
-			return rInfo, errNoSuchThread, http.StatusNotFound
-		}
-
-		rInfo.ThreadID = thread
-
-		postLimits = defaultReplySubmissionLimits
-
-	}
-
-	err = sp.unmarshalBoardConfig(&postLimits, jbPL, jbXL)
-	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
-	}
-
-	if isReply {
-		err = sp.unmarshalThreadConfig(
-			&postLimits, &threadOpts, jtRL, jbTO, jtTO)
-		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
-		}
-
-		sp.applyInstanceThreadOptions(&threadOpts, board)
-	}
-
-	ok, postOpts := parsePostOptions(optimiseFormLine(xfoptions))
+	ok, postOpts := parsePostOptions(optimiseFormLine(xf.options))
 	if !ok {
-		return rInfo, errors.New("invalid options"), http.StatusBadRequest
+		err = badWebRequest(errInvalidOptions)
+		return
 	}
 
-	if postOpts.nolimit {
-		// TODO check whether poster is privileged or something
-		postLimits = maxSubmissionLimits
+	rInfo, bid, tid, ref, postLimits, opdate, err :=
+		sp.getPrePostInfo(isReply, board, thread, postOpts)
+	if err != nil {
+		return
 	}
-
-	// apply instance-specific limit tweaks
-	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board)
 
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
-	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xftitle))
-
-	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xfname))
+	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xf.title))
+	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xf.name))
 
 	var signkeyseed []byte
 	if i := strings.IndexByte(pInfo.MI.Author, '#'); i >= 0 {
@@ -465,19 +124,13 @@ func (sp *PSQLIB) commonNewPost(
 		// we currently only support ed25519 seed syntax
 		tripseed, e := hex.DecodeString(tripstr)
 		if e != nil || len(tripseed) != ed25519.SeedSize {
-			return rInfo,
-				errors.New("invalid tripcode syntax; we expected 64 hex chars"),
-				http.StatusBadRequest
+			err = badWebRequest(errInvalidTripcode)
+			return
 		}
 		signkeyseed = tripseed
 	}
 
-	pInfo.MI.Message = tu.NormalizeTextMessage(xfmessage)
-
-	sp.log.LogPrintf(DEBUG,
-		"form fields after processing: Title(%q) Message(%q)",
-		pInfo.MI.Title, pInfo.MI.Message)
-
+	pInfo.MI.Message = tu.NormalizeTextMessage(xf.message)
 	pInfo.MI.Sage = isReply &&
 		(postOpts.sage || strings.ToLower(pInfo.MI.Title) == "sage")
 
@@ -485,7 +138,8 @@ func (sp *PSQLIB) commonNewPost(
 	var filecount int
 	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo.MI)
 	if err != nil {
-		return rInfo, err, http.StatusBadRequest
+		err = badWebRequest(err)
+		return
 	}
 
 	// disallow content-less msgs
@@ -493,9 +147,8 @@ func (sp *PSQLIB) commonNewPost(
 		filecount == 0 &&
 		(len(signkeyseed) == 0 || len(pInfo.MI.Title) == 0) {
 
-		return rInfo,
-			errors.New("posting empty messages isn't allowed"),
-			http.StatusBadRequest
+		err = badWebRequest(errEmptyMsg)
+		return
 	}
 
 	// time awareness
@@ -508,7 +161,7 @@ func (sp *PSQLIB) commonNewPost(
 	if isReply && pInfo.Date.Before(opdate.Time) {
 		err = errors.New(
 			"time error: server's time too far into the past or thread's time too far into the future")
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	// at this point message should be checked
@@ -538,7 +191,7 @@ func (sp *PSQLIB) commonNewPost(
 			pInfo.FI[x], ext, err = generateFileConfig(
 				files[i].F, files[i].ContentType, pInfo.FI[x])
 			if err != nil {
-				return rInfo, err, http.StatusInternalServerError
+				return
 			}
 
 			// thumbnail and close file
@@ -547,8 +200,8 @@ func (sp *PSQLIB) commonNewPost(
 			res, tfi, err = sp.thumbnailer.ThumbProcess(
 				files[i].F, ext, pInfo.FI[x].ContentType, tplan.ThumbConfig)
 			if err != nil {
-				return rInfo, fmt.Errorf("error thumbnailing file: %v", err),
-					http.StatusInternalServerError
+				err = fmt.Errorf("error thumbnailing file: %v", err)
+				return
 			}
 
 			pInfo.FI[x].Type = tfi.Kind
@@ -573,9 +226,10 @@ func (sp *PSQLIB) commonNewPost(
 
 			for xx := 0; xx < x; xx++ {
 				if pInfo.FI[xx].Equivalent(pInfo.FI[x]) {
-					return rInfo,
-						fmt.Errorf("duplicate file: %d is same as %d", xx, x),
-						http.StatusBadRequest
+					err = badWebRequest(
+						fmt.Errorf(
+							"duplicate file: %d is same as %d", xx, x))
+					return
 				}
 			}
 
@@ -594,7 +248,7 @@ func (sp *PSQLIB) commonNewPost(
 	inreplyto, err = sp.processReferencesOnPost(
 		sp.db.DB, srefs, bid, postID(tid.Int64), isctlgrp)
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	// fill in layout/sign
@@ -608,7 +262,7 @@ func (sp *PSQLIB) commonNewPost(
 	pInfo, fmsgids, msgfn, pubkeystr, err = sp.fillWebPostDetails(
 		pInfo, f, board, fref, inreplyto, true, tu, signkeyseed)
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	if fmsgids == "" {
@@ -647,14 +301,14 @@ func (sp *PSQLIB) commonNewPost(
 		gstmt, err = sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
 	}
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	// start transaction
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
 		err = sp.sqlError("webpost tx begin", err)
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 	defer func() {
 		if err != nil {
@@ -666,7 +320,7 @@ func (sp *PSQLIB) commonNewPost(
 
 	err = sp.makeDelTables(tx)
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	var modid uint64
@@ -680,7 +334,7 @@ func (sp *PSQLIB) commonNewPost(
 		modid, hascap, modCC, err =
 			sp.registeredMod(tx, pubkeystr)
 		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
+			return
 		}
 
 		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
@@ -698,16 +352,16 @@ func (sp *PSQLIB) commonNewPost(
 		gpid, bpid, duplicate, err =
 			sp.insertNewReply(
 				tx, gstmt,
-				replyTargetInfo{bid, postID(tid.Int64), threadOpts.BumpLimit},
+				replyTargetInfo{bid, postID(tid.Int64)},
 				pInfo, modid)
 	}
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 	if duplicate {
 		// shouldn't really happen there
 		err = errDuplicateArticle
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	// execute mod cmd
@@ -728,7 +382,7 @@ func (sp *PSQLIB) commonNewPost(
 				pInfo, nil, pInfo.MessageID,
 				cref, delmsgids, delModIDState{})
 		if err != nil {
-			return rInfo, err, http.StatusInternalServerError
+			return
 		}
 
 		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pInfo.MessageID)
@@ -745,8 +399,9 @@ func (sp *PSQLIB) commonNewPost(
 		srefs, irefs, inreplyto,
 		bid, uint64(tid.Int64), bpid,
 		pInfo.ID, board, pInfo.MessageID)
+
 	if err != nil {
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 
 	// move files
@@ -765,7 +420,7 @@ func (sp *PSQLIB) commonNewPost(
 				} else {
 					err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
 					sp.log.LogPrint(ERROR, err.Error())
-					return rInfo, err, http.StatusInternalServerError
+					return
 				}
 				// if failed to move, remove
 				files[i].Remove()
@@ -781,7 +436,7 @@ func (sp *PSQLIB) commonNewPost(
 			if !os.IsExist(xe) {
 				err = fmt.Errorf("failed to rename %q to %q: %v", msgfn, to, xe)
 				sp.log.LogPrint(ERROR, err.Error())
-				return rInfo, err, http.StatusInternalServerError
+				return
 			}
 			// if failed to move, remove
 			os.Remove(msgfn)
@@ -807,7 +462,7 @@ func (sp *PSQLIB) commonNewPost(
 			} else {
 				err = fmt.Errorf("failed to rename %q to %q: %v", from, to, xe)
 				sp.log.LogPrint(ERROR, err.Error())
-				return rInfo, err, http.StatusInternalServerError
+				return
 			}
 			os.Remove(from)
 		}
@@ -818,7 +473,7 @@ func (sp *PSQLIB) commonNewPost(
 	err = tx.Commit()
 	if err != nil {
 		err = sp.sqlError("webpost tx commit", err)
-		return rInfo, err, http.StatusInternalServerError
+		return
 	}
 	sp.log.LogPrintf(DEBUG, "webpost commit done")
 
@@ -890,24 +545,22 @@ RETURNING
 
 func (sp *PSQLIB) IBPostNewBoard(
 	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
-	err error, code int) {
+	err error) {
 
 	err, duplicate := sp.addNewBoard(bi)
 	if err != nil {
 		if duplicate {
-			code = http.StatusConflict
-		} else {
-			code = http.StatusInternalServerError
+			return &ib0.WebPostError{Err: err, Code: http.StatusConflict}
 		}
 		return
 	}
-	return nil, 0
+	return nil
 }
 
 func (sp *PSQLIB) IBPostNewThread(
 	w http.ResponseWriter, r *http.Request,
 	f form.Form, board string) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	return sp.commonNewPost(w, r, f, board, "", false)
 }
@@ -915,14 +568,14 @@ func (sp *PSQLIB) IBPostNewThread(
 func (sp *PSQLIB) IBPostNewReply(
 	w http.ResponseWriter, r *http.Request,
 	f form.Form, board, thread string) (
-	rInfo postedInfo, err error, _ int) {
+	rInfo postedInfo, err error) {
 
 	return sp.commonNewPost(w, r, f, board, thread, true)
 }
 
 func (sp *PSQLIB) IBUpdateBoard(
 	w http.ResponseWriter, r *http.Request, bi ib0.IBNewBoardInfo) (
-	err error, code int) {
+	err error) {
 
 	q := `UPDATE ib0.boards
 SET
@@ -935,26 +588,22 @@ WHERE bname = $1`
 		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages)
 	if e != nil {
 		err = sp.sqlError("board update query row scan", e)
-		code = http.StatusInternalServerError
 		return
 	}
 	aff, e := res.RowsAffected()
 	if e != nil {
 		err = sp.sqlError("board update query result check", e)
-		code = http.StatusInternalServerError
 		return
 	}
 	if aff == 0 {
-		err = errors.New("no such board")
-		code = http.StatusNotFound
-		return
+		return webNotFound(errNoSuchBoard)
 	}
-	return nil, 0
+	return nil
 }
 
 func (sp *PSQLIB) IBDeleteBoard(
 	w http.ResponseWriter, r *http.Request, board string) (
-	err error, code int) {
+	err error) {
 
 	// TODO delet any of posts in board
 	var bid boardID
@@ -962,22 +611,21 @@ func (sp *PSQLIB) IBDeleteBoard(
 	e := sp.db.DB.QueryRow(q, board).Scan(&bid)
 	if e != nil {
 		if e == sql.ErrNoRows {
-			return errors.New("no such board"), http.StatusNotFound
+			return webNotFound(errNoSuchBoard)
 		}
 		err = sp.sqlError("board delete query row scan", e)
-		code = http.StatusInternalServerError
 		return
 	}
 
-	return nil, 0
+	return nil
 }
 
 func (sp *PSQLIB) IBDeletePost(
 	w http.ResponseWriter, r *http.Request, board, post string) (
-	err error, code int) {
+	err error) {
 
 	// TODO
-	return nil, 0
+	return nil
 }
 
 var _ ib0.IBWebPostProvider = (*PSQLIB)(nil)

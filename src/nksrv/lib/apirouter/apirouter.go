@@ -112,8 +112,12 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					return
 				}
 
-				rInfo, err, code := cfg.WebPostProvider.
+				var code int
+				rInfo, err := cfg.WebPostProvider.
 					IBPostNewReply(w, r, f, b, t)
+				if err != nil {
+					err, code = ib0.UnpackWebPostError(err)
+				}
 
 				cfg.Renderer.DressPostResult(w, rInfo, false, err, code)
 			}))
@@ -131,8 +135,12 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 						return
 					}
 
-					rInfo, err, code := cfg.WebPostProvider.
+					var code int
+					rInfo, err := cfg.WebPostProvider.
 						IBPostNewThread(w, r, f, b)
+					if err != nil {
+						err, code = ib0.UnpackWebPostError(err)
+					}
 
 					cfg.Renderer.DressPostResult(w, rInfo, true, err, code)
 				})))
@@ -171,7 +179,11 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					return
 				}
 
-				e, code := cfg.WebPostProvider.IBPostNewBoard(w, r, nbi)
+				var code int
+				e := cfg.WebPostProvider.IBPostNewBoard(w, r, nbi)
+				if e != nil {
+					e, code = ib0.UnpackWebPostError(e)
+				}
 				cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 			}))
@@ -212,18 +224,26 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 
 					nbi.Name = r.Context().Value("b").(string)
 
-					e, code := cfg.WebPostProvider.IBUpdateBoard(w, r, nbi)
+					var code int
+					e := cfg.WebPostProvider.IBUpdateBoard(w, r, nbi)
+					if e != nil {
+						e, code = ib0.UnpackWebPostError(e)
+					}
 					cfg.Renderer.DressNewBoardResult(w, nbi.Name, e, code)
 
 				})).
 			Handle("DELETE", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
 					b := r.Context().Value("b").(string)
-					e, code := cfg.WebPostProvider.IBDeleteBoard(w, r, b)
+
+					var code int
+					e := cfg.WebPostProvider.IBDeleteBoard(w, r, b)
 					if e != nil {
+						e, code := ib0.UnpackWebPostError(e)
 						http.Error(w, e.Error(), code)
 						return
 					}
+
 					http.Error(w, "deleted", 200)
 				}))
 

@@ -187,9 +187,8 @@ FROM
 }
 
 type replyTargetInfo struct {
-	bid       boardID
-	tid       postID
-	bumpLimit uint32
+	bid boardID
+	tid postID
 }
 
 func (sp *PSQLIB) insertNewReply(

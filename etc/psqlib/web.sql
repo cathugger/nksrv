@@ -579,39 +579,31 @@ WHERE
 	b_name=$1
 
 -- :name web_prepost_newpost
-WITH
-	xb AS (
-		SELECT
-			b_id,
-			post_limits,
-			reply_limits,
-			thread_opts
-		FROM
-			ib0.boards
-		WHERE
-			b_name=$1
-		LIMIT
-			1
-	)
 SELECT
 	xb.b_id,
 	xb.post_limits,
 	xb.reply_limits,
 	xtp.b_t_id,
 	xtp.reply_limits,
-	xb.thread_opts,
-	xtp.thread_opts,
 	xtp.msgid,
 	xtp.date_sent
 FROM
-	xb
+	(
+		SELECT
+			b_id,
+			post_limits,
+			reply_limits
+		FROM
+			ib0.boards
+		WHERE
+			b_name = $1
+	) AS xb
 LEFT JOIN LATERAL
 	(
 		SELECT
 			xt.b_id,
 			xt.b_t_id,
 			xt.reply_limits,
-			xt.thread_opts,
 			xp.msgid,
 			xp.date_sent
 		FROM

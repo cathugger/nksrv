@@ -39,34 +39,51 @@ type IBNewBoardInfo struct {
 	// TODO more fields
 }
 
+type WebPostError struct {
+	Err  error
+	Code int
+}
+
+func (e *WebPostError) Error() string { return e.Err.Error() }
+func (e *WebPostError) Unwrap() error { return e.Err }
+
+func UnpackWebPostError(err error) (error, int) {
+	if wpe, ok := err.(*WebPostError); ok {
+		return wpe.Err, wpe.Code
+	} else {
+		return err, http.StatusInternalServerError
+	}
+}
+
 type IBWebPostProvider interface {
 	IBGetPostParams() (
 		*form.ParserParams, form.FileOpener, func(string) bool)
 
 	IBDefaultBoardInfo() IBNewBoardInfo
+
 	IBPostNewBoard(
 		w http.ResponseWriter, r *http.Request, bi IBNewBoardInfo) (
-		err error, code int)
+		err error)
 
 	IBPostNewThread(
 		w http.ResponseWriter, r *http.Request,
 		f form.Form, board string) (
-		rInfo IBPostedInfo, err error, code int)
+		rInfo IBPostedInfo, err error)
 
 	IBPostNewReply(
 		w http.ResponseWriter, r *http.Request,
 		f form.Form, board, thread string) (
-		rInfo IBPostedInfo, err error, code int)
+		rInfo IBPostedInfo, err error)
 
 	IBUpdateBoard(
 		w http.ResponseWriter, r *http.Request, bi IBNewBoardInfo) (
-		err error, code int)
+		err error)
 
 	IBDeleteBoard(
 		w http.ResponseWriter, r *http.Request, board string) (
-		err error, code int)
+		err error)
 
 	IBDeletePost(
 		w http.ResponseWriter, r *http.Request, board, post string) (
-		err error, code int)
+		err error)
 }
