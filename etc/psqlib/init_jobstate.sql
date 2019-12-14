@@ -61,3 +61,22 @@ CREATE TABLE ib0.refs_recalc (
 )
 -- :next
 CREATE INDEX ON ib0.refs_recalc (b_id,b_p_id)
+
+
+-- :next
+-- table used to hold files which should be deleted
+-- we can't delete files before tx is successfuly commited (otherwise if commit fails/crashed, we gonna be in broken state),
+-- and after it's committed we MUST hold lock on counter before delete to prevent nuking of new files
+-- XXX we could nuke file/thumb counter tables and rely on serialized mode's siread locks; how would performance compare?
+-- a bit of backlog aint going to cause any troubles
+CREATE TABLE ib0.files_deleted (
+	d_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	fname TEXT NOT NULL
+)
+-- :next
+-- same for file thumbnails
+CREATE TABLE ib0.fthumbs_deleted (
+	d_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	fname TEXT NOT NULL,
+	thumb TEXT NOT NULL
+)

@@ -90,20 +90,23 @@ CREATE FUNCTION ib0.files_uniq_fname_update_delete() RETURNS TRIGGER
 AS $$
 BEGIN
 
-	-- delete instead of updating
-	DELETE FROM
-		ib0.files_uniq_fname uf
-	WHERE
-		uf.fname = NEW.fname;
+	-- "If you have no specific reason to make a trigger BEFORE or AFTER, the BEFORE case is more efficient, since the information about the operation doesn't have to be saved until end of statement."
 
-	-- mark that we deleted
+	IF NEW.cnt < 0 THEN
+		RAISE EXCEPTION 'counter went negative';
+	END IF;
+
+	-- mark to delet
 	INSERT INTO
-		t_del_files (fname)
+		ib0.files_deleted (fname)
 	VALUES
 		(NEW.fname);
 
-	-- do not update
-	RETURN NULL;
+	-- notify reaper
+	NOTIFY ib0_files_deleted;
+
+	-- proceed
+	RETURN NEW;
 
 END;
 $$ LANGUAGE plpgsql
@@ -113,7 +116,7 @@ CREATE TRIGGER update_delete
 BEFORE UPDATE
 ON ib0.files_uniq_fname
 FOR EACH ROW
-WHEN (NEW.cnt = 0)
+WHEN (NEW.cnt <= 0)
 EXECUTE PROCEDURE ib0.files_uniq_fname_update_delete()
 
 
@@ -124,20 +127,23 @@ CREATE FUNCTION ib0.files_uniq_thumb_update_delete() RETURNS TRIGGER
 AS $$
 BEGIN
 
-	-- delete instead of updating
-	DELETE FROM
-		ib0.files_uniq_thumb ut
-	WHERE
-		(ut.fname,ut.thumb) = (NEW.fname,NEW.thumb);
+	-- "If you have no specific reason to make a trigger BEFORE or AFTER, the BEFORE case is more efficient, since the information about the operation doesn't have to be saved until end of statement."
 
-	-- mark that we deleted
+	IF NEW.cnt < 0 THEN
+		RAISE EXCEPTION 'counter went negative';
+	END IF;
+
+	-- mark to delet
 	INSERT INTO
-		t_del_fthumbs (fname,thumb)
+		ib0.fthumbs_deleted (fname,thumb)
 	VALUES
 		(NEW.fname,NEW.thumb);
 
-	-- do not update
-	RETURN NULL;
+	-- notify reaper
+	NOTIFY ib0_fthumbs_deleted;
+
+	-- proceed
+	RETURN NEW;
 
 END;
 $$ LANGUAGE plpgsql
@@ -147,5 +153,5 @@ CREATE TRIGGER update_delete
 BEFORE UPDATE
 ON ib0.files_uniq_thumb
 FOR EACH ROW
-WHEN (NEW.cnt = 0)
+WHEN (NEW.cnt <= 0)
 EXECUTE PROCEDURE ib0.files_uniq_thumb_update_delete()

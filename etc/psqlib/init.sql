@@ -103,7 +103,9 @@ CREATE TABLE ib0.boards (
 	max_active_pages INTEGER, -- <=0 - all existing pages are active
 	max_pages        INTEGER, -- <=0 - unlimited, archive mode
 
-	cfg_t_bump_limit INTEGER, -- bump limit, can be NULL
+	cfg_t_bump_limit   INTEGER, -- bump limit, can be NULL
+	cfg_t_thread_limit BIGINT,  -- thread limit, can be NULL
+
 	post_limits      JSONB, -- allowed properties of post, sorta common for both OPs and replies
 	newthread_limits JSONB, -- same as post_limits but for new threads. inherits from post_limits
 	reply_limits     JSONB, -- same as post_limits but for replies. inherits from post_limits
@@ -131,6 +133,7 @@ CREATE TABLE ib0.threads (
 	b_t_name TEXT     COLLATE "C"  NOT NULL, -- external thread identifier
 
 	bump      TIMESTAMP  WITH TIME ZONE  NOT NULL, -- last bump time. decides position in pages/catalog
+	t_order   BIGINT                     NOT NULL, -- order within board its in
 	skip_over BOOLEAN                    NOT NULL, -- if true, do not include in overboard
 	p_count   BIGINT                     NOT NULL DEFAULT 0, -- post count (including OP)
 	f_count   BIGINT                     NOT NULL DEFAULT 0, -- sum of posts' (including OP) f_count
