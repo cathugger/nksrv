@@ -3,8 +3,6 @@ package legacytrip
 // legacy UNIX DES crypt(3) & Shift_JIS based imageboard tripcode stuff
 
 import (
-	"regexp"
-
 	ud "nksrv/lib/unixdescrypt"
 
 	ej "golang.org/x/text/encoding/japanese"
@@ -29,10 +27,11 @@ func encodeSJIS(src, dst []byte) ([]byte, error) {
 	}
 }
 
+// assumption: len(old) == len(rep)
 func myTr(buf []byte, old, rep string) {
-	for i := 0; i < len(buf); i++ {
+	for i, ic := range buf {
 		for j := 0; j < len(old); j++ {
-			if buf[i] == old[j] {
+			if ic == old[j] {
 				buf[i] = rep[j]
 				break
 			}
@@ -40,9 +39,18 @@ func myTr(buf []byte, old, rep string) {
 	}
 }
 
+func replaceNotInRangeWith(buf []byte, rst, red, x byte) {
+	for i, c := range buf {
+		if c < rst || c > red {
+			buf[i] = x
+		}
+	}
+}
+
 var saltsuffix = []byte("H..")
-var saltregexp = regexp.MustCompile("[^.-z]")
-var saltreplacement = []byte{'.'}
+
+//var saltregexp = regexp.MustCompile("[^.-z]")
+//var saltreplacement = []byte{'.'}
 
 func MakeLegacyTrip(src string) (string, error) {
 	// encode in Shift_JIS
@@ -52,10 +60,9 @@ func MakeLegacyTrip(src string) (string, error) {
 		return "", err
 	}
 	// """salt""" preparation
-	salt1 := append(trip, saltsuffix...)[1:3]
-	salt2 := saltregexp.ReplaceAll(salt1, saltreplacement)
 	var salt [2]byte
-	copy(salt[:], salt2)
+	copy(salt[:], append(trip, saltsuffix...)[1:3])
+	replaceNotInRangeWith(salt[:], '.', 'z', '.')
 	myTr(salt[:], ":;<=>?@[\\]^_`", `ABCDEFGabcdef`)
 	// do crypt
 	var buf [13]byte
