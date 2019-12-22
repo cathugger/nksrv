@@ -22,18 +22,6 @@ func (sp *PSQLIB) makeDelTables(tx *sql.Tx) (err error) {
 		return
 	}
 
-	_, err = tx.Exec("CREATE TEMPORARY TABLE t_del_files (fname TEXT NOT NULL) ON COMMIT DROP")
-	if err != nil {
-		err = sp.sqlError("", err)
-		return
-	}
-
-	_, err = tx.Exec("CREATE TEMPORARY TABLE t_del_fthumbs (fname TEXT NOT NULL,thumb TEXT NOT NULL) ON COMMIT DROP")
-	if err != nil {
-		err = sp.sqlError("", err)
-		return
-	}
-
 	return
 }
 
@@ -79,22 +67,6 @@ ON
 
 func (sp *PSQLIB) drainDelModIDs(tx *sql.Tx) (rows *sql.Rows, err error) {
 	rows, err = tx.Query("DELETE FROM t_del_modids RETURNING mod_id")
-	if err != nil {
-		err = sp.sqlError("", err)
-	}
-	return
-}
-
-func (sp *PSQLIB) drainDelFiles(tx *sql.Tx) (rows *sql.Rows, err error) {
-	rows, err = tx.Query("DELETE FROM t_del_files RETURNING fname")
-	if err != nil {
-		err = sp.sqlError("", err)
-	}
-	return
-}
-
-func (sp *PSQLIB) drainDelFThumbs(tx *sql.Tx) (rows *sql.Rows, err error) {
-	rows, err = tx.Query("DELETE FROM t_del_fthumbs RETURNING fname,thumb")
 	if err != nil {
 		err = sp.sqlError("", err)
 	}

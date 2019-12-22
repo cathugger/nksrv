@@ -76,6 +76,7 @@ func buildMsgIDArray(prefs []string) string {
 
 type queryable interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
 func (sp *PSQLIB) processReferencesOnPost(qq queryable,

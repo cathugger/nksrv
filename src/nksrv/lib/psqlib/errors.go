@@ -44,6 +44,10 @@ func errTooBigFileAll(limit int64) error {
 	return fmt.Errorf("files are too large (limit: %d bytes)", limit)
 }
 
+func errDuplicateFile(a, b int) error {
+	return fmt.Errorf("duplicate file: %d is same as %d", xx, x)
+}
+
 // indicates that psql error is deadlock
 type psqlDeadlockError struct {
 	error

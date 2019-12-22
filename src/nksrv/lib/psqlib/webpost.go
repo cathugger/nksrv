@@ -57,32 +57,75 @@ func webNotFound(err error) error {
 	return &ib0.WebPostError{Err: err, Code: http.StatusNotFound}
 }
 
-func (sp *PSQLIB) commonNewPost(
-	w http.ResponseWriter, r *http.Request,
-	f form.Form, board, thread string, isReply bool) (
-	rInfo postedInfo, err error) {
+/*
+ * request processing:
+ * 1. validate correctness of input data, extract it
+ * 2. quick db query for info based on some of input data, possibly reject there
+ * 3. expensive processing of message data depending on both board info and input data (like hashing, thumbnailing)
+ * 4. transaction: insert data, do sql actions; if transaction fails, retry
+ * 5. somewhere, move files/thumbs in.
+ *   doing that after tx commits isnt completely sound,
+ *   and may only result in having excess files (could be mitigated by periodic checks)
+ *   or initial unavailability (could be mitigated by exponential delays after failures);
+ *   I think that's better than alternative of doing it before tx, which could lead to files being nuked after tx fails to commit;
+ *   in idea we could copy over data before tx and then delete tmp files after tx, but copies are more expensive.
+ *   We could use two-phase commits (PREPARE TRANSACTION) maybe, but there are some limitations with them so not yet.
+ */
 
-	var pInfo mailib.PostInfo
+type wp_thumbMove struct {
+	from string
+	to   string
+}
 
-	type thumbMove struct{ from, to string }
-	var thumbMoves []thumbMove
+type wp_btr struct {
+	board      string
+	thread     string
+	isReply    bool
+}
 
-	var msgfn string
+type wp_context struct {
+	f          form.Form
 
-	defer func() {
-		if err != nil {
-			f.RemoveAll()
-			for _, mov := range thumbMoves {
-				os.Remove(mov.from)
-			}
-			if msgfn != "" {
-				os.Remove(msgfn)
-			}
-		}
-	}()
+	wp_btr
+
+	xf         webInputFields
+	postOpts   PostOptions
+
+	wp_dbinfo
+
+	pInfo      mailib.PostInfo
+	isctlgrp   bool
+	srefs      []ibref_nntp.Reference
+	irefs      []ibref_nntp.Index
+
+	thumbMoves []wp_thumbMove
+	msgfn      string // full filename of inner msg (if doing primitive signing)
+}
+
+type wp_dbinfo struct {
+	bid        boardID
+	tid        sql.NullInt64
+	ref        sql.NullString
+	postLimits submissionLimits
+	opdate     pq.NullTime
+}
+
+func wp_errcleanup(ctx *wp_context) {
+	ctx.f.RemoveAll()
+	for _, mov := range ctx.thumbMoves {
+		os.Remove(mov.from)
+	}
+	if ctx.msgfn != "" {
+		os.Remove(ctx.msgfn)
+	}
+}
+
+// step #1: premature extraction and sanity validation of input data
+func (sp *PSQLIB) wp_validateAndExtract(
+	ctx *wp_context, w http.ResponseWriter, r *http.Request) (err error) {
 
 	// do text inputs processing/checking
-	xf, err := sp.processTextFields(f)
+	ctx.xf, err = sp.processTextFields(ctx.f)
 	if err != nil {
 		err = badWebRequest(err)
 		return
@@ -91,35 +134,39 @@ func (sp *PSQLIB) commonNewPost(
 	// web captcha checking
 	if sp.webcaptcha != nil {
 		var code int
-		if err, code = sp.webcaptcha.CheckCaptcha(w, r, f.Values); err != nil {
+		if err, code = sp.webcaptcha.CheckCaptcha(w, r, ctx.f.Values); err != nil {
 			err = &ib0.WebPostError{Err: err, Code: code}
 			return
 		}
 	}
 
-	ok, postOpts := parsePostOptions(optimiseFormLine(xf.options))
+	var ok bool
+	ok, ctx.postOpts = parsePostOptions(optimiseFormLine(ctx.xf.options))
 	if !ok {
 		err = badWebRequest(errInvalidOptions)
 		return
 	}
+}
 
-	rInfo, bid, tid, ref, postLimits, opdate, err :=
-		sp.getPrePostInfo(isReply, board, thread, postOpts)
-	if err != nil {
-		return
-	}
+// step #2: extraction from DB
+func (sp *PSQLIB) wp_dbcheck(ctx *wp_context) (err error) {
+	ctx.rInfo, ctx.wp_dbinfo, err = sp.getPrePostInfo(nil, ctx.btr, ctx.postOpts)
+	return
+}
 
+// step #3: expensive processing
+func (sp *PSQLIB) wp_process(ctx *wp_context) (err error) {
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
-	pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(xf.title))
-	pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(xf.name))
+	ctx.pInfo.MI.Title = strings.TrimSpace(optimiseFormLine(ctx.xf.title))
+	ctx.pInfo.MI.Author = strings.TrimSpace(optimiseFormLine(ctx.xf.name))
 
 	var signkeyseed []byte
-	if i := strings.IndexByte(pInfo.MI.Author, '#'); i >= 0 {
-		tripstr := pInfo.MI.Author[i+1:]
+	if i := strings.IndexByte(ctx.pInfo.MI.Author, '#'); i >= 0 {
+		tripstr := ctx.pInfo.MI.Author[i+1:]
 		// strip stuff to not leak secrets
-		pInfo.MI.Author = strings.TrimSpace(pInfo.MI.Author[:i])
+		ctx.pInfo.MI.Author = strings.TrimSpace(ctx.pInfo.MI.Author[:i])
 
 		// we currently only support ed25519 seed syntax
 		tripseed, e := hex.DecodeString(tripstr)
@@ -130,22 +177,22 @@ func (sp *PSQLIB) commonNewPost(
 		signkeyseed = tripseed
 	}
 
-	pInfo.MI.Message = tu.NormalizeTextMessage(xf.message)
-	pInfo.MI.Sage = isReply &&
-		(postOpts.sage || strings.ToLower(pInfo.MI.Title) == "sage")
+	ctx.pInfo.MI.Message = tu.NormalizeTextMessage(ctx.xf.message)
+	ctx.pInfo.MI.Sage = ctx.isReply &&
+		(ctx.postOpts.sage || strings.ToLower(ctx.pInfo.MI.Title) == "sage")
 
 	// check for specified limits
 	var filecount int
-	err, filecount = checkSubmissionLimits(&postLimits, isReply, f, pInfo.MI)
+	err, filecount = checkSubmissionLimits(&ctx.postLimits, ctx.isReply, ctx.f, ctx.pInfo.MI)
 	if err != nil {
 		err = badWebRequest(err)
 		return
 	}
 
 	// disallow content-less msgs
-	if len(pInfo.MI.Message) == 0 &&
+	if len(ctx.pInfo.MI.Message) == 0 &&
 		filecount == 0 &&
-		(len(signkeyseed) == 0 || len(pInfo.MI.Title) == 0) {
+		(len(signkeyseed) == 0 || len(ctx.pInfo.MI.Title) == 0) {
 
 		err = badWebRequest(errEmptyMsg)
 		return
@@ -154,11 +201,11 @@ func (sp *PSQLIB) commonNewPost(
 	// time awareness
 	tu := date.NowTimeUnix()
 	// yeah we intentionally strip nanosec part
-	pInfo.Date = date.UnixTimeUTC(tu)
+	ctx.pInfo.Date = date.UnixTimeUTC(tu)
 	// could happen if OP' time is too far into the future
 	// or our time too far into the past
 	// result would be invalid so disallow
-	if isReply && pInfo.Date.Before(opdate.Time) {
+	if ctx.isReply && ctx.pInfo.Date.Before(ctx.opdate.Time) {
 		err = errors.New(
 			"time error: server's time too far into the past or thread's time too far into the future")
 		return
@@ -175,21 +222,21 @@ func (sp *PSQLIB) commonNewPost(
 	srcdir := sp.src.Main()
 	thumbdir := sp.thm.Main()
 
-	tplan := sp.pickThumbPlan(isReply, pInfo.MI.Sage)
+	tplan := sp.pickThumbPlan(ctx.isReply, ctx.pInfo.MI.Sage)
 
 	// process files
-	pInfo.FI = make([]mailib.FileInfo, filecount)
+	ctx.pInfo.FI = make([]mailib.FileInfo, filecount)
 	x := 0
 	sp.log.LogPrint(DEBUG, "processing form files")
 	for _, fieldname := range FileFields {
-		files := f.Files[fieldname]
+		files := ctx.f.Files[fieldname]
 		for i := range files {
-			pInfo.FI[x].Original = files[i].FileName
-			pInfo.FI[x].Size = files[i].Size
+			ctx.pInfo.FI[x].Original = files[i].FileName
+			ctx.pInfo.FI[x].Size = files[i].Size
 
 			var ext string
-			pInfo.FI[x], ext, err = generateFileConfig(
-				files[i].F, files[i].ContentType, pInfo.FI[x])
+			ctx.pInfo.FI[x], ext, err = generateFileConfig(
+				files[i].F, files[i].ContentType, ctx.pInfo.FI[x])
 			if err != nil {
 				return
 			}
@@ -204,13 +251,13 @@ func (sp *PSQLIB) commonNewPost(
 				return
 			}
 
-			pInfo.FI[x].Type = tfi.Kind
+			ctx.pInfo.FI[x].Type = tfi.Kind
 			if tfi.DetectedType != "" {
-				pInfo.FI[x].ContentType = tfi.DetectedType
+				ctx.pInfo.FI[x].ContentType = tfi.DetectedType
 				// XXX change
 			}
 			// save it
-			pInfo.FI[x].Extras.ContentType = pInfo.FI[x].ContentType
+			ctx.pInfo.FI[x].Extras.ContentType = pInfo.FI[x].ContentType
 			// thumbnail
 			if res.FileName != "" {
 				tfile := pInfo.FI[x].ID + "." + tplan.Name + "." + res.FileExt
@@ -225,10 +272,8 @@ func (sp *PSQLIB) commonNewPost(
 			}
 
 			for xx := 0; xx < x; xx++ {
-				if pInfo.FI[xx].Equivalent(pInfo.FI[x]) {
-					err = badWebRequest(
-						fmt.Errorf(
-							"duplicate file: %d is same as %d", xx, x))
+				if ctx.pInfo.FI[xx].Equivalent(ctx.pInfo.FI[x]) {
+					err = badWebRequest(errDuplicateFile(xx, x))
 					return
 				}
 			}
@@ -238,15 +283,15 @@ func (sp *PSQLIB) commonNewPost(
 	}
 
 	// is control message?
-	isctlgrp := board == "ctl"
+	ctx.isctlgrp := board == "ctl"
 
 	// process references
-	srefs, irefs := ibref_nntp.ParseReferences(pInfo.MI.Message)
+	ctx.srefs, ctx.irefs = ibref_nntp.ParseReferences(ctx.pInfo.MI.Message)
 	var inreplyto []string
 	// we need to build In-Reply-To beforehand
 	// best-effort basis, in most cases it'll be okay
 	inreplyto, err = sp.processReferencesOnPost(
-		sp.db.DB, srefs, bid, postID(tid.Int64), isctlgrp)
+		sp.db.DB, ctx.srefs, ctx.bid, postID(ctx.tid.Int64), ctx.isctlgrp)
 	if err != nil {
 		return
 	}
@@ -254,7 +299,7 @@ func (sp *PSQLIB) commonNewPost(
 	// fill in layout/sign
 	var fmsgids FullMsgIDStr
 	var fref FullMsgIDStr
-	cref := CoreMsgIDStr(ref.String)
+	cref := CoreMsgIDStr(ctx.ref.String)
 	if cref != "" {
 		fref = FullMsgIDStr(fmt.Sprintf("<%s>", cref))
 	}
@@ -303,7 +348,14 @@ func (sp *PSQLIB) commonNewPost(
 	if err != nil {
 		return
 	}
+}
 
+
+func (sp *PSQLIB) wp_txloop(ctx *wp_context) (err error) {
+	// loop
+}
+
+func (sp *PSQLIB) wp_onetx(ctx *wp_context) (err error) {
 	// start transaction
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
@@ -396,7 +448,7 @@ func (sp *PSQLIB) commonNewPost(
 	// TODO implement job doing after-processing for this; initial best-effort scan can still be handy
 	err = sp.processRefsAfterPost(
 		tx,
-		srefs, irefs, inreplyto,
+		ctx.srefs, irefs, inreplyto,
 		bid, uint64(tid.Int64), bpid,
 		pInfo.ID, board, pInfo.MessageID)
 
@@ -404,6 +456,17 @@ func (sp *PSQLIB) commonNewPost(
 		return
 	}
 
+	// commit
+	sp.log.LogPrintf(DEBUG, "webpost commit start")
+	err = tx.Commit()
+	if err != nil {
+		err = sp.sqlError("webpost tx commit", err)
+		return
+	}
+	sp.log.LogPrintf(DEBUG, "webpost commit done")
+}
+
+func (sp *PSQLIB) wp_filespostprocess(ctx *wp_context) (err error) {
 	// move files
 	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
 	x = 0
@@ -467,15 +530,40 @@ func (sp *PSQLIB) commonNewPost(
 			os.Remove(from)
 		}
 	}
+}
 
-	// commit
-	sp.log.LogPrintf(DEBUG, "webpost commit start")
-	err = tx.Commit()
+
+func (sp *PSQLIB) commonNewPost(
+	w http.ResponseWriter, r *http.Request, ctx *wp_context) (
+	rInfo postedInfo, err error) {
+
+	defer func() {
+		if err != nil {
+			wp_errcleanup(&ctx)
+		}
+	}()
+
+	err = sp.wp_validateAndExtract(ctx, w, r)
 	if err != nil {
-		err = sp.sqlError("webpost tx commit", err)
 		return
 	}
-	sp.log.LogPrintf(DEBUG, "webpost commit done")
+
+	err = sp.wp_dbcheck(ctx)
+	if err != nil {
+		return
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 
 	if !isReply {
 		rInfo.ThreadID = pInfo.ID

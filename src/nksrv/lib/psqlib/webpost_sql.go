@@ -9,25 +9,30 @@ import (
 	"github.com/lib/pq"
 )
 
+func (sp *PSQLIB) maybeTxStmt(tx *sql.Tx, stmt int) (r *sql.Stmt) {
+	r = sp.st_prep[st_web_prepost_newthread]
+	if tx != nil {
+		r = tx.Stmt(r)
+	}
+	return
+}
+
 func (sp *PSQLIB) getPrePostInfo(
-	isReply bool, board, thread string, postOpts PostOptions) (
-	rInfo postedInfo,
-	bid boardID, tid sql.NullInt64, ref sql.NullString,
-	postLimits submissionLimits, opdate pq.NullTime,
-	err error) {
+	tx *sql.Tx, btr wp_btr, postOpts PostOptions) (
+	rInfo postedInfo, dbi wp_dbinfo, err error) {
 
 	var jbPL xtypes.JSONText // board post limits
 	var jbXL xtypes.JSONText // board newthread/reply limits
 	var jtRL xtypes.JSONText // thread reply limits
 
 	// get info about board, its limits and shit. does it even exists?
-	if !isReply {
+	if !btr.isReply {
 
 		// new thread
 
-		err = sp.st_prep[st_web_prepost_newthread].
-			QueryRow(board).
-			Scan(&bid, &jbPL, &jbXL)
+		err = sp.maybeTxStmt(tx, st_web_prepost_newthread).
+			QueryRow(btr.board).
+			Scan(&dbi.bid, &jbPL, &jbXL)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = webNotFound(errNoSuchBoard)
@@ -41,17 +46,17 @@ func (sp *PSQLIB) getPrePostInfo(
 			"got bid(%d) post_limits(%q) newthread_limits(%q)",
 			bid, jbPL, jbXL)
 
-		rInfo.Board = board
+		rInfo.Board = btr.board
 
-		postLimits = defaultNewThreadSubmissionLimits
+		dbi.postLimits = defaultNewThreadSubmissionLimits
 
 	} else {
 
 		// new post
 
-		err = sp.st_prep[st_web_prepost_newpost].
-			QueryRow(board, thread).
-			Scan(&bid, &jbPL, &jbXL, &tid, &jtRL, &ref, &opdate)
+		err = sp.maybeTxStmt(tx, st_web_prepost_newpost).
+			QueryRow(btr.board, btr.thread).
+			Scan(&dbi.bid, &jbPL, &jbXL, &dbi.tid, &jtRL, &dbi.ref, &dbi.opdate)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = webNotFound(errNoSuchBoard)
@@ -64,33 +69,33 @@ func (sp *PSQLIB) getPrePostInfo(
 		sp.log.LogPrintf(DEBUG,
 			"got bid(%d) b.post_limits(%q) b.reply_limits(%q) tid(%#v) "+
 				"t.reply_limits(%q) p.msgid(%#v)",
-			bid, jbPL, jbXL, tid, jtRL, ref)
+			dbi.bid, jbPL, jbXL, dbi.tid, jtRL, dbi.ref)
 
-		rInfo.Board = board
+		rInfo.Board = btr.board
 
-		if tid.Int64 <= 0 {
+		if dbi.tid.Int64 <= 0 {
 			err = webNotFound(errNoSuchThread)
 			return
 		}
 
 		rInfo.ThreadID = thread
 
-		postLimits = defaultReplySubmissionLimits
+		dbi.postLimits = defaultReplySubmissionLimits
 
 	}
 
-	err = sp.unmarshalBoardConfig(&postLimits, jbPL, jbXL)
+	err = sp.unmarshalBoardConfig(&dbi.postLimits, jbPL, jbXL)
 	if err != nil {
 		return
 	}
 
 	if postOpts.nolimit {
 		// TODO check whether poster is privileged or something
-		postLimits = maxSubmissionLimits
+		dbi.postLimits = maxSubmissionLimits
 	}
 
 	// apply instance-specific limit tweaks
-	sp.applyInstanceSubmissionLimits(&postLimits, isReply, board)
+	sp.applyInstanceSubmissionLimits(&dbi.postLimits, btr.isReply, btr.board)
 
 	return
 }
