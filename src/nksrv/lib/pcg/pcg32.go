@@ -25,18 +25,17 @@ const (
 )
 
 type PCG32 struct {
-	state     uint64
-	increment uint64
+	state uint64
+	inc   uint64
 }
 
 func NewPCG32() PCG32 {
 	return PCG32{pcg32InitState, pcg32InitIncrement}
 }
 
-func (p *PCG32) Seed(state, sequence uint64) *PCG32 {
-	p.increment = (sequence << 1) | 1
-	p.state = (state+p.increment)*pcg32Multiplier + p.increment
-	return p
+func (p *PCG32) Seed(state, seq uint64) {
+	p.inc = (seq << 1) | 1
+	p.state = (state+p.inc)*pcg32Multiplier + p.inc
 }
 
 func (p *PCG32) Random() (r uint32) {
@@ -44,7 +43,7 @@ func (p *PCG32) Random() (r uint32) {
 	r = bits.RotateLeft32(uint32(((p.state>>18)^p.state)>>27), -int(p.state>>59))
 
 	// Advance 64-bit linear congruential generator to new state
-	p.state = p.state*pcg32Multiplier + p.increment
+	p.state = p.state*pcg32Multiplier + p.inc
 
 	return
 }
@@ -79,11 +78,10 @@ func (p *PCG32) FastBounded(bound uint32) uint32 {
 	return uint32(prod >> 32)
 }
 
-func (p *PCG32) Advance(delta uint64) *PCG32 {
-	p.state = advanceLCG64(p.state, delta, pcg32Multiplier, p.increment)
-	return p
+func (p *PCG32) Advance(delta uint64) {
+	p.state = advanceLCG64(p.state, delta, pcg32Multiplier, p.inc)
 }
 
-func (p *PCG32) Retreat(delta uint64) *PCG32 {
-	return p.Advance(-delta)
+func (p *PCG32) Retreat(delta uint64) {
+	p.Advance(-delta)
 }

@@ -130,7 +130,7 @@ func ExampleReport64s() {
 	fmt.Printf("pcg64s random:\n"+
 		"      -  result:      64-bit unsigned int (uint64)\n"+
 		"      -  period:      2^128\n"+
-		"      -  state type:  PGC64s (%d bytes)\n"+
+		"      -  state type:  PCG64s (%d bytes)\n"+
 		"      -  output func: XSL-RR\n"+
 		"\n",
 		unsafe.Sizeof(rng))
@@ -204,7 +204,7 @@ func ExampleReport64s() {
 	// pcg64s random:
 	//       -  result:      64-bit unsigned int (uint64)
 	//       -  period:      2^128
-	//       -  state type:  PGC64s (16 bytes)
+	//       -  state type:  PCG64s (16 bytes)
 	//       -  output func: XSL-RR
 	//
 	// Round 1:

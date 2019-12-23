@@ -70,7 +70,7 @@ func TestRetreat32s(t *testing.T) {
 func BenchmarkNew32s(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		pcg := NewPCG32s()
-		_ = pcg.Seed(1)
+		pcg.Seed(1)
 	}
 }
 
@@ -130,7 +130,7 @@ func ExampleReport32s() {
 	fmt.Printf("pcg32s random:\n"+
 		"      -  result:      32-bit unsigned int (uint32)\n"+
 		"      -  period:      2^64\n"+
-		"      -  state type:  PGC32s (%d bytes)\n"+
+		"      -  state type:  PCG32s (%d bytes)\n"+
 		"      -  output func: XSH-RR\n"+
 		"\n",
 		unsafe.Sizeof(rng))
@@ -198,7 +198,7 @@ func ExampleReport32s() {
 	// pcg32s random:
 	//       -  result:      32-bit unsigned int (uint32)
 	//       -  period:      2^64
-	//       -  state type:  PGC32s (8 bytes)
+	//       -  state type:  PCG32s (8 bytes)
 	//       -  output func: XSH-RR
 	//
 	// Round 1:

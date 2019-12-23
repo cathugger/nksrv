@@ -31,9 +31,8 @@ func NewPCG32s() PCG32s {
 	return PCG32s{pcg32sInitState}
 }
 
-func (p *PCG32s) Seed(state uint64) *PCG32s {
+func (p *PCG32s) Seed(state uint64) {
 	p.state = (state+pcg32sIncrement)*pcg32Multiplier + pcg32sIncrement
-	return p
 }
 
 func (p *PCG32s) Random() (r uint32) {
@@ -76,11 +75,10 @@ func (p *PCG32s) FastBounded(bound uint32) uint32 {
 	return uint32(prod >> 32)
 }
 
-func (p *PCG32s) Advance(delta uint64) *PCG32s {
+func (p *PCG32s) Advance(delta uint64) {
 	p.state = advanceLCG64(p.state, delta, pcg32Multiplier, pcg32sIncrement)
-	return p
 }
 
-func (p *PCG32s) Retreat(delta uint64) *PCG32s {
-	return p.Advance(-delta)
+func (p *PCG32s) Retreat(delta uint64) {
+	p.Advance(-delta)
 }

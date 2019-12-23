@@ -24,7 +24,8 @@ import (
 // Basic sanity test: is first known value determined properly?
 func TestSanity32x2(t *testing.T) {
 	pcg := NewPCG32x2()
-	result := pcg.Seed(1, 1, 2, 1).Random()
+	pcg.Seed(1, 1, 2, 1)
+	result := pcg.Random()
 	expect := uint64(1107300197865787281)
 	if result != expect {
 		t.Errorf("NewPCG32x2().Seed(1, 1, 2, 1).Random() is %q; want %q", result, expect)
@@ -167,7 +168,7 @@ func ExampleReport32x2() {
 	fmt.Printf("pcg32x2 random:\n"+
 		"      -  result:      64-bit unsigned int (uint64)\n"+
 		"      -  period:      2^64   (* ~2^126 streams)\n"+
-		"      -  state type:  PGC32x2 (%d bytes)\n"+
+		"      -  state type:  PCG32x2 (%d bytes)\n"+
 		"      -  output func: XSH-RR (x 2)\n"+
 		"\n",
 		unsafe.Sizeof(rng))
@@ -236,11 +237,12 @@ func ExampleReport32x2() {
 
 		fmt.Println()
 	}
+
 	// Output:
 	// pcg32x2 random:
 	//       -  result:      64-bit unsigned int (uint64)
 	//       -  period:      2^64   (* ~2^126 streams)
-	//       -  state type:  PGC32x2 (32 bytes)
+	//       -  state type:  PCG32x2 (32 bytes)
 	//       -  output func: XSH-RR (x 2)
 	//
 	// Round 1:
