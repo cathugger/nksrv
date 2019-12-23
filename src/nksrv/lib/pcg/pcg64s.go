@@ -22,13 +22,12 @@ func NewPCG64s() PCG64s {
 	}
 }
 
-func (p *PCG64s) Seed(stateHi, stateLo uint64) *PCG64s {
+func (p *PCG64s) Seed(stateHi, stateLo uint64) {
 	//p.state = (state+pcg64sIncrement)*pcg64Multiplier + pcg64sIncrement
 	p.state = xuint128{stateHi, stateLo}
 	p.add()
 	p.multiply()
 	p.add()
-	return p
 }
 
 func (p *PCG64s) Random() uint64 {
@@ -82,18 +81,17 @@ func (p *PCG64s) FastBounded(bound uint64) uint64 {
 	return high
 }
 
-func (p *PCG64s) Advance(deltaHi, deltaLo uint64) *PCG64s {
+func (p *PCG64s) Advance(deltaHi, deltaLo uint64) {
 	p.state = advanceLCG128(
 		p.state,
 		xuint128{deltaHi, deltaLo},
 		xuint128{pcg64MulHi, pcg64MulLo},
 		xuint128{pcg64sIncHi, pcg64sIncLo})
-	return p
 }
 
-func (p *PCG64s) Retreat(deltaHi, deltaLo uint64) *PCG64s {
+func (p *PCG64s) Retreat(deltaHi, deltaLo uint64) {
 	// -x = ~x + 1
 	t := xuint128{^deltaHi, ^deltaLo}
 	t.add(xuint128{0, 1})
-	return p.Advance(t.hi, t.lo)
+	p.Advance(t.hi, t.lo)
 }

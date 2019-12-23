@@ -70,7 +70,7 @@ func TestRetreat64s(t *testing.T) {
 func BenchmarkNew64s(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		pcg := NewPCG64s()
-		_ = pcg.Seed(0, 1)
+		pcg.Seed(0, 1)
 	}
 }
 
