@@ -18,30 +18,35 @@ import "math/bits"
 // on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
 // the specific language governing permissions and limitations under the License.
 
-type PCG32x2 struct {
-	hi PCG32
-	lo PCG32
+const (
+	pcg32sInitState = 0x4d595df4d0f33173 // 5573589319906701683
+	pcg32sIncrement = 0x14057b7ef767814f // 1442695040888963407
+)
+
+type PCG32s struct {
+	state uint64
 }
 
-func NewPCG32x2() PCG32x2 {
-	return PCG32x2{NewPCG32(), NewPCG32()}
+func NewPCG32s() PCG32s {
+	return PCG32s{pcg32sInitState}
 }
 
-func (p *PCG32x2) Seed(stateHi, stateLo, sequenceHi, sequenceLo uint64) *PCG32x2 {
-	mask := ^uint64(0) >> 1
-	if sequenceHi&mask == sequenceLo&mask {
-		sequenceLo = ^sequenceHi
-	}
-	p.hi.Seed(stateHi, sequenceHi)
-	p.lo.Seed(stateLo, sequenceLo)
+func (p *PCG32s) Seed(state uint64) *PCG32s {
+	p.state = (state+pcg32sIncrement)*pcg32Multiplier + pcg32sIncrement
 	return p
 }
 
-func (p *PCG32x2) Random() uint64 {
-	return uint64(p.hi.Random())<<32 | uint64(p.lo.Random())
+func (p *PCG32s) Random() (r uint32) {
+	// Confuse and permute 32-bit output from old state
+	r = bits.RotateLeft32(uint32(((p.state>>18)^p.state)>>27), -int(p.state>>59))
+
+	// Advance 64-bit linear congruential generator to new state
+	p.state = p.state*pcg32Multiplier + pcg32sIncrement
+
+	return
 }
 
-func (p *PCG32x2) Bounded(bound uint64) uint64 {
+func (p *PCG32s) Bounded(bound uint32) uint32 {
 	if bound == 0 {
 		return 0
 	}
@@ -56,31 +61,26 @@ func (p *PCG32x2) Bounded(bound uint64) uint64 {
 
 // as in int31n, go/src/math/rand/rand.go
 // this function uses a single division in the worst case
-func (p *PCG32x2) FastBounded(bound uint64) uint64 {
+func (p *PCG32s) FastBounded(bound uint32) uint32 {
 	v := p.Random()
-	high, low := bits.Mul64(v, bound)
+	prod := uint64(v) * uint64(bound)
+	low := uint32(prod)
 	if low < bound {
-		thresh := -bound
-		if thresh >= bound {
-			thresh -= bound
-			if thresh >= bound {
-				thresh %= bound
-			}
-		}
+		thresh := -bound % bound
 		for low < thresh {
 			v = p.Random()
-			high, low = bits.Mul64(v, bound)
+			prod = uint64(v) * uint64(bound)
+			low = uint32(prod)
 		}
 	}
-	return high
+	return uint32(prod >> 32)
 }
 
-func (p *PCG32x2) Advance(delta uint64) *PCG32x2 {
-	p.lo.Advance(delta)
-	p.hi.Advance(delta)
+func (p *PCG32s) Advance(delta uint64) *PCG32s {
+	p.state = advanceLCG64(p.state, delta, pcg32Multiplier, pcg32sIncrement)
 	return p
 }
 
-func (p *PCG32x2) Retreat(delta uint64) *PCG32x2 {
+func (p *PCG32s) Retreat(delta uint64) *PCG32s {
 	return p.Advance(-delta)
 }

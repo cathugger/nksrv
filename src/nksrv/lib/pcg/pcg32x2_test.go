@@ -24,10 +24,10 @@ import (
 // Basic sanity test: is first known value determined properly?
 func TestSanity32x2(t *testing.T) {
 	pcg := NewPCG32x2()
-	result := pcg.Seed(1, 1, 1, 2).Random()
+	result := pcg.Seed(1, 1, 2, 1).Random()
 	expect := uint64(1107300197865787281)
 	if result != expect {
-		t.Errorf("NewPCG32x2().Seed(1, 1, 1, 2).Random() is %q; want %q", result, expect)
+		t.Errorf("NewPCG32x2().Seed(1, 1, 2, 1).Random() is %q; want %q", result, expect)
 	}
 }
 
@@ -47,7 +47,7 @@ var sumTests32x2 = []struct {
 func TestSum32x2(t *testing.T) {
 	for i, a := range sumTests32x2 {
 		pcg := NewPCG32x2()
-		pcg.Seed(a.state, a.state, a.sequence, a.sequence+1)
+		pcg.Seed(a.state, a.state, a.sequence+1, a.sequence)
 		sum := uint64(0)
 		for j := 0; j < a.count; j++ {
 			sum += uint64(pcg.Random())
@@ -166,9 +166,9 @@ func ExampleReport32x2() {
 
 	fmt.Printf("pcg32x2 random:\n"+
 		"      -  result:      64-bit unsigned int (uint64)\n"+
-		"      -  period:      2^64   (* 2^63 streams)\n"+
+		"      -  period:      2^64   (* ~2^126 streams)\n"+
 		"      -  state type:  PGC32x2 (%d bytes)\n"+
-		"      -  output func: XSH-RR\n"+
+		"      -  output func: XSH-RR (x 2)\n"+
 		"\n",
 		unsafe.Sizeof(rng))
 
@@ -234,62 +234,67 @@ func ExampleReport32x2() {
 		}
 		fmt.Println()
 
+		fmt.Println()
 	}
 	// Output:
 	// pcg32x2 random:
 	//       -  result:      64-bit unsigned int (uint64)
-	//       -  period:      2^64   (* 2^63 streams)
+	//       -  period:      2^64   (* ~2^126 streams)
 	//       -  state type:  PGC32x2 (32 bytes)
-	//       -  output func: XSH-RR
+	//       -  output func: XSH-RR (x 2)
 	//
 	// Round 1:
-	//   64bit: 0x1a410f65a15c02b7 0xe0b09a537b47f409 0x11fba8acba1d3330
-	// 	 0x452993e983d2f293 0x36082c12bfa4784b 0xf5934191cbed606e
-	//   Again: 0x1a410f65a15c02b7 0xe0b09a537b47f409 0x11fba8acba1d3330
-	// 	 0x452993e983d2f293 0x36082c12bfa4784b 0xf5934191cbed606e
-	//   Coins: HHTTTHTHHHTHTTTHHHHHTTTHHHTHTHTHTTHTTTHHHHHHTTTTHHTTTTTHTTTTTTTHT
-	//   Rolls: 3 2 1 3 2 2 3 6 4 5 6 4 5 5 5 2 1 1 1 3 3 3 6 1 3 6 6 6 2 2 6 3 5
-	//   Cards: 5c 9s Th 5s 2h 7d 5d Tc Qh 8h 9d 4s 3d 8d 7c 7s Js Qc 3h Jc 2d Jd
-	// 	 Ad 6d 3c Kh 7h Qd 9h Qs 9c 6s As 4c Td 6c Kd Ks 8s 8c 2s 4d 6h Ah
-	// 	 3s 2c 4h 5h Ts Ac Jh Kc
+	//   64bit: 0xa15c02b71a410f65 0x7b47f409e0b09a53 0xba1d333011fba8ac
+	// 	 0x83d2f293452993e9 0xbfa4784b36082c12 0xcbed606ef5934191
+	//   Again: 0xa15c02b71a410f65 0x7b47f409e0b09a53 0xba1d333011fba8ac
+	// 	 0x83d2f293452993e9 0xbfa4784b36082c12 0xcbed606ef5934191
+	//   Coins: TTTTHTHTTHHHHTHTTTTTTHHTHHTTHHHTHHHTHTHHHHHTHTHHHTHTTTHTHHTHTTTHT
+	//   Rolls: 6 2 1 3 5 5 6 3 4 2 3 1 2 5 5 2 1 1 1 6 6 3 6 4 3 6 6 6 2 5 6 3 5
+	//   Cards: As Qc 8c Ts 3s Kd 4s Js 6h Jc 9h 9s Ad 5d 9d 2s Ah 6s 8s Ks 4h 3d
+	// 	 2c 7c 4d 5s 7h 5c Td Ac 8h 8d Kc Qd 5h 9c Tc 7s 2h 3c Th Kh Qs Jd
+	// 	 7d 6c 4c 6d 3h 2d Jh Qh
+	//
 	// Round 2:
-	//   64bit: 0x2c59d33474ab93ad 0x63e4d9a81c1da000 0xd80ced60494ff896
-	// 	 0xabb62df034462f2f 0x6ceea41fd308a3e5 0x7c561bd70fa83bab
-	//   Again: 0x2c59d33474ab93ad 0x63e4d9a81c1da000 0xd80ced60494ff896
-	// 	 0xabb62df034462f2f 0x6ceea41fd308a3e5 0x7c561bd70fa83bab
-	//   Coins: HHHHHHHHHHTHHHTHTHTHTHTTTTHHTTTHHTHHTHTTHHTTTHHHHHHTHTTHTHTTTTTTT
-	//   Rolls: 5 5 3 5 5 6 4 5 1 4 6 4 2 1 6 2 6 6 3 6 5 4 5 6 3 4 4 6 3 3 5 2 2
-	//   Cards: 6d 9d 3c 7h Qc Ts Js 3h Th 4s 5d 5c 2d 3d 4c 6c Ad Kd 9c 6h Qs 2c
-	// 	 Td 8h 5s 5h 8s 7c 7d Jh Kh Qd 4d Jc Kc 3s Ah 7s Jd 9h 4h 8d Tc 6s
-	// 	 2h Qh Ks 9s Ac 2s As 8c
+	//   64bit: 0x74ab93ad2c59d334 0x1c1da00063e4d9a8 0x494ff896d80ced60
+	// 	 0x34462f2fabb62df0 0xd308a3e56ceea41f 0x0fa83bab7c561bd7
+	//   Again: 0x74ab93ad2c59d334 0x1c1da00063e4d9a8 0x494ff896d80ced60
+	// 	 0x34462f2fabb62df0 0xd308a3e56ceea41f 0x0fa83bab7c561bd7
+	//   Coins: TTHHHTTTTHTTHHHTTHHHTTTHTTTTHHTHTHHHTHHHHTTTHHHTHTTHHTTTTHTHTHHTH
+	//   Rolls: 5 5 6 2 2 3 1 2 1 1 6 4 2 1 3 2 3 3 6 6 2 1 5 6 3 4 4 6 3 3 2 5 5
+	//   Cards: 3d Th 2c Jd Qh 2s Ac Jc 8h 3s 3h 5d 6c 9h 9c Js Qd Qc Qs Td 8d 9d
+	// 	 4s Tc 7h 6h 8s Kh 7c Kc 8c Ah 9s 4c 6d 7d 5s 4h 5h Ad 6s 2d Kd 3c
+	// 	 2h Ks Ts 4d 5c 7s As Jh
+	//
 	// Round 3:
-	//   64bit: 0x7088079939af5f9f 0x31198a8804196b18 0x26859955c3c3eb28
-	// 	 0x822c3b19c076c60c 0x1c41c1e0c693e135 0x7255b24df8f63932
-	//   Again: 0x7088079939af5f9f 0x31198a8804196b18 0x26859955c3c3eb28
-	// 	 0x822c3b19c076c60c 0x1c41c1e0c693e135 0x7255b24df8f63932
-	//   Coins: HTTHHTTTTTHTTHHHTHTTHHTTHTHHTHTHTTTTHHTTTHHTHHTTHTTHHHTHHHTHTTTHT
-	//   Rolls: 3 3 5 3 4 4 2 3 1 1 5 3 4 6 5 2 1 2 2 4 1 3 3 2 6 2 4 2 2 2 5 5 4
-	//   Cards: Ac 5h Ts Kd 2d 6d 5d 6h 3d 8c Jd 5s 9h 4h Tc 9d Qh 7d Ad 4s 5c 2c
-	// 	 Ah Qc Jh Th 6c 3s 8h 7s 7c Js 8s 4d Kh 9s Qs 7h Ks Qd 2h Jc 9c Kc
-	// 	 As 4c 8d Td 3h 6s 3c 2s
+	//   64bit: 0x39af5f9f70880799 0x04196b1831198a88 0xc3c3eb2826859955
+	// 	 0xc076c60c822c3b19 0xc693e1351c41c1e0 0xf8f639327255b24d
+	//   Again: 0x39af5f9f70880799 0x04196b1831198a88 0xc3c3eb2826859955
+	// 	 0xc076c60c822c3b19 0xc693e1351c41c1e0 0xf8f639327255b24d
+	//   Coins: THTTHHHHHTTTHTTHHTHTHTTHHHTHHHTHHTTTHTHHTHHTHHTTTHTTTHHHTTHTTTHHT
+	//   Rolls: 6 6 5 3 4 4 2 3 1 1 5 6 1 6 2 5 4 2 2 1 1 3 6 2 6 2 1 5 2 2 5 2 4
+	//   Cards: Jd Jc 8s Ks Ad Tc 6c Kd 8h 4s 2c 3s 6d 5c 2h 9d Qh Th 5h 3d 9c 8d
+	// 	 Kc 4c Js 9s 7h Qd Qs 7s 4h 2d 2s 4d 3h 7d Qc 5d Jh 7c Ts 6s Ac Td
+	// 	 As 8c 6h 9h Ah Kh 3c 5s
+	//
 	// Round 4:
-	//   64bit: 0xe2d9967955ce6851 0x339ab6aa97a7726d 0x7638b42017e10815
-	// 	 0x742b519858007d43 0x6083910e962fb148 0xdcb7a611b9bb55bd
-	//   Again: 0xe2d9967955ce6851 0x339ab6aa97a7726d 0x7638b42017e10815
-	// 	 0x742b519858007d43 0x6083910e962fb148 0xdcb7a611b9bb55bd
-	//   Coins: HHTHHTTTTHTHHHHHTTHHHTTTHHTHTHTHTHHTTHTHHHHHHTHHTHHTHHTTTTHHTHHTT
-	//   Rolls: 6 6 3 6 1 4 6 2 2 2 4 1 2 3 3 5 5 2 2 2 6 4 2 3 2 6 4 5 6 3 1 2 5
-	//   Cards: 7c 4c Qh 2h 7s 3s 4h 2c Ad 8c 5s 9h 2d 4s Td 6d 2s 8h Ks 6h 9d 3h
-	// 	 Ac Th 7d 5c Jd 8s 5d 6c Qs 3c 5h Tc As Qc Kd Ts 9s 3d Qd Ah 4d 8d
-	// 	 Kh Js Jc Jh Kc 6s 7h 9c
+	//   64bit: 0x55ce6851e2d99679 0x97a7726d339ab6aa 0x17e108157638b420
+	// 	 0x58007d43742b5198 0x962fb1486083910e 0xb9bb55bddcb7a611
+	//   Again: 0x55ce6851e2d99679 0x97a7726d339ab6aa 0x17e108157638b420
+	// 	 0x58007d43742b5198 0x962fb1486083910e 0xb9bb55bddcb7a611
+	//   Coins: TTHTTTTHHTTTHTHHHHHHTHHHTHHHHTHHTHTTHTHTHHTHHHHHTHTHHTTTTTHHTHHHT
+	//   Rolls: 3 3 6 6 4 4 3 2 5 2 4 4 2 3 6 5 5 5 2 2 6 4 2 3 5 3 1 5 3 6 4 2 2
+	//   Cards: Js Qd 4h 4d 2c 9h 8h Th Qs As 6d 5h 6c Ad 9s 7s Ts 2s 6h Qc 3c 5d
+	// 	 Ac 7d Jc Jh Qh 3s 9c Kh Ah 8s 4c Tc 6s 8d Ks 3d 5c Jd 9d Kd 7c 4s
+	// 	 Td Kc 8c 5s 2d 3h 7h 2h
+	//
 	// Round 5:
-	//   64bit: 0x7f85ce72fcef7cd6 0xddfc86301b488b5a 0xc38e77dbd0daf7ea
-	// 	 0x27df76751d9a70f7 0x77011f4d241a37cf 0xbe702c2b9a3857b7
-	//   Again: 0x7f85ce72fcef7cd6 0xddfc86301b488b5a 0xc38e77dbd0daf7ea
-	// 	 0x27df76751d9a70f7 0x77011f4d241a37cf 0xbe702c2b9a3857b7
-	//   Coins: HHHHTHHTTHTTHHHTTTHHTHTHTTTTHTTHTHTTTHHHTHTHTTHTTHTHHTHTHHHTHTHTT
-	//   Rolls: 3 4 3 6 2 1 5 1 5 6 3 4 2 5 2 4 3 6 5 3 2 5 2 6 6 2 1 4 6 2 5 3 2
-	//   Cards: 6c 2d 9s Ah 2s As 4h 6h Kd 4d 3d Js 8d Qs Jh Qd 6s 9d 3h Qh Th 5c
-	// 	 2h Kc 7c 5s 7s 5d Ks Ad 7h Tc Jc 7d 3s 8c 8s 3c 6d Ac 9c 2c Td Qc
-	// 	 5h 9h 8h Kh Ts Jd 4c 4s
+	//   64bit: 0xfcef7cd67f85ce72 0x1b488b5addfc8630 0xd0daf7eac38e77db
+	// 	 0x1d9a70f727df7675 0x241a37cf77011f4d 0x9a3857b7be702c2b
+	//   Again: 0xfcef7cd67f85ce72 0x1b488b5addfc8630 0xd0daf7eac38e77db
+	// 	 0x1d9a70f727df7675 0x241a37cf77011f4d 0x9a3857b7be702c2b
+	//   Coins: HHTHTTTTTTTHTHTTTTTHHHHTTTHHHHHHHHTHTHTHTTHTTTTTTHTHTHHHTTHHHTHTT
+	//   Rolls: 3 4 6 3 5 4 2 4 2 3 3 1 5 5 5 4 6 3 2 3 2 5 5 6 3 2 4 4 6 5 5 6 2
+	//   Cards: Ah 2s 8c Qh Jd As 3d Ks 4s Kc Qd Js Kd 7c 9s 8d 5d Kh 2h 9d Jh 3s
+	// 	 7s Qs Qc Td 4h Th 6d 8s 6s Ad 9c 7d 6c Jc 2d 7h Tc Ac 8h 5c 3c 4d
+	// 	 5h 5s 6h Ts 3h 9h 4c 2c
 }

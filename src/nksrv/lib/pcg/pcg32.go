@@ -1,5 +1,7 @@
 package pcg
 
+import "math/bits"
+
 // PCG Random Number Generation
 // Developed by Melissa O'Neill <oneill@pcg-random.org>
 // Paper and details at http://www.pcg-random.org
@@ -17,9 +19,9 @@ package pcg
 // the specific language governing permissions and limitations under the License.
 
 const (
-	pcg32InitState  = 0x853c49e6748fea9b //  9600629759793949339
-	pcg32Increment  = 0xda3e39cb94b95bdb // 15726070495360670683
-	pcg32Multiplier = 0x5851f42d4c957f2d //  6364136223846793005
+	pcg32InitState     = 0x853c49e6748fea9b //  9600629759793949339
+	pcg32InitIncrement = 0xda3e39cb94b95bdb // 15726070495360670683
+	pcg32Multiplier    = 0x5851f42d4c957f2d //  6364136223846793005
 )
 
 type PCG32 struct {
@@ -28,7 +30,7 @@ type PCG32 struct {
 }
 
 func NewPCG32() PCG32 {
-	return PCG32{pcg32InitState, pcg32Increment}
+	return PCG32{pcg32InitState, pcg32InitIncrement}
 }
 
 func (p *PCG32) Seed(state, sequence uint64) *PCG32 {
@@ -37,15 +39,14 @@ func (p *PCG32) Seed(state, sequence uint64) *PCG32 {
 	return p
 }
 
-func (p *PCG32) Random() uint32 {
-	// Advance 64-bit linear congruential generator to new state
-	oldState := p.state
-	p.state = oldState*pcg32Multiplier + p.increment
-
+func (p *PCG32) Random() (r uint32) {
 	// Confuse and permute 32-bit output from old state
-	xorShifted := uint32(((oldState >> 18) ^ oldState) >> 27)
-	rot := uint32(oldState >> 59)
-	return (xorShifted >> rot) | (xorShifted << ((-rot) & 31))
+	r = bits.RotateLeft32(uint32(((p.state>>18)^p.state)>>27), -int(p.state>>59))
+
+	// Advance 64-bit linear congruential generator to new state
+	p.state = p.state*pcg32Multiplier + p.increment
+
+	return
 }
 
 func (p *PCG32) Bounded(bound uint32) uint32 {
@@ -79,25 +80,10 @@ func (p *PCG32) FastBounded(bound uint32) uint32 {
 }
 
 func (p *PCG32) Advance(delta uint64) *PCG32 {
-	p.state = p.advanceLCG64(p.state, delta, pcg32Multiplier, p.increment)
+	p.state = advanceLCG64(p.state, delta, pcg32Multiplier, p.increment)
 	return p
 }
 
 func (p *PCG32) Retreat(delta uint64) *PCG32 {
 	return p.Advance(-delta)
-}
-
-func (p *PCG32) advanceLCG64(state, delta, curMult, curPlus uint64) uint64 {
-	accMult := uint64(1)
-	accPlus := uint64(0)
-	for delta > 0 {
-		if delta&1 != 0 {
-			accMult *= curMult
-			accPlus = accPlus*curMult + curPlus
-		}
-		curPlus = (curMult + 1) * curPlus
-		curMult *= curMult
-		delta /= 2
-	}
-	return accMult*state + accPlus
 }
