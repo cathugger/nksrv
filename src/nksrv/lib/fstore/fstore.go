@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"nksrv/lib/pcg"
 )
 
 type Config struct {
@@ -16,7 +18,7 @@ type Config struct {
 }
 
 type FStore struct {
-	root     string
+	root     string // root folder + path separator
 	initMu   sync.Mutex
 	initDirs map[string]struct{}
 }
@@ -24,29 +26,29 @@ type FStore struct {
 // tempfile logic based on stdlib' io/ioutil/tempfile.go
 
 var (
-	rand   uint32
-	randmu sync.Mutex
+	rand     pcg.PCG64s
+	randInit bool
+	randMu   sync.Mutex
 )
 
-func reseed() uint32 {
-	return uint32(time.Now().UnixNano() + int64(os.Getpid()))
+func reseed() {
+	rand.Seed(uint64(os.Getpid()), uint64(time.Now().UnixNano()))
 }
 
 func nextSuffix() string {
-	randmu.Lock()
-	r := rand
-	if r == 0 {
-		r = reseed()
+	randMu.Lock()
+	if !randInit {
+		reseed()
+		randInit = true
 	}
-	r = r*1664525 + 1013904223 // constants from Numerical Recipes
-	rand = r
-	randmu.Unlock()
-	return strconv.Itoa(int(1e9 + r%1e9))[1:]
+	x := rand.Bounded(1e18)
+	randMu.Unlock()
+	return strconv.FormatUint(1e18+x, 10)[1:]
 }
 
 const tmpDir = "_tmp"
 
-func OpenFStore(cfg Config) (s FStore, _ error) {
+func OpenFStore(cfg Config) (s FStore, e error) {
 	s.initDirs = make(map[string]struct{})
 
 	i := len(cfg.Path)
@@ -56,13 +58,13 @@ func OpenFStore(cfg Config) (s FStore, _ error) {
 		s.root = cfg.Path
 	}
 	if i > 0 {
-		e := os.MkdirAll(s.root[:len(s.root)-1], 0777)
+		e = os.MkdirAll(s.root[:len(s.root)-1], 0777)
 		if e != nil {
-			return FStore{}, e
+			return
 		}
 	}
 
-	return s, nil
+	return
 }
 
 func (fs FStore) Main() string {
@@ -124,10 +126,11 @@ func (fs *FStore) NewFile(dir, pfx, ext string) (f *os.File, err error) {
 		name := filepath.Join(fulldir, pfx+nextSuffix()+ext)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
-			if nconflict++; nconflict > 10 {
-				randmu.Lock()
-				rand = reseed()
-				randmu.Unlock()
+			nconflict++
+			if nconflict > 10 {
+				randMu.Lock()
+				reseed()
+				randMu.Unlock()
 			}
 			continue
 		}

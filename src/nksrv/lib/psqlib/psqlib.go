@@ -76,6 +76,7 @@ type Config struct {
 	NGPGlobal      string
 	NGPAnyPuller   string
 	NGPAnyServer   string
+	InstanceName   string
 }
 
 // readonly for now

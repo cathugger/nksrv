@@ -469,7 +469,7 @@ func (sp *PSQLIB) wp_onetx(ctx *wp_context) (err error) {
 func (sp *PSQLIB) wp_filespostprocess(ctx *wp_context) (err error) {
 	// move files
 	sp.log.LogPrint(DEBUG, "moving form temporary files to their intended place")
-	x = 0
+	x := 0
 	for _, fieldname := range FileFields {
 		files := f.Files[fieldname]
 		for i := range files {
