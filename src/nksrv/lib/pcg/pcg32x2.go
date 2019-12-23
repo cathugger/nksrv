@@ -18,16 +18,16 @@ import "math/bits"
 // on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
 // the specific language governing permissions and limitations under the License.
 
-type PCG64 struct {
+type PCG32x2 struct {
 	lo PCG32
 	hi PCG32
 }
 
-func NewPCG64() PCG64 {
-	return PCG64{NewPCG32(), NewPCG32()}
+func NewPCG32x2() PCG32x2 {
+	return PCG32x2{NewPCG32(), NewPCG32()}
 }
 
-func (p *PCG64) Seed(state1, state2, sequence1, sequence2 uint64) *PCG64 {
+func (p *PCG32x2) Seed(state1, state2, sequence1, sequence2 uint64) *PCG32x2 {
 	mask := ^uint64(0) >> 1
 	if sequence1&mask == sequence2&mask {
 		sequence2 = ^sequence2
@@ -37,11 +37,11 @@ func (p *PCG64) Seed(state1, state2, sequence1, sequence2 uint64) *PCG64 {
 	return p
 }
 
-func (p *PCG64) Random() uint64 {
+func (p *PCG32x2) Random() uint64 {
 	return uint64(p.hi.Random())<<32 | uint64(p.lo.Random())
 }
 
-func (p *PCG64) Bounded(bound uint64) uint64 {
+func (p *PCG32x2) Bounded(bound uint64) uint64 {
 	if bound == 0 {
 		return 0
 	}
@@ -56,7 +56,7 @@ func (p *PCG64) Bounded(bound uint64) uint64 {
 
 // as in int31n, go/src/math/rand/rand.go
 // this function uses a single division in the worst case
-func (p *PCG64) FastBounded(bound uint64) uint64 {
+func (p *PCG32x2) FastBounded(bound uint64) uint64 {
 	v := p.Random()
 	high, low := bits.Mul64(v, bound)
 	if low < bound {
@@ -75,12 +75,12 @@ func (p *PCG64) FastBounded(bound uint64) uint64 {
 	return high
 }
 
-func (p *PCG64) Advance(delta uint64) *PCG64 {
+func (p *PCG32x2) Advance(delta uint64) *PCG32x2 {
 	p.lo.Advance(delta)
 	p.hi.Advance(delta)
 	return p
 }
 
-func (p *PCG64) Retreat(delta uint64) *PCG64 {
+func (p *PCG32x2) Retreat(delta uint64) *PCG32x2 {
 	return p.Advance(-delta)
 }

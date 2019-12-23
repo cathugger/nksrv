@@ -22,16 +22,16 @@ import (
 //
 
 // Basic sanity test: is first known value determined properly?
-func TestSanity64(t *testing.T) {
-	pcg := NewPCG64()
+func TestSanity32x2(t *testing.T) {
+	pcg := NewPCG32x2()
 	result := pcg.Seed(1, 1, 1, 2).Random()
 	expect := uint64(1107300197865787281)
 	if result != expect {
-		t.Errorf("NewPCG64().Seed(1, 1, 1, 2).Random() is %q; want %q", result, expect)
+		t.Errorf("NewPCG32x2().Seed(1, 1, 1, 2).Random() is %q; want %q", result, expect)
 	}
 }
 
-var sumTests64 = []struct {
+var sumTests32x2 = []struct {
 	state    uint64 // PCG seed value for state
 	sequence uint64 // PCG seed value for sequence
 	count    int    // number of values to sum
@@ -44,9 +44,9 @@ var sumTests64 = []struct {
 }
 
 // Are the sums of the first few values consistent with expectation?
-func TestSum64(t *testing.T) {
-	for i, a := range sumTests64 {
-		pcg := NewPCG64()
+func TestSum32x2(t *testing.T) {
+	for i, a := range sumTests32x2 {
+		pcg := NewPCG32x2()
 		pcg.Seed(a.state, a.state, a.sequence, a.sequence+1)
 		sum := uint64(0)
 		for j := 0; j < a.count; j++ {
@@ -58,18 +58,18 @@ func TestSum64(t *testing.T) {
 	}
 }
 
-const count64 = 256
+const count32x2 = 256
 
 // Does advancing work?
-func TestAdvance64(t *testing.T) {
-	pcg := NewPCG64()
+func TestAdvance32x2(t *testing.T) {
+	pcg := NewPCG32x2()
 	pcg.Seed(1, 1, 1, 2)
-	values := make([]uint64, count64)
+	values := make([]uint64, count32x2)
 	for i := range values {
 		values[i] = pcg.Random()
 	}
 
-	for skip := 1; skip < count64; skip++ {
+	for skip := 1; skip < count32x2; skip++ {
 		pcg.Seed(1, 1, 1, 2)
 		pcg.Advance(uint64(skip))
 		result := pcg.Random()
@@ -81,12 +81,12 @@ func TestAdvance64(t *testing.T) {
 }
 
 // Does retreating work?
-func TestRetreat64(t *testing.T) {
-	pcg := NewPCG64()
+func TestRetreat32x2(t *testing.T) {
+	pcg := NewPCG32x2()
 	pcg.Seed(1, 1, 1, 2)
 	expect := pcg.Random()
 
-	for skip := 1; skip < count64; skip++ {
+	for skip := 1; skip < count32x2; skip++ {
 		pcg.Seed(1, 1, 1, 2)
 		for i := 0; i < skip; i++ {
 			_ = pcg.Random()
@@ -104,17 +104,17 @@ func TestRetreat64(t *testing.T) {
 //
 
 // Measure the time it takes to generate a 64-bit generator
-func BenchmarkNew64(b *testing.B) {
+func BenchmarkNew32x2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		pcg := NewPCG64()
+		pcg := NewPCG32x2()
 		_ = pcg.Seed(1, 1, 1, 2)
 	}
 }
 
 // Measure the time it takes to generate random values
-func BenchmarkRandom64(b *testing.B) {
+func BenchmarkRandom32x2(b *testing.B) {
 	b.StopTimer()
-	pcg := NewPCG64()
+	pcg := NewPCG32x2()
 	pcg.Seed(1, 1, 1, 2)
 	b.StartTimer()
 
@@ -124,9 +124,9 @@ func BenchmarkRandom64(b *testing.B) {
 }
 
 // Measure the time it takes to generate bounded random values
-func BenchmarkBounded64(b *testing.B) {
+func BenchmarkBounded32x2(b *testing.B) {
 	b.StopTimer()
-	pcg := NewPCG64()
+	pcg := NewPCG32x2()
 	pcg.Seed(1, 1, 1, 2)
 	b.StartTimer()
 
@@ -140,9 +140,9 @@ func BenchmarkBounded64(b *testing.B) {
 }
 
 // Measure the time it takes to generate bounded random values
-func BenchmarkBounded64Fast(b *testing.B) {
+func BenchmarkBounded32x2Fast(b *testing.B) {
 	b.StopTimer()
-	pcg := NewPCG64()
+	pcg := NewPCG32x2()
 	pcg.Seed(1, 1, 1, 2)
 	b.StartTimer()
 
@@ -159,15 +159,15 @@ func BenchmarkBounded64Fast(b *testing.B) {
 // EXAMPLES
 //
 
-func ExampleReport64() {
+func ExampleReport32x2() {
 	// Print report
-	rng := NewPCG64()
+	rng := NewPCG32x2()
 	rng.Seed(42, 42, 54, 54)
 
 	fmt.Printf("pcg32x2 random:\n"+
 		"      -  result:      64-bit unsigned int (uint64)\n"+
 		"      -  period:      2^64   (* 2^63 streams)\n"+
-		"      -  state type:  PGC64 (%d bytes)\n"+
+		"      -  state type:  PGC32x2 (%d bytes)\n"+
 		"      -  output func: XSH-RR\n"+
 		"\n",
 		unsafe.Sizeof(rng))
@@ -239,7 +239,7 @@ func ExampleReport64() {
 	// pcg32x2 random:
 	//       -  result:      64-bit unsigned int (uint64)
 	//       -  period:      2^64   (* 2^63 streams)
-	//       -  state type:  PGC64 (32 bytes)
+	//       -  state type:  PGC32x2 (32 bytes)
 	//       -  output func: XSH-RR
 	//
 	// Round 1:
