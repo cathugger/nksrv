@@ -72,43 +72,6 @@ func webNotFound(err error) error {
  *   We could use two-phase commits (PREPARE TRANSACTION) maybe, but there are some limitations with them so not yet.
  */
 
-type wp_thumbMove struct {
-	from string
-	to   string
-}
-
-type wp_btr struct {
-	board      string
-	thread     string
-	isReply    bool
-}
-
-type wp_context struct {
-	f          form.Form
-
-	wp_btr
-
-	xf         webInputFields
-	postOpts   PostOptions
-
-	wp_dbinfo
-
-	pInfo      mailib.PostInfo
-	isctlgrp   bool
-	srefs      []ibref_nntp.Reference
-	irefs      []ibref_nntp.Index
-
-	thumbMoves []wp_thumbMove
-	msgfn      string // full filename of inner msg (if doing primitive signing)
-}
-
-type wp_dbinfo struct {
-	bid        boardID
-	tid        sql.NullInt64
-	ref        sql.NullString
-	postLimits submissionLimits
-	opdate     pq.NullTime
-}
 
 func wp_errcleanup(ctx *wp_context) {
 	ctx.f.RemoveAll()
@@ -351,8 +314,35 @@ func (sp *PSQLIB) wp_process(ctx *wp_context) (err error) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
 func (sp *PSQLIB) wp_txloop(ctx *wp_context) (err error) {
 	// loop
+	var wg sync.WaitGroup
+	errch := make(chan error, 1)
+	sp.wp_spawn_filepostproc(ctx, &wg, errch)
+
 }
 
 func (sp *PSQLIB) wp_onetx(ctx *wp_context) (err error) {
