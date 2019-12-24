@@ -54,3 +54,21 @@ type psqlDeadlockError struct {
 }
 
 func (x psqlDeadlockError) Unwrap() error { return x.error }
+
+func sendError(c chan<- error, e error) {
+	// non-blocking send incase we have buffer space available
+	select {
+		case c <- e:
+		default:
+	}
+}
+
+func recvError(c <-chan error) error {
+	// non-blocking recv incase there's error buffered
+	select {
+		case e := <-c:
+			return e
+		default:
+			return nil
+	}
+}
