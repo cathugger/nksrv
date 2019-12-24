@@ -3,6 +3,8 @@ package fstore
 // abstracts and automates some filestore operations
 
 import (
+	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path"
@@ -21,33 +23,41 @@ type Config struct {
 }
 
 type FStore struct {
-	rootdir  string // root folder + path separator
-	privdir  string // private this instance folder
-	privpfx  string // priv pfx used for initDirs
-	initMu   sync.Mutex
-	initDirs map[string]struct{}
+	rootdir string // root folder + path separator if needed
+	privdir string // priv (per instance) folder + path sep if needed
+	privpfx string // priv pfx used for initDirs
+
+	initDirsMu sync.Mutex
+	initDirs   map[string]struct{}
 }
 
 // tempfile logic based on stdlib' io/ioutil/tempfile.go
 
 var (
-	rand     pcg.PCG64s
-	randInit bool
-	randMu   sync.Mutex
+	rng     pcg.PCG64s
+	rngInit bool
+	rngMu   sync.Mutex
 )
 
 func reseed() {
-	rand.Seed(uint64(os.Getpid()), uint64(time.Now().UnixNano()))
+	var b [16]byte
+	if _, e := crand.Read(b[:]); e != nil {
+		panic(e.Error())
+	}
+	x, y := binary.BigEndian.Uint64(b[:8]), binary.BigEndian.Uint64(b[8:])
+	x += uint64(os.Getpid())
+	y += uint64(time.Now().UnixNano())
+	rng.Seed(x, y)
 }
 
 func nextSuffix() string {
-	randMu.Lock()
-	if !randInit {
+	rngMu.Lock()
+	if !rngInit {
 		reseed()
-		randInit = true
+		rngInit = true
 	}
-	x := rand.Bounded(1e18)
-	randMu.Unlock()
+	x := rng.Bounded(1e18)
+	rngMu.Unlock()
 	return strconv.FormatUint(1e18+x, 10)[1:]
 }
 
@@ -99,8 +109,8 @@ func (fs FStore) Main() string {
 }
 
 func (fs *FStore) makeDir(root, rpfx, dir string, mode os.FileMode) (err error) {
-	fs.initMu.Lock()
-	defer fs.initMu.Unlock()
+	fs.initDirsMu.Lock()
+	defer fs.initDirsMu.Unlock()
 
 	//fmt.Fprintf(os.Stderr, "newdir: %q\n", fs.root+dir)
 	err = os.MkdirAll(root+dir, mode)
@@ -121,8 +131,8 @@ func (fs *FStore) MakeGlobalDir(dir string, mode os.FileMode) (err error) {
 }
 
 func (fs *FStore) removeDir(root, rpfx, dir string) (err error) {
-	fs.initMu.Lock()
-	defer fs.initMu.Unlock()
+	fs.initDirsMu.Lock()
+	defer fs.initDirsMu.Unlock()
 
 	err = os.RemoveAll(root + dir)
 	delete(fs.initDirs, rpfx+dir)
@@ -138,8 +148,8 @@ func (fs *FStore) RemoveGlobalDir(dir string) error {
 }
 
 func (fs *FStore) ensureDir(fulldir, dir string) (err error) {
-	fs.initMu.Lock()
-	defer fs.initMu.Unlock()
+	fs.initDirsMu.Lock()
+	defer fs.initDirsMu.Unlock()
 
 	if _, inited := fs.initDirs[dir]; !inited {
 		err = os.MkdirAll(fulldir, 0700)
@@ -160,9 +170,9 @@ func (fs *FStore) makeRndFile(fulldir, pfx, ext string) (f *os.File, err error) 
 		if os.IsExist(err) {
 			nconflict++
 			if nconflict > 10 {
-				randMu.Lock()
+				rngMu.Lock()
 				reseed()
-				randMu.Unlock()
+				rngMu.Unlock()
 			}
 			continue
 		}
@@ -179,9 +189,9 @@ func (fs *FStore) makeRndDir(fulldir, pfx, ext string) (name string, err error) 
 		if os.IsExist(err) {
 			nconflict++
 			if nconflict > 10 {
-				randMu.Lock()
+				rngMu.Lock()
 				reseed()
-				randMu.Unlock()
+				rngMu.Unlock()
 			}
 			continue
 		}
