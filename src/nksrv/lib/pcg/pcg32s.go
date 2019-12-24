@@ -45,7 +45,7 @@ func (p *PCG32s) Random() (r uint32) {
 	return
 }
 
-func (p *PCG32s) Bounded(bound uint32) uint32 {
+func (p *PCG32s) slowBounded(bound uint32) uint32 {
 	if bound == 0 {
 		return 0
 	}
@@ -58,9 +58,7 @@ func (p *PCG32s) Bounded(bound uint32) uint32 {
 	}
 }
 
-// as in int31n, go/src/math/rand/rand.go
-// this function uses a single division in the worst case
-func (p *PCG32s) FastBounded(bound uint32) uint32 {
+func (p *PCG32s) Bounded(bound uint32) uint32 {
 	v := p.Random()
 	prod := uint64(v) * uint64(bound)
 	low := uint32(prod)

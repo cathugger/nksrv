@@ -21,8 +21,9 @@ type Config struct {
 }
 
 type FStore struct {
-	root     string // root folder + path separator
-	private  string // private this instance folder
+	rootdir  string // root folder + path separator
+	privdir  string // private this instance folder
+	privpfx  string // priv pfx used for initDirs
 	initMu   sync.Mutex
 	initDirs map[string]struct{}
 }
@@ -74,16 +75,19 @@ func OpenFStore(cfg Config) (s FStore, err error) {
 	rootdir := cleanWSlash(cfg.Path)
 	privdir := cleanWSlash(cfg.Private)
 	if privdir != "" {
-		s.private = rootdir + "_priv" + string(os.PathSeparator) + privdir
+		s.privdir = rootdir + "_priv" + string(os.PathSeparator) + privdir
 	} else {
 		// was explicit "." which got converted to ""
-		s.private = rootdir
+		s.privdir = rootdir
 	}
-	s.root = s.private[:len(rootdir)]
+	s.rootdir = s.privdir[:len(rootdir)]
+	s.privpfx = s.privdir[len(rootdir):]
 
-	err = os.MkdirAll(s.private[:len(s.private)-1], 0777)
-	if err != nil {
-		return
+	if s.privdir != "" {
+		err = os.MkdirAll(s.privdir[:len(s.privdir)-1], 0777)
+		if err != nil {
+			return
+		}
 	}
 
 	return
@@ -91,52 +95,46 @@ func OpenFStore(cfg Config) (s FStore, err error) {
 
 // Main returns main directory with slash if needed.
 func (fs FStore) Main() string {
-	return fs.root
+	return fs.rootdir
 }
 
-func (fs *FStore) MakeDir(dir string, mode os.FileMode) (err error) {
+func (fs *FStore) makeDir(root, rpfx, dir string, mode os.FileMode) (err error) {
 	fs.initMu.Lock()
 	defer fs.initMu.Unlock()
 
 	//fmt.Fprintf(os.Stderr, "newdir: %q\n", fs.root+dir)
-	err = os.MkdirAll(fs.private+dir, mode)
+	err = os.MkdirAll(root+dir, mode)
 	if err != nil {
 		return
 	}
 	// mark so if someone removes we'll err
-	fs.initDirs[fs.private[len(fs.root):]+dir] = struct{}{}
+	fs.initDirs[rpfx+dir] = struct{}{}
 	return
+}
+
+func (fs *FStore) MakeDir(dir string, mode os.FileMode) error {
+	return fs.makeDir(fs.privdir, fs.privpfx, dir, mode)
 }
 
 func (fs *FStore) MakeGlobalDir(dir string, mode os.FileMode) (err error) {
+	return fs.makeDir(fs.rootdir, "", dir, mode)
+}
+
+func (fs *FStore) removeDir(root, rpfx, dir string) (err error) {
 	fs.initMu.Lock()
 	defer fs.initMu.Unlock()
 
-	err = os.MkdirAll(fs.root+dir, mode)
-	if err != nil {
-		return
-	}
-	// mark so if someone removes we'll err
-	fs.initDirs[dir] = struct{}{}
+	err = os.RemoveAll(root + dir)
+	delete(fs.initDirs, rpfx+dir)
 	return
 }
 
-func (fs *FStore) RemoveDir(dir string) (err error) {
-	fs.initMu.Lock()
-	defer fs.initMu.Unlock()
-
-	err = os.RemoveAll(fs.private + dir)
-	delete(fs.initDirs, fs.private[len(fs.root):]+dir)
-	return
+func (fs *FStore) RemoveDir(dir string) error {
+	return fs.removeDir(fs.privdir, fs.privpfx, dir)
 }
 
-func (fs *FStore) RemoveGlobalDir(dir string) (err error) {
-	fs.initMu.Lock()
-	defer fs.initMu.Unlock()
-
-	err = os.RemoveAll(fs.root + dir)
-	delete(fs.initDirs, dir)
-	return
+func (fs *FStore) RemoveGlobalDir(dir string) error {
+	return fs.removeDir(fs.rootdir, "", dir)
 }
 
 func (fs *FStore) ensureDir(fulldir, dir string) (err error) {
@@ -154,14 +152,7 @@ func (fs *FStore) ensureDir(fulldir, dir string) (err error) {
 	return
 }
 
-func (fs *FStore) newFile(root, dir, pfx, ext string) (f *os.File, err error) {
-	fulldir := root + dir
-
-	err = fs.ensureDir(fulldir, dir)
-	if err != nil {
-		return
-	}
-
+func (fs *FStore) makeRndFile(fulldir, pfx, ext string) (f *os.File, err error) {
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
 		name := filepath.Join(fulldir, pfx+nextSuffix()+ext)
@@ -180,28 +171,7 @@ func (fs *FStore) newFile(root, dir, pfx, ext string) (f *os.File, err error) {
 	return
 }
 
-func (fs *FStore) NewFile(dir, pfx, ext string) (*os.File, error) {
-	return fs.newFile(fs.private, dir, pfx, ext)
-}
-
-func (fs *FStore) NewGlobalFile(dir, pfx, ext string) (*os.File, error) {
-	return fs.newFile(fs.root, dir, pfx, ext)
-}
-
-const tmpDir = "_tmp"
-
-func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
-	return fs.NewFile(tmpDir, pfx, ext)
-}
-
-func (fs *FStore) newDir(root, dir, pfx, ext string) (name string, err error) {
-	fulldir := root + dir
-
-	err = fs.ensureDir(fulldir, dir)
-	if err != nil {
-		return
-	}
-
+func (fs *FStore) makeRndDir(fulldir, pfx, ext string) (name string, err error) {
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
 		name = filepath.Join(fulldir, pfx+nextSuffix()+ext)
@@ -220,10 +190,50 @@ func (fs *FStore) newDir(root, dir, pfx, ext string) (name string, err error) {
 	return
 }
 
+func (fs *FStore) newFile(
+	root, rpfx, dir, pfx, ext string) (f *os.File, err error) {
+
+	fulldir := root + dir
+
+	err = fs.ensureDir(fulldir, rpfx+dir)
+	if err != nil {
+		return
+	}
+
+	return fs.makeRndFile(fulldir, pfx, ext)
+}
+
+func (fs *FStore) NewFile(dir, pfx, ext string) (*os.File, error) {
+	return fs.newFile(fs.privdir, fs.privpfx, dir, pfx, ext)
+}
+
+func (fs *FStore) NewGlobalFile(dir, pfx, ext string) (*os.File, error) {
+	return fs.newFile(fs.rootdir, "", dir, pfx, ext)
+}
+
+const tmpDir = "_tmp"
+
+func (fs *FStore) TempFile(pfx, ext string) (f *os.File, err error) {
+	return fs.NewFile(tmpDir, pfx, ext)
+}
+
+func (fs *FStore) newDir(
+	root, rpfx, dir, pfx, ext string) (name string, err error) {
+
+	fulldir := root + dir
+
+	err = fs.ensureDir(fulldir, rpfx+dir)
+	if err != nil {
+		return
+	}
+
+	return fs.makeRndDir(fulldir, pfx, ext)
+}
+
 func (fs *FStore) NewDir(dir, pfx, ext string) (string, error) {
-	return fs.newDir(fs.private, dir, pfx, ext)
+	return fs.newDir(fs.privdir, fs.privpfx, dir, pfx, ext)
 }
 
 func (fs *FStore) NewGlobalDir(dir, pfx, ext string) (string, error) {
-	return fs.newDir(fs.root, dir, pfx, ext)
+	return fs.newDir(fs.rootdir, "", dir, pfx, ext)
 }

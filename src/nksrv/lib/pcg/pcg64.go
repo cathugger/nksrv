@@ -56,7 +56,7 @@ func (p *PCG64) multiply() {
 	p.state.multiply(xuint128{pcg64MulHi, pcg64MulLo})
 }
 
-func (p *PCG64) Bounded(bound uint64) uint64 {
+func (p *PCG64) slowBounded(bound uint64) uint64 {
 	if bound == 0 {
 		return 0
 	}
@@ -69,9 +69,7 @@ func (p *PCG64) Bounded(bound uint64) uint64 {
 	}
 }
 
-// as in int31n, go/src/math/rand/rand.go
-// this function uses a single division in the worst case
-func (p *PCG64) FastBounded(bound uint64) uint64 {
+func (p *PCG64) Bounded(bound uint64) uint64 {
 	v := p.Random()
 	high, low := bits.Mul64(v, bound)
 	if low < bound {

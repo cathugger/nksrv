@@ -87,7 +87,23 @@ func BenchmarkRandom64(b *testing.B) {
 }
 
 // Measure the time it takes to generate bounded random values
-func BenchmarkBounded64(b *testing.B) {
+func BenchmarkSlowBounded64(b *testing.B) {
+	b.StopTimer()
+	pcg := NewPCG64()
+	pcg.Seed(1, 1, 0, 1)
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = pcg.slowBounded(uint64(i) & 0xff) // 0..255
+		// _ = pcg.SlowBounded(1e18)
+		// _ = pcg.SlowBounded(6)             // roll of die
+		// _ = pcg.SlowBounded(52)            // deck of cards
+		// _ = pcg.SlowBounded(365)           // day of year
+	}
+}
+
+// Measure the time it takes to generate bounded random values
+func BenchmarkFastBounded64(b *testing.B) {
 	b.StopTimer()
 	pcg := NewPCG64()
 	pcg.Seed(1, 1, 0, 1)
@@ -95,26 +111,10 @@ func BenchmarkBounded64(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = pcg.Bounded(uint64(i) & 0xff) // 0..255
-		//_ = pcg.Bounded(1e19)
+		// _ = pcg.Bounded(1e18)
 		// _ = pcg.Bounded(6)             // roll of die
 		// _ = pcg.Bounded(52)            // deck of cards
 		// _ = pcg.Bounded(365)           // day of year
-	}
-}
-
-// Measure the time it takes to generate bounded random values
-func BenchmarkBounded64Fast(b *testing.B) {
-	b.StopTimer()
-	pcg := NewPCG64()
-	pcg.Seed(1, 1, 0, 1)
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		_ = pcg.FastBounded(uint64(i) & 0xff) // 0..255
-		//_ = pcg.FastBounded(1e19)
-		// _ = pcg.Bounded(6)                 // roll of die
-		// _ = pcg.Bounded(52)                // deck of cards
-		// _ = pcg.Bounded(365)               // day of year
 	}
 }
 
@@ -163,14 +163,14 @@ func ExampleReport64() {
 		/* Toss some coins */
 		fmt.Printf("  Coins: ")
 		for i := 0; i < 65; i++ {
-			fmt.Printf("%c", "TH"[rng.Bounded(2)])
+			fmt.Printf("%c", "TH"[rng.slowBounded(2)])
 		}
 		fmt.Println()
 
 		/* Roll some dice */
 		fmt.Printf("  Rolls:")
 		for i := 0; i < 33; i++ {
-			fmt.Printf(" %d", rng.Bounded(6)+1)
+			fmt.Printf(" %d", rng.slowBounded(6)+1)
 		}
 		fmt.Println()
 
@@ -184,7 +184,7 @@ func ExampleReport64() {
 			cards[i] = i
 		}
 		for i := uint64(CARDS); i > 1; i-- {
-			chosen := rng.Bounded(i)
+			chosen := rng.slowBounded(i)
 			cards[chosen], cards[i-1] = cards[i-1], cards[chosen]
 		}
 
