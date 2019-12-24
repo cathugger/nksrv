@@ -63,7 +63,7 @@ func nextSuffix() string {
 
 func badPrivate(p string) bool {
 	return p == "" || (p[0] == '.' && p != ".") ||
-		strings.ContainsAny(p, "/\\")
+		strings.ContainsAny(p, `/\ `)
 }
 
 func cleanWSlash(p string) string {
