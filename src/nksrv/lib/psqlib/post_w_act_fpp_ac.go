@@ -55,7 +55,8 @@ func (ctx *wp_context) wp_fpp_ac_thumbs() error {
 	}
 }
 
-func (ctx *wp_context) wp_fpp_ac() (err error) {
+// after commit
+func (ctx *wp_context) wp_act_fpp_ac() (err error) {
 	err = ctx.wp_fpp_ac_files()
 	if err != nil {
 		return

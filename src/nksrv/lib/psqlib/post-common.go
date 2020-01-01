@@ -78,10 +78,7 @@ func (f *modPrivFetch) parse() (mcc ModCombinedCaps) {
 	return
 }
 
-func (sp *PSQLIB) registeredMod(
-	tx *sql.Tx, pubkeystr string) (
-	modid uint64, hascap bool, mcc ModCombinedCaps,
-	err error) {
+func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, err error) {
 
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
 	// at which point we're fucked because moddel posts also will exclusively block files table
@@ -101,7 +98,7 @@ func (sp *PSQLIB) registeredMod(
 		var f modPrivFetch
 
 		err = st.QueryRow(pubkeystr).Scan(
-			&modid,
+			&rmi.modid,
 
 			&f.m_g_cap,
 			&f.m_b_cap_j,
@@ -131,10 +128,10 @@ func (sp *PSQLIB) registeredMod(
 		f.unmarshalJSON()
 
 		// enough to check only usable flags
-		hascap = f.m_g_cap.Valid || len(f.m_b_cap) != 0 ||
+		rmi.actionable = f.m_g_cap.Valid || len(f.m_b_cap) != 0 ||
 			f.m_g_caplvl != nil || len(f.m_b_caplvl) != 0
 
-		mcc = f.parse()
+		rmi.ModCombinedCaps = f.parse()
 
 		return
 	}

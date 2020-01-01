@@ -63,11 +63,10 @@ func (sp *PSQLIB) execModCmd(
 	modid uint64, modCC ModCombinedCaps,
 	pi mailib.PostInfo, filenames []string,
 	selfid, ref CoreMsgIDStr,
-	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
-	out_delmsgids delMsgIDState, out_delmodids delModIDState,
+	_in_delmodids delModIDState) (
+	out_delmodids delModIDState,
 	err error, inputerr bool) {
 
-	out_delmsgids = _in_delmsgids
 	out_delmodids = _in_delmodids
 
 	r, c, err := getModCmdInput(pi, filenames)
@@ -119,10 +118,10 @@ func (sp *PSQLIB) execModCmd(
 				// TODO TODO TODO
 				if modCC.ModCap.Cap&cap_delpost != 0 {
 					// global delete by msgid
-					out_delmsgids, out_delmodids, err =
+					out_delmodids, err =
 						sp.modCmdDelete(
 							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args,
-							out_delmsgids, out_delmodids)
+							out_delmodids)
 				}
 			}
 			if err != nil {
@@ -141,11 +140,9 @@ func (sp *PSQLIB) execModCmd(
 }
 
 func (sp *PSQLIB) xxxx(
-	tx *sql.Tx, _in_delmsgids delMsgIDState,
+	tx *sql.Tx,
 	modid uint64, modCC ModCombinedCaps) (
-	out_delmsgids delMsgIDState, err error) {
-
-	out_delmsgids = _in_delmsgids
+	err error) {
 
 	srcdir := sp.src.Main()
 	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs_continue])
@@ -251,11 +248,11 @@ requery:
 			var delmodids delModIDState
 			var inputerr bool
 
-			out_delmsgids, delmodids, err, inputerr = sp.execModCmd(
+			delmodids, err, inputerr = sp.execModCmd(
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
 				modid, modCC,
 				pi, posts[i].files, pi.MessageID,
-				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
+				CoreMsgIDStr(posts[i].ref), delmodids)
 
 			if err != nil {
 

@@ -26,7 +26,7 @@ import (
 
 
 
-func (ctx *wp_context) wp_fpp_bc_files(errch chan error) {
+func (ctx *wp_context) wp_fpp_bc_files(errch chan<- error) {
 
 		var err1 error
 		ctx.src_pending, err1 = ctx.sp.src.NewDir("pending", "wp-", "")
@@ -51,13 +51,15 @@ func (ctx *wp_context) wp_fpp_bc_files(errch chan error) {
 					go func(){
 						defer xg.Done()
 
+						// do sync of contents before move, as move should change only metadata,
+						// and file with broken contents in pending folder could be harmful
+						ctx.wp_syncfilename(from)
+
 						err2 := ctx.wp_movefile_fast(from, to)
 						if err2 != nil {
 							sendError(errch, err2)
 							return
 						}
-
-						ctx.wp_syncfilename(to)
 					}
 
 					x++
@@ -71,13 +73,13 @@ func (ctx *wp_context) wp_fpp_bc_files(errch chan error) {
 				go func(){
 					defer xg.Done()
 
+					ctx.wp_syncfilename(ctx.msgfn)
+
 					err2 := ctx.wp_movefile_fast(ctx.msgfn, to)
 					if err2 != nil {
 						sendError(errch, err2)
 						return
 					}
-
-					ctx.wp_syncfilename(to)
 				}
 
 				x++
@@ -99,7 +101,7 @@ func (ctx *wp_context) wp_fpp_bc_files(errch chan error) {
 		ctx.wp_syncdir(path.Dir(ctx.src_pending))
 }
 
-func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan error) {
+func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan<- error) {
 
 	var err1 error
 	ctx.thm_pending, err1 = ctx.sp.thm.NewDir("pending", "wp-", "")
@@ -109,28 +111,29 @@ func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan error) {
 	}
 
 	// move & sync individual thumbs
-	{
-		var xg sync.WaitGroup
-		for x := range ctx.thumbMoves {
-			// need to copy data to use in goroutine
-			from := thumbMoves[x].fulltmpname
-			to := filepath.Join(ctx.thm_pending, thumbMoves[x].destname)
+	var xg sync.WaitGroup
+	xg.Add(len(ctx.thumbMoves))
+	for x := range ctx.thumbMoves {
+		// need to copy data to use in goroutine
+		from := thumbMoves[x].fulltmpname
+		to := filepath.Join(ctx.thm_pending, thumbMoves[x].destname)
 
-			xg.Add(1)
-			go func(){
-				defer xg.Done()
+		// xg.Add before loop
+		go func(){
+			defer xg.Done()
 
-				err2 := ctx.wp_movefile_fast(from, to)
-				if err2 != nil {
-					sendError(errch, err2)
-					return
-				}
+			// do sync of contents before move, as move should change only metadata,
+			// and file with broken contents in pending folder could be harmful
+			ctx.wp_syncfilename(from)
 
-				ctx.wp_syncfilename(to)
+			err2 := ctx.wp_movefile_fast(from, to)
+			if err2 != nil {
+				sendError(errch, err2)
+				return
 			}
 		}
-		xg.Wait()
 	}
+	xg.Wait()
 
 	// once all files are moved & sync'd, sync dir they're in
 	ctx.wp_syncdir(ctx.thm_pending)
@@ -139,7 +142,11 @@ func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan error) {
 	ctx.wp_syncdir(path.Dir(ctx.thm_pending))
 }
 
-func (ctx *wp_context) wp_fpp_bc(wg *sync.WaitGroup, errch chan error) {
+// before commit, spawns work to be ran in parallel with sql insertion funcs
+func (ctx *wp_context) wp_act_fpp_bc(wg *sync.WaitGroup, errch chan<- error) {
+
+	ct := ctx.traceStart("wp_act_fpp_bc")
+	defer ct.Done()
 
 	wg.Add(2)
 

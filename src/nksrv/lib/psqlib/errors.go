@@ -49,11 +49,11 @@ func errDuplicateFile(a, b int) error {
 }
 
 // indicates that psql error is deadlock
-type psqlDeadlockError struct {
+type psqlRetriableError struct {
 	error
 }
 
-func (x psqlDeadlockError) Unwrap() error { return x.error }
+func (x psqlRetriableError) Unwrap() error { return x.error }
 
 func sendError(c chan<- error, e error) {
 	// non-blocking send incase we have buffer space available

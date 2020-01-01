@@ -55,8 +55,8 @@ type wp_context struct {
 	srefs      []ibref_nntp.Reference
 	irefs      []ibref_nntp.Index
 
-	thumbMoves []wp_thumbMove
 	msgfn      string // full filename of inner msg (if doing primitive signing)
+	thumbMoves []wp_thumbMove
 
 	src_pending string // full dir name without slash of pending dir in src
 	thm_pending string // full dir name without slash of pending dir in thm

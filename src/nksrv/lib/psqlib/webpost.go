@@ -72,11 +72,10 @@ func webNotFound(err error) error {
  *   We could use two-phase commits (PREPARE TRANSACTION) maybe, but there are some limitations with them so not yet.
  */
 
-
 func wp_errcleanup(ctx *wp_context) {
 	ctx.f.RemoveAll()
 	for _, mov := range ctx.thumbMoves {
-		os.Remove(mov.from)
+		os.Remove(mov.fulltmpname)
 	}
 	if ctx.msgfn != "" {
 		os.Remove(ctx.msgfn)
@@ -337,124 +336,6 @@ func (sp *PSQLIB) wp_process(ctx *wp_context) (err error) {
 
 }
 
-func (sp *PSQLIB) wp_txloop(ctx *wp_context) (err error) {
-	// loop
-	var wg sync.WaitGroup
-	errch := make(chan error, 1)
-	sp.wp_spawn_filepostproc(ctx, &wg, errch)
-
-}
-
-func (sp *PSQLIB) wp_onetx(ctx *wp_context) (err error) {
-	// start transaction
-	tx, err := sp.db.DB.Begin()
-	if err != nil {
-		err = sp.sqlError("webpost tx begin", err)
-		return
-	}
-	defer func() {
-		if err != nil {
-			sp.log.LogPrintf(DEBUG, "webpost rollback start")
-			_ = tx.Rollback()
-			sp.log.LogPrintf(DEBUG, "webpost rollback done")
-		}
-	}()
-
-	err = sp.makeDelTables(tx)
-	if err != nil {
-		return
-	}
-
-	var modid uint64
-	var hascap bool
-	var modCC ModCombinedCaps
-
-	if isctlgrp && pubkeystr != "" {
-
-		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
-
-		modid, hascap, modCC, err =
-			sp.registeredMod(tx, pubkeystr)
-		if err != nil {
-			return
-		}
-
-		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
-	}
-
-	var gpid, bpid postID
-	var duplicate bool
-	// perform insert
-	if !isReply {
-		sp.log.LogPrint(DEBUG, "inserting newthread post data to database")
-		gpid, bpid, duplicate, err =
-			sp.insertNewThread(tx, gstmt, bid, pInfo, isctlgrp, modid)
-	} else {
-		sp.log.LogPrint(DEBUG, "inserting reply post data to database")
-		gpid, bpid, duplicate, err =
-			sp.insertNewReply(
-				tx, gstmt,
-				replyTargetInfo{bid, postID(tid.Int64)},
-				pInfo, modid)
-	}
-	if err != nil {
-		return
-	}
-	if duplicate {
-		// shouldn't really happen there
-		err = errDuplicateArticle
-		return
-	}
-
-	// execute mod cmd
-	if hascap {
-		// we should execute it
-		// we never put message in file when processing message
-
-		// msgid deletion state
-		var delmsgids delMsgIDState
-		defer func() { sp.cleanDeletedMsgIDs(delmsgids) }()
-
-		sp.log.LogPrintf(DEBUG, "EXECMOD %s start", pInfo.MessageID)
-
-		delmsgids, _, err, _ =
-			sp.execModCmd(
-				tx, gpid, bid, bpid,
-				modid, modCC,
-				pInfo, nil, pInfo.MessageID,
-				cref, delmsgids, delModIDState{})
-		if err != nil {
-			return
-		}
-
-		sp.log.LogPrintf(DEBUG, "EXECMOD %s done", pInfo.MessageID)
-	}
-
-	// NOTE
-	// current method may sometimes fail finding stuff in highly concurrent conditions
-	// we're inside transaction, therefore we won't see messages being added in other transactions
-	// messages in other thransactions also won't be able to see our new message so they wont be able to notify
-	// in idea, after-tx job should find us, but only if it runs after we have commited (not guaranteed)
-	// TODO implement job doing after-processing for this; initial best-effort scan can still be handy
-	err = sp.processRefsAfterPost(
-		tx,
-		ctx.srefs, irefs, inreplyto,
-		bid, uint64(tid.Int64), bpid,
-		pInfo.ID, board, pInfo.MessageID)
-
-	if err != nil {
-		return
-	}
-
-	// commit
-	sp.log.LogPrintf(DEBUG, "webpost commit start")
-	err = tx.Commit()
-	if err != nil {
-		err = sp.sqlError("webpost tx commit", err)
-		return
-	}
-	sp.log.LogPrintf(DEBUG, "webpost commit done")
-}
 
 func (sp *PSQLIB) wp_filespostprocess(ctx *wp_context) (err error) {
 	// move files
