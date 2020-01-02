@@ -159,7 +159,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 		}
 
 		// hash content, produce filename
-		hash, hashtype, e := ht.MakeFileHash(f)
+		hashname, e := ht.MakeFileHash(f)
 		if e != nil {
 			err = fmt.Errorf("err making message filehash: %v", e)
 			return
@@ -177,7 +177,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 			Type:        ftypes.FTypeMsg,
 			ContentType: messageType,
 			Size:        n,
-			ID:          hash + "-" + hashtype + ".eml",
+			ID:          hashname + ".eml",
 		}
 		// add it
 		i.FI = append(i.FI, mfi)

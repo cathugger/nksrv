@@ -57,6 +57,10 @@ func (ctx *wp_context) wp_fpp_ac_thumbs() error {
 
 // after commit
 func (ctx *wp_context) wp_act_fpp_ac() (err error) {
+
+	yct := ctx.traceStart("wp_act_fpp_ac")
+	defer yct.Done()
+
 	err = ctx.wp_fpp_ac_files()
 	if err != nil {
 		return

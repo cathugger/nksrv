@@ -27,8 +27,8 @@ import (
 
 // info for thumbnail tmpfile location and intended final filename
 type wp_thumbMove struct {
-	fulltmpname string
-	destname   string
+	FullTmpName string
+	RelDestName string
 }
 
 // board/thread/reply

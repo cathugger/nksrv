@@ -101,11 +101,10 @@ func generateFileConfig(
 	f *os.File, ct string, fi mailib.FileInfo) (
 	_ mailib.FileInfo, ext string, err error) {
 
-	hash, hashtype, err := ht.MakeFileHash(f)
+	hashname, err := ht.MakeFileHash(f)
 	if err != nil {
 		return
 	}
-	s := hash + "-" + hashtype
 
 	// prefer info from file name, try figuring out content-type from it
 	// if that fails, try looking into content-type, try figure out filename
@@ -138,14 +137,14 @@ func generateFileConfig(
 
 	if len(ext) != 0 {
 		ext = emime.MIMEPreferedExtension(ext)
-		s += "." + ext
+		hashname += "." + ext
 	}
 
-	fi.ID = s
+	fi.ID = hashname
 	fi.ContentType = ctype
-	// yeh this is actually possible
 	if oname == "" {
-		fi.Original = s
+		// yeh this is actually possible, work it around in this case
+		fi.Original = hashname
 	}
 
 	return fi, ext, err

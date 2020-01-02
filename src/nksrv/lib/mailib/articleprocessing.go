@@ -178,8 +178,8 @@ func (cfg *MailProcessorConfig) processMessageText(
 func takeInFile(
 	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool,
 	ext, ctype string, r io.Reader, binary bool, ow io.Writer) (
-	fn, hash, hashtype string, fsize int64,
-	tres thumbnailer.ThumbResult, tfi thumbnailer.FileInfo, err error) {
+	fn, hashname string, fsize int64,
+	tres thumbnailer.ThumbResult, err error) {
 
 	// new
 	f, err := src.TempFile("mail-", "")
@@ -210,7 +210,7 @@ func takeInFile(
 	}
 	// TODO? io.MultiWriter?
 	// hash it
-	hash, hashtype, err = ht.MakeFileHash(f)
+	hashname, err = ht.MakeFileHash(f)
 	if err != nil {
 		return
 	}
@@ -229,7 +229,7 @@ func takeInFile(
 
 	if !nothumb {
 		// thumbnail (and also close)
-		tres, tfi, err = thm.ThumbProcess(f, ext, ctype, thm.ThumbConfig)
+		tres, err = thm.ThumbProcess(f, ext, ctype, thm.ThumbConfig)
 	} else {
 		// just close
 		err = f.Close()
@@ -309,54 +309,72 @@ func attachmentInfo(
 	return ext, oname, ct_t
 }
 
-func processMessageAttachment(
-	src *fstore.FStore, thm thumbnailer.ThumbExec, nothumb bool, r io.Reader,
-	binary bool, ct_t string, ct_par, cdis_par map[string]string, ow io.Writer) (
-	fi FileInfo, fn, thmfn string, err error) {
+type pmactx struct {
+	src      *fstore.FStore
+	thm      thumbnailer.ThumbExec
+	nothumb  bool
+	r        io.Reader
+	binary   bool
+	ct_par   map[string]string
+	cdis_par map[string]string
+	thmis    []ThumbInfo
+	ow       io.Writer
+}
+
+func (ctx *pmactx) processMessageAttachment(ct_t string) (
+	fi FileInfo, fn string, err error) {
 
 	// file extension, original name, corrected type
-	ext, oname, ct_t := attachmentInfo(ct_t, ct_par, cdis_par)
+	ext, oname, ct_t := attachmentInfo(ct_t, ctx.ct_par, ctx.cdis_par)
 
 	// processing of file itself
-	fn, hash, hashtype, fsize, tres, tfi, err :=
-		takeInFile(src, thm, nothumb, ext, ct_t, r, binary, ow)
+	fn, hashname, fsize, tres, err := takeInFile(
+		ctx.src, ctx.thm, ctx.nothumb, ext, ct_t, ctx.r, ctx.binary, ctx.ow)
 	if err != nil {
 		return
 	}
 
 	// ohwell, at this point we should probably have something
 	// even if we don't, that's okay
-	var iname string
 	if ext != "" {
-		iname = hash + "-" + hashtype + "." + ext
-	} else {
-		iname = hash + "-" + hashtype
+		hashname += "." + ext
 	}
 	// don't make up original name, it's ok not to have anything in it
 	//if oname == "" {
-	//	oname = iname
+	//	oname = hashname
 	//}
 
 	fi = FileInfo{
 		ContentType: ct_t,
 		Size:        fsize,
-		ID:          iname,
+		ID:          hashname,
 		Original:    oname,
 	}
 
-	fi.Type = tfi.Kind
-	if tfi.DetectedType != "" {
-		fi.ContentType = tfi.DetectedType
+	fi.Type = tres.FI.Kind
+	if tres.FI.DetectedType != "" {
+		fi.ContentType = tres.FI.DetectedType
 	}
-	if tres.FileName != "" {
-		tfile := iname + "." + thm.Name + "." + tres.FileExt
-		fi.Thumb = tfile
+	if tres.DBSuffix != "" {
+		fi.ThumbField = thm.Name + "." + tres.DBSuffix
 		fi.ThumbAttrib.Width = uint32(tres.Width)
 		fi.ThumbAttrib.Height = uint32(tres.Height)
-		thmfn = tres.FileName
+
+		dname := hashname + "." + thm.Name + "." + tres.CF.Suffix
+		ctx.thmis = append(ctx.thmis, ThumbInfo{
+			FullTmpName: tres.CF.FullTmpName,
+			RelDestName: dname,
+		})
+		for _, ce := tres.CE {
+			dname = hashname + "." + thm.Name + "." + ce.Suffix
+			ctx.thmis = append(ctx.thmis, ThumbInfo{
+				FullTmpName: ce.FullTmpName,
+				RelDestName: dname,
+			})
+		}
 	}
-	if len(tfi.Attrib) != 0 {
-		fi.FileAttrib = tfi.Attrib
+	if len(tres.FI.Attrib) != 0 {
+		fi.FileAttrib = tres.FI.Attrib
 	}
 
 	return
@@ -787,7 +805,7 @@ func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
 	XH mail.Headers, xct_t string, xct_par map[string]string, eatinner bool,
 	xr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	pi PostInfo, tmpfilenames []string, thmis []ThumbInfo,
 	IH mail.Headers, err error) {
 
 	return DefaultMailProcessorConfig.DevourMessageBody(

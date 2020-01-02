@@ -54,7 +54,7 @@ type FileInfo struct {
 	ContentType string        // MIME type (without parameters)
 	Size        int64
 	ID          string                 // storename
-	Thumb       string                 // thumbnail
+	ThumbField  string                 // thumbnail suffix stored in db
 	Original    string                 // original file name
 	FileAttrib  map[string]interface{} // file attributes
 	ThumbAttrib IBThumbAttribs         // thumbnail attributes
@@ -63,6 +63,11 @@ type FileInfo struct {
 
 func (x FileInfo) Equivalent(y FileInfo) bool {
 	return x.ID == y.ID && x.Original == y.Original && x.Size == y.Size
+}
+
+type ThumbInfo struct {
+	FullTmpName string
+	RelDestName string
 }
 
 //// layout should be:

@@ -104,7 +104,7 @@ func rotimg(orient int, img *image.NRGBA) *image.NRGBA {
 
 func (t *GoThumbnailer) ThumbProcess(
 	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
+	res thumbnailer.ThumbResult, err error) {
 
 	closed := false
 
@@ -158,8 +158,8 @@ func (t *GoThumbnailer) ThumbProcess(
 	}
 
 	// mark this as image & store current config as we know it
-	fi.Kind = ftypes.FTypeImage
-	fi.DetectedType = "image/" + cfgfmt
+	res.FI.Kind = ftypes.FTypeImage
+	res.FI.DetectedType = "image/" + cfgfmt
 
 	// seek to start
 	_, err = f.Seek(0, 0)
@@ -174,9 +174,9 @@ func (t *GoThumbnailer) ThumbProcess(
 	imgcfg.Width, imgcfg.Height =
 		exifhelper.RotWH(orient, imgcfg.Width, imgcfg.Height)
 
-	fi.Attrib = make(map[string]interface{})
-	fi.Attrib["width"] = imgcfg.Width
-	fi.Attrib["height"] = imgcfg.Height
+	res.FI.Attrib = make(map[string]interface{})
+	res.FI.Attrib["width"] = imgcfg.Width
+	res.FI.Attrib["height"] = imgcfg.Height
 
 	t.log.LogPrintf(
 		DEBUG, "after orient size %dx%d", imgcfg.Width, imgcfg.Height)
@@ -276,15 +276,16 @@ func (t *GoThumbnailer) ThumbProcess(
 	}
 
 	// thumbnail info
-	res.FileName = tfn
-	res.FileExt = "jpg"
 	res.Width = tsz.X
 	res.Height = tsz.Y
+	res.DBSuffix = "jpg"
+	res.CF.FullTmpName = tfn
+	res.CF.Suffix = "jpg"
 
 	// update original img info (it could differ from previous config?)
-	fi.DetectedType = "image/" + imgfmt // golang devs seem sane so far
-	fi.Attrib["width"] = ow
-	fi.Attrib["height"] = oh
+	res.FI.DetectedType = "image/" + imgfmt // golang devs seem sane so far
+	res.FI.Attrib["width"] = ow
+	res.FI.Attrib["height"] = oh
 
 	return
 }

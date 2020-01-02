@@ -33,17 +33,23 @@ type ThumbExec struct {
 	ThumbPlan
 }
 
-type ThumbResult struct {
-	// TODO multiple filenames, probably with some attributes each
-	FileName      string
-	FileExt       string
-	Width, Height int
-}
-
 type FileInfo struct {
 	Kind         ftypes.FTypeT
 	DetectedType string
 	Attrib       map[string]interface{}
+}
+
+type ThumbContent struct {
+	FullTmpName string
+	Suffix      string
+}
+
+type ThumbResult struct {
+	FI FileInfo // info extracted from file
+	Width, Height int // width and height of generated thumb(s)
+	DBSuffix string // suffix to be stored in database; may be template
+	CF ThumbContent // first
+	CE []ThumbContent // extra, if any
 }
 
 type ThumbnailerBuilder interface {
@@ -54,5 +60,5 @@ type Thumbnailer interface {
 	// ThumbProcess tries to thumbnail f. Closes f after it's done.
 	ThumbProcess(
 		f *os.File, ext, mimeType string, cfg ThumbConfig) (
-		res ThumbResult, fi FileInfo, err error)
+		res ThumbResult, err error)
 }
