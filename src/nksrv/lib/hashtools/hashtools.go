@@ -44,12 +44,14 @@ const (
 	// XXX in idea these could be for arbitrary lengths, but we have no practical need for that atm
 	_              = iota // skip first to start with non-0
 	ht_BLAKE2b_224        // fastest on most 64bit CPUs without dedicated crypto instructions
+	ht_BLAKE2s_224        // faster on weak 32bit CPUs
 	ht_SHA2_224           // can be faster if SHA2-256 crypto instructions are available
 	// XXX SHA3/SHAKE? maybe when there is hw to test...
 )
 
 var h_selecta = [...]fhash{
 	{newHasher: func() (hash.Hash, error) { return blake2b.New(28, nil) }},
+	{newHasher: func() (hash.Hash, error) { return nil, nil }}, // TODO
 	{newHasher: func() (hash.Hash, error) { return sha256.New224(), nil }},
 }
 var h_use_id byte
