@@ -36,9 +36,9 @@ func dotest(b *testing.B, exp string) {
 }
 
 var hexp = [...]string{
-	"73xc5t80vzz32ubrgs2198rm8jbrs5r5u9sov02qlea3",
-	"x",
-	"4ffm46fu1rbaio6i4yo4uvjn2e6r8dmi2r59wzsonx7b",
+	"73xc5t80vzz32ubrgs2198rm8jbrs5r5u9sov02qlea3", // BLAKE2b-224
+	"--------------------------------------------", // BLAKE2s-224
+	"4ffm46fu1rbaio6i4yo4uvjn2e6r8dmi2r59wzsonx7b", // SHA2-224
 }
 
 func doxtest(b *testing.B, id byte) {

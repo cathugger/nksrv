@@ -182,7 +182,7 @@ func takeInFile(
 	tres thumbnailer.ThumbResult, err error) {
 
 	// new
-	f, err := src.TempFile("mail-", "")
+	f, err := src.NewFile("tmp", "mail-", "")
 	if err != nil {
 		return
 	}
@@ -310,26 +310,29 @@ func attachmentInfo(
 }
 
 type pmactx struct {
-	src      *fstore.FStore
-	thm      thumbnailer.ThumbExec
+	*dmbctx
+
 	nothumb  bool
 	r        io.Reader
 	binary   bool
+	ct_t     string
 	ct_par   map[string]string
 	cdis_par map[string]string
-	thmis    []ThumbInfo
 	ow       io.Writer
 }
 
-func (ctx *pmactx) processMessageAttachment(ct_t string) (
+func (ctx pmactx) processMessageAttachment() (
 	fi FileInfo, fn string, err error) {
 
 	// file extension, original name, corrected type
-	ext, oname, ct_t := attachmentInfo(ct_t, ctx.ct_par, ctx.cdis_par)
+	var ext, oname string
+	ext, oname, ctx.ct_t =
+		attachmentInfo(ctx.ct_t, ctx.ct_par, ctx.cdis_par)
 
 	// processing of file itself
 	fn, hashname, fsize, tres, err := takeInFile(
-		ctx.src, ctx.thm, ctx.nothumb, ext, ct_t, ctx.r, ctx.binary, ctx.ow)
+		ctx.src, ctx.thmexec, ctx.nothumb,
+		ext, ctx.ct_t, ctx.r, ctx.binary, ctx.ow)
 	if err != nil {
 		return
 	}
@@ -345,7 +348,7 @@ func (ctx *pmactx) processMessageAttachment(ct_t string) (
 	//}
 
 	fi = FileInfo{
-		ContentType: ct_t,
+		ContentType: ctx.ct_t,
 		Size:        fsize,
 		ID:          hashname,
 		Original:    oname,
@@ -356,20 +359,18 @@ func (ctx *pmactx) processMessageAttachment(ct_t string) (
 		fi.ContentType = tres.FI.DetectedType
 	}
 	if tres.DBSuffix != "" {
-		fi.ThumbField = thm.Name + "." + tres.DBSuffix
+		fi.ThumbField = ctx.thmexec.DBSuffix(tres.DBSuffix)
 		fi.ThumbAttrib.Width = uint32(tres.Width)
 		fi.ThumbAttrib.Height = uint32(tres.Height)
 
-		dname := hashname + "." + thm.Name + "." + tres.CF.Suffix
-		ctx.thmis = append(ctx.thmis, ThumbInfo{
+		ctx.thumbinfos = append(ctx.thumbinfos, ThumbInfo{
 			FullTmpName: tres.CF.FullTmpName,
-			RelDestName: dname,
+			RelDestName: ctx.thmexec.RelDestName(hashname, tres.CF.Suffix),
 		})
-		for _, ce := tres.CE {
-			dname = hashname + "." + thm.Name + "." + ce.Suffix
-			ctx.thmis = append(ctx.thmis, ThumbInfo{
+		for _, ce := range tres.CE {
+			ctx.thumbinfos = append(ctx.thumbinfos, ThumbInfo{
 				FullTmpName: ce.FullTmpName,
-				RelDestName: dname,
+				RelDestName: ctx.thmexec.RelDestName(hashname, ce.Suffix),
 			})
 		}
 	}
@@ -391,6 +392,25 @@ func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
 	return
 }
 
+// for shits possibly shared with deeper functions and shits what need to be changed
+type dmbctx struct {
+	cfg          *MailProcessorConfig
+	src          *fstore.FStore
+	thmexec      thumbnailer.ThumbExec
+	thumbinfos   []ThumbInfo
+	tmpfilenames []string
+}
+
+// for read-only things only used one level deep
+type dmbin struct {
+	ZH       mail.Headers
+	zct_t    string
+	zct_par  map[string]string
+	eatinner bool
+	zr       io.Reader
+	oiw      io.Writer
+}
+
 // DevourMessageBody processes message body, filling in PostInfo structure,
 // creating relevant files.
 // It removes "Content-Transfer-Encoding" header from ZH,
@@ -398,27 +418,49 @@ func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
 // info.ContentParams must be non-nil only if info.ContentType requires
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
-	src *fstore.FStore, thm thumbnailer.ThumbExec,
+	src *fstore.FStore, thmexec thumbnailer.ThumbExec,
 	ZH mail.Headers, zct_t string, zct_par map[string]string, eatinner bool,
 	zr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thumbfilenames []string,
+	pi PostInfo, tmpfilenames []string, thumbinfos []ThumbInfo,
 	IH mail.Headers, zerr error) {
+
+	ctx := dmbctx{
+		cfg:     cfg,
+		src:     src,
+		thmexec: thmexec,
+	}
+	zin := dmbin{
+		ZH:       ZH,
+		zct_t:    zct_t,
+		zct_par:  zct_par,
+		eatinner: eatinner,
+		zr:       zr,
+		oiw:      oiw,
+	}
+	pi, IH, zerr = ctx.devourMessageBody(zin)
+	tmpfilenames = ctx.tmpfilenames
+	thumbinfos = ctx.thumbinfos
+	return
+}
+
+func (ctx *dmbctx) devourMessageBody(zin dmbin) (
+	pi PostInfo, IH mail.Headers, zerr error) {
 
 	defer func() {
 		if zerr != nil {
-			for _, fn := range tmpfilenames {
+			for _, fn := range ctx.tmpfilenames {
 				if fn != "" {
 					os.Remove(fn)
 				}
 			}
-			tmpfilenames = nil
+			ctx.tmpfilenames = nil
 
-			for _, fn := range thumbfilenames {
-				if fn != "" {
-					os.Remove(fn)
+			for _, ti := range ctx.thumbinfos {
+				if ti.FullTmpName != "" {
+					os.Remove(ti.FullTmpName)
 				}
 			}
-			thumbfilenames = nil
+			ctx.thumbinfos = nil
 		}
 	}()
 
@@ -461,7 +503,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			var str string
 			var finished bool
 			r, str, finished, preservemsgattachment, err =
-				cfg.processMessageText(r, binary, ct_t, ct_par)
+				ctx.cfg.processMessageText(r, binary, ct_t, ct_par)
 			if err != nil {
 				return
 			}
@@ -481,13 +523,22 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		// if this point is reached, we'll need to add this as attachment
 
-		fi, fn, thmfn, err := processMessageAttachment(
-			src, thm, preservemsgattachment, r, binary, ct_t, ct_par, cdis_par, nil)
+		pmac := pmactx{
+			dmbctx:   ctx,
+			nothumb:  preservemsgattachment,
+			r:        r,
+			binary:   binary,
+			ct_t:     ct_t,
+			ct_par:   ct_par,
+			cdis_par: cdis_par,
+			ow:       nil,
+		}
+		fi, fn, err := pmac.processMessageAttachment()
 		if err != nil {
 			return
 		}
-		tmpfilenames = append(tmpfilenames, fn)
-		thumbfilenames = append(thumbfilenames, thmfn)
+		// this one is left here because signature code uses this
+		ctx.tmpfilenames = append(ctx.tmpfilenames, fn)
 
 		if preservemsgattachment {
 			// if translated message was already stored in msg field
@@ -531,7 +582,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		var xbinary bool
 		xr, _, xbinary, err =
-			cfg.processMessagePrepareReader(xcte, xismultipart, xr)
+			ctx.cfg.processMessagePrepareReader(xcte, xismultipart, xr)
 		if err != nil {
 			return
 		}
@@ -581,7 +632,8 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 				var pxr io.Reader
 				var pbinary bool
 				pxr, _, pbinary, err =
-					cfg.processMessagePrepareReader(pcte, pismultipart, pr)
+					ctx.cfg.processMessagePrepareReader(
+						pcte, pismultipart, pr)
 				if err != nil {
 					// XXX maybe skip only this part?
 					return
@@ -658,35 +710,36 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		}
 
 		// process face-like headers if any
-		ffn, ffi, err := extractMessageFace(XH, src)
+		ffn, ffi, err := extractMessageFace(XH, ctx.src)
 		if err != nil {
 			err = fmt.Errorf("extractMessageFace: %v", err)
 			return
 		}
 		if ffn != "" {
-			tmpfilenames = append(tmpfilenames, ffn)
-			thumbfilenames = append(thumbfilenames, "")
+			ctx.tmpfilenames = append(ctx.tmpfilenames, ffn)
 			pi.FI = append(pi.FI, ffi)
 		}
 
 		return
 	}
 
-	zcte := ZH.GetFirst("Content-Transfer-Encoding")
+	zcte := zin.ZH.GetFirst("Content-Transfer-Encoding")
 	// we won't need this anymore
-	delete(ZH, "Content-Transfer-Encoding")
+	delete(zin.ZH, "Content-Transfer-Encoding")
 
-	if !eatinner {
+	if !zin.eatinner {
 
 		// eat body
-		pi.L, zerr = eatMainAndHeaders(zct_t, zct_par, zcte, ZH, zr)
+		pi.L, zerr = eatMainAndHeaders(
+			zin.zct_t, zin.zct_par, zcte, zin.ZH, zin.zr)
 
 	} else {
 		// special handling for message/* bodies
 
 		var ir io.Reader
 		var ibinary bool
-		ir, _, ibinary, zerr = cfg.processMessagePrepareReader(zcte, false, zr)
+		ir, _, ibinary, zerr =
+			ctx.cfg.processMessagePrepareReader(zcte, false, zin.zr)
 		if zerr != nil {
 			return
 		}
@@ -695,7 +748,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 		pir, piw := io.Pipe()
 		ir = io.TeeReader(ir, piw)
 		var wfi FileInfo
-		var wfn, wthmfn string
+		var wfn string
 		var werr error
 		var wHasNull bool
 		var wHas8Bit bool
@@ -710,8 +763,17 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 			}
 
 			// this deals with body itself
-			wfi, wfn, wthmfn, werr = processMessageAttachment(
-				src, thm, true, r, ibinary, zct_t, zct_par, nil, oiw)
+			wpmac := pmactx{
+				dmbctx:   ctx,
+				nothumb:  true,
+				r:        r,
+				binary:   ibinary,
+				ct_t:     zin.zct_t,
+				ct_par:   zin.zct_par,
+				cdis_par: nil,
+				ow:       zin.oiw,
+			}
+			wfi, wfn, werr = wpmac.processMessageAttachment()
 
 			if rt != nil {
 				wHasNull = rt.HasNull
@@ -732,9 +794,6 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 			if wfn != "" {
 				os.Remove(wfn)
-			}
-			if wthmfn != "" {
-				os.Remove(wthmfn)
 			}
 		}
 
@@ -785,9 +844,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 
 		wfi.Type = ftypes.FTypeMsg
 		// add to tmp filenames
-		tmpfilenames = append(tmpfilenames, wfn)
-		// to tmp thm filenames
-		thumbfilenames = append(thumbfilenames, wthmfn)
+		ctx.tmpfilenames = append(ctx.tmpfilenames, wfn)
 		// to fileinfos
 		pi.FI = append(pi.FI, wfi)
 		// set up proper body layout info

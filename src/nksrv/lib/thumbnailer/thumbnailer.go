@@ -27,6 +27,23 @@ type ThumbPlan struct {
 	ThumbConfig
 }
 
+func (p *ThumbPlan) DBSuffix(s string) string {
+	// suffix is always defined to be at least extension
+	if p.Name != "" {
+		return p.Name + "." + s
+	} else {
+		return s
+	}
+}
+
+func (p *ThumbPlan) RelDestName(h, s string) string {
+	if p.Name != "" {
+		return h + "." + p.Name + "." + s
+	} else {
+		return h + "." + s
+	}
+}
+
 // execution: thumbnailer + name + config
 type ThumbExec struct {
 	Thumbnailer
@@ -45,11 +62,11 @@ type ThumbContent struct {
 }
 
 type ThumbResult struct {
-	FI FileInfo // info extracted from file
-	Width, Height int // width and height of generated thumb(s)
-	DBSuffix string // suffix to be stored in database; may be template
-	CF ThumbContent // first
-	CE []ThumbContent // extra, if any
+	FI            FileInfo       // info extracted from file
+	Width, Height int            // width and height of generated thumb(s)
+	DBSuffix      string         // suffix to be stored in database; may be template
+	CF            ThumbContent   // first
+	CE            []ThumbContent // extra, if any
 }
 
 type ThumbnailerBuilder interface {

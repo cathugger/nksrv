@@ -14,6 +14,7 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
+	golang.org/x/sys v0.0.0-20191008105621-543471e840be
 	golang.org/x/text v0.3.2
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 )

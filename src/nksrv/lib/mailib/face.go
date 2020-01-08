@@ -38,10 +38,10 @@ func extractMessageFace(
 
 					// image in buffer suits our needs :>
 
-					var hash, hashtype string
+					var hashname string
 					var fsize int64
 					pngr.Reset(pngb)
-					fn, hash, hashtype, fsize, _, _, err =
+					fn, hashname, fsize, _, err =
 						takeInFile(
 							src, thumbnailer.ThumbExec{}, true,
 							"png", "image/png", pngr, true, nil)
@@ -53,7 +53,7 @@ func extractMessageFace(
 						Type:        ftypes.FTypeFace,
 						ContentType: "image/png",
 						Size:        fsize,
-						ID:          hash + "-" + hashtype + ".png",
+						ID:          hashname + ".png",
 						Original:    "Face",
 					}
 
@@ -75,9 +75,9 @@ func extractMessageFace(
 				panic(ex)
 			}
 
-			var hash, hashtype string
+			var hashname string
 			var fsize int64
-			fn, hash, hashtype, fsize, _, _, err =
+			fn, hashname, fsize, _, err =
 				takeInFile(
 					src, thumbnailer.ThumbExec{}, true,
 					"gif", "image/gif", &b, true, nil)
@@ -89,7 +89,7 @@ func extractMessageFace(
 				Type:        ftypes.FTypeFace,
 				ContentType: "image/gif",
 				Size:        fsize,
-				ID:          hash + "-" + hashtype + ".gif",
+				ID:          hashname + ".gif",
 				Original:    "X-Face",
 			}
 
