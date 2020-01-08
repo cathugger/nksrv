@@ -61,9 +61,9 @@ func pickhash(id byte) {
 	h_use_id = id
 	h_use = h_selecta[id-1]
 }
-func init() {
+func autopickhash() {
 	// currently only ARM64 because pretty much guaranteed gain
-	// afaik x86_64 sha256 routine can't do SHA2 instructions
+	// afaik x86_64 golang sha256 routine can't do SHA2 instructions (yet?)
 	// XXX s390x?
 	if cpu.ARM64.HasSHA2 {
 		pickhash(ht_SHA2_224)
@@ -71,6 +71,7 @@ func init() {
 	}
 	pickhash(ht_BLAKE2b_224)
 }
+func init() { autopickhash() }
 
 // MakeFileHash returns textural representation of file hash for use in filename.
 // It expects file to be seeked at 0.
