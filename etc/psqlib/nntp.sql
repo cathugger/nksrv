@@ -162,6 +162,7 @@ ORDER BY
 -- input: {board name} {old b_p_id}
 SELECT
 	xbp.b_p_id,
+	xbp.g_p_id,
 	xbp.msgid
 FROM
 	ib0.bposts AS xbp
@@ -176,6 +177,7 @@ LIMIT
 -- input: {board name} {old b_p_id}
 SELECT
 	xbp.b_p_id,
+	xbp.g_p_id,
 	xbp.msgid
 FROM
 	ib0.bposts AS xbp
