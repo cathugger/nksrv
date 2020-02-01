@@ -32,11 +32,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	fs, err := fstore.OpenFStore(fstore.Config{Path: *thumbdir})
+	fs, err := fstore.OpenFStore(fstore.Config{
+		Path: *thumbdir,
+		Private: "demothumb",
+	})
 	if err != nil {
 		fmt.Printf("err opening fstore: %v\n", err)
 		return
 	}
+	fs.DeclareDir("tmp", false)
 
 	var thm thumbnailer.Thumbnailer
 	if !*thumbext {
