@@ -253,7 +253,7 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	// write
 
-	tf, err := t.fs.TempFile("t-", ".jpg")
+	tf, err := t.fs.NewFile("tmp", "t-", ".jpg")
 	if err != nil {
 		return
 	}

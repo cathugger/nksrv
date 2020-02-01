@@ -26,10 +26,7 @@ import (
 
 
 // info for thumbnail tmpfile location and intended final filename
-type wp_thumbMove struct {
-	FullTmpName string
-	RelDestName string
-}
+type wp_thumbMove = mailib.ThumbInfo
 
 // board/thread/reply
 type wp_btr struct {

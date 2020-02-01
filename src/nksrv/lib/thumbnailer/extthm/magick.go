@@ -29,8 +29,9 @@ func (b *magickBackend) init(magickBin string) (err error) {
 }
 
 func (b *magickBackend) doThumbnailing(
-	p tparams, f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
+	p tparams, f *os.File, ext, mimeType string,
+	cfg thumbnailer.ThumbConfig) (
+	res thumbnailer.ThumbResult, err error) {
 
 	closed := false
 
@@ -100,11 +101,11 @@ func (b *magickBackend) doThumbnailing(
 			DEBUG, "magick: after orient size %dx%d", imgcfg.Width, imgcfg.Height)
 
 		// mark this as image and store config
-		fi.Kind = ftypes.FTypeImage
-		fi.DetectedType = "image/" + cfgfmt
-		fi.Attrib = make(map[string]interface{})
-		fi.Attrib["width"] = imgcfg.Width
-		fi.Attrib["height"] = imgcfg.Height
+		res.FI.Kind = ftypes.FTypeImage
+		res.FI.DetectedType = "image/" + cfgfmt
+		res.FI.Attrib = make(map[string]interface{})
+		res.FI.Attrib["width"] = imgcfg.Width
+		res.FI.Attrib["height"] = imgcfg.Height
 
 		if (cfgfmt != "jpeg" || b.forceJPEGLimit) &&
 			((b.t.cfg.MaxWidth > 0 && imgcfg.Width > b.t.cfg.MaxWidth) ||
@@ -129,7 +130,7 @@ func (b *magickBackend) doThumbnailing(
 	}
 
 	// park file for convert output
-	tf, err := b.t.fs.TempFile("t-", ".jpg")
+	tf, err := b.t.fs.NewFile("tmp", "t-", ".jpg")
 	if err != nil {
 		return
 	}
@@ -231,8 +232,9 @@ func (b *magickBackend) doThumbnailing(
 	res.Width, res.Height =
 		calcDecreaseThumbSizeOIS(
 			imgcfg.Width, imgcfg.Height, cfg.Width, cfg.Height)
-	res.FileName = tfn
-	res.FileExt = "jpg"
+	res.DBSuffix = "jpg"
+	res.CF.FullTmpName = tfn
+	res.CF.Suffix = "jpg"
 
 	return
 }

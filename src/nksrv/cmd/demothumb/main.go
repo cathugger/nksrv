@@ -86,24 +86,34 @@ func main() {
 
 		fmt.Printf("processing %q (ext %q mime %q)...\n", arg, ext, mtype)
 
-		res, fi, err := thm.ThumbProcess(f, ext, mtype, tcfg)
+		res, err := thm.ThumbProcess(f, ext, mtype, tcfg)
 		if err != nil {
 			fmt.Printf("err thumbnailing: %v", err)
 			return
 		}
-		if res.FileName == "" {
+		if res.DBSuffix == "" {
 			fmt.Printf("thumbnailer didn't work for this file\n")
 			continue
 		}
 
-		fmt.Printf("thumbnailed %q, res %#v, fi %#v\n", base, res, fi)
+		fmt.Printf("thumbnailed %q, res %#v\n", base, res)
 
-		to := fs.Main() + base + "." + res.FileExt
+		to := fs.Main() + base + "." + res.CF.Suffix
 		fmt.Printf("moving to %q...\n", to)
-		err = os.Rename(res.FileName, to)
+		err = os.Rename(res.CF.FullTmpName, to)
 		if err != nil {
 			fmt.Printf("err renaming: %v\n", err)
 			return
+		}
+
+		for i := range res.CE {
+			to = fs.Main() + base + "." + res.CE[i].Suffix
+			fmt.Printf("moving to %q...\n", to)
+			err = os.Rename(res.CE[i].FullTmpName, to)
+			if err != nil {
+				fmt.Printf("err renaming: %v\n", err)
+				return
+			}
 		}
 	}
 }

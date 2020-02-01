@@ -79,8 +79,9 @@ type ffprobeMain struct {
 }
 
 func (b *ffmpegSoxBackend) doThumbnailing(
-	p tparams, f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
+	p tparams, f *os.File, ext, mimeType string,
+	cfg thumbnailer.ThumbConfig) (
+	res thumbnailer.ThumbResult, err error) {
 
 	closed := false
 
@@ -359,7 +360,7 @@ foundfmt:
 	var tfn string
 	parktmp := func(ending string) {
 		// park file for convert output
-		tf, err = b.t.fs.TempFile("t-", ending)
+		tf, err = b.t.fs.NewFile("tmp", "t-", ending)
 		if err != nil {
 			return
 		}
@@ -376,7 +377,7 @@ foundfmt:
 	}
 
 	// so what we gonna do with it?
-	fi.DetectedType = mimeType
+	res.FI.DetectedType = mimeType
 
 	if gotVids > 1 || gotBadVids {
 		// multiple videos... nah
@@ -387,14 +388,14 @@ foundfmt:
 
 	if gotVids > 0 {
 		// VIDEO
-		fi.Kind = ftypes.FTypeVideo
+		res.FI.Kind = ftypes.FTypeVideo
 
-		fi.Attrib = make(map[string]interface{})
+		res.FI.Attrib = make(map[string]interface{})
 		vw := ffproberes.Streams[gotVidsID].Width
 		vh := ffproberes.Streams[gotVidsID].Height
-		fi.Attrib["width"] = vw
-		fi.Attrib["height"] = vh
-		fi.Attrib["length"] = ffproberes.Format.Duration
+		res.FI.Attrib["width"] = vw
+		res.FI.Attrib["height"] = vh
+		res.FI.Attrib["length"] = ffproberes.Format.Duration
 
 		if (b.t.cfg.MaxWidth > 0 && vw > b.t.cfg.MaxWidth) ||
 			(b.t.cfg.MaxHeight > 0 && vh > b.t.cfg.MaxHeight) ||
@@ -453,8 +454,9 @@ foundfmt:
 		// succeeded
 		res.Width, res.Height =
 			calcDecreaseThumbSize(vw, vh, cfg.Width, cfg.Height)
-		res.FileName = tfn
-		res.FileExt = "jpg"
+		res.DBSuffix = "jpg"
+		res.CF.FullTmpName = tfn
+		res.CF.Suffix = "jpg"
 		return
 	}
 
@@ -462,12 +464,12 @@ foundfmt:
 	if gotAudio {
 
 		// AUDIO
-		fi.Kind = ftypes.FTypeAudio
-		fi.Attrib = make(map[string]interface{})
+		res.FI.Kind = ftypes.FTypeAudio
+		res.FI.Attrib = make(map[string]interface{})
 		if ffproberes.Streams[gotAudioID].Duration > 0 {
-			fi.Attrib["length"] = ffproberes.Streams[gotAudioID].Duration
+			res.FI.Attrib["length"] = ffproberes.Streams[gotAudioID].Duration
 		} else {
-			fi.Attrib["length"] = ffproberes.Format.Duration
+			res.FI.Attrib["length"] = ffproberes.Format.Duration
 		}
 
 		if gotPics {
@@ -487,8 +489,8 @@ foundfmt:
 				ah = cfg.Height
 			}
 
-			fi.Attrib["width"] = aw
-			fi.Attrib["height"] = ah
+			res.FI.Attrib["width"] = aw
+			res.FI.Attrib["height"] = ah
 
 			vw := ffproberes.Streams[gotPicsID].Width
 			vh := ffproberes.Streams[gotPicsID].Height
@@ -550,8 +552,9 @@ foundfmt:
 			// succeeded
 			res.Width, res.Height =
 				calcDecreaseThumbSize(aw, ah, cfg.Width, cfg.Height)
-			res.FileName = tfn
-			res.FileExt = "jpg"
+			res.DBSuffix = "jpg"
+			res.CF.FullTmpName = tfn
+			res.CF.Suffix = "jpg"
 			return
 		}
 

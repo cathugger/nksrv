@@ -86,8 +86,9 @@ type tparams = map[string]string
 
 type thmbackend interface {
 	doThumbnailing(
-		p tparams, f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-		res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error)
+		p tparams, f *os.File, ext, mimeType string,
+		cfg thumbnailer.ThumbConfig) (
+		res thumbnailer.ThumbResult, err error)
 }
 
 type extExec struct {
@@ -108,8 +109,9 @@ type ExternalThumbnailer struct {
 }
 
 func (t *ExternalThumbnailer) ThumbProcess(
-	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
+	f *os.File, ext, mimeType string,
+	cfg thumbnailer.ThumbConfig) (
+	res thumbnailer.ThumbResult, err error) {
 
 	close_err := func() { err = f.Close() }
 

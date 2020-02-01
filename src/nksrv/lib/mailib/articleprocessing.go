@@ -385,6 +385,7 @@ func ProcessContentType(ct string) (ct_t string, ct_par map[string]string) {
 	if ct != "" {
 		var e error
 		ct_t, ct_par, e = mime.ParseMediaType(ct)
+		// only replace with "invalid" if failed to parse completely
 		if e != nil && ct_t == "" {
 			ct_t = "invalid"
 		}

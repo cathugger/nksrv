@@ -123,11 +123,6 @@ func (sp *PSQLIB) wp_dbcheck(ctx *wp_context) (err error) {
 
 
 
-
-func (sp *PSQLIB) wp_filespostprocess(ctx *wp_context) (err error) {
-}
-
-
 func (sp *PSQLIB) commonNewPost(
 	w http.ResponseWriter, r *http.Request, ctx *wp_context) (
 	rInfo postedInfo, err error) {
@@ -148,19 +143,6 @@ func (sp *PSQLIB) commonNewPost(
 	if err != nil {
 		return
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	if !isReply {
 		rInfo.ThreadID = pInfo.ID
