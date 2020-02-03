@@ -9,12 +9,11 @@
 
 # type[;param=val...]           [(.|!|=)]extension ...
 
-text/plain                      txt
-text/html                       =html htm
-text/html                       shtml           // SSI HTML
-text/css                        css
-text/xml                        xml
-text/javascript                 js
+text/plain              txt
+text/html               =html htm
+text/css                css
+text/xml                xml
+text/javascript         js
 
 image/jpeg                      =jpg jpeg jpe
 image/png                       png
@@ -46,10 +45,10 @@ video/x-msvideo                 avi
 video/x-flv                     flv
 video/x-matroska                mkv
 
-font/woff                       woff
-font/woff2                      woff2
-font/ttf                        ttf
-font/otf                        otf
+font/woff               woff
+font/woff2              woff2
+font/ttf                ttf
+font/otf                otf
 
 application/wasm                        wasm
 application/atom+xml                    atom
@@ -73,5 +72,6 @@ application/rtf                         rtf
 application/msword                      doc dot
 application/x-shockwave-flash           swf
 application/java-archive                jar
+application/x-doom-wad                  wad
 
-text/plain                              !eml
+text/plain              !eml
