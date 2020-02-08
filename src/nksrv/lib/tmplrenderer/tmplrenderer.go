@@ -154,7 +154,9 @@ func (tr *TmplRenderer) configTemplates(cfg TmplRendererCfg) error {
 		}
 	}
 
-	root := template.New("").Funcs(funcs)
+	root := template.
+		New("").
+		Funcs(static_funcs)
 	mc := metaContext{
 		dir:       cfg.TemplateDir,
 		env:       &tr.ni,

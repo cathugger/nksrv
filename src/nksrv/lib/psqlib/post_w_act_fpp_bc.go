@@ -142,11 +142,57 @@ func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan<- error) {
 	ctx.wp_syncdir(path.Dir(ctx.thm_pending))
 }
 
-// before commit, spawns work to be ran in parallel with sql insertion funcs
-func (ctx *wp_context) wp_act_fpp_bc(wg *sync.WaitGroup, errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_afiw_files(
+	wg *sync.WaitGroup, errch chan<- error) {
 
-	ct := ctx.traceStart("wp_act_fpp_bc")
+	srcdir := ctx.sp.src.Main()
+
+	// hardlink/copy files
+	wg.Add(len(ctx.pInfo.FI))
+	for x := range ctx.pInfo.FI {
+		from := filepath.Join(ctx.src_pending, ctx.pInfo.FI[x].ID)
+		to := srcdir + ctx.pInfo.FI[x].ID
+
+		go func(){
+			defer wg.Done()
+
+			e := ctx.sp.pending2src.HardlinkOrCopy(from, to)
+			if e != nil {
+				sendError(errch, e)
+			}
+		}
+	}
+}
+
+func (ctx *wp_context) wp_act_fpp_bc_afiw_thumbs(
+	wg *sync.WaitGroup, errch chan<- error) {
+
+	thmdir := ctx.sp.thm.Main()
+
+	// hardlink/copy files
+	wg.Add(len(ctx.thumbMoves))
+	for x := range ctx.thumbMoves {
+		from := filepath.Join(ctx.thm_pending, ctx.thumbMoves[x].destname)
+		to := thmdir + ctx.thumbMoves[x].destname
+
+		go func(){
+			defer wg.Done()
+
+			e := ctx.sp.pending2thm.HardlinkOrCopy(from, to)
+			if e != nil {
+				sendError(errch, e)
+			}
+		}
+	}
+}
+
+
+func (ctx *wp_context) wp_act_fpp_bc_work(errch chan<- error) {
+
+	ct := ctx.traceStart("wp_act_fpp_bc_work")
 	defer ct.Done()
+
+	var wg sync.WaitGroup
 
 	wg.Add(2)
 
@@ -159,4 +205,33 @@ func (ctx *wp_context) wp_act_fpp_bc(wg *sync.WaitGroup, errch chan<- error) {
 		defer wg.Done()
 		ctx.wp_fpp_bc_thumbs(errch)
 	}()
+
+	wg.Wait()
+
+	// wait for DB fileinfo write
+	// once that's done, nothing shuold be able to delete these files off disk
+	ctx.fi_inserted_mu.RLock()
+	for !ctx.fi_inserted {
+		ctx.fi_inserted_cond.Wait()
+	}
+	ctx.fi_inserted_mu.RUnlock()
+
+	// once fileinfo is written out, push it to roots
+	ctx.wp_act_fpp_bc_afiw_files(&wg, errch)
+	ctx.wp_act_fpp_bc_afiw_thumbs(&wg, errch)
+	wg.Wait()
+}
+
+// before commit, spawns work to be ran in parallel with sql insertion funcs
+func (ctx *wp_context) wp_act_fpp_bc(
+	wg *sync.WaitGroup, errch chan<- error) {
+
+	ct := ctx.traceStart("wp_act_fpp_bc")
+	defer ct.Done()
+
+	wg.Add(1)
+	go func (){
+		defer wg.Done()
+		ctx.wp_act_fpp_bc_work(errch)
+	}
 }

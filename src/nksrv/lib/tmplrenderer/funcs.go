@@ -30,7 +30,7 @@ func f_dict(args ...interface{}) (m map[interface{}]interface{}, _ error) {
 	return m, nil
 }
 
-var funcs = map[string]interface{}{
+var static_funcs = map[string]interface{}{
 	// basics which should be there by default but aren't
 	"list": f_list,
 	"dict": f_dict,
