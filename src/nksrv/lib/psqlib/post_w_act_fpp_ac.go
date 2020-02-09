@@ -31,9 +31,8 @@ func (ctx *wp_context) wp_fpp_ac_files() error {
 
 	for x := range pInfo.FI {
 		from := filepath.Join(ctx.src_pending, ctx.pInfo.FI[x].ID)
-		to := srcdir + ctx.pInfo.FI[x].ID
 
-		err := ctx.wp_movefile_or_delet(from, to)
+		err := os.Remove(from)
 		if err != nil {
 			return err
 		}
@@ -46,9 +45,8 @@ func (ctx *wp_context) wp_fpp_ac_thumbs() error {
 
 	for x := range ctx.thumbMoves {
 		from := filepath.Join(ctx.thm_pending, ctx.thumbMoves[x].destname)
-		to := thmdir + ctx.thumbMoves[x].destname
 
-		err := ctx.wp_movefile_or_delet(from, to)
+		err := os.Remove(from)
 		if err != nil {
 			return err
 		}

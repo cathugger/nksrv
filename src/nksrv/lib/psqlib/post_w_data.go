@@ -57,6 +57,10 @@ type wp_context struct {
 
 	src_pending string // full dir name without slash of pending dir in src
 	thm_pending string // full dir name without slash of pending dir in thm
+
+	fi_inserted      bool
+	fi_inserted_mu   sync.Mutex
+	fi_inserted_cond sync.Cond
 }
 
 type wp_dbinfo struct {
