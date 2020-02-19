@@ -52,6 +52,9 @@ type wp_context struct {
 	srefs      []ibref_nntp.Reference
 	irefs      []ibref_nntp.Index
 
+	wg_TP sync.WaitGroup // for tmp->pending
+	wg_PA sync.WaitGroup // for pending->active storage
+
 	msgfn      string // full filename of inner msg (if doing primitive signing)
 	thumbMoves []wp_thumbMove
 

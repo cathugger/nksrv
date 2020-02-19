@@ -38,6 +38,19 @@ func (ctx *wp_context) wp_registered_mod(tx *sql.Tx) (regModInfo, error) {
 	return sp.registeredMod(tx, ctx.pubkeystr)
 }
 
+func (ctx *wp_context) wp_fileinfoinsert_unmark() {
+	ctx.fi_inserted_mu.Lock()
+	ctx.fi_inserted = false
+	ctx.fi_inserted_mu.Unlock()
+}
+
+func (ctx *wp_context) wp_fileinfoinsert_mark() {
+	ctx.fi_inserted_mu.Lock()
+	ctx.fi_inserted = true
+	ctx.fi_inserted_mu.Unlock()
+	ctx.fi_inserted_cond.NotifyAll()
+}
+
 func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 	yct := ctx.traceStart("wp_insertsql %p", tx)
 	defer yct.Done()
@@ -88,6 +101,9 @@ func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 		err = errDuplicateArticle
 		return
 	}
+
+	// we've inserted file infos, so notify
+	ctx.wp_notifyfileinfoinsert()
 
 	// execute mod cmd
 	if rmi.actionable {
@@ -141,7 +157,10 @@ func (ctx *wp_context) wp_act_commit() (err error) {
 	sp.wp_act_fpp_bc(ctx, &wg, errch)
 	defer func() {
 		if err != nil {
-			wg.Wait() // hold on incase we seriously fail before commit
+			// ensure it's marked to prevent hang
+			ctx.wp_notifyfileinfoinsert()
+			// hold on incase we seriously fail before commit
+			wg.Wait()
 		}
 	}()
 
@@ -151,6 +170,10 @@ func (ctx *wp_context) wp_act_commit() (err error) {
 		func(){
 			zct := ctx.traceStart("wp_act_commit whole tx")
 			defer zct.Done()
+
+			// XXX pending->root transfer needs to be redone on crash
+
+			ctx.wp_fileinfoinsert_unmark()
 
 			// start transaction
 			var tx *sql.Tx

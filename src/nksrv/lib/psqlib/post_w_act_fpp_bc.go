@@ -116,15 +116,9 @@ func (ctx *wp_context) wp_act_fpp_bc_afiw_any(
 	fromdir, rootdir string, mover *fstore.Mover,
 	func iterf(func(id string))) {
 
-	//wg.Add(getlen())
 	iterf(func(id string){
 		fromfull := filepath.Join(fromdir, id)
 		tofull := rootdir + ctx.pInfo.FI[x].ID
-
-		/*
-		go func(){
-			defer wg.Done()
-		*/
 
 		e := mover.HardlinkOrCopyIfNeededStable(fromfull, tofull)
 		if e != nil {
@@ -154,51 +148,67 @@ func (ctx *wp_context) wp_act_fpp_bc_afiw_thumbs(errch chan<- error) {
 }
 
 
-func (ctx *wp_context) wp_act_fpp_bc_work(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_work_TP(errch chan<- error) {
 
-	ct := ctx.traceStart("wp_act_fpp_bc_work")
+	ct := ctx.traceStart("wp_act_fpp_bc_work_TP")
 	defer ct.Done()
 
-	var wg sync.WaitGroup
+	var zg sync.WaitGroup
 
-	wg.Add(2)
+	zg.Add(2)
 
 	go func(){
-		defer wg.Done()
+		defer zg.Done()
 		ctx.wp_fpp_bc_files(errch)
 	}()
 
 	go func(){
-		defer wg.Done()
+		defer zg.Done()
 		ctx.wp_fpp_bc_thumbs(errch)
 	}()
 
-	wg.Wait()
+	zg.Wait()
+}
 
-	// wait for DB fileinfo write
+func (ctx *wp_context) wp_act_fpp_bc_work_PA(errch chan<- error) {
+
+	ct := ctx.traceStart("wp_act_fpp_bc_work_PA")
+	defer ct.Done()
+
+	// we're spawn once fileinfo is written to DB
 	// once that's done, nothing shuold be able to delete these files off disk
-	ctx.fi_inserted_mu.Lock()
-	for !ctx.fi_inserted {
-		ctx.fi_inserted_cond.Wait()
-	}
-	ctx.fi_inserted_mu.Unlock()
+	// we want T->P process to finish before we do our stuff
+	ctx.wg_TP.Wait()
 
-	// once fileinfo is written out, push it to roots
-	ctx.wp_act_fpp_bc_afiw_files(&wg, errch)
-	ctx.wp_act_fpp_bc_afiw_thumbs(&wg, errch)
-	wg.Wait()
+	// stuff landed to P, push it to A
+	ctx.wp_act_fpp_bc_afiw_files(errch)
+	ctx.wp_act_fpp_bc_afiw_thumbs(errch)
 }
 
 // before commit, spawns work to be ran in parallel with sql insertion funcs
-func (ctx *wp_context) wp_act_fpp_bc(
-	wg *sync.WaitGroup, errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_spawn_TP(errch chan<- error) {
+
+	ct := ctx.traceStart("wp_act_fpp_bc_spawn_TP")
+	defer ct.Done()
+
+	ctx.wg_TP.Add(1)
+	go func (){
+		defer ctx.wg_TP.Done()
+		ctx.wp_act_fpp_bc_work_TA(errch)
+	}
+}
+
+func (ctx *wp_context) wp_act_fpp_bc_spawn_PA(errch chan<- error) {
 
 	ct := ctx.traceStart("wp_act_fpp_bc")
 	defer ct.Done()
 
-	wg.Add(1)
+	// ensure we don't have more than one of these
+	ctx.wg_PA.Wait()
+
+	ctx.wg_PA.Add(1)
 	go func (){
-		defer wg.Done()
-		ctx.wp_act_fpp_bc_work(errch)
+		defer ctx.wg_PA.Done()
+		ctx.wp_act_fpp_bc_work_PA(errch)
 	}
 }

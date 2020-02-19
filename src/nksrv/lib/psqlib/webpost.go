@@ -83,8 +83,22 @@ func wp_err_cleanup(ctx *wp_context) {
 }
 
 func wp_comm_cleanup(ctx *wp_context) {
-	os.RemoveAll(ctx.src_pending)
-	os.RemoveAll(ctx.thm_pending)
+	var err error
+	// NOTE: don't use os.RemoveAll, as we don't need traces of failed stuff gone
+	err = os.Remove(ctx.src_pending)
+	if err != nil {
+		ctx.log.LogPrintf(
+			WARN,
+			"failed to remove pending src folder %q: %v",
+			ctx.src_pending)
+	}
+	err = os.Remove(ctx.thm_pending)
+	if err != nil {
+		ctx.log.LogPrintf(
+			WARN,
+			"failed to remove pending thm folder %q: %v",
+			ctx.thm_pending)
+	}
 }
 
 // step #1: premature extraction and sanity validation of input data
