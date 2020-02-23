@@ -55,15 +55,29 @@ type wp_context struct {
 	wg_TP sync.WaitGroup // for tmp->pending
 	wg_PA sync.WaitGroup // for pending->active storage
 
+	werr_mu sync.Mutex
+	werr    error
+
 	msgfn      string // full filename of inner msg (if doing primitive signing)
 	thumbMoves []wp_thumbMove
 
 	src_pending string // full dir name without slash of pending dir in src
 	thm_pending string // full dir name without slash of pending dir in thm
+}
 
-	fi_inserted      bool
-	fi_inserted_mu   sync.Mutex
-	fi_inserted_cond sync.Cond
+func (c *wp_context) set_werr(e error) {
+	c.werr_mu.Lock()
+	if (c.werr == nil) != (e == nil) {
+		c.werr = e
+	}
+	c.werr_mu.Unlock()
+}
+
+func (c *wp_context) get_werr() (e error) {
+	c.werr_mu.Lock()
+	e = c.werr
+	c.werr_mu.Unlock()
+	return
 }
 
 type wp_dbinfo struct {

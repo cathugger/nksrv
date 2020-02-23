@@ -26,8 +26,7 @@ import (
 
 
 func (ctx *wp_context) wp_fpp_bc_movensync(
-	errch chan<- error, pendir string,
-	iterf func(func(fromfull, tofull string))) {
+	pendir string, iterf func(func(fromfull, tofull string))) {
 
 	// move & sync individual files
 	var xg sync.WaitGroup
@@ -42,7 +41,7 @@ func (ctx *wp_context) wp_fpp_bc_movensync(
 
 			err2 := ctx.wp_movefile_fast(fromfull, tofull)
 			if err2 != nil {
-				sendError(errch, err2)
+				ctx.set_werr(err2)
 				return
 			}
 		}
@@ -56,12 +55,12 @@ func (ctx *wp_context) wp_fpp_bc_movensync(
 	ctx.wp_syncdir(path.Dir(pendir))
 }
 
-func (ctx *wp_context) wp_fpp_bc_files(errch chan<- error) {
+func (ctx *wp_context) wp_fpp_bc_files() {
 
 	var err1 error
 	ctx.src_pending, err1 = ctx.sp.src.NewDir("pending", "pw-", "")
 	if err1 != nil {
-		sendError(errch, err1)
+		ctx.set_werr(err1)
 		return
 	}
 
@@ -88,15 +87,15 @@ func (ctx *wp_context) wp_fpp_bc_files(errch chan<- error) {
 		}
 	}
 
-	ctx.wp_fpp_bc_movensync(errch, ctx.src_pending, iterf)
+	ctx.wp_fpp_bc_movensync(ctx.src_pending, iterf)
 }
 
-func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan<- error) {
+func (ctx *wp_context) wp_fpp_bc_thumbs() {
 
 	var err1 error
 	ctx.thm_pending, err1 = ctx.sp.thm.NewDir("pending", "pw-", "")
 	if err1 != nil {
-		sendError(errch, err1)
+		ctx.set_werr(err1)
 		return
 	}
 
@@ -108,11 +107,10 @@ func (ctx *wp_context) wp_fpp_bc_thumbs(errch chan<- error) {
 		}
 	}
 
-	ctx.wp_fpp_bc_movensync(errch, ctx.thm_pending, iterf)
+	ctx.wp_fpp_bc_movensync(ctx.thm_pending, iterf)
 }
 
 func (ctx *wp_context) wp_act_fpp_bc_afiw_any(
-	errch chan<- error,
 	fromdir, rootdir string, mover *fstore.Mover,
 	func iterf(func(id string))) {
 
@@ -122,33 +120,33 @@ func (ctx *wp_context) wp_act_fpp_bc_afiw_any(
 
 		e := mover.HardlinkOrCopyIfNeededStable(fromfull, tofull)
 		if e != nil {
-			sendError(errch, e)
+			ctx.set_werr(e)
 		}
 	})
 }
 
-func (ctx *wp_context) wp_act_fpp_bc_afiw_files(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_afiw_files() {
 	fromdir := ctx.src_pending
 	rootdir := ctx.sp.src.Main()
 	mover := &ctx.sp.pending2src
 	iterf := func(func(string) f) {
 		for x := range ctx.pInfo.FI { f(ctx.pInfo.FI[x].ID) }
 	}
-	wp_act_fpp_bc_afiw_any(errch, fromdir, rootdir, mover, iterf)
+	wp_act_fpp_bc_afiw_any(fromdir, rootdir, mover, iterf)
 }
 
-func (ctx *wp_context) wp_act_fpp_bc_afiw_thumbs(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_afiw_thumbs() {
 	fromdir := ctx.thm_pending
 	rootdir := ctx.sp.thm.Main()
 	mover := &ctx.sp.pending2thm
 	iterf := func(func(string) f) {
 		for x := range ctx.thumbMoves { f(ctx.thumbMoves[x].destname) }
 	}
-	wp_act_fpp_bc_afiw_any(errch, fromdir, rootdir, mover, iterf)
+	wp_act_fpp_bc_afiw_any(fromdir, rootdir, mover, iterf)
 }
 
 
-func (ctx *wp_context) wp_act_fpp_bc_work_TP(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_work_TP() {
 
 	ct := ctx.traceStart("wp_act_fpp_bc_work_TP")
 	defer ct.Done()
@@ -159,18 +157,18 @@ func (ctx *wp_context) wp_act_fpp_bc_work_TP(errch chan<- error) {
 
 	go func(){
 		defer zg.Done()
-		ctx.wp_fpp_bc_files(errch)
+		ctx.wp_fpp_bc_files()
 	}()
 
 	go func(){
 		defer zg.Done()
-		ctx.wp_fpp_bc_thumbs(errch)
+		ctx.wp_fpp_bc_thumbs()
 	}()
 
 	zg.Wait()
 }
 
-func (ctx *wp_context) wp_act_fpp_bc_work_PA(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_work_PA() {
 
 	ct := ctx.traceStart("wp_act_fpp_bc_work_PA")
 	defer ct.Done()
@@ -180,13 +178,18 @@ func (ctx *wp_context) wp_act_fpp_bc_work_PA(errch chan<- error) {
 	// we want T->P process to finish before we do our stuff
 	ctx.wg_TP.Wait()
 
+	if ctx.get_werr() != nil {
+		// don't do anything if T->P err'd
+		return
+	}
+
 	// stuff landed to P, push it to A
-	ctx.wp_act_fpp_bc_afiw_files(errch)
-	ctx.wp_act_fpp_bc_afiw_thumbs(errch)
+	ctx.wp_act_fpp_bc_afiw_files()
+	ctx.wp_act_fpp_bc_afiw_thumbs()
 }
 
 // before commit, spawns work to be ran in parallel with sql insertion funcs
-func (ctx *wp_context) wp_act_fpp_bc_spawn_TP(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_spawn_TP() {
 
 	ct := ctx.traceStart("wp_act_fpp_bc_spawn_TP")
 	defer ct.Done()
@@ -194,13 +197,13 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_TP(errch chan<- error) {
 	ctx.wg_TP.Add(1)
 	go func (){
 		defer ctx.wg_TP.Done()
-		ctx.wp_act_fpp_bc_work_TA(errch)
+		ctx.wp_act_fpp_bc_work_TA()
 	}
 }
 
-func (ctx *wp_context) wp_act_fpp_bc_spawn_PA(errch chan<- error) {
+func (ctx *wp_context) wp_act_fpp_bc_spawn_PA() {
 
-	ct := ctx.traceStart("wp_act_fpp_bc")
+	ct := ctx.traceStart("wp_act_fpp_bc_spawn_PA")
 	defer ct.Done()
 
 	// ensure we don't have more than one of these
@@ -209,6 +212,6 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_PA(errch chan<- error) {
 	ctx.wg_PA.Add(1)
 	go func (){
 		defer ctx.wg_PA.Done()
-		ctx.wp_act_fpp_bc_work_PA(errch)
+		ctx.wp_act_fpp_bc_work_PA()
 	}
 }
