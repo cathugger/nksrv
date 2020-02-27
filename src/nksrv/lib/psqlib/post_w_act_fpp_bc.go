@@ -55,8 +55,13 @@ func (ctx *wp_context) wp_fpp_bc_movensync(
 	ctx.wp_syncdir(path.Dir(pendir))
 }
 
+func (ctx *wp_context) wp_fpp_bc_hasfiles() bool {
+	return len(ctx.pInfo.FI) != 0
+}
+
 func (ctx *wp_context) wp_fpp_bc_files() {
 
+	// make pending dir
 	var err1 error
 	ctx.src_pending, err1 = ctx.sp.src.NewDir("pending", "pw-", "")
 	if err1 != nil {
@@ -90,8 +95,13 @@ func (ctx *wp_context) wp_fpp_bc_files() {
 	ctx.wp_fpp_bc_movensync(ctx.src_pending, iterf)
 }
 
+func (ctx *wp_context) wp_fpp_bc_hasthumbs() bool {
+	return len(ctx.thumbMoves) != 0
+}
+
 func (ctx *wp_context) wp_fpp_bc_thumbs() {
 
+	// make pending dir
 	var err1 error
 	ctx.thm_pending, err1 = ctx.sp.thm.NewDir("pending", "pw-", "")
 	if err1 != nil {
@@ -153,17 +163,19 @@ func (ctx *wp_context) wp_act_fpp_bc_work_TP() {
 
 	var zg sync.WaitGroup
 
-	zg.Add(2)
-
+	zg.Add(1)
 	go func(){
 		defer zg.Done()
 		ctx.wp_fpp_bc_files()
 	}()
 
-	go func(){
-		defer zg.Done()
-		ctx.wp_fpp_bc_thumbs()
-	}()
+	if ctx.wp_fpp_bc_hasthumbs() {
+		zg.Add(1)
+		go func(){
+			defer zg.Done()
+			ctx.wp_fpp_bc_thumbs()
+		}()
+	}
 
 	zg.Wait()
 }
@@ -194,10 +206,15 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_TP() {
 	ct := ctx.traceStart("wp_act_fpp_bc_spawn_TP")
 	defer ct.Done()
 
+	if !ctx.wp_fpp_bc_hasfiles() {
+		// if has no files, then has no thumbs too so moot
+		return
+	}
+
 	ctx.wg_TP.Add(1)
 	go func (){
 		defer ctx.wg_TP.Done()
-		ctx.wp_act_fpp_bc_work_TA()
+		ctx.wp_act_fpp_bc_work_TP()
 	}
 }
 
@@ -205,6 +222,11 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_PA() {
 
 	ct := ctx.traceStart("wp_act_fpp_bc_spawn_PA")
 	defer ct.Done()
+
+	if !ctx.wp_fpp_bc_hasfiles() {
+		// waste to spawn goroutine if we have nothing to do
+		return
+	}
 
 	// ensure we don't have more than one of these
 	ctx.wg_PA.Wait()
