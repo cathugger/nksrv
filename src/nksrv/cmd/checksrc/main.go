@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
 	"golang.org/x/crypto/blake2b"
@@ -15,7 +16,7 @@ import (
 )
 
 func printUsage(f io.Writer) {
-	fmt.Fprintf(f, "Usage: %s dir\n", os.Args[0])
+	fmt.Fprintf(f, "Usage: %s file/dir filename/dirname\n", os.Args[0])
 }
 
 func printFile(n string) {
@@ -89,25 +90,41 @@ func processfile(name string) {
 }
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) != 3 {
 		printUsage(os.Stderr)
 		os.Exit(1)
 	}
-	dname := os.Args[1]
-	err := os.Chdir(dname)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error on chdir into %q: %v", dname, err)
-		os.Exit(1)
-	}
-	fis, err := ioutil.ReadDir(".")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading dir %q: %v", dname, err)
-		os.Exit(1)
-	}
-	for _, f := range fis {
-		n := f.Name()
-		if n != "" && n[0] != '.' && n[0] != '_' && !f.IsDir() {
-			processfile(n)
+
+	arg := os.Args[2]
+
+	switch os.Args[1] {
+	case "file":
+		dname := path.Dir(arg)
+		err := os.Chdir(dname)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error on chdir into %q: %v", dname, err)
+			os.Exit(1)
 		}
+		processfile(path.Base(arg))
+	case "dir":
+		err := os.Chdir(arg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error on chdir into %q: %v", arg, err)
+			os.Exit(1)
+		}
+		fis, err := ioutil.ReadDir(".")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading dir %q: %v", arg, err)
+			os.Exit(1)
+		}
+		for _, f := range fis {
+			n := f.Name()
+			if n != "" && n[0] != '.' && n[0] != '_' && !f.IsDir() {
+				processfile(n)
+			}
+		}
+	default:
+		printUsage(os.Stderr)
+		os.Exit(1)
 	}
 }
