@@ -421,6 +421,17 @@ func (c *ConnState) serveClient() bool {
 					break
 				}
 			}
+
+			/*
+				// https://tools.ietf.org/html/rfc3977#section-3.1
+				// "The arguments MUST NOT exceed 497 octets."
+				if len(incmd)-x > 497 {
+					AbortOnErr(c.w.PrintfLine("501 arguments exceeded 497 octets"))
+					c.log.LogPrintf(WARN, "arguments exceeded 497 octets")
+					goto nextcommand
+				}
+			*/
+
 			if len(args) >= cmd.maxargs {
 				if !cmd.allowextra {
 					AbortOnErr(c.w.PrintfLine("501 too many parameters"))
@@ -432,7 +443,10 @@ func (c *ConnState) serveClient() bool {
 				}
 				goto nextcommand
 			}
+
+			// mark start
 			sx := x
+
 			// skip non-spaces
 			for {
 				x++

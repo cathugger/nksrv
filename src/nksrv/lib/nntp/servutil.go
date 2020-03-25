@@ -73,7 +73,17 @@ func validHeaderQuery(hq []byte) bool {
 	return au.IsPrintableASCIISlice(hq, ':')
 }
 
+// https://tools.ietf.org/html/rfc3977#section-3.1
+// "The arguments MUST NOT exceed 497 octets."
+// let's use something less than that
+const maxGroupNameLength = 450
+
 func ValidGroupSlice(s []byte) bool {
+
+	if len(s) > maxGroupNameLength {
+		return false
+	}
+
 	for _, c := range s {
 		// exclude ctl and ! * , ? [ \ ]
 		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
@@ -87,6 +97,11 @@ func ValidGroupSlice(s []byte) bool {
 }
 
 func FullValidGroupSlice(s []byte) bool {
+
+	if len(s) > maxGroupNameLength {
+		return false
+	}
+
 	hasunicode := false
 	for _, c := range s {
 		if !((c >= 0x22 && c <= 0x29) || c == 0x2B ||
