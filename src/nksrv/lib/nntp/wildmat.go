@@ -146,6 +146,7 @@ func CompileWildmat(x []byte) (w Wildmat) {
 
 func (w Wildmat) CheckString(s string) (result bool) {
 	for i := range w {
+		// later ones override previous ones
 		if w[i].re.MatchString(s) {
 			result = w[i].result
 		}

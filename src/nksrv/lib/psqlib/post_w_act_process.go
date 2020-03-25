@@ -5,23 +5,17 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
 	"strings"
 
 	"golang.org/x/crypto/ed25519"
 
 	"nksrv/lib/date"
-	fu "nksrv/lib/fileutil"
 	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
-	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
 	tu "nksrv/lib/textutils"
 	"nksrv/lib/thumbnailer"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
 )
 
 // expensive processing after initial DB lookup but before commit
@@ -159,7 +153,7 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 	}
 
 	// is control message?
-	ctx.isctlgrp := board == "ctl"
+	ctx.isctlgrp = board == "ctl"
 
 	// process references
 	ctx.srefs, ctx.irefs = ibref_nntp.ParseReferences(ctx.pInfo.MI.Message)

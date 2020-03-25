@@ -61,10 +61,20 @@ func groupFirstCompEq(grp, comp string) bool {
 
 // if any of components equal
 func groupAnyCompEq(grp, comp string) bool {
-	i := strings.Index(grp, comp)
-	return i >= 0 &&
-		(i > 0 || grp[i-1] == '.') &&
-		(i+len(comp) == len(grp) || grp[i+len(comp)] == '.')
+	off := 0
+	for {
+		i := strings.Index(grp[off:], comp)
+		if i < 0 {
+			return false
+		}
+		i += off
+		if (i == 0 || grp[i-1] == '.') &&
+			(i+len(comp) == len(grp) || grp[i+len(comp)] == '.') {
+
+			return true
+		}
+		off = i + 1
+	}
 }
 
 func validNetNewsGroup(s string, allowUTF8 bool) bool {
@@ -115,6 +125,7 @@ func validNetNewsGroup(s string, allowUTF8 bool) bool {
 func validFuckyGroup(s string, allowUTF8 bool) bool {
 	for _, c := range s {
 		if c < 0x80 {
+			// it should already be checked against control chars I think
 			continue
 		}
 		if !allowUTF8 || !unicode.IsPrint(c) {

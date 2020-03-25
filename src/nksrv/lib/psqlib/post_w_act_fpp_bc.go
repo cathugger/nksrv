@@ -1,38 +1,22 @@
 package psqlib
 
 import (
-	"database/sql"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"net/http"
-	"os"
-	"strings"
+	"path"
+	"path/filepath"
+	"sync"
 
-	"golang.org/x/crypto/ed25519"
-
-	"nksrv/lib/date"
-	fu "nksrv/lib/fileutil"
-	"nksrv/lib/ibref_nntp"
+	"nksrv/lib/fstore"
 	. "nksrv/lib/logx"
-	"nksrv/lib/mail"
-	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	tu "nksrv/lib/textutils"
-	"nksrv/lib/thumbnailer"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
 )
-
 
 func (ctx *wp_context) wp_fpp_bc_movensync(
 	pendir string, iterf func(func(fromfull, tofull string))) {
 
 	// move & sync individual files
 	var xg sync.WaitGroup
-	iterf(func(fromfull, tofull string){
+	iterf(func(fromfull, tofull string) {
 		xg.Add(1)
-		go func(){
+		go func() {
 			defer xg.Done()
 
 			// do sync of contents before move, as move should change only metadata,
@@ -44,7 +28,7 @@ func (ctx *wp_context) wp_fpp_bc_movensync(
 				ctx.set_werr(err2)
 				return
 			}
-		}
+		}()
 	})
 	xg.Wait()
 
@@ -122,9 +106,9 @@ func (ctx *wp_context) wp_fpp_bc_thumbs() {
 
 func (ctx *wp_context) wp_act_fpp_bc_afiw_any(
 	fromdir, rootdir string, mover *fstore.Mover,
-	func iterf(func(id string))) {
+	iterf func(func(id string))) {
 
-	iterf(func(id string){
+	iterf(func(id string) {
 		fromfull := filepath.Join(fromdir, id)
 		tofull := rootdir + ctx.pInfo.FI[x].ID
 
@@ -140,7 +124,9 @@ func (ctx *wp_context) wp_act_fpp_bc_afiw_files() {
 	rootdir := ctx.sp.src.Main()
 	mover := &ctx.sp.pending2src
 	iterf := func(func(string) f) {
-		for x := range ctx.pInfo.FI { f(ctx.pInfo.FI[x].ID) }
+		for x := range ctx.pInfo.FI {
+			f(ctx.pInfo.FI[x].ID)
+		}
 	}
 	wp_act_fpp_bc_afiw_any(fromdir, rootdir, mover, iterf)
 }
@@ -150,11 +136,12 @@ func (ctx *wp_context) wp_act_fpp_bc_afiw_thumbs() {
 	rootdir := ctx.sp.thm.Main()
 	mover := &ctx.sp.pending2thm
 	iterf := func(func(string) f) {
-		for x := range ctx.thumbMoves { f(ctx.thumbMoves[x].destname) }
+		for x := range ctx.thumbMoves {
+			f(ctx.thumbMoves[x].destname)
+		}
 	}
 	wp_act_fpp_bc_afiw_any(fromdir, rootdir, mover, iterf)
 }
-
 
 func (ctx *wp_context) wp_act_fpp_bc_work_TP() {
 
@@ -164,14 +151,14 @@ func (ctx *wp_context) wp_act_fpp_bc_work_TP() {
 	var zg sync.WaitGroup
 
 	zg.Add(1)
-	go func(){
+	go func() {
 		defer zg.Done()
 		ctx.wp_fpp_bc_files()
 	}()
 
 	if ctx.wp_fpp_bc_hasthumbs() {
 		zg.Add(1)
-		go func(){
+		go func() {
 			defer zg.Done()
 			ctx.wp_fpp_bc_thumbs()
 		}()
@@ -212,10 +199,10 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_TP() {
 	}
 
 	ctx.wg_TP.Add(1)
-	go func (){
+	go func() {
 		defer ctx.wg_TP.Done()
 		ctx.wp_act_fpp_bc_work_TP()
-	}
+	}()
 }
 
 func (ctx *wp_context) wp_act_fpp_bc_spawn_PA() {
@@ -232,8 +219,8 @@ func (ctx *wp_context) wp_act_fpp_bc_spawn_PA() {
 	ctx.wg_PA.Wait()
 
 	ctx.wg_PA.Add(1)
-	go func (){
+	go func() {
 		defer ctx.wg_PA.Done()
 		ctx.wp_act_fpp_bc_work_PA()
-	}
+	}()
 }

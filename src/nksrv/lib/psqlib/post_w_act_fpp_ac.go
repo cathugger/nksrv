@@ -1,29 +1,11 @@
 package psqlib
 
 import (
-	"database/sql"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"net/http"
 	"os"
-	"strings"
+	"path/filepath"
 
-	"golang.org/x/crypto/ed25519"
-
-	"nksrv/lib/date"
-	fu "nksrv/lib/fileutil"
-	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
-	"nksrv/lib/mail"
-	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	tu "nksrv/lib/textutils"
-	"nksrv/lib/thumbnailer"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
 )
-
 
 func (ctx *wp_context) wp_fpp_ac_files() (err error) {
 

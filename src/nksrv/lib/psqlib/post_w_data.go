@@ -2,55 +2,42 @@ package psqlib
 
 import (
 	"database/sql"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"net/http"
-	"os"
-	"strings"
+	"sync"
 
-	"golang.org/x/crypto/ed25519"
+	"github.com/lib/pq"
 
-	"nksrv/lib/date"
-	fu "nksrv/lib/fileutil"
 	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
-	"nksrv/lib/mail"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
-	tu "nksrv/lib/textutils"
-	"nksrv/lib/thumbnailer"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
 )
-
 
 // info for thumbnail tmpfile location and intended final filename
 type wp_thumbMove = mailib.ThumbInfo
 
 // board/thread/reply
 type wp_btr struct {
-	board      string
-	thread     string
-	isReply    bool
+	board   string
+	thread  string
+	isReply bool
 }
 
 type wp_context struct {
-	sp         *PSQLIB
+	sp *PSQLIB
 
-	f          form.Form
+	f form.Form
 
 	wp_btr
 
-	xf         webInputFields
-	postOpts   PostOptions
+	xf       webInputFields
+	postOpts PostOptions
 
 	wp_dbinfo
 
-	pInfo      mailib.PostInfo
-	isctlgrp   bool
-	srefs      []ibref_nntp.Reference
-	irefs      []ibref_nntp.Index
+	pInfo    mailib.PostInfo
+	isctlgrp bool
+	srefs    []ibref_nntp.Reference
+	irefs    []ibref_nntp.Index
 
 	wg_TP sync.WaitGroup // for tmp->pending
 	wg_PA sync.WaitGroup // for pending->active storage

@@ -6,7 +6,6 @@ import (
 	. "nksrv/lib/logx"
 
 	xtypes "github.com/jmoiron/sqlx/types"
-	"github.com/lib/pq"
 )
 
 func (sp *PSQLIB) maybeTxStmt(tx *sql.Tx, stmt int) (r *sql.Stmt) {

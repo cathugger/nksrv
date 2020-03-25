@@ -2,24 +2,12 @@ package psqlib
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
-	"golang.org/x/crypto/ed25519"
-
-	"nksrv/lib/date"
-	fu "nksrv/lib/fileutil"
-	"nksrv/lib/ibref_nntp"
 	. "nksrv/lib/logx"
-	"nksrv/lib/mail"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	tu "nksrv/lib/textutils"
-	"nksrv/lib/thumbnailer"
 	"nksrv/lib/webcaptcha"
 	ib0 "nksrv/lib/webib0"
 )
@@ -134,8 +122,6 @@ func (sp *PSQLIB) wp_dbcheck(ctx *wp_context) (err error) {
 	ctx.rInfo, ctx.wp_dbinfo, err = sp.getPrePostInfo(nil, ctx.btr, ctx.postOpts)
 	return
 }
-
-
 
 func (sp *PSQLIB) commonNewPost(
 	w http.ResponseWriter, r *http.Request, ctx *wp_context) (
