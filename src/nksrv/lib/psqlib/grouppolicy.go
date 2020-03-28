@@ -86,7 +86,7 @@ func validNetNewsGroup(s string, allowUTF8 bool) bool {
 	*/
 	for i, c := range s {
 		if c == '.' {
-			if i <= 0 || s[i-1] == '.' || i+1 == len(s) {
+			if i == 0 || s[i-1] == '.' || i+1 == len(s) {
 				return false
 			}
 			continue
