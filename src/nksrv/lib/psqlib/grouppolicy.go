@@ -78,6 +78,7 @@ func groupAnyCompEq(grp, comp string) bool {
 }
 
 func validNetNewsGroup(s string, allowUTF8 bool) bool {
+	// already assumes valid UTF-8 string
 	/*
 		{RFC 5536}
 		   newsgroup-name  =  component *( "." component )
