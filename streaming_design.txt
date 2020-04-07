@@ -1,0 +1,46 @@
+* subject
+how to stream new message updates to listening clients.
+listening clients include:
+ outgoing NNTP pusher connections
+ XWAITing NNTP alien pullers
+ imageboard HTTP clients
+
+* means
+using postgresql NOTIFY/LISTEN
+will be using one event stream per node for all boards/threads
+using one stream per board wouldn't scale for big board count
+filtering for board/thread will be done inside nksrv
+therefore, events will include:
+  msgid
+  board(s)
+  timestamp
+
+* possible problems
+reliability - stream can be cut at any point
+workaround:
+  after stream reconnection, we will recheck database for not yet pushed events
+  this, however, isn't trouble-free because of following problem
+
+message gpids may not match transaction completion order
+postgresql sequences are atomic, however they completely ignore transaction semantics
+this means that if there are 2 concurrent transactions,
+and tx1 allocates n1 for gpid, and tx2 allocates n2,
+and tx2 completes sooner than tx1, then n2 will appear before n1.
+that can cause issues for "upload completed" marking, if implemented not carefuly.
+my workaround for that is delay storing "last msg gpid processed" counter
+by 5 minutes, and limit time transaction takes by a little bit less than that.
+this will ensure that when "last msg gpid processed" counter is stored, there
+can be no messages added before it.
+insertion event should contain timestamp insert happened.
+it should probably be sourced either from psql server or nksrv (decision needed).
+nksrv should delay events by 5 mins. nksrv MUST ensure that latest event received
+via notify pipe is 5 or more minutes away (time must be taken from event itself).
+if no newer events are delivered after last event which is to be marked read,
+then nksrv should issue query which would produce new dummy event which would
+include only timestamp, and proceed once it gets it.
+this is to protect this mechanism from hung pipe, thus ensuring that event
+stream coming from psql is indeed current.
+if this is not checked, then event with lower gpid coming after higher gpid
+could stall and end up being not delivered if pipe eventually dies, and higher
+would be still marked, thus recheck would not pick up lower one
+ - essentially dropping message.
