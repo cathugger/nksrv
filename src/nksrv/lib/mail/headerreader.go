@@ -184,7 +184,8 @@ func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
 			hcont := h.Bytes()
 			if !validHeaderContent(hcont) {
 				h.Reset()
-				return fmt.Errorf("invalid %q header content %#q", currHeader, hcont)
+				return fmt.Errorf(
+					"invalid %q header content %#q", currHeader, hcont)
 			}
 			hval := HeaderVal{HeaderValInner: HeaderValInner{
 				V: string(au.TrimWSBytes(hcont)),

@@ -8,6 +8,9 @@ import (
 	au "nksrv/lib/asciiutils"
 )
 
+/*
+ * some utility stuff
+ */
 func ValidHeaderName(h []byte) bool {
 	return au.IsPrintableASCIISlice(h, ':')
 }
@@ -36,6 +39,10 @@ var (
 
 const maxCommonHdrLen = 32
 
+/*
+ * header map stuff
+ */
+
 type HeaderValInner struct {
 	V string   `json:"v"`           // value
 	O string   `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
@@ -45,6 +52,11 @@ type HeaderValInner struct {
 type HeaderVal struct {
 	HeaderValInner
 }
+
+type HeaderVals []HeaderVal
+type Headers map[string]HeaderVals
+
+// header map related functions
 
 func (hv HeaderVal) MarshalJSON() ([]byte, error) {
 	if hv.O == "" && len(hv.S) == 0 {
@@ -64,9 +76,6 @@ func (hv *HeaderVal) UnmarshalJSON(b []byte) (err error) {
 	return json.Unmarshal(b, &hv.HeaderValInner)
 }
 
-type HeaderVals []HeaderVal
-type Headers map[string]HeaderVals
-
 func OneHeaderVal(v string) HeaderVals {
 	return HeaderVals{{HeaderValInner: HeaderValInner{V: v}}}
 }
@@ -84,7 +93,7 @@ func (h Headers) GetFirst(x string) string {
 // NOTE: assumes that Headers map was created by current version
 // this is NOT the case with stuff pulled out of database
 func (h Headers) Lookup(x string) []HeaderVal {
-	if y, ok := commonHeaders[x]; ok {
+	if y, ok := headerMap[x]; ok {
 		return h[y]
 	}
 	if s, ok := h[x]; ok {
@@ -111,9 +120,56 @@ func (h Headers) Lookup(x string) []HeaderVal {
 		b[i] = c
 		upper = c == '-'
 	}
-	if y, ok := commonHeaders[string(b)]; ok {
+	if y, ok := headerMap[string(b)]; ok {
 		return h[y]
 	} else {
 		return h[string(b)]
 	}
+}
+
+
+/*
+ * header list stuff
+ */
+
+type HeaderListValInner struct {
+	K string   `json:"k"`
+	V string   `json:"v"`
+	O string   `json:"h"`
+	S []uint32 `json:"s"`
+}
+
+type HeaderListVal struct {
+	HeaderListValInner
+}
+
+type HeaderList []HeaderListVal
+
+/*
+ * header map related functions
+ */
+
+func (hv HeaderListVal) MarshalJSON() ([]byte, error) {
+	if hv.O == "" && len(hv.S) == 0 {
+		l := [2]string{
+			hv.K,
+			hv.V,
+		}
+		return json.Marshal(l)
+	} else {
+		return json.Marshal(hv.HeaderListValInner)
+	}
+}
+
+func (hv *HeaderListVal) UnmarshalJSON(b []byte) (err error) {
+	var l [2]string
+	err = json.Unmarshal(b, &l)
+	if err == nil {
+		*hv = HeaderListVal{HeaderListValInner{
+			K: l[0],
+			V: l[1],
+		}}
+		return
+	}
+	return json.Unmarshal(b, &hv.HeaderListValInner)
 }

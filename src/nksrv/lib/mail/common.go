@@ -1,25 +1,5 @@
 package mail
 
-// common email headers statically allocated to avoid dynamic allocations
-// TODO actually analyse which are used and update accordingly
-var commonHeaders = map[string]string{
-	// overrides
-	// RFCs digestion, also observation of actual messages
-	"Message-Id":        "Message-ID",
-	"Content-Id":        "Content-ID",
-	"List-Id":           "List-ID",
-	"Mime-Version":      "MIME-Version",
-	"Nntp-Posting-Date": "NNTP-Posting-Date",
-	"Nntp-Posting-Host": "NNTP-Posting-Host",
-	// overchan
-	"X-Pubkey-Ed25519":            "X-PubKey-Ed25519",
-	"X-Signature-Ed25519-Sha512":  "X-Signature-Ed25519-SHA512",
-	"X-Signature-Ed25519-Blake2b": "X-Signature-Ed25519-BLAKE2b",
-	"X-Frontend-Pubkey":           "X-Frontend-PubKey", // signature below
-	"X-Encrypted-Ip":              "X-Encrypted-IP",
-	"X-I2p-Desthash":              "X-I2P-DestHash",
-}
-
 var commonHeadersList = [...]string{
 	// kitchen-sink RFCs and other online sources digestion
 
@@ -94,35 +74,20 @@ var commonHeadersList = [...]string{
 	"X-Sage",
 }
 
-func AddCommonKey(h string) {
-	if len(h) > maxCommonHdrLen {
-		panic("maxCommonHdrLen needs adjustment")
-	}
-	commonHeaders[h] = h
-}
-
-func AddCommonKeyOverride(h, o string) {
-	if len(h) > maxCommonHdrLen || len(o) > maxCommonHdrLen {
-		panic("maxCommonHdrLen needs adjustment")
-	}
-	commonHeaders[h] = o // override
-	commonHeaders[o] = o // self-map
-}
-
 func init() {
 	// self-map overrides, to allow more efficient lookup
-	for _, v := range commonHeaders {
-		commonHeaders[v] = v
+	for _, v := range headerMap {
+		headerMap[v] = v
 	}
 	// common headers which match their canonical versions
 	for _, v := range commonHeadersList {
-		commonHeaders[v] = v
+		headerMap[v] = v
 	}
 }
 
 // does not allocate anything, just returns canonical form if header is common and empty string otherwise
 func FindCommonCanonicalKey(s string) string {
-	if y, ok := commonHeaders[s]; ok {
+	if y, ok := headerMap[s]; ok {
 		return y
 	}
 
@@ -143,7 +108,7 @@ func FindCommonCanonicalKey(s string) string {
 		b[i] = c
 		upper = c == '-'
 	}
-	return commonHeaders[string(b[:len(s)])]
+	return headerMap[string(b[:len(s)])]
 }
 
 func canonicaliseSlice(b []byte) {
@@ -164,7 +129,7 @@ func canonicaliseSlice(b []byte) {
 // if we can't be sure of its canonical form. May modify buffer.
 func unsafeMapCanonicalOriginalHeaders(b []byte) (string, string) {
 	// fast path: maybe its common header in form we want
-	if h, ok := commonHeaders[string(b)]; ok {
+	if h, ok := headerMap[string(b)]; ok {
 		return h, ""
 	}
 	// save original form
@@ -172,7 +137,7 @@ func unsafeMapCanonicalOriginalHeaders(b []byte) (string, string) {
 	// canonicalise
 	canonicaliseSlice(b)
 	// try to use static name again
-	if h, ok := commonHeaders[string(b)]; ok {
+	if h, ok := headerMap[string(b)]; ok {
 		// if it works, then we're sure of its canonical form
 		return h, ""
 	}
@@ -187,13 +152,13 @@ func unsafeMapCanonicalOriginalHeaders(b []byte) (string, string) {
 
 func UnsafeCanonicalHeader(b []byte) string {
 	// fast path: maybe its common header in form we want
-	if h, ok := commonHeaders[string(b)]; ok {
+	if h, ok := headerMap[string(b)]; ok {
 		return h
 	}
 	// canonicalise
 	canonicaliseSlice(b)
 	// try to use static name again
-	if h, ok := commonHeaders[string(b)]; ok {
+	if h, ok := headerMap[string(b)]; ok {
 		return h
 	}
 	// ohwell nothing we can do, return unsafe slice
