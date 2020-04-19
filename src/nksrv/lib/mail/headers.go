@@ -29,7 +29,7 @@ func validHeaderContent(b []byte) bool {
 	return !has8bit || utf8.Valid(b)
 }
 
-const maxHeaderLen = 2000
+const maxHeaderLen = 1000
 
 var (
 	errTooLongHeader       = errors.New("too long header")
@@ -74,7 +74,7 @@ func (hv *HeaderMapVal) UnmarshalJSON(b []byte) (err error) {
 	err = json.Unmarshal(b, &hv.V)
 	if err == nil {
 		hv.O = ""
-		hv.S = []uint32(nil)
+		hv.S = HeaderValSplitList(nil)
 		return
 	}
 	return json.Unmarshal(b, &hv.HeaderMapValInner)

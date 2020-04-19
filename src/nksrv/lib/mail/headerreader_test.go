@@ -8,9 +8,12 @@ import (
 )
 
 type hr_testcase struct {
-	msg   []byte
-	limit int
-	hdrs  HeaderMap
+	msg       []byte
+	msgextra  []byte
+	output    []byte
+	limit     int
+	forcelong bool
+	hdrs      HeaderMap
 }
 
 var hr_tests = []hr_testcase{
@@ -20,9 +23,10 @@ var hr_tests = []hr_testcase{
 		hdrs:  HeaderMap{},
 	},
 	{
-		msg:   []byte("\nsomething"),
-		limit: 0,
-		hdrs:  HeaderMap{},
+		msg:      []byte("\nsomething"),
+		msgextra: []byte("something"),
+		limit:    0,
+		hdrs:     HeaderMap{},
 	},
 	{
 		msg:   []byte("A: b\n\n"),
@@ -30,14 +34,16 @@ var hr_tests = []hr_testcase{
 		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
-		msg:   []byte("A:b\n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
+		msg:    []byte("A:b\n\n"),
+		output: []byte("A: b\n\n"),
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
-		msg:   []byte("A   :b\n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
+		msg:    []byte("A   :b\n\n"),
+		output: []byte("A: b\n\n"),
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
 		msg:   []byte("a: b\n\n"),
@@ -48,23 +54,27 @@ var hr_tests = []hr_testcase{
 		},
 	},
 	{
-		msg:   []byte("A:    b\n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
+		msg:    []byte("A:    b\n\n"),
+		output: []byte("A: b\n\n"),
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
-		msg:   []byte("A: b    \n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
+		msg:    []byte("A: b    \n\n"),
+		output: []byte("A: b\n\n"),
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
-		msg:   []byte("A:     b    \n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
+		msg:    []byte("A:     b    \n\n"),
+		output: []byte("A: b\n\n"),
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("b")},
 	},
 	{
-		msg:   []byte("A: b\n c\n d\n\n"),
-		limit: 0,
+		msg:    []byte("A:   b\n c\n d   \n\n"),
+		output: []byte("A: b\n c\n d\n\n"),
+		limit:  0,
 		hdrs: HeaderMap{"A": HeaderMapVals{{HeaderMapValInner{
 			V: "b c d",
 			S: HeaderValSplitList{1, 2},
@@ -111,6 +121,7 @@ func init() {
 		tc.msg = append([]byte(fmt.Sprintf("A%05d: ", i)), br.Bytes()...)
 		tc.msg = append(tc.msg, []byte("\n\n")...)
 		tc.hdrs = HeaderMap{fmt.Sprintf("A%05d", i): OneHeaderVal(string(br.Bytes()))}
+		tc.forcelong = true
 		hr_tests = append(hr_tests, tc)
 	}
 
@@ -165,6 +176,7 @@ func init() {
 				S: HeaderValSplitList{HeaderValSplit(i + 2)},
 			}}},
 		}
+		tc.forcelong = true
 		hr_tests = append(hr_tests, tc)
 	}
 
@@ -172,21 +184,42 @@ func init() {
 
 func TestValid(t *testing.T) {
 	const which = -1
+	bw := new(bytes.Buffer)
 	for i := range hr_tests {
+		tt := hr_tests[i]
 		if which >= 0 && i != which {
 			continue
 		}
-		br := bytes.NewReader(hr_tests[i].msg)
-		mh, e := ReadHeaders(br, hr_tests[i].limit)
+		br := bytes.NewReader(tt.msg)
+		mh, e := ReadHeaders(br, tt.limit)
 		if e != nil {
 			t.Fatalf("%d ReadHeaders err: %v", i, e)
 		}
 		defer mh.Close()
-		if !reflect.DeepEqual(mh.H, hr_tests[i].hdrs) {
-			t.Logf("%d not equal!", i)
+		if !reflect.DeepEqual(mh.H, tt.hdrs) {
+			t.Logf("%d struct not equal!", i)
 			t.Logf("got %#v", mh.H)
-			t.Logf("expected %#v", hr_tests[i].hdrs)
-			t.Logf("input %q", hr_tests[i].msg)
+			t.Logf("expected %#v", tt.hdrs)
+			t.Logf("input %q", tt.msg)
+			t.FailNow()
+		}
+		bw.Reset()
+		e = WriteMessageHeaderMap(bw, mh.H, tt.forcelong)
+		if e != nil {
+			t.Fatalf("%d WriteMessageHeaderMap err: %v", i, e)
+		}
+		fmt.Fprintf(bw, "\n")
+		fmt.Fprintf(bw, "%s", tt.msgextra)
+		var bb []byte
+		if tt.output != nil {
+			bb = tt.output
+		} else {
+			bb = tt.msg
+		}
+		if !bytes.Equal(bb, bw.Bytes()) {
+			t.Logf("%d write not equal!", i)
+			t.Logf("got %q", bw.Bytes())
+			t.Logf("input %q", tt.msg)
 			t.FailNow()
 		}
 	}

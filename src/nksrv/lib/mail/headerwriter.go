@@ -96,15 +96,45 @@ var writePartHeaderMap = func() (m map[string]struct{}) {
 	return
 }()
 
-func writeHeaderLine(w io.Writer, h, s string, force bool) error {
-	// TODO implement line folding
-	if !force && len(h)+2+len(s)+2 > maxHeaderLen {
+func writeHeaderLine(
+	w io.Writer, h, v string, s HeaderValSplitList, force bool) (
+	e error) {
+
+	if len(s) != 0 {
+		l := int(s[0])
+		if !force && len(h)+2+l+2 > maxHeaderLen {
+			return ErrHeaderLineTooLong
+		}
+		if _, e = fmt.Fprintf(w, "%s: %s\n", h, v[:l]); e != nil {
+			return
+		}
+		for i := 1; i < len(s); i++ {
+			x := int(s[i])
+			if !force && l+2 > maxHeaderLen {
+				return ErrHeaderLineTooLong
+			}
+			if _, e = fmt.Fprintf(w, "%s\n", v[l:l+x]); e != nil {
+				return
+			}
+			l += x
+		}
+		if !force && len(v)-l+2 > maxHeaderLen {
+			return ErrHeaderLineTooLong
+		}
+		if _, e = fmt.Fprintf(w, "%s\n", v[l:]); e != nil {
+			return
+		}
+
+		return
+	}
+
+	if !force && len(h)+2+len(v)+2 > maxHeaderLen {
 		return ErrHeaderLineTooLong
 	}
-	if _, e := fmt.Fprintf(w, "%s: %s\n", h, s); e != nil {
-		return e
+	if _, e = fmt.Fprintf(w, "%s: %s\n", h, v); e != nil {
+		return
 	}
-	return nil
+	return
 }
 
 func writeHeaderLines(w io.Writer, h string, v []HeaderMapVal, force bool) error {
@@ -113,7 +143,7 @@ func writeHeaderLines(w io.Writer, h string, v []HeaderMapVal, force bool) error
 		if x.O != "" {
 			hh = x.O
 		}
-		if e := writeHeaderLine(w, hh, x.V, force); e != nil {
+		if e := writeHeaderLine(w, hh, x.V, x.S, force); e != nil {
 			return e
 		}
 	}
@@ -142,7 +172,7 @@ func WriteHeaderList(w io.Writer, HL HeaderList, force bool) (err error) {
 		if x.O != "" {
 			hh = x.O
 		}
-		if err = writeHeaderLine(w, hh, x.V, force); err != nil {
+		if err = writeHeaderLine(w, hh, x.V, x.S, force); err != nil {
 			return
 		}
 	}
