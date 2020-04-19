@@ -119,6 +119,14 @@ func TrimWSBytes(b []byte) []byte {
 	return b[x:y]
 }
 
+func TrimLeftWSBytes(b []byte) []byte {
+	x := 0
+	for x != len(b) && (b[x] == ' ' || b[x] == '\t') {
+		x++
+	}
+	return b[x:]
+}
+
 // NOTE ASCII space (32) is neither printable chatacter nor control character
 func IsPrintableASCIISlice(s []byte, e byte) bool {
 	for _, c := range s {

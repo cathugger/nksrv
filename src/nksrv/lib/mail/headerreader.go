@@ -202,6 +202,8 @@ func errInvalidHeaderName(k []byte) error {
 	return fmt.Errorf("invalid header name: %#q", k)
 }
 
+var errEmptyFold = errors.New("empty folding lines aren't allowed")
+
 func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 	h := hdrPool.Get().(*bytes.Buffer)
 	h.Reset()
@@ -357,6 +359,12 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 
 				if len(currHeader) == 0 {
 					e = errInvalidContinuation
+					break
+				}
+				if start-lastStart == 0 || len(au.TrimLeftWSBytes(line)) == 0 {
+					// last fragment was empty or this one is
+					// it would be a problem because of how it interacts with trimming
+					e = errEmptyFold
 					break
 				}
 

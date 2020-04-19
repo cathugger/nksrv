@@ -29,6 +29,17 @@ var hr_tests = []hr_testcase{
 		hdrs:     HeaderMap{},
 	},
 	{
+		msg:   []byte("A:\n\n"),
+		output: []byte("A: \n\n"),
+		limit: 0,
+		hdrs:  HeaderMap{"A": OneHeaderVal("")},
+	},
+	{
+		msg:   []byte("A: \n\n"),
+		limit: 0,
+		hdrs:  HeaderMap{"A": OneHeaderVal("")},
+	},
+	{
 		msg:   []byte("A: b\n\n"),
 		limit: 0,
 		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
@@ -104,6 +115,16 @@ var hr_tests = []hr_testcase{
 			}}},
 		},
 	},
+}
+
+var hr_badones = [][]byte{
+	[]byte("test"),
+	[]byte("test\n"),
+	[]byte("test: test"),
+	[]byte("test: test\n"),
+	[]byte("test: \n test\n\n"),
+	[]byte("test: test\n \n\n"),
+	[]byte("test: test\n \n test\n\n"),
 }
 
 func init() {
@@ -195,7 +216,6 @@ func TestValid(t *testing.T) {
 		if e != nil {
 			t.Fatalf("%d ReadHeaders err: %v", i, e)
 		}
-		defer mh.Close()
 		if !reflect.DeepEqual(mh.H, tt.hdrs) {
 			t.Logf("%d struct not equal!", i)
 			t.Logf("got %#v", mh.H)
@@ -208,6 +228,7 @@ func TestValid(t *testing.T) {
 		if e != nil {
 			t.Fatalf("%d WriteMessageHeaderMap err: %v", i, e)
 		}
+		mh.Close()
 		fmt.Fprintf(bw, "\n")
 		fmt.Fprintf(bw, "%s", tt.msgextra)
 		var bb []byte
@@ -221,6 +242,22 @@ func TestValid(t *testing.T) {
 			t.Logf("got %q", bw.Bytes())
 			t.Logf("input %q", tt.msg)
 			t.FailNow()
+		}
+	}
+}
+
+func TestInvalid(t *testing.T) {
+	const which = -1
+	for i := range hr_badones {
+		tt := hr_badones[i]
+		if which >= 0 && i != which {
+			continue
+		}
+		br := bytes.NewReader(tt)
+		mh, e := ReadHeaders(br, -1)
+		mh.Close()
+		if e == nil {
+			t.Fatalf("%d should fail but didn't", i)
 		}
 	}
 }
