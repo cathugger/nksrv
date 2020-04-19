@@ -213,6 +213,7 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 	// 0                   s
 	var line []byte   // CURRENT full line
 	var start int     // begining of current line's logical fragment
+	var contStart int // begining of actual content of whole defrag'd line
 	var lastStart int // for fragment counting
 
 	finishCurrent := func() error {
@@ -221,7 +222,7 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 
 			//fmt.Printf("!hdr finishing current %q\n", currHeader)
 
-			hcont := h.Bytes()[:start]
+			hcont := h.Bytes()[contStart:start]
 			if !validHeaderContent(hcont) {
 				h.Reset()
 				return errInvalidHeaderContent(currHeader, hcont)
@@ -283,6 +284,7 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 			// have CR? discard that too
 			if len(line) != 0 && line[len(line)-1] == '\r' {
 				line = line[:len(line)-1]
+				h.Truncate(start + len(line))
 			}
 
 			if len(line) == 0 {
@@ -339,9 +341,11 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 					nn++
 				}
 
-				// move
-				h.Truncate(start)
-				h.Write(line[nn:])
+				// mark actual content start
+				contStart = nn
+				lastStart = contStart
+
+				// mark start of the next line
 				start = h.Len()
 
 			} else {
@@ -357,11 +361,7 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 				splits = append(splits, HeaderValSplit(start-lastStart))
 				lastStart = start
 
-				// bytes are already appended
-				// however length may need fix
-				if len(line) != h.Len()-start {
-					h.Truncate(start + len(line))
-				}
+				// mark start
 				start = h.Len()
 			}
 		}
