@@ -238,22 +238,22 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 		h.Reset()
 		start = 0
 		lastStart = 0
-		if len(line) != 0 {
-			h.Write(line)
-			line = h.Bytes()
-		}
 
 		return nil
 	}
 
+	lastWasFrag := false
+	currFrag := false
 	for {
 		b := br.Buffered()
 		for len(b) != 0 {
 			// wb is currently usable slice
 			var wb []byte
+			lastWasFrag = currFrag
 
 			n := bytes.IndexByte(b, '\n')
-			if n >= 0 {
+			currFrag = n < 0
+			if !currFrag {
 				// found newline - this line will be complete
 				wb = b[:n] // do not include LF
 				//fmt.Printf("!hdr full line %q\n", wb)
@@ -267,13 +267,23 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 				b = nil
 			}
 
+			// we can already know at this point if next completed line
+			// is going to be logical fragment or not
+			if !lastWasFrag && len(wb) != 0 && wb[0] != ' ' && wb[0] != '\t' {
+				// finish current, if any
+				e = finishCurrent()
+				if e != nil {
+					break
+				}
+			}
+
 			// write it out
 			h.Write(wb)
 
 			//fmt.Printf("!hdr wrote chunk %q\n", wb)
 
 			// drain until we have completed this line
-			if n < 0 {
+			if currFrag {
 				continue
 			}
 
@@ -297,12 +307,6 @@ func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 			if line[0] != ' ' && line[0] != '\t' {
 				// not logical continuation, just normal line
 				//fmt.Printf("!hdr line is NOT continuation\n")
-
-				// finish current, if any
-				e = finishCurrent()
-				if e != nil {
-					break
-				}
 
 				// find :
 				nn := bytes.IndexByte(line, ':')
