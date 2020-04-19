@@ -110,7 +110,7 @@ func writeHeaderLine(
 		}
 		for i := 1; i < len(s); i++ {
 			x := int(s[i])
-			if !force && l+2 > maxHeaderLen {
+			if !force && x+2 > maxHeaderLen {
 				return ErrHeaderLineTooLong
 			}
 			if _, e = fmt.Fprintf(w, "%s\n", v[l:l+x]); e != nil {
