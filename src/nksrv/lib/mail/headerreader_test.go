@@ -40,6 +40,12 @@ var hr_tests = []hr_testcase{
 		hdrs:  HeaderMap{"A": OneHeaderVal("")},
 	},
 	{
+		msg:   []byte("A:  \n\n"),
+		output: []byte("A: \n\n"),
+		limit: 0,
+		hdrs:  HeaderMap{"A": OneHeaderVal("")},
+	},
+	{
 		msg:   []byte("A: b\n\n"),
 		limit: 0,
 		hdrs:  HeaderMap{"A": OneHeaderVal("b")},
