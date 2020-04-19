@@ -3,6 +3,7 @@ package mail
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 	"unicode/utf8"
 
 	au "nksrv/lib/asciiutils"
@@ -18,7 +19,7 @@ func ValidHeaderName(h []byte) bool {
 func validHeaderContent(b []byte) bool {
 	has8bit := false
 	for _, c := range b {
-		if c == '\000' || c == '\r' {
+		if c == '\000' || c == '\r' || c == '\n' {
 			return false
 		}
 		if c&0x80 != 0 {
@@ -43,45 +44,48 @@ const maxCommonHdrLen = 32
  * header map stuff
  */
 
-type HeaderValInner struct {
-	V string   `json:"v"`           // value
-	O string   `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
-	S []uint32 `json:"s,omitempty"` // split points, for folding/unfolding
+type HeaderValSplit = uint32
+type HeaderValSplitList = []HeaderValSplit
+
+type HeaderMapValInner struct {
+	V string             `json:"v"`           // value
+	O string             `json:"h,omitempty"` // original name, optional, needed only incase non-canonical form
+	S HeaderValSplitList `json:"s,omitempty"` // split points, for folding/unfolding
 }
 
-type HeaderVal struct {
-	HeaderValInner
+type HeaderMapVal struct {
+	HeaderMapValInner
 }
 
-type HeaderVals []HeaderVal
-type Headers map[string]HeaderVals
+type HeaderMapVals []HeaderMapVal
+type HeaderMap map[string]HeaderMapVals
 
 // header map related functions
 
-func (hv HeaderVal) MarshalJSON() ([]byte, error) {
+func (hv HeaderMapVal) MarshalJSON() ([]byte, error) {
 	if hv.O == "" && len(hv.S) == 0 {
 		return json.Marshal(hv.V)
 	} else {
-		return json.Marshal(hv.HeaderValInner)
+		return json.Marshal(hv.HeaderMapValInner)
 	}
 }
 
-func (hv *HeaderVal) UnmarshalJSON(b []byte) (err error) {
+func (hv *HeaderMapVal) UnmarshalJSON(b []byte) (err error) {
 	err = json.Unmarshal(b, &hv.V)
 	if err == nil {
 		hv.O = ""
 		hv.S = []uint32(nil)
 		return
 	}
-	return json.Unmarshal(b, &hv.HeaderValInner)
+	return json.Unmarshal(b, &hv.HeaderMapValInner)
 }
 
-func OneHeaderVal(v string) HeaderVals {
-	return HeaderVals{{HeaderValInner: HeaderValInner{V: v}}}
+func OneHeaderVal(v string) HeaderMapVals {
+	return HeaderMapVals{{HeaderMapValInner: HeaderMapValInner{V: v}}}
 }
 
 // case-sensitive
-func (h Headers) GetFirst(x string) string {
+func (h HeaderMap) GetFirst(x string) string {
 	if s, ok := h[x]; ok {
 		// assumption: will always have at least one value
 		return s[0].V
@@ -90,9 +94,9 @@ func (h Headers) GetFirst(x string) string {
 }
 
 // case-insensitive lookup
-// NOTE: assumes that Headers map was created by current version
+// NOTE: assumes that HeaderMap was created by current version
 // this is NOT the case with stuff pulled out of database
-func (h Headers) Lookup(x string) []HeaderVal {
+func (h HeaderMap) Lookup(x string) []HeaderMapVal {
 	if y, ok := headerMap[x]; ok {
 		return h[y]
 	}
@@ -127,16 +131,15 @@ func (h Headers) Lookup(x string) []HeaderVal {
 	}
 }
 
-
 /*
  * header list stuff
  */
 
 type HeaderListValInner struct {
-	K string   `json:"k"`
-	V string   `json:"v"`
-	O string   `json:"h"`
-	S []uint32 `json:"s"`
+	K string             `json:"k"`
+	V string             `json:"v"`
+	O string             `json:"h"`
+	S HeaderValSplitList `json:"s"`
 }
 
 type HeaderListVal struct {
@@ -172,4 +175,93 @@ func (hv *HeaderListVal) UnmarshalJSON(b []byte) (err error) {
 		return
 	}
 	return json.Unmarshal(b, &hv.HeaderListValInner)
+}
+
+func (hl HeaderList) ToHeaderMap() (hm HeaderMap) {
+
+	// assume HeaderList is all canonical already
+
+	// make independent list which is going to be used for this
+	chml := make(HeaderMapVals, 0, len(hl))
+
+	hm = make(HeaderMap)
+	for _, hlv := range hl {
+		hmv := HeaderMapVal{HeaderMapValInner{
+			V: hlv.V,
+			O: hlv.O,
+			S: hlv.S,
+		}}
+		if lastval := hm[hlv.K]; lastval != nil {
+			hm[hlv.K] = append(lastval, hmv)
+		} else {
+			chml = append(chml[len(chml):], hmv)
+			hm[hlv.K] = chml[0:1:1]
+		}
+	}
+
+	return
+}
+
+type addHdrFunc = func(h string, hmvl []HeaderMapVal, force bool) error
+
+func addHeadersOrdered(
+	F addHdrFunc, HO []string, HM map[string]struct{},
+	H HeaderMap, force bool) (
+	err error) {
+
+	n := 0
+	// first try to put headers we know about in order
+	for _, h := range HO {
+		if len(H[h]) != 0 {
+			n++
+			err = F(h, H[h], force)
+			if err != nil {
+				return
+			}
+		}
+	}
+	if len(H) <= n {
+		return
+	}
+	// then put rest, sorted
+	l := make([]string, 0, len(H)-n)
+	for k := range H {
+		if _, inmap := HM[k]; !inmap {
+			l = append(l, k)
+		}
+	}
+	sort.Strings(l)
+	for _, h := range l {
+		err = F(h, H[h], force)
+		if err != nil {
+			return
+		}
+	}
+	// done
+	return
+}
+
+func (hm HeaderMap) toHeaderList(
+	HO []string, HM map[string]struct{}) (hl HeaderList) {
+
+	f := func(h string, hmvl []HeaderMapVal, force bool) error {
+		for _, hmv := range hmvl {
+			hl = append(hl, HeaderListVal{HeaderListValInner{
+				K: h,
+				V: hmv.V,
+				O: hmv.O,
+				S: hmv.S,
+			}})
+		}
+		return nil
+	}
+	_ = addHeadersOrdered(f, HO, HM, hm, false)
+	return
+}
+
+func (hm HeaderMap) ToMessageHeaderList() HeaderList {
+	return hm.toHeaderList(writeHeaderOrder[:], writeHeaderMap)
+}
+func (hm HeaderMap) ToPartHeaderList() (hl HeaderList) {
+	return hm.toHeaderList(writePartHeaderOrder[:], writePartHeaderMap)
 }

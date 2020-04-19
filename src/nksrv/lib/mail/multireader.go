@@ -198,7 +198,7 @@ func (pr *PartReader) checkPartEndEOF(line []byte) bool {
 	return len(line) == 0
 }
 
-func (pr *PartReader) ReadHeaders(headlimit int) (H Headers, e error) {
+func (pr *PartReader) ReadHeaders(headlimit int) (H HeaderMap, e error) {
 	return limitedReadHeadersFromExisting(pr.BufReader, headlimit)
 }
 

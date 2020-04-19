@@ -11,7 +11,7 @@ import (
 )
 
 type MessageHead struct {
-	H Headers // message headers
+	H HeaderMap // message headers
 	//HSort []string      // header keys sorted in order they appeared
 	B *bufreader.BufReader // message body reader
 }
@@ -57,7 +57,7 @@ func ReadHeaders(r io.Reader, headlimit int) (mh MessageHead, err error) {
 		br = obtainBufReader(r)
 	}
 
-	mh.H, err = readHeaders(br)
+	mh.H, err = readHeaderMap(br)
 
 	// if we get error that means that error has occured before reaching body
 	if err == nil {
@@ -76,7 +76,7 @@ func ReadHeaders(r io.Reader, headlimit int) (mh MessageHead, err error) {
 }
 
 func limitedReadHeadersFromExisting(
-	cr *bufreader.BufReader, headlimit int) (H Headers, e error) {
+	cr *bufreader.BufReader, headlimit int) (H HeaderMap, e error) {
 
 	var orig_r io.Reader
 	var lr *limitedHeadReader
@@ -95,7 +95,7 @@ func limitedReadHeadersFromExisting(
 		cr.SetReader(lr)
 	}
 
-	H, e = readHeaders(cr)
+	H, e = readHeaderMap(cr)
 
 	if lr != nil {
 		// restore original reader
@@ -109,12 +109,12 @@ func limitedReadHeadersFromExisting(
 }
 
 func ReadHeadersFromExisting(
-	cr *bufreader.BufReader, headlimit int) (H Headers, e error) {
+	cr *bufreader.BufReader, headlimit int) (H HeaderMap, e error) {
 
 	return limitedReadHeadersFromExisting(cr, headlimit)
 }
 
-func (mh *MessageHead) ReadHeaders(headlimit int) (H Headers, e error) {
+func (mh *MessageHead) ReadHeaders(headlimit int) (H HeaderMap, e error) {
 	return limitedReadHeadersFromExisting(mh.B, headlimit)
 }
 
@@ -163,144 +163,206 @@ func estimateNumHeaders(br *bufreader.BufReader) (n int, e error) {
 	return
 }
 
-func readHeaders(br *bufreader.BufReader) (H Headers, e error) {
+type readHeaderFunc = func(k, o, v string, s HeaderValSplitList)
+
+func readHeaderMap(br *bufreader.BufReader) (H HeaderMap, e error) {
+
+	H = make(HeaderMap)
+
+	est, e := estimateNumHeaders(br)
+
+	Hbuf := make([]HeaderMapVal, 0, est)
+
+	f := func(k, o, v string, s HeaderValSplitList) {
+		hval := HeaderMapVal{HeaderMapValInner: HeaderMapValInner{
+			V: v,
+			O: o,
+			S: s,
+		}}
+		if cs, ok := H[k]; ok {
+			H[k] = append(cs, hval)
+		} else {
+			// do not include previous values, as in case of reallocation we don't need them
+			Hbuf = append(Hbuf[len(Hbuf):], hval)
+			// ensure that append will reallocate and not spill into Hbuf by forcing cap to 1
+			H[k] = Hbuf[0:1:1]
+		}
+	}
+
+	e = readHeaderIntoFunc(br, f)
+
+	return
+}
+
+func errInvalidHeaderContent(k string, v []byte) error {
+	return fmt.Errorf("invalid %q header content %#q", k, v)
+}
+
+func errInvalidHeaderName(k []byte) error {
+	return fmt.Errorf("invalid header name: %#q", k)
+}
+
+func readHeaderIntoFunc(br *bufreader.BufReader, rhf readHeaderFunc) (e error) {
 	h := hdrPool.Get().(*bytes.Buffer)
 	h.Reset()
 
-	H = make(Headers)
-
 	var currHeader, origHeader string
+	var splits HeaderValSplitList
 
-	var est int
-	est, e = estimateNumHeaders(br)
-	//HSort = make([]string, 0, est)
-	// one buffer for string slice
-	Hbuf := make([]HeaderVal, 0, est)
-
-	var splits []uint32
+	// |-------------------|------|
+	// 0                   s
+	var line []byte   // CURRENT full line
+	var start int     // begining of current line's logical fragment
+	var lastStart int // for fragment counting
 
 	finishCurrent := func() error {
+
 		if len(currHeader) != 0 {
-			hcont := h.Bytes()
+
+			//fmt.Printf("!hdr finishing current %q\n", currHeader)
+
+			hcont := h.Bytes()[:start]
 			if !validHeaderContent(hcont) {
 				h.Reset()
-				return fmt.Errorf(
-					"invalid %q header content %#q", currHeader, hcont)
+				return errInvalidHeaderContent(currHeader, hcont)
 			}
-			hval := HeaderVal{HeaderValInner: HeaderValInner{
-				V: string(au.TrimWSBytes(hcont)),
-				O: origHeader,
-				S: splits,
-			}}
-			splits = []uint32(nil)
-			if cs, ok := H[currHeader]; ok {
-				H[currHeader] = append(cs, hval)
-			} else {
-				// mark key in HSort array
-				//HSort = append(HSort, currHeader)
-				// do not include previous values, as in case of reallocation we don't need them
-				Hbuf = append(Hbuf[len(Hbuf):], hval)
-				// ensure that append will reallocate and not spill into Hbuf by forcing cap to 1
-				H[currHeader] = Hbuf[0:1:1]
-			}
+
+			rhf(currHeader, origHeader,
+				string(au.TrimWSBytes(hcont)), splits)
+
+			splits = HeaderValSplitList(nil)
 			currHeader = ""
 		}
+
 		h.Reset()
+		start = 0
+		lastStart = 0
+		if len(line) != 0 {
+			h.Write(line)
+			line = h.Bytes()
+		}
+
 		return nil
 	}
 
-	nextCont := false
 	for {
 		b := br.Buffered()
 		for len(b) != 0 {
-			// continuation processing
-			currCont := nextCont
+			// wb is currently usable slice
+			var wb []byte
 
 			n := bytes.IndexByte(b, '\n')
-			var wb []byte
 			if n >= 0 {
-				if n == 0 || b[n-1] != '\r' {
-					wb = b[:n]
-				} else {
-					wb = b[:n-1]
-				}
-
+				// found newline - this line will be complete
+				wb = b[:n] // do not include LF
 				//fmt.Printf("!hdr full line %q\n", wb)
-
 				b = b[n+1:]
 				br.Discard(n + 1)
-				nextCont = false
 			} else {
-				n := len(b)
-				if n == 0 || b[n-1] != '\r' {
-					wb = b[:n]
-				} else {
-					wb = b[:n-1]
-				}
-
+				// no newline yet - take in what we can
+				wb = b
 				//fmt.Printf("!hdr full unfinished line %q\n", wb)
-
-				br.Discard(n)
+				br.Discard(len(b))
 				b = nil
-				nextCont = true
 			}
 
-			if len(wb) == 0 {
-				//fmt.Printf("!empty line - end of headers\n")
-				// empty line == end of headers
+			// write it out
+			h.Write(wb)
+
+			//fmt.Printf("!hdr wrote chunk %q\n", wb)
+
+			// drain until we have completed this line
+			if n < 0 {
+				continue
+			}
+
+			// take current logical fragment
+			line = h.Bytes()[start:]
+			//fmt.Printf("!hdr got full line[%d] %q\n", start, line)
+			// LF was already skipped
+			// have CR? discard that too
+			if len(line) != 0 && line[len(line)-1] == '\r' {
+				line = line[:len(line)-1]
+			}
+
+			if len(line) == 0 {
+				// empty line terminates headers
 				goto endHeaders
 			}
 
-			//fmt.Printf("!currCont = %v\n", currCont)
-
 			// process header line
-			if wb[0] != ' ' && wb[0] != '\t' && !currCont {
-				// not a continuation
+
+			if line[0] != ' ' && line[0] != '\t' {
+				// not logical continuation, just normal line
+				//fmt.Printf("!hdr line is NOT continuation\n")
+
 				// finish current, if any
 				e = finishCurrent()
 				if e != nil {
 					break
 				}
-				// process it
-				nn := bytes.IndexByte(wb, ':')
+
+				// find :
+				nn := bytes.IndexByte(line, ':')
 				if nn < 0 {
 					// no ':' -- illegal
 					e = errMissingColon
 					break
 				}
 				hn := nn
+
 				// strip possible whitespace before ':'
-				for hn != 0 && (wb[hn-1] == ' ' || wb[hn-1] == '\t') {
+				for hn != 0 && (line[hn-1] == ' ' || line[hn-1] == '\t') {
 					hn--
 				}
+
 				// empty or invalid
 				if hn == 0 {
 					e = errEmptyHeaderName
 					break
 				}
-				if !ValidHeaderName(wb[:hn]) {
-					e = fmt.Errorf("invalid header name: %q", wb[:hn])
+				if !ValidHeaderName(line[:hn]) {
+					e = errInvalidHeaderName(line[:hn])
 					break
 				}
-				currHeader, origHeader =
-					unsafeMapCanonicalOriginalHeaders(wb[:hn])
 
-				nn++
-				// skip one space after ':'
-				// XXX should we do this for '\t'? probably not.
-				/// content is trimmed anyway
-				//if nn < len(wb) && wb[nn] == ' ' {
-				//	nn++
-				//}
-				h.Write(wb[nn:])
+				// get proper header string
+				currHeader, origHeader =
+					unsafeMapCanonicalOriginalHeaders(line[:hn])
+
+				//fmt.Printf("!hdr header name is %q\n", currHeader)
+
+				nn++ // step over ':'
+
+				// trim before actual text
+				for nn < len(line) && (line[nn] == ' ' || line[nn] == '\t') {
+					nn++
+				}
+
+				// move
+				h.Truncate(start)
+				h.Write(line[nn:])
+				start = h.Len()
+
 			} else {
-				// a continuation
+				// logical continuation
+
 				if len(currHeader) == 0 {
-					// there was no previous header
 					e = errInvalidContinuation
 					break
 				}
-				h.Write(wb)
+
+				//fmt.Printf("!hdr line is continuation\n")
+
+				splits = append(splits, HeaderValSplit(start-lastStart))
+				lastStart = start
+
+				// bytes are already appended
+				// however length may need fix
+				if len(line) != h.Len()-start {
+					h.Truncate(start + len(line))
+				}
+				start = h.Len()
 			}
 		}
 		if e != nil {

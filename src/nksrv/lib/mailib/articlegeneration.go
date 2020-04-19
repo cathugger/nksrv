@@ -52,14 +52,14 @@ func modifyMultipartType(
 }
 
 func setCTE(
-	H mail.Headers, pi PartInfo, w io.Writer) (
-	_ mail.Headers, cw io.Writer, cc io.Closer) {
+	H mail.HeaderMap, pi PartInfo, w io.Writer) (
+	_ mail.HeaderMap, cw io.Writer, cc io.Closer) {
 
 	cw = w // default
 
 	if pi.Binary {
 		if H == nil {
-			H = make(mail.Headers)
+			H = make(mail.HeaderMap)
 		}
 		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("base64")
 
@@ -69,7 +69,7 @@ func setCTE(
 		cc = ww
 	} else if pi.HasNull {
 		if H == nil {
-			H = make(mail.Headers)
+			H = make(mail.HeaderMap)
 		}
 		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("quoted-printable")
 
@@ -78,7 +78,7 @@ func setCTE(
 		cc = ww
 	} else if pi.Has8Bit {
 		if H == nil {
-			H = make(mail.Headers)
+			H = make(mail.HeaderMap)
 		}
 		H["Content-Transfer-Encoding"] = mail.OneHeaderVal("8bit")
 	}
@@ -117,7 +117,7 @@ func GenerateMessage(
 		}
 	}
 	if pi.H != nil {
-		err = mail.WriteHeaders(xw, pi.H, true)
+		err = mail.WriteMessageHeaderMap(xw, pi.H, true)
 		if err != nil {
 			return
 		}
@@ -207,7 +207,7 @@ func GenerateMessage(
 			if !ismp {
 				if pis[i].ContentType != "" {
 					if pis[i].Headers == nil {
-						pis[i].Headers = make(mail.Headers)
+						pis[i].Headers = make(mail.HeaderMap)
 					}
 					pis[i].Headers["Content-Type"] =
 						mail.OneHeaderVal(pis[i].ContentType)
@@ -219,7 +219,7 @@ func GenerateMessage(
 				}
 
 				if pis[i].Headers == nil {
-					pis[i].Headers = make(mail.Headers)
+					pis[i].Headers = make(mail.HeaderMap)
 				}
 
 				if pis[i].Has8Bit && !pis[i].HasNull {

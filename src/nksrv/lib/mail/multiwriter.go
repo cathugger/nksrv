@@ -23,7 +23,7 @@ func NewPartWriter(w io.Writer, boundary, pre string) (pw *PartWriter) {
 	return
 }
 
-func (pw *PartWriter) StartNextPart(H Headers) (err error) {
+func (pw *PartWriter) StartNextPart(H HeaderMap) (err error) {
 	var bs string
 	if pw.s {
 		bs = pw.b[:len(pw.b)-2]
@@ -36,7 +36,7 @@ func (pw *PartWriter) StartNextPart(H Headers) (err error) {
 		return
 	}
 	if H != nil {
-		err = WritePartHeaders(pw.Writer, H, false)
+		err = WritePartHeaderMap(pw.Writer, H, false)
 		if err != nil {
 			return
 		}

@@ -404,7 +404,7 @@ type dmbctx struct {
 
 // for read-only things only used one level deep
 type dmbin struct {
-	ZH       mail.Headers
+	ZH       mail.HeaderMap
 	zct_t    string
 	zct_par  map[string]string
 	eatinner bool
@@ -420,10 +420,10 @@ type dmbin struct {
 // processing of params (text/*, multipart/*).
 func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thmexec thumbnailer.ThumbExec,
-	ZH mail.Headers, zct_t string, zct_par map[string]string, eatinner bool,
+	ZH mail.HeaderMap, zct_t string, zct_par map[string]string, eatinner bool,
 	zr io.Reader, oiw io.Writer) (
 	pi PostInfo, tmpfilenames []string, thumbinfos []ThumbInfo,
-	IH mail.Headers, zerr error) {
+	IH mail.HeaderMap, zerr error) {
 
 	ctx := dmbctx{
 		cfg:     cfg,
@@ -445,7 +445,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 }
 
 func (ctx *dmbctx) devourMessageBody(zin dmbin) (
-	pi PostInfo, IH mail.Headers, zerr error) {
+	pi PostInfo, IH mail.HeaderMap, zerr error) {
 
 	defer func() {
 		if zerr != nil {
@@ -472,7 +472,7 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 	textprocessed := false
 
 	guttleBody := func(
-		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
+		r io.Reader, H mail.HeaderMap, ct_t string, ct_par map[string]string,
 		binary bool) (obj BodyObject, err error) {
 
 		// attachment is original of msg field what must be preserved, msg was decoded
@@ -555,7 +555,7 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 	}
 
 	trackedGuttleBody := func(
-		r io.Reader, H mail.Headers, ct_t string, ct_par map[string]string,
+		r io.Reader, H mail.HeaderMap, ct_t string, ct_par map[string]string,
 		binary bool) (obj BodyObject, hasNull, has8Bit bool, err error) {
 
 		var rt *ReadTracker
@@ -576,7 +576,7 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 
 	eatMain := func(
 		xct_t string, xct_par map[string]string, xcte string,
-		XH mail.Headers, xr io.Reader) (
+		XH mail.HeaderMap, xr io.Reader) (
 		rpinfo PartInfo, err error) {
 
 		xismultipart := strings.HasPrefix(xct_t, "multipart/")
@@ -612,7 +612,7 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 					break
 				}
 
-				var PH mail.Headers
+				var PH mail.HeaderMap
 				PH, err = pr.ReadHeaders(8 << 10)
 				if err != nil {
 					err = fmt.Errorf("pr.ReadHeaders: %v", err)
@@ -702,7 +702,7 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 
 	eatMainAndHeaders := func(
 		xct_t string, xct_par map[string]string, xcte string,
-		XH mail.Headers, xr io.Reader) (
+		XH mail.HeaderMap, xr io.Reader) (
 		rpinfo PartInfo, err error) {
 
 		rpinfo, err = eatMain(xct_t, xct_par, xcte, XH, xr)
@@ -861,16 +861,16 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 
 func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
-	XH mail.Headers, xct_t string, xct_par map[string]string, eatinner bool,
+	XH mail.HeaderMap, xct_t string, xct_par map[string]string, eatinner bool,
 	xr io.Reader, oiw io.Writer) (
 	pi PostInfo, tmpfilenames []string, thmis []ThumbInfo,
-	IH mail.Headers, err error) {
+	IH mail.HeaderMap, err error) {
 
 	return DefaultMailProcessorConfig.DevourMessageBody(
 		src, thm, XH, xct_t, xct_par, eatinner, xr, oiw)
 }
 
-func CleanContentTypeAndTransferEncoding(H mail.Headers) {
+func CleanContentTypeAndTransferEncoding(H mail.HeaderMap) {
 	// ignore other headers than first, trim whitespace
 	if len(H["Content-Type"]) != 0 {
 		ct := au.TrimWSString(H["Content-Type"][0].V)

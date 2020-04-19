@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 )
 
 var ErrHeaderLineTooLong = errors.New("header line is too long")
@@ -79,7 +78,7 @@ var writeHeaderMap = func() (m map[string]struct{}) {
 	return
 }()
 
-var writePartHeaderOrder = []string{
+var writePartHeaderOrder = [...]string{
 	"Content-ID",
 	"Content-Type",
 	"Content-Transfer-Encoding",
@@ -108,7 +107,7 @@ func writeHeaderLine(w io.Writer, h, s string, force bool) error {
 	return nil
 }
 
-func writeHeaderLines(w io.Writer, h string, v []HeaderVal, force bool) error {
+func writeHeaderLines(w io.Writer, h string, v []HeaderMapVal, force bool) error {
 	for _, x := range v {
 		hh := h
 		if x.O != "" {
@@ -121,68 +120,31 @@ func writeHeaderLines(w io.Writer, h string, v []HeaderVal, force bool) error {
 	return nil
 }
 
-func WriteHeaders(w io.Writer, H Headers, force bool) (err error) {
-	n := 0
-	// first try to put headers we know about in order
-	for _, h := range writeHeaderOrder {
-		if len(H[h]) != 0 {
-			n++
-			err = writeHeaderLines(w, h, H[h], force)
-			if err != nil {
-				return
-			}
-		}
+func whlFunc(w io.Writer) addHdrFunc {
+	return func(h string, hmvl []HeaderMapVal, force bool) error {
+		return writeHeaderLines(w, h, hmvl, force)
 	}
-	if len(H) <= n {
-		return
-	}
-	// then put rest, sorted
-	l := make([]string, 0, len(H)-n)
-	for k := range H {
-		if _, inmap := writeHeaderMap[k]; !inmap {
-			l = append(l, k)
-		}
-	}
-	sort.Strings(l)
-	for _, h := range l {
-		err = writeHeaderLines(w, h, H[h], force)
-		if err != nil {
-			return
-		}
-	}
-	// done
-	return
 }
 
-func WritePartHeaders(w io.Writer, H Headers, force bool) (err error) {
-	n := 0
-	// first try to put headers we know about in order
-	for _, h := range writePartHeaderOrder {
-		if len(H[h]) != 0 {
-			n++
-			err = writeHeaderLines(w, h, H[h], force)
-			if err != nil {
-				return
-			}
+func WriteMessageHeaderMap(w io.Writer, H HeaderMap, force bool) error {
+	return addHeadersOrdered(
+		whlFunc(w), writeHeaderOrder[:], writeHeaderMap, H, force)
+}
+
+func WritePartHeaderMap(w io.Writer, H HeaderMap, force bool) error {
+	return addHeadersOrdered(
+		whlFunc(w), writePartHeaderOrder[:], writePartHeaderMap, H, force)
+}
+
+func WriteHeaderList(w io.Writer, HL HeaderList, force bool) (err error) {
+	for _, x := range HL {
+		hh := x.K
+		if x.O != "" {
+			hh = x.O
 		}
-	}
-	if len(H) <= n {
-		return
-	}
-	// then put rest, sorted
-	l := make([]string, 0, len(H)-n)
-	for k := range H {
-		if _, inmap := writePartHeaderMap[k]; !inmap {
-			l = append(l, k)
-		}
-	}
-	sort.Strings(l)
-	for _, h := range l {
-		err = writeHeaderLines(w, h, H[h], force)
-		if err != nil {
+		if err = writeHeaderLine(w, hh, x.V, force); err != nil {
 			return
 		}
 	}
-	// done
 	return
 }

@@ -17,7 +17,7 @@ import (
 var stripSPHT = strings.NewReplacer(" ", "", "\t", "")
 
 func extractMessageFace(
-	H mail.Headers, src *fstore.FStore) (fn string, fi FileInfo, err error) {
+	H mail.HeaderMap, src *fstore.FStore) (fn string, fi FileInfo, err error) {
 
 	// try Face header first
 	fh := H.GetFirst("Face")

@@ -19,7 +19,7 @@ type PostInfo struct {
 	FI []FileInfo
 	FC int // file count -- may be less than len(FI)
 
-	H  mail.Headers
+	H  mail.HeaderMap
 	GA GlobalPostAttribs
 	BA BoardPostAttribs
 	L  PartInfo
@@ -141,7 +141,7 @@ type PartInfoInner struct {
 	Binary      bool              `json:"x,omitempty"`
 	HasNull     bool              `json:"0,omitempty"` // not used if Binary
 	Has8Bit     bool              `json:"8,omitempty"` // not used if Binary or HasNull
-	Headers     mail.Headers      `json:"h,omitempty"`
+	Headers     mail.HeaderMap    `json:"h,omitempty"`
 	MPParams    map[string]string `json:"m,omitempty"`
 	Body        BodyObject        `json:"b"`
 }
