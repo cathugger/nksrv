@@ -668,8 +668,10 @@ func (ctx *dmbctx) devourMessageBody(zin dmbin) (
 			err = nil
 
 			// params of this go elsewhere
-			XH["Content-Type"][0].V =
-				au.TrimWSString(au.UntilString(XH["Content-Type"][0].V, ';'))
+			XH["Content-Type"] = mail.OneHeaderVal(
+				au.TrimWSString(
+					au.UntilString(XH["Content-Type"][0].V, ';')))
+
 			// no need for this param after parsing
 			// XXX maybe clone instead of modifying given?
 			delete(xct_par, "boundary") // never include this there

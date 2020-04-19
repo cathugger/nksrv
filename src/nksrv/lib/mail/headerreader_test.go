@@ -29,10 +29,10 @@ var hr_tests = []hr_testcase{
 		hdrs:     HeaderMap{},
 	},
 	{
-		msg:   []byte("A:\n\n"),
+		msg:    []byte("A:\n\n"),
 		output: []byte("A: \n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("")},
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("")},
 	},
 	{
 		msg:   []byte("A: \n\n"),
@@ -40,10 +40,10 @@ var hr_tests = []hr_testcase{
 		hdrs:  HeaderMap{"A": OneHeaderVal("")},
 	},
 	{
-		msg:   []byte("A:  \n\n"),
+		msg:    []byte("A:  \n\n"),
 		output: []byte("A: \n\n"),
-		limit: 0,
-		hdrs:  HeaderMap{"A": OneHeaderVal("")},
+		limit:  0,
+		hdrs:   HeaderMap{"A": OneHeaderVal("")},
 	},
 	{
 		msg:   []byte("A: b\n\n"),
@@ -126,8 +126,14 @@ var hr_tests = []hr_testcase{
 var hr_badones = [][]byte{
 	[]byte("test"),
 	[]byte("test\n"),
+	[]byte("test\ntest"),
+	[]byte("test\ntest\n"),
 	[]byte("test: test"),
 	[]byte("test: test\n"),
+	[]byte("test: test\ntest: test"),
+	[]byte("test: test\ntest: test\n"),
+	[]byte("test: test\ntest: test\n test"),
+	[]byte("test: test\ntest: test\n test\n"),
 	[]byte("test: \n test\n\n"),
 	[]byte("test: test\n \n\n"),
 	[]byte("test: test\n \n test\n\n"),
@@ -207,6 +213,42 @@ func init() {
 		hr_tests = append(hr_tests, tc)
 	}
 
+	{
+		tc := hr_testcase{}
+		br.Reset()
+		bt.Reset()
+		// 998 - len("C: ")
+		for j := 0; j < 994; j++ {
+			c := rune(0x23 + (13000-j)%(0x26-0x23+1))
+			fmt.Fprintf(br, "%c", c)
+			fmt.Fprintf(bt, "%c", c)
+		}
+		fmt.Fprintf(br, "\n")
+		for i := 0; i < 10; i++ {
+			fmt.Fprintf(br, " ")
+			fmt.Fprintf(bt, " ")
+			// 998 - len(" ")
+			for j := 0; j < 997; j++ {
+				c := rune(0x23 + (13000-j+i)%(0x26-0x23+1))
+				fmt.Fprintf(br, "%c", c)
+				fmt.Fprintf(bt, "%c", c)
+			}
+			fmt.Fprintf(br, "\n")
+		}
+		fmt.Fprintf(br, "\n")
+		vv := HeaderMapVal{HeaderMapValInner{
+			V: string(bt.Bytes()),
+		}}
+		vv.S = append(vv.S, 994)
+		for i := 1; i < 10; i++ {
+			vv.S = append(vv.S, 998)
+		}
+		tc.msg = append([]byte("C: "), br.Bytes()...)
+		tc.hdrs = HeaderMap{
+			"C": HeaderMapVals{vv},
+		}
+		hr_tests = append(hr_tests, tc)
+	}
 }
 
 func TestValid(t *testing.T) {
