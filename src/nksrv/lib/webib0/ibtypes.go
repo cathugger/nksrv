@@ -85,7 +85,7 @@ type IBPostInfo struct {
 	References     []IBMessageReference   `json:"refs,omitempty"`    // posts Message refers to
 	Files          []IBFileInfo           `json:"files,omitempty"`   // attached files
 	BackReferences []IBBackReference      `json:"brefs,omitempty"`   // post refering to this post
-	Headers        mail.Headers           `json:"headers,omitempty"` // headers
+	Headers        mail.HeaderMap         `json:"headers,omitempty"` // headers
 	Options        map[string]interface{} `json:"opts,omitempty"`    // additional stuff
 }
 

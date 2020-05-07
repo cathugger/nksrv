@@ -125,7 +125,7 @@ func (fp *ParserParams) ParseForm(
 			e = nil
 			return
 		}
-		var H mail.Headers
+		var H mail.HeaderMap
 		H, e = pr.ReadHeaders(fp.MaxHeaderBytes)
 		//fmt.Fprintf(os.Stderr, "XXX after ReadHeaders()\n")
 		if e != nil {

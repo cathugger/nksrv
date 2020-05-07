@@ -146,32 +146,33 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 					c.GetHTMLRenderer().ServeBoardList(w, r)
 				}))
 
-		h_get.Handle("/_ukko", true,
-			handler.NewRegexPath().
-				Handle("/{{pn:[0-9]*}}", false,
-					http.HandlerFunc(func(
-						w http.ResponseWriter, r *http.Request) {
+		h_overboard := handler.NewRegexPath().
+			Handle("/{{pn:[0-9]*}}", false,
+				http.HandlerFunc(func(
+					w http.ResponseWriter, r *http.Request) {
 
-						pn := r.Context().Value("pn").(string)
-						ok, pni := handlePageNum(w, r, pn)
-						if !ok {
-							return
-						}
+					pn := r.Context().Value("pn").(string)
+					ok, pni := handlePageNum(w, r, pn)
+					if !ok {
+						return
+					}
 
-						log.LogPrintf(DEBUG, "overboard-page %d", pni)
+					log.LogPrintf(DEBUG, "overboard-page %d", pni)
 
-						c.GetHTMLRenderer().
-							ServeOverboardPage(w, r, pni)
-					})).
-				Handle("/catalog", false,
-					http.HandlerFunc(func(
-						w http.ResponseWriter, r *http.Request) {
+					c.GetHTMLRenderer().
+						ServeOverboardPage(w, r, pni)
+				})).
+			Handle("/catalog", false,
+				http.HandlerFunc(func(
+					w http.ResponseWriter, r *http.Request) {
 
-						log.LogPrintf(DEBUG, "overboard-catalog")
+					log.LogPrintf(DEBUG, "overboard-catalog")
 
-						c.GetHTMLRenderer().
-							ServeOverboardCatalog(w, r)
-					})))
+					c.GetHTMLRenderer().
+						ServeOverboardCatalog(w, r)
+				}))
+		h_get.Handle("/_ukko", true, h_overboard)
+		h_get.Handle("/*", true, h_overboard)
 
 		h_getr := handler.NewRegexPath()
 		h_get.Fallback(h_getr)
