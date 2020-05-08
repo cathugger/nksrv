@@ -146,43 +146,43 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 					c.GetHTMLRenderer().ServeBoardList(w, r)
 				}))
 
-		h_overboard := handler.NewRegexPath().
-			Handle("/{{pn:[0-9]*}}", false,
-				http.HandlerFunc(func(
-					w http.ResponseWriter, r *http.Request) {
+		h_get_overboard := handler.NewRegexPath()
+		h_get.Handle("/_ukko", true, h_get_overboard)
+		h_get.Handle("/*", true, h_get_overboard)
+		h_get_overboard.Handle("/{{pn:[0-9]*}}", false,
+			http.HandlerFunc(func(
+				w http.ResponseWriter, r *http.Request) {
 
-					pn := r.Context().Value("pn").(string)
-					ok, pni := handlePageNum(w, r, pn)
-					if !ok {
-						return
-					}
+				pn := r.Context().Value("pn").(string)
+				ok, pni := handlePageNum(w, r, pn)
+				if !ok {
+					return
+				}
 
-					log.LogPrintf(DEBUG, "overboard-page %d", pni)
+				log.LogPrintf(DEBUG, "overboard-page %d", pni)
 
-					c.GetHTMLRenderer().
-						ServeOverboardPage(w, r, pni)
-				})).
-			Handle("/catalog", false,
-				http.HandlerFunc(func(
-					w http.ResponseWriter, r *http.Request) {
+				c.GetHTMLRenderer().
+					ServeOverboardPage(w, r, pni)
+			}))
+		h_get_overboard.Handle("/catalog", false,
+			http.HandlerFunc(func(
+				w http.ResponseWriter, r *http.Request) {
 
-					log.LogPrintf(DEBUG, "overboard-catalog")
+				log.LogPrintf(DEBUG, "overboard-catalog")
 
-					c.GetHTMLRenderer().
-						ServeOverboardCatalog(w, r)
-				}))
-		h_get.Handle("/_ukko", true, h_overboard)
-		h_get.Handle("/*", true, h_overboard)
+				c.GetHTMLRenderer().
+					ServeOverboardCatalog(w, r)
+			}))
 
 		h_getr := handler.NewRegexPath()
 		h_get.Fallback(h_getr)
 
-		h_getbr := handler.NewRegexPath()
-		h_getr.Handle("/{{b:[^_./][^/]*}}", true, h_getbr)
-		h_getr.Handle("/_{{b:[_.][^/]*}}", true, h_getbr)
+		h_getr_board := handler.NewRegexPath()
+		h_getr.Handle("/{{b:[^_./][^/]*}}", true, h_getr_board)
+		h_getr.Handle("/_{{b:[_.][^/]*}}", true, h_getr_board) // escaped
 		// TODO handle boards not ending with slash
 
-		h_getbr.Handle("/{{pn:[0-9]*}}", false, http.HandlerFunc(
+		h_getr_board.Handle("/{{pn:[0-9]*}}", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				pn := r.Context().Value("pn").(string)
@@ -193,14 +193,14 @@ func NewIBRouter(cfg Cfg) (http.Handler, *IBRouterCtl) {
 				log.LogPrintf(DEBUG, "board-page %q %d", b, pni)
 				c.GetHTMLRenderer().ServeThreadListPage(w, r, b, pni)
 			}))
-		h_getbr.Handle("/catalog", false, http.HandlerFunc(
+		h_getr_board.Handle("/catalog", false, http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				b := r.Context().Value("b").(string)
 				log.LogPrintf(DEBUG, "board-catalog %q", b)
 				c.GetHTMLRenderer().ServeThreadCatalog(w, r, b)
 			}))
 
-		h_getbr.Handle("/thread/{{t}}(?:/[^/]*)?", false,
+		h_getr_board.Handle("/thread/{{t}}(?:/[^/]*)?", false,
 			http.HandlerFunc(func(
 				w http.ResponseWriter, r *http.Request) {
 
