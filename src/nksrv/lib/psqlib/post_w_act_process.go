@@ -105,7 +105,9 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 			// thumbnail and close file
 			var res thumbnailer.ThumbResult
 			res, err = sp.thumbnailer.ThumbProcess(
-				files[i].F, ext, pInfo.FI[x].ContentType, tplan.ThumbConfig)
+				files[i].F,
+				ext, pInfo.FI[x].ContentType, files[i].Size,
+				tplan.ThumbConfig)
 			if err != nil {
 				err = fmt.Errorf("error thumbnailing file: %v", err)
 				return

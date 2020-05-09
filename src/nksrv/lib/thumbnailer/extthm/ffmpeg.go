@@ -79,7 +79,7 @@ type ffprobeMain struct {
 }
 
 func (b *ffmpegSoxBackend) doThumbnailing(
-	p tparams, f *os.File, ext, mimeType string,
+	p tparams, f *os.File, ext, mimeType string, fsize int64,
 	cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, err error) {
 
@@ -548,6 +548,12 @@ foundfmt:
 				err = ex
 				return
 			}
+
+			// TODO
+			// currently we're only taking in first frame
+			// it's relatively fast but totally sucks if first frame is all black/white
+			// we could do something smarter, like how SRNd does it
+			// see SRNd/install_files/plugins/overchan/overchan.py:gen_thumb_from_video
 
 			// succeeded
 			res.Width, res.Height =

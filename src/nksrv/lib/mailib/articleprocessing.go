@@ -229,7 +229,7 @@ func takeInFile(
 
 	if !nothumb {
 		// thumbnail (and also close)
-		tres, err = thm.ThumbProcess(f, ext, ctype, thm.ThumbConfig)
+		tres, err = thm.ThumbProcess(f, ext, ctype, fsize, thm.ThumbConfig)
 	} else {
 		// just close
 		err = f.Close()

@@ -29,7 +29,7 @@ func (b *magickBackend) init(magickBin string) (err error) {
 }
 
 func (b *magickBackend) doThumbnailing(
-	p tparams, f *os.File, ext, mimeType string,
+	p tparams, f *os.File, ext, mimeType string, fsize int64,
 	cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, err error) {
 
@@ -106,6 +106,15 @@ func (b *magickBackend) doThumbnailing(
 		res.FI.Attrib = make(map[string]interface{})
 		res.FI.Attrib["width"] = imgcfg.Width
 		res.FI.Attrib["height"] = imgcfg.Height
+
+		if b.t.cfg.MaxFileSize > 0 && fsize > b.t.cfg.MaxFileSize {
+			b.t.log.LogPrintf(
+				DEBUG, "magick: bailing out because constrained by file size limit")
+
+			close_err()
+
+			return
+		}
 
 		if (cfgfmt != "jpeg" || b.forceJPEGLimit) &&
 			((b.t.cfg.MaxWidth > 0 && imgcfg.Width > b.t.cfg.MaxWidth) ||

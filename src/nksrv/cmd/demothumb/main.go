@@ -17,6 +17,68 @@ import (
 	"nksrv/lib/thumbnailer/gothm"
 )
 
+func doFile(
+	arg string,
+	fs *fstore.FStore,
+	thm thumbnailer.Thumbnailer, tcfg thumbnailer.ThumbConfig) (
+	ok bool) {
+
+	f, err := os.Open(arg)
+	if err != nil {
+		fmt.Printf("err opening %q: %v\n", arg, err)
+		return
+	}
+	defer f.Close()
+
+	st, err := f.Stat()
+	if err != nil {
+		return
+	}
+	fsize := st.Size()
+
+	base := path.Base(arg)
+	var ext string
+	if i := strings.LastIndexByte(base, '.'); i >= 0 {
+		ext = base[i+1:]
+	}
+
+	mtype := emime.MIMETypeByExtension(ext)
+
+	fmt.Printf("processing %q (ext %q mime %q)...\n", arg, ext, mtype)
+
+	res, err := thm.ThumbProcess(f, ext, mtype, fsize, tcfg)
+	if err != nil {
+		fmt.Printf("err thumbnailing: %v", err)
+		return
+	}
+	if res.DBSuffix == "" {
+		fmt.Printf("thumbnailer didn't work for this file\n")
+		return true
+	}
+
+	fmt.Printf("thumbnailed %q, res %#v\n", base, res)
+
+	to := fs.Main() + base + "." + res.CF.Suffix
+	fmt.Printf("moving to %q...\n", to)
+	err = os.Rename(res.CF.FullTmpName, to)
+	if err != nil {
+		fmt.Printf("err renaming: %v\n", err)
+		return
+	}
+
+	for i := range res.CE {
+		to = fs.Main() + base + "." + res.CE[i].Suffix
+		fmt.Printf("moving to %q...\n", to)
+		err = os.Rename(res.CE[i].FullTmpName, to)
+		if err != nil {
+			fmt.Printf("err renaming: %v\n", err)
+			return
+		}
+	}
+
+	return true
+}
+
 func main() {
 
 	thumbdir := flag.String("thumbdir", "_demothm", "thumbnail directory")
@@ -33,7 +95,7 @@ func main() {
 	}
 
 	fs, err := fstore.OpenFStore(fstore.Config{
-		Path: *thumbdir,
+		Path:    *thumbdir,
 		Private: "demothumb",
 	})
 	if err != nil {
@@ -74,50 +136,8 @@ func main() {
 		return
 	}
 	for _, arg := range args {
-		f, err := os.Open(arg)
-		if err != nil {
-			fmt.Printf("err opening %q: %v\n", arg, err)
+		if !doFile(arg, &fs, thm, tcfg) {
 			return
-		}
-
-		base := path.Base(arg)
-		var ext string
-		if i := strings.LastIndexByte(base, '.'); i >= 0 {
-			ext = base[i+1:]
-		}
-
-		mtype := emime.MIMETypeByExtension(ext)
-
-		fmt.Printf("processing %q (ext %q mime %q)...\n", arg, ext, mtype)
-
-		res, err := thm.ThumbProcess(f, ext, mtype, tcfg)
-		if err != nil {
-			fmt.Printf("err thumbnailing: %v", err)
-			return
-		}
-		if res.DBSuffix == "" {
-			fmt.Printf("thumbnailer didn't work for this file\n")
-			continue
-		}
-
-		fmt.Printf("thumbnailed %q, res %#v\n", base, res)
-
-		to := fs.Main() + base + "." + res.CF.Suffix
-		fmt.Printf("moving to %q...\n", to)
-		err = os.Rename(res.CF.FullTmpName, to)
-		if err != nil {
-			fmt.Printf("err renaming: %v\n", err)
-			return
-		}
-
-		for i := range res.CE {
-			to = fs.Main() + base + "." + res.CE[i].Suffix
-			fmt.Printf("moving to %q...\n", to)
-			err = os.Rename(res.CE[i].FullTmpName, to)
-			if err != nil {
-				fmt.Printf("err renaming: %v\n", err)
-				return
-			}
 		}
 	}
 }

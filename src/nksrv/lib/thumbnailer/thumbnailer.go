@@ -76,6 +76,7 @@ type ThumbnailerBuilder interface {
 type Thumbnailer interface {
 	// ThumbProcess tries to thumbnail f. Closes f after it's done.
 	ThumbProcess(
-		f *os.File, ext, mimeType string, cfg ThumbConfig) (
+		f *os.File, ext, mimeType string, fsize int64,
+		cfg ThumbConfig) (
 		res ThumbResult, err error)
 }

@@ -103,7 +103,8 @@ func rotimg(orient int, img *image.NRGBA) *image.NRGBA {
 }
 
 func (t *GoThumbnailer) ThumbProcess(
-	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
+	f *os.File, ext, mimeType string, fsize int64,
+	cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, err error) {
 
 	closed := false
@@ -120,19 +121,6 @@ func (t *GoThumbnailer) ThumbProcess(
 	}
 
 	t.log.LogPrintf(DEBUG, "ThumbProcess ext %q mime %q", ext, mimeType)
-
-	if t.cfg.MaxFileSize > 0 {
-		var st os.FileInfo
-		st, err = f.Stat()
-		if err != nil {
-			return
-		}
-		if st.Size() > t.cfg.MaxFileSize {
-			t.log.LogPrintf(DEBUG, "bailing out because filesize limit")
-			close_err()
-			return
-		}
-	}
 
 	_, err = f.Seek(0, 0)
 	if err != nil {
@@ -180,6 +168,12 @@ func (t *GoThumbnailer) ThumbProcess(
 
 	t.log.LogPrintf(
 		DEBUG, "after orient size %dx%d", imgcfg.Width, imgcfg.Height)
+
+	if t.cfg.MaxFileSize > 0 && fsize > t.cfg.MaxFileSize {
+		t.log.LogPrintf(DEBUG, "bailing out because filesize limit")
+		close_err()
+		return
+	}
 
 	if (t.cfg.MaxWidth > 0 && imgcfg.Width > t.cfg.MaxWidth) ||
 		(t.cfg.MaxHeight > 0 && imgcfg.Height > t.cfg.MaxHeight) ||

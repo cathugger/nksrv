@@ -86,7 +86,7 @@ type tparams = map[string]string
 
 type thmbackend interface {
 	doThumbnailing(
-		p tparams, f *os.File, ext, mimeType string,
+		p tparams, f *os.File, ext, mimeType string, fsize int64,
 		cfg thumbnailer.ThumbConfig) (
 		res thumbnailer.ThumbResult, err error)
 }
@@ -109,24 +109,11 @@ type ExternalThumbnailer struct {
 }
 
 func (t *ExternalThumbnailer) ThumbProcess(
-	f *os.File, ext, mimeType string,
+	f *os.File, ext, mimeType string, fsize int64,
 	cfg thumbnailer.ThumbConfig) (
 	res thumbnailer.ThumbResult, err error) {
 
 	close_err := func() { err = f.Close() }
-
-	if t.cfg.MaxFileSize > 0 {
-		var st os.FileInfo
-		st, err = f.Stat()
-		if err != nil {
-			_ = f.Close()
-			return
-		}
-		if st.Size() > t.cfg.MaxFileSize {
-			close_err()
-			return
-		}
-	}
 
 	mt, _, _ := mime.ParseMediaType(mimeType)
 
@@ -140,7 +127,7 @@ func (t *ExternalThumbnailer) ThumbProcess(
 
 			// XXX fallbacks?
 			return t.routes[i].t.
-				doThumbnailing(t.routes[i].p, f, ext, mimeType, cfg)
+				doThumbnailing(t.routes[i].p, f, ext, mimeType, fsize, cfg)
 		}
 	}
 
