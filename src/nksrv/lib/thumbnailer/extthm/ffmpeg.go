@@ -6,14 +6,12 @@ import (
 	"mime"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"nksrv/lib/ftypes"
 	"nksrv/lib/thumbnailer"
 )
-
-//sect.Add("audio/*", "{{.ffmpeg}} -i {{.infile}} -an -vcodec copy {{.outfile}}")
-//sect.Add("video/*", "{{.ffmpeg}} -i {{.infile}} -vf scale=300:200 -vframes 1 {{.outfile}}")
 
 type ffmpegSoxBackend struct {
 	t *ExternalThumbnailer
@@ -110,7 +108,8 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 		runffprobe,
 		"-v", "error",
 		"-print_format", "json",
-		"-show_format", "-show_streams",
+		"-show_format",
+		"-show_streams",
 	}
 	if b.fmt != "" {
 		args = append(args, "-f", b.fmt)
@@ -404,6 +403,30 @@ foundfmt:
 			return
 		}
 
+		// NOTICE:
+		// there is interesting way to calculate image entropy in
+		// SRNd/install_files/plugins/overchan/overchan.py, gen_thumb_from_video
+		// it seems ffmpeg binary can't really do it that way though
+		// so we do it other way
+
+		avg_fr := ffproberes.Streams[gotVidsID].AvgFrameRate
+		avg_fr_s := strings.IndexByte(avg_fr, '/')
+		avg_fr_1, _ := strconv.ParseFloat(avg_fr[:avg_fr_s], 64)
+		avg_fr_2, _ := strconv.ParseFloat(avg_fr[avg_fr_s+1:], 64)
+		vidfps := avg_fr_1 / avg_fr_2
+
+		//b.t.log.LogPrintf(DEBUG, "ffmpeg vid fps(%v)", vidfps)
+
+		allowt := 10 // first 10 secs
+		const costyfps = 60
+		if vidfps > costyfps {
+			// if over FPS limit, scale down secs we take in
+			allowt = int((float64(allowt*costyfps) / vidfps) + 0.5)
+			if allowt <= 0 {
+				allowt = 1
+			}
+		}
+
 		parktmp(".jpg")
 		if err != nil {
 			return
@@ -411,7 +434,7 @@ foundfmt:
 
 		vfilter :=
 			fmt.Sprintf(
-				"scale=%d:%d:force_original_aspect_ratio=decrease",
+				"fps=1,scale=%d:%d:force_original_aspect_ratio=decrease,thumbnail",
 				cfg.Width, cfg.Height)
 		if cfg.Grayscale {
 			vfilter += ",hue=s=0"
@@ -422,10 +445,11 @@ foundfmt:
 			"-v", "error",
 			"-an", "-sn", "-dn",
 			"-f", knownfmt,
+			"-t", strconv.Itoa(allowt),
 			"-i", fn,
 			"-map", fmt.Sprintf("0:%d", gotVidsID),
-			"-vframes", "1",
 			"-vf", vfilter,
+			"-frames:v", "1",
 			"-qscale:v", "2", // TODO make configurable
 			"-y", tfn,
 		}
@@ -522,7 +546,7 @@ foundfmt:
 				"-f", knownfmt,
 				"-i", fn,
 				"-map", fmt.Sprintf("0:%d", gotPicsID),
-				"-vframes", "1",
+				"-frames:v", "1",
 				"-vf", vfilter,
 				"-qscale:v", "2", // TODO make configurable
 				"-y", tfn,
@@ -548,12 +572,6 @@ foundfmt:
 				err = ex
 				return
 			}
-
-			// TODO
-			// currently we're only taking in first frame
-			// it's relatively fast but totally sucks if first frame is all black/white
-			// we could do something smarter, like how SRNd does it
-			// see SRNd/install_files/plugins/overchan/overchan.py:gen_thumb_from_video
 
 			// succeeded
 			res.Width, res.Height =
