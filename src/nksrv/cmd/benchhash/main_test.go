@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/minio/highwayhash"
-	"github.com/zeebo/blake3"
 	"golang.org/x/crypto/blake2b"
+	"lukechampine.com/blake3"
 )
 
 var crc32c = crc32.MakeTable(crc32.Castagnoli)
@@ -174,7 +174,7 @@ func BenchmarkBLAKE2b_224_big(b *testing.B) {
 func BenchmarkBLAKE3_small(b *testing.B) {
 	var s [32]byte
 	for i := 0; i < b.N; i++ {
-		h := blake3.New()
+		h := blake3.New(32, nil)
 		io.Copy(h, bytes.NewReader(smallBuf))
 		_ = h.Sum(s[:0])
 	}
@@ -183,7 +183,7 @@ func BenchmarkBLAKE3_small(b *testing.B) {
 func BenchmarkBLAKE3_big(b *testing.B) {
 	var s [32]byte
 	for i := 0; i < b.N; i++ {
-		h := blake3.New()
+		h := blake3.New(32, nil)
 		io.Copy(h, bytes.NewReader(bigBuf))
 		_ = h.Sum(s[:0])
 	}
