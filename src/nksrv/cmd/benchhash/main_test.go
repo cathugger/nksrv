@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"hash/crc32"
 	"hash/crc64"
 	"io"
@@ -133,7 +134,25 @@ func BenchmarkSHA1_big(b *testing.B) {
 	}
 }
 
-func BenchmarkBLAKE2b_small(b *testing.B) {
+func BenchmarkSHA2_224_small(b *testing.B) {
+	var s [28]byte
+	for i := 0; i < b.N; i++ {
+		h := sha256.New224()
+		io.Copy(h, bytes.NewReader(smallBuf))
+		_ = h.Sum(s[:0])
+	}
+}
+
+func BenchmarkSHA2_224_big(b *testing.B) {
+	var s [28]byte
+	for i := 0; i < b.N; i++ {
+		h := sha256.New224()
+		io.Copy(h, bytes.NewReader(bigBuf))
+		_ = h.Sum(s[:0])
+	}
+}
+
+func BenchmarkBLAKE2b_224_small(b *testing.B) {
 	var s [28]byte
 	for i := 0; i < b.N; i++ {
 		h, _ := blake2b.New(28, nil)
@@ -142,7 +161,7 @@ func BenchmarkBLAKE2b_small(b *testing.B) {
 	}
 }
 
-func BenchmarkBLAKE2b_big(b *testing.B) {
+func BenchmarkBLAKE2b_224_big(b *testing.B) {
 	var s [28]byte
 	for i := 0; i < b.N; i++ {
 		h, _ := blake2b.New(28, nil)
