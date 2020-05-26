@@ -23,7 +23,7 @@ func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
 	return CoreMsgIDStr(unsafeBytesToStr(b))
 }
 
-func getHdrMsgID(h mail.Headers) FullMsgIDStr {
+func getHdrMsgID(h mail.HeaderMap) FullMsgIDStr {
 	return FullMsgIDStr(au.TrimWSString(h.GetFirst("Message-ID")))
 }
 
@@ -34,7 +34,7 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 	if !p.PostingPermit {
 		return false
 	}
-	w.ResSendArticleToBePosted()
+	nntp.AbortOnErr(w.ResSendArticleToBePosted())
 	r := ro.OpenReader()
 	h, e := mail.ReadHeaders(r, 2<<20)
 	p.Log.LogPrintf(DEBUG, "finished reading headers")
@@ -55,7 +55,7 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 		}
 	}
 	if !p.PostingAccept || e == nil || (len(mid) != 0 && (!validMsgID(mid) || reservedMsgID(mid) || s1.articles[cutMsgID(mid)] != nil)) {
-		w.ResPostingFailed(nil)
+		nntp.AbortOnErr(w.ResPostingFailed(nil))
 		h.Close()
 		r.Discard(-1)
 		return true
@@ -63,7 +63,7 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 	h.B.Discard(-1)
 	h.Close()
 	r.Discard(-1) // ensure
-	w.ResPostingAccepted()
+	nntp.AbortOnErr(w.ResPostingAccepted())
 	return true
 }
 
@@ -71,19 +71,19 @@ func (p *TestSrv) HandlePost(w Responder, cs *ConnState, ro nntp.ReaderOpener) b
 // cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
 func (p *TestSrv) HandleIHave(w Responder, cs *ConnState, ro nntp.ReaderOpener, msgid CoreMsgID) bool {
 	if !p.TransferPermit {
-		w.ResTransferFailed()
+		nntp.AbortOnErr(w.ResTransferFailed())
 		return true
 	}
 	mstr := unsafeCoreMsgIDToStr(msgid)
 	if s1.articles[mstr] != nil {
 		return false
 	}
-	w.ResSendArticleToBeTransferred()
+	nntp.AbortOnErr(w.ResSendArticleToBeTransferred())
 	r := ro.OpenReader()
 	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != mstr {
-		w.ResTransferRejected(nil)
+		nntp.AbortOnErr(w.ResTransferRejected(nil))
 		h.Close()
 		r.Discard(-1)
 		return true
@@ -91,20 +91,20 @@ func (p *TestSrv) HandleIHave(w Responder, cs *ConnState, ro nntp.ReaderOpener, 
 	h.B.Discard(-1)
 	h.Close()
 	r.Discard(-1) // ensure
-	w.ResTransferSuccess()
+	nntp.AbortOnErr(w.ResTransferSuccess())
 	return true
 }
 
 // + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
 func (p *TestSrv) HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool {
 	if !p.TransferPermit {
-		w.ResArticleWantLater(msgid)
+		nntp.AbortOnErr(w.ResArticleWantLater(msgid))
 		return true
 	}
 	if s1.articles[unsafeCoreMsgIDToStr(msgid)] != nil {
 		return false
 	}
-	w.ResArticleWanted(msgid)
+	nntp.AbortOnErr(w.ResArticleWanted(msgid))
 	return true
 }
 
@@ -113,7 +113,7 @@ func (p *TestSrv) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReade
 	h, e := mail.ReadHeaders(r, 2<<20)
 	mid := getHdrMsgID(h.H)
 	if !p.TransferAccept || e != nil || !validMsgID(mid) || cutMsgID(mid) != unsafeCoreMsgIDToStr(msgid) {
-		w.ResArticleRejected(msgid, nil)
+		nntp.AbortOnErr(w.ResArticleRejected(msgid, nil))
 		h.Close()
 		r.Discard(-1)
 		return true
@@ -121,6 +121,6 @@ func (p *TestSrv) HandleTakeThis(w Responder, cs *ConnState, r nntp.ArticleReade
 	h.B.Discard(-1)
 	h.Close()
 	r.Discard(-1) // ensure
-	w.ResArticleTransferedOK(msgid)
+	nntp.AbortOnErr(w.ResArticleTransferedOK(msgid))
 	return true
 }
