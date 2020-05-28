@@ -7,6 +7,9 @@ import (
 	"hash"
 	"io"
 	"math/big"
+	"sync"
+
+	//"github.com/zeebo/blake3"
 
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sys/cpu"
@@ -37,64 +40,88 @@ var SBase64Enc = base64.
 const hashLen = 28
 
 type fhash struct {
-	newHasher func() (hash.Hash, error)
+	newHasher func() hash.Hash
 }
 
 const (
 	// XXX in idea these could be for arbitrary lengths, but we have no practical need for that atm
 	_              = iota // skip first to start with non-0
-	ht_BLAKE2b_224        // fastest on most 64bit CPUs without dedicated crypto instructions
-	ht_BLAKE2s_224        // faster on weak 32bit CPUs
 	ht_SHA2_224           // can be faster if SHA2-256 crypto instructions are available
-	// XXX SHA3/SHAKE? maybe when there is hw to test...
+	ht_BLAKE2b_224        // fastest on most 64bit CPUs without dedicated crypto instructions
+	//_                     // ht_BLAKE2s_224 // faster on weak 32bit CPUs -- waiting on when x/crypto provides New224 or equivalent
+	//_                     // ht_SHA3_224 // maybe once I get some hardware to test
+	//ht_BLAKE3_224
+	ht_max = iota - 1
 )
 
-var h_selecta = [...]fhash{
-	{newHasher: func() (hash.Hash, error) { return blake2b.New(28, nil) }},
-	{newHasher: func() (hash.Hash, error) { return nil, nil }}, // TODO
-	{newHasher: func() (hash.Hash, error) { return sha256.New224(), nil }},
+var h_hashes = [ht_max]fhash{
+	{newHasher: func() hash.Hash { return sha256.New224() }},
+	{newHasher: func() hash.Hash { x, _ := blake2b.New(28, nil); return x }},
+	//{newHasher: func() hash.Hash { return blake3.New() }},
 }
+var h_pools [ht_max]sync.Pool
 var h_use_id byte
-var h_use fhash
+var h_use_hash fhash
+var h_use_pool *sync.Pool
+
+func gethasher() hash.Hash {
+	h, _ := h_use_pool.Get().(hash.Hash)
+	if h != nil {
+		h.Reset()
+	} else {
+		h = h_use_hash.newHasher()
+	}
+	return h
+}
 
 func pickhash(id byte) {
 	h_use_id = id
-	h_use = h_selecta[id-1]
+	h_use_hash = h_hashes[id-1]
+	h_use_pool = &h_pools[id-1]
 }
+
 func autopickhash() {
 	// currently only ARM64 because pretty much guaranteed gain
 	// afaik x86_64 golang sha256 routine can't do SHA2 instructions (yet?)
 	// XXX s390x?
+	// XXX SHA3 for ones where it's possible?
 	if cpu.ARM64.HasSHA2 {
 		pickhash(ht_SHA2_224)
 		return
 	}
 	pickhash(ht_BLAKE2b_224)
 }
+
 func init() { autopickhash() }
+
+type convstruct struct {
+	x big.Int
+	b [44]byte // 28 type bytes (224 bits) + 1 type byte = 29 bytes; floor(log36((2^224 - 1) + (2^224 * 3)) + 1 = 44; that remains true upto 10; 11 is 45 bytes
+}
+
+var convpool = sync.Pool{
+	New: func() interface{} { return new(convstruct) },
+}
 
 // MakeFileHash returns textural representation of file hash for use in filename.
 // It expects file to be seeked at 0.
 func MakeFileHash(r io.Reader) (s string, e error) {
-	const slen = 48 // technically 44 for 224bit+mark, but wont hurt to have a bit more
-	var b [slen]byte
+	c := convpool.Get().(*convstruct)
 
-	b[0] = h_use_id
+	// first byte - hash type
+	c.b[0] = h_use_id
 	// hash
-	h, e := h_use.newHasher()
-	if e != nil {
-		panic("newHasher(): " + e.Error())
-	}
-	_, e = io.Copy(h, r)
+	h := gethasher()
+	_, e = io.Copy(h, r) // XXX this loves allocating
 	if e != nil {
 		return
 	}
-	h.Sum(b[1:][:0])
+	h.Sum(c.b[1:][:0])
+	h_use_pool.Put(h)
 
 	// convert to base36 number and print it
-	var x big.Int
-	x.SetBytes(b[:1+hashLen])
-	xb := x.Append(b[:0], 36)
+	c.x.SetBytes(c.b[:1+hashLen])
+	xb := c.x.Append(c.b[:0], 36)
 
 	// flip (we want front bits to be more variable)
 	for i, j := 0, len(xb)-1; i < j; i, j = i+1, j-1 {
@@ -103,6 +130,8 @@ func MakeFileHash(r io.Reader) (s string, e error) {
 
 	// it's ready
 	s = string(xb)
+
+	convpool.Put(c)
 
 	return
 }

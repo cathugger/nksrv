@@ -13,9 +13,10 @@ require (
 	github.com/mattn/go-isatty v0.0.10
 	github.com/minio/highwayhash v1.0.0 // indirect
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
+	github.com/zeebo/blake3 v0.0.3
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
-	golang.org/x/sys v0.0.0-20191008105621-543471e840be
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	golang.org/x/text v0.3.2
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 )
