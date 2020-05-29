@@ -68,7 +68,6 @@ type hashstuff struct {
 	copybuf *[32 * 1024]byte
 	x       big.Int
 	strbuf  [44]byte // 28 type bytes (224 bits) + 1 type byte = 29 bytes; floor(log36((2^224 - 1) + (2^224 * 3)) + 1 = 44; that remains true upto 10; 11 is 45 bytes
-
 }
 
 func gethasher() *hashstuff {
