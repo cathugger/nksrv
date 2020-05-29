@@ -118,6 +118,7 @@ func BenchmarkHashBLAKE2b_224_Bigg(b *testing.B) {
 	doxbench(b, ht_BLAKE2b_224, sizebigg)
 }
 
+/*
 func TestHashBLAKE3_224(t *testing.T) {
 	doxtest(t, ht_BLAKE3_224, sizesmol)
 }
@@ -127,3 +128,4 @@ func BenchmarkHashBLAKE3_224_Smol(b *testing.B) {
 func BenchmarkHashBLAKE3_224_Bigg(b *testing.B) {
 	doxbench(b, ht_BLAKE3_224, sizebigg)
 }
+*/
