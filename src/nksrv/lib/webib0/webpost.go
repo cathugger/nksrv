@@ -32,6 +32,7 @@ const (
 
 type IBNewBoardInfo struct {
 	Name           string `json:"bname"`
+	NewsGroup      string `json:"newsgroup,omitempty"`
 	Description    string `json:"bdesc,omitempty"`
 	ThreadsPerPage int32  `json:"threads_per_page,omitempty"` // <= 0 - infinite
 	MaxActivePages int32  `json:"max_active_pages,omitempty"` // <= 0 - all pages are active

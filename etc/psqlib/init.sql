@@ -89,9 +89,10 @@ CREATE INDEX
 
 -- :next
 CREATE TABLE ib0.boards (
-	b_id    INTEGER  GENERATED ALWAYS AS IDENTITY, -- internal board ID
-	b_name  TEXT     COLLATE "C"  NOT NULL,        -- external board identifier
-	last_id BIGINT   DEFAULT 0    NOT NULL,        -- used for post/thread IDs
+	b_id      INTEGER  GENERATED ALWAYS AS IDENTITY, -- internal board ID
+	b_name    TEXT     COLLATE "C",                  -- board name. if NULL, don't show as board
+	newsgroup TEXT     COLLATE "C",                  -- newsgroup name
+	last_id   BIGINT   DEFAULT 0    NOT NULL,        -- used for post/thread IDs
 
 	t_count BIGINT  DEFAULT 0  NOT NULL, -- thread count
 	p_count BIGINT  DEFAULT 0  NOT NULL, -- post count
@@ -123,6 +124,11 @@ CREATE INDEX
 -- for UI-visible board list
 CREATE INDEX
 	ON ib0.boards (b_name COLLATE "und-x-icu")
+	WHERE b_name IS NOT NULL
+-- for netnews-visible grouplist
+CREATE INDEX
+	ON ib0.boards (newsgroup COLLATE "und-x-icu")
+	WHERE newsgroup IS NOT NULL
 
 
 -- :next

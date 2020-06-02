@@ -155,6 +155,7 @@ func (sp *PSQLIB) commonNewPost(
 func (sp *PSQLIB) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 	return ib0.IBNewBoardInfo{
 		Name:           "",
+		NewsGroup:      "",
 		Description:    "",
 		ThreadsPerPage: 10,
 		MaxActivePages: 10,
@@ -165,9 +166,14 @@ func (sp *PSQLIB) IBDefaultBoardInfo() ib0.IBNewBoardInfo {
 func (sp *PSQLIB) addNewBoard(
 	bi ib0.IBNewBoardInfo) (err error, duplicate bool) {
 
+	if bi.NewsGroup == "" {
+		bi.NewsGroup = bi.Name
+	}
+
 	q := `INSERT INTO
 	ib0.boards (
 		b_name,
+		newsgroup,
 		badded,
 		bdesc,
 		threads_per_page,
@@ -178,12 +184,13 @@ func (sp *PSQLIB) addNewBoard(
 VALUES
 	(
 		$1,
-		NOW(),
 		$2,
+		NOW(),
 		$3,
 		$4,
 		$5,
-		$6
+		$6,
+		$7
 	)
 ON CONFLICT
 	DO NOTHING
@@ -193,7 +200,7 @@ RETURNING
 	var bid boardID
 	e := sp.db.DB.
 		QueryRow(
-			q, bi.Name, bi.Description,
+			q, bi.Name, bi.NewsGroup, bi.Description,
 			bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages,
 			defaultThreadOptions.BumpLimit).
 		Scan(&bid)

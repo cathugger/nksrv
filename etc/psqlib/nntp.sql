@@ -75,7 +75,7 @@ ORDER BY
 
 
 -- :name nntp_select
--- input: {board name}
+-- input: {newsgroup}
 WITH
 	z AS (
 		SELECT
@@ -90,7 +90,7 @@ WITH
 		USING
 			(b_id)
 		WHERE
-			xb.b_name = $1
+			xb.newsgroup = $1
 		GROUP BY
 			xb.b_id
 	)
@@ -138,7 +138,7 @@ FROM
 				USING
 					(b_id)
 				WHERE
-					xb.b_name = $1
+					xb.newsgroup = $1
 				GROUP BY
 					xb.b_id
 			) AS xbe
@@ -159,7 +159,7 @@ ORDER BY
 
 
 -- :name nntp_next
--- input: {board name} {old b_p_id}
+-- input: {board id} {old b_p_id}
 SELECT
 	xbp.b_p_id,
 	xbp.g_p_id,
@@ -174,7 +174,7 @@ LIMIT
 	1
 
 -- :name nntp_last
--- input: {board name} {old b_p_id}
+-- input: {board id} {old b_p_id}
 SELECT
 	xbp.b_p_id,
 	xbp.g_p_id,
@@ -214,7 +214,7 @@ USING
 	(b_id)
 WHERE
 	xbp.date_recv >= $1 AND
-		xb.b_name = $2
+		xb.newsgroup = $2
 ORDER BY
 	xbp.date_recv,
 	xbp.g_p_id
@@ -224,7 +224,7 @@ ORDER BY
 -- clientside filtering of multiple posts to one board
 SELECT
 	xbp.msgid,
-	xb.b_name
+	xb.newsgroup
 FROM
 	ib0.boards AS xb
 JOIN
@@ -242,7 +242,7 @@ ORDER BY
 -- :name nntp_newgroups
 -- input: {time since}
 SELECT
-	xb.b_name,
+	xb.newsgroup,
 	MIN(xbp.b_p_id) AS lo,
 	MAX(xbp.b_p_id) AS hi
 FROM
@@ -263,7 +263,7 @@ ORDER BY
 
 -- :name nntp_listactive_all
 SELECT
-	xb.b_name,
+	xb.newsgroup,
 	MIN(xbp.b_p_id),
 	MAX(xbp.b_p_id)
 FROM
@@ -275,12 +275,12 @@ USING
 GROUP BY
 	xb.b_id
 ORDER BY
-	xb.b_name COLLATE "und-x-icu"
+	xb.newsgroup COLLATE "und-x-icu"
 
 -- :name nntp_listactive_one
 -- input: {board name}
 SELECT
-	xb.b_name,
+	xb.newsgroup,
 	MIN(xbp.b_p_id),
 	MAX(xbp.b_p_id)
 FROM
@@ -290,7 +290,7 @@ LEFT JOIN
 USING
 	(b_id)
 WHERE
-	xb.b_name = $1
+	xb.newsgroup = $1
 GROUP BY
 	xb.b_id
 
@@ -298,12 +298,12 @@ GROUP BY
 
 -- :name nntp_over_msgid
 -- input: {msgid}
--- string_agg(xb.b_name || ':' || xbp.b_p_id, ' ') -- unused
+-- string_agg(xb.newsgroup || ':' || xbp.b_p_id, ' ') -- unused
 -- TODO filter by xp.date_recv/xbp.date_recv
 SELECT
 	array_agg(xbp.b_id),
 	array_agg(xbp.b_p_id),
-	array_agg(xb.b_name),
+	array_agg(xb.newsgroup),
 	xp.title,
 	xp.headers -> 'Subject' ->> 0,
 	xp.headers -> 'From' ->> 0,
@@ -330,7 +330,7 @@ GROUP BY
 SELECT
 	array_agg(zbp.b_id),
 	array_agg(zbp.b_p_id),
-	array_agg(zb.b_name),
+	array_agg(zb.newsgroup),
 	xbp.b_p_id,
 	xp.msgid,
 	xp.title,
@@ -367,7 +367,7 @@ ORDER BY
 SELECT
 	array_agg(xbp.b_id),
 	array_agg(xbp.b_p_id),
-	array_agg(xb.b_name),
+	array_agg(xb.newsgroup),
 	xp.msgid,
 	xp.title,
 	xp.headers -> 'Subject' ->> 0,

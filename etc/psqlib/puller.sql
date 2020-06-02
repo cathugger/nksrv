@@ -94,4 +94,4 @@ ON
 WHERE
 	xs.sid=$1 AND xs.last_use=$2
 ORDER BY
-	xb.b_name
+	xb.newsgroup COLLATE "und-x-icu"
