@@ -1,4 +1,4 @@
-package nilthumbnailer
+package nilthm
 
 import (
 	"os"
@@ -9,8 +9,8 @@ import (
 type NilThumbnailer struct{}
 
 func (NilThumbnailer) ThumbProcess(
-	f *os.File, ext, mimeType string, cfg thumbnailer.ThumbConfig) (
-	res thumbnailer.ThumbResult, fi thumbnailer.FileInfo, err error) {
+	f *os.File, ext, mimeType string, fsize int64, cfg thumbnailer.ThumbConfig) (
+	res thumbnailer.ThumbResult, err error) {
 
 	err = f.Close()
 	return
