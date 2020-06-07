@@ -15,19 +15,19 @@ import (
 	"nksrv/lib/thumbnailer"
 )
 
-func isInnerMessage(t string, h main.Headers) bool {
+func isInnerMessage(t string, h mail.HeaderMap) bool {
 	return (t == "message/rfc822" || t == "message/global") &&
 		len(h["Content-Disposition"]) == 0
 }
 
-func (ctx *nntpPostCtx) pn_eatbody(
+func (ctx *postNNTPContext) pn_eatbody(
 	br io.Reader) (err error, unexpected bool) {
 
 	ctx.isSage = ctx.info.isReply && len(ctx.H["X-Sage"]) != 0
 
-	tplan := sp.pickThumbPlan(ctx.info.isReply, ctx.isSage)
+	tplan := ctx.sp.pickThumbPlan(ctx.info.isReply, ctx.isSage)
 	texec := thumbnailer.ThumbExec{
-		Thumbnailer: sp.thumbnailer,
+		Thumbnailer: ctx.sp.thumbnailer,
 		ThumbPlan:   tplan,
 	}
 
@@ -36,8 +36,8 @@ func (ctx *nntpPostCtx) pn_eatbody(
 
 	ver, iow := mailibsign.PrepareVerifier(ctx.H, act_t, act_par, eatinner)
 
-	var IH mail.Headers
-	ctx.pi, ctx.tmpfns, ctx.thminfos, IH, err =
+	var IH mail.HeaderMap
+	ctx.pi, ctx.tmpfns, ctx.thumbInfos, IH, err =
 		mailib.DevourMessageBody(
 			&ctx.sp.src, texec, ctx.H, act_t, act_par, eatinner, br, iow)
 	if err != nil {
@@ -54,7 +54,7 @@ func (ctx *nntpPostCtx) pn_eatbody(
 	if ver != nil {
 		res := ver.Verify(iow)
 		pubkeystr = res.PubKey
-		pi.MI.Trip = res.PubKey
+		ctx.pi.MI.Trip = res.PubKey
 	}
 	verifiedinner := pubkeystr != ""
 
@@ -62,37 +62,41 @@ func (ctx *nntpPostCtx) pn_eatbody(
 
 	if ctx.info.FullMsgIDStr == "" {
 		// was POST, think of Message-ID there
-		fmsgids := mailib.NewRandomMessageID(ctx.info.PostedDate, sp.instance)
+		fmsgids := mailib.NewRandomMessageID(ctx.info.PostedDate, ctx.sp.instance)
 		ctx.H["Message-ID"] = mail.OneHeaderVal(string(fmsgids))
 		ctx.info.FullMsgIDStr = fmsgids
 	}
 
-	pi.H = ctx.H
-	pi.MessageID = cutMsgID(info.FullMsgIDStr)
-	pi.ID = mailib.HashPostID_SHA1(info.FullMsgIDStr)
-	pi.Date = date.UnixTimeUTC(info.PostedDate)
+	ctx.pi.H = ctx.H
+	ctx.pi.MessageID = cutMsgID(ctx.info.FullMsgIDStr)
+	ctx.pi.ID = mailib.HashPostID_SHA1(ctx.info.FullMsgIDStr)
+	ctx.pi.Date = date.UnixTimeUTC(ctx.info.PostedDate)
 
-	pi.FC = countRealFiles(pi.FI)
+	ctx.pi.FC = countRealFiles(ctx.pi.FI)
 
 	if ver != nil {
 		if verifiedinner {
-			sp.log.LogPrintf(DEBUG, "sigver: %s successfuly verified as %s", info.FullMsgIDStr, pi.MI.Trip)
+			ctx.sp.log.LogPrintf(
+				DEBUG, "sigver: %s successfuly verified as %s",
+				ctx.info.FullMsgIDStr, ctx.pi.MI.Trip)
 		} else {
-			sp.log.LogPrintf(DEBUG, "sigver: %s failed verification", info.FullMsgIDStr)
+			ctx.sp.log.LogPrintf(
+				DEBUG, "sigver: %s failed verification",
+				ctx.info.FullMsgIDStr)
 		}
 	}
 
 	if IH != nil && verifiedinner {
 		// validated inner msg, should take Subject and other hdrs from it
-		H = IH
+		ctx.H = IH
 	}
 
-	if len(H["Subject"]) != 0 {
-		sh := H["Subject"][0].V
+	if len(ctx.H["Subject"]) != 0 {
+		sh := ctx.H["Subject"][0].V
 
 		ssub := sh
 
-		if len(H["MIME-Version"]) != 0 {
+		if len(ctx.H["MIME-Version"]) != 0 {
 			// undo MIME hacks, if any
 			dsub, e := mail.DecodeMIMEWordHeader(ssub)
 			if e == nil {
@@ -103,26 +107,28 @@ func (ctx *nntpPostCtx) pn_eatbody(
 		// ensure safety and sanity
 		ssub = au.TrimWSString(safeHeader(tu.TruncateText(ssub, maxSubjectSize)))
 
-		if !isSubjectEmpty(ssub, info.isReply, ctx.isSage, info.refSubject) {
-			pi.MI.Title = ssub
-			if pi.MI.Title == sh && len(H["Subject"]) == 1 {
+		if !isSubjectEmpty(ssub, ctx.info.isReply, ctx.isSage, ctx.info.refSubject) {
+			ctx.pi.MI.Title = ssub
+			if ctx.pi.MI.Title == sh && len(ctx.H["Subject"]) == 1 {
 				// no need to duplicate
-				delete(H, "Subject")
+				delete(ctx.H, "Subject")
 			}
 		}
 	}
 
-	if fromhdr := au.TrimWSString(H.GetFirst("From")); fromhdr != "" {
+	if fromhdr := au.TrimWSString(ctx.H.GetFirst("From")); fromhdr != "" {
 
 		a, e := mail.ParseAddressX(fromhdr)
 		if e == nil && utf8.ValidString(a.Name) {
 			// XXX should we filter out "Anonymous" names? would save some bytes
-			pi.MI.Author = au.TrimWSString(safeHeader(
+			ctx.pi.MI.Author = au.TrimWSString(safeHeader(
 				tu.TruncateText(a.Name, maxNameSize)))
 		} else {
-			pi.MI.Author = "[Invalid From header]"
+			ctx.pi.MI.Author = "[Invalid From header]"
 		}
 	}
 
-	pi.MI.Sage = ctx.isSage
+	ctx.pi.MI.Sage = ctx.isSage
+
+	return
 }

@@ -4,7 +4,7 @@ import (
 	mm "nksrv/lib/minimail"
 )
 
-func NextValidReference(s string) (mm.FullMsgIDStr, string) {
+func NextValidReference(s string) (mm.TFullMsgIDStr, string) {
 	i := 0
 	for i < len(s) {
 		c := s[i]
@@ -39,7 +39,7 @@ func NextValidReference(s string) (mm.FullMsgIDStr, string) {
 			i++
 		}
 
-		x := mm.FullMsgIDStr(s[p:i])
+		x := mm.TFullMsgIDStr(s[p:i])
 		if mm.ValidMessageIDStr(x) {
 			return x, s[i:]
 		}
@@ -47,7 +47,7 @@ func NextValidReference(s string) (mm.FullMsgIDStr, string) {
 	return "", ""
 }
 
-func ExtractFirstValidReference(s string) (ref mm.FullMsgIDStr) {
+func ExtractFirstValidReference(s string) (ref mm.TFullMsgIDStr) {
 	ref, _ = NextValidReference(s)
 	return
 }
@@ -56,7 +56,7 @@ func ExtractAllValidReferences(
 	refs []string, s string) []string {
 
 	for {
-		var x mm.FullMsgIDStr
+		var x mm.TFullMsgIDStr
 		x, s = NextValidReference(s)
 		if x != "" {
 			refs = append(refs, string(x))

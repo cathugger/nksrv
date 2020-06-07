@@ -15,18 +15,18 @@ type regModInfo struct {
 	ModCombinedCaps
 }
 
-func (ctx *wp_context) wp_registered_mod(tx *sql.Tx) (regModInfo, error) {
+func (ctx *postWebContext) wp_registered_mod(tx *sql.Tx) (regModInfo, error) {
 	ct := ctx.traceStart("wp_registered_mod %s", ctx.pubkeystr)
 	defer ct.Done()
 
-	return sp.registeredMod(tx, ctx.pubkeystr)
+	return ctx.sp.registeredMod(tx, ctx.pubkeystr)
 }
 
-func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
+func (ctx *postWebContext) wp_insertsql(tx *sql.Tx) (err error) {
 	yct := ctx.traceStart("wp_insertsql %p", tx)
 	defer yct.Done()
 
-	err = sp.makeDelTables(tx)
+	err = ctx.sp.makeDelTables(tx)
 	if err != nil {
 		return
 	}
@@ -47,7 +47,7 @@ func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 		ct := ctx.traceStart("insert newthread post data to database")
 
 		gpid, bpid, duplicate, err =
-			ctx.sp.insertNewThread(tx, gstmt, bid, pInfo, isctlgrp, modid)
+			ctx.sp.insertNewThread(tx, ctx.gstmt, ctx.bid, ctx.pInfo, ctx.isctlgrp, rmi.modid)
 
 		ct.Done()
 
@@ -57,9 +57,9 @@ func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 
 		gpid, bpid, duplicate, err =
 			ctx.sp.insertNewReply(
-				tx, gstmt,
-				replyTargetInfo{bid, postID(tid.Int64)},
-				pInfo, modid)
+				tx, ctx.gstmt,
+				replyTargetInfo{ctx.bid, postID(ctx.tid.Int64)},
+				ctx.pInfo, rmi.modid)
 
 		ct.Done()
 
@@ -81,14 +81,14 @@ func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 		// we should execute it
 		// we never put message in file when processing message
 
-		ct := ctx.traceStart("execute mod cmd %s", pInfo.MessageID)
+		ct := ctx.traceStart("execute mod cmd %s", ctx.pInfo.MessageID)
 
 		_, err, _ =
-			sp.execModCmd(
-				tx, gpid, bid, bpid,
-				modid, modCC,
-				pInfo, nil, pInfo.MessageID,
-				cref, delModIDState{})
+			ctx.sp.execModCmd(
+				tx, gpid, ctx.bid, bpid,
+				rmi.modid, rmi.ModCombinedCaps,
+				ctx.pInfo, nil, ctx.pInfo.MessageID,
+				TCoreMsgIDStr(ctx.ref.String), delModIDState{})
 
 		ct.Done()
 
@@ -107,6 +107,8 @@ func (ctx *wp_context) wp_insertsql(tx *sql.Tx) (err error) {
 	if err != nil {
 		return
 	}
+
+	return
 }
 
 var sqlSerializedOpts = sql.TxOptions{Isolation: sql.LevelSerializable}
@@ -117,7 +119,7 @@ func isRetriableError(err error) bool {
 	return xerrors.As(err, &rerr)
 }
 
-func (ctx *wp_context) wp_act_commit() (err error) {
+func (ctx *postWebContext) wp_act_commit() (err error) {
 
 	yct := ctx.traceStart("wp_act_commit")
 	defer yct.Done()
@@ -142,9 +144,9 @@ func (ctx *wp_context) wp_act_commit() (err error) {
 
 			// start transaction
 			var tx *sql.Tx
-			tx, err = sp.db.DB.BeginTx(ctx.ctx, &sqlSerializedOpts)
+			tx, err = ctx.sp.db.DB.BeginTx(ctx.ctx, &sqlSerializedOpts)
 			if err != nil {
-				err = sp.sqlError("webpost tx begin", err)
+				err = ctx.sp.sqlError("webpost tx begin", err)
 				return
 			}
 			// if error, attempt rollback

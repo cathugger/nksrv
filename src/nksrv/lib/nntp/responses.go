@@ -18,11 +18,11 @@ func (r Responder) ResListFollows() error {
 	return r.PrintfLine("215 list follows")
 }
 
-func (r Responder) ResArticleFollows(num uint64, msgid CoreMsgIDStr) error {
+func (r Responder) ResArticleFollows(num uint64, msgid TCoreMsgIDStr) error {
 	return r.PrintfLine("220 %d <%s> cominngg!!!", num, msgid)
 }
 
-func (r Responder) ResHeadFollows(num uint64, msgid CoreMsgIDStr) error {
+func (r Responder) ResHeadFollows(num uint64, msgid TCoreMsgIDStr) error {
 	return r.PrintfLine("221 %d <%s> head incoming", num, msgid)
 }
 
@@ -30,11 +30,11 @@ func (r Responder) ResXHdrFollow() error {
 	return r.PrintfLine("221 headers follow")
 }
 
-func (r Responder) ResBodyFollows(num uint64, msgid CoreMsgIDStr) error {
+func (r Responder) ResBodyFollows(num uint64, msgid TCoreMsgIDStr) error {
 	return r.PrintfLine("222 %d <%s> body is coming", num, msgid)
 }
 
-func (r Responder) ResArticleFound(num uint64, msgid CoreMsgIDStr) error {
+func (r Responder) ResArticleFound(num uint64, msgid TCoreMsgIDStr) error {
 	return r.PrintfLine("223 %d <%s> it's here", num, msgid)
 }
 
@@ -58,11 +58,11 @@ func (r Responder) ResTransferSuccess() error {
 	return r.PrintfLine("235 got it :>")
 }
 
-func (r Responder) ResArticleWanted(msgid CoreMsgID) error {
+func (r Responder) ResArticleWanted(msgid TCoreMsgID) error {
 	return r.PrintfLine("238 <%s>", msgid)
 }
 
-func (r Responder) ResArticleTransferedOK(msgid CoreMsgID) error {
+func (r Responder) ResArticleTransferedOK(msgid TCoreMsgID) error {
 	return r.PrintfLine("239 <%s>", msgid)
 }
 
@@ -134,7 +134,7 @@ func (r Responder) ResNoArticleWithThatMsgID() error {
 	return r.PrintfLine("430 no article with that Message-ID")
 }
 
-func (r Responder) ResArticleWantLater(msgid CoreMsgID) error {
+func (r Responder) ResArticleWantLater(msgid TCoreMsgID) error {
 	return r.PrintfLine("431 <%s>", msgid)
 }
 
@@ -156,11 +156,11 @@ func (r Responder) ResTransferRejected(e error) error {
 	}
 }
 
-func (r Responder) ResArticleNotWanted(msgid CoreMsgID) error {
+func (r Responder) ResArticleNotWanted(msgid TCoreMsgID) error {
 	return r.PrintfLine("438 <%s>", msgid)
 }
 
-func (r Responder) ResArticleRejected(msgid CoreMsgID, err error) error {
+func (r Responder) ResArticleRejected(msgid TCoreMsgID, err error) error {
 	if err == nil {
 		return r.PrintfLine("439 <%s>", msgid)
 	} else {

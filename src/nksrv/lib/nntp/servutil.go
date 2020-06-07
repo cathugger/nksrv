@@ -43,20 +43,20 @@ func ToLowerASCII(b []byte) {
 	}
 }
 
-func CutMessageID(id FullMsgID) CoreMsgID {
-	return CoreMsgID(id[1 : len(id)-1])
+func CutMessageID(id TFullMsgID) TCoreMsgID {
+	return TCoreMsgID(id[1 : len(id)-1])
 }
 
-func CutMsgIDStr(id FullMsgIDStr) CoreMsgIDStr {
-	return CoreMsgIDStr(id[1 : len(id)-1])
+func CutMsgIDStr(id TFullMsgIDStr) TCoreMsgIDStr {
+	return TCoreMsgIDStr(id[1 : len(id)-1])
 }
 
-func ValidMessageID(id FullMsgID) bool {
+func ValidMessageID(id TFullMsgID) bool {
 	return len(id) >= 3 && id[0] == '<' && id[len(id)-1] == '>' &&
 		len(id) <= 250 && au.IsPrintableASCIISlice(CutMessageID(id), '>')
 }
 
-func ReservedMessageID(id FullMsgID) bool {
+func ReservedMessageID(id TFullMsgID) bool {
 	sid := unsafeBytesToStr(id)
 	return sid == "<0>" /* {RFC 977} */ ||
 		sid == "<keepalive@dummy.tld>" /* srndv2 */

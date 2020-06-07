@@ -8,10 +8,10 @@ import (
 
 func generic2nntpcopyer(
 	objid string, objinfo interface{}) (
-	msgid CoreMsgIDStr, bpid, gpid postID) {
+	msgid TCoreMsgIDStr, bpid, gpid postID) {
 
 	x := objinfo.(nntpidinfo)
-	return CoreMsgIDStr(objid), x.bpid, x.gpid
+	return TCoreMsgIDStr(objid), x.bpid, x.gpid
 }
 
 type nntpCopyer interface {

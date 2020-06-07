@@ -1,7 +1,6 @@
 package psqlib
 
 import (
-	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/mailib"
 )
@@ -18,12 +17,17 @@ type insertSqlInfo struct {
 type nntpParsedInfo struct {
 	insertSqlInfo
 	mailib.ParsedMessageInfo
-	FRef FullMsgIDStr
+	FRef TFullMsgIDStr
 }
 
-type nntpPostCtx struct {
+type postNNTPContext struct {
+	postCommonContext
+
 	sp     *PSQLIB
-	H      mail.Headers
+	pi     mailib.PostInfo
+	H      mail.HeaderMap
 	info   nntpParsedInfo
 	isSage bool
+
+	tmpfns []string
 }

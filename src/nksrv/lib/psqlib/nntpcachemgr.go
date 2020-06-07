@@ -29,18 +29,18 @@ func (mgr nntpcachemgr) MakeFilename(id string) string {
 }
 
 func (mgr nntpcachemgr) NewTempFile() (*os.File, error) {
-	return mgr.sp.nntpfs.TempFile("", "")
+	return mgr.sp.nntpfs.NewFile("tmp", "", "")
 }
 
 func (mgr nntpcachemgr) Generate(
 	w io.Writer, objid string, objinfo interface{}) error {
 
 	x := objinfo.(nntpidinfo)
-	return mgr.sp.nntpGenerate(w, CoreMsgIDStr(objid), x.gpid)
+	return mgr.sp.nntpGenerate(w, TCoreMsgIDStr(objid), x.gpid)
 }
 
 func (sp *PSQLIB) nntpObtainItemByMsgID(
-	w nntpCopyer, cs *ConnState, msgid CoreMsgIDStr) error {
+	w nntpCopyer, cs *ConnState, msgid TCoreMsgIDStr) error {
 
 	cb_bid := currSelectedGroupID(cs)
 
@@ -78,7 +78,7 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 		return errNoBoardSelected
 	}
 
-	var p_msgid CoreMsgIDStr
+	var p_msgid TCoreMsgIDStr
 	var p_gpid postID
 
 	err := sp.st_prep[st_nntp_article_msgid_by_num].
@@ -107,7 +107,7 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 		return errNotExist
 	}
 
-	var msgid CoreMsgIDStr
+	var msgid TCoreMsgIDStr
 	var gpid postID
 
 	err := sp.st_prep[st_nntp_article_msgid_by_num].
@@ -126,7 +126,7 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 }
 
 func (sp *PSQLIB) nntpObtainItemOrStat(
-	w nntpCopyer, bpid postID, msgid CoreMsgIDStr, gpid postID) error {
+	w nntpCopyer, bpid postID, msgid TCoreMsgIDStr, gpid postID) error {
 
 	nii := nntpidinfo{bpid: bpid, gpid: gpid}
 

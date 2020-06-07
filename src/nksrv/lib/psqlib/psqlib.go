@@ -16,24 +16,31 @@ import (
 	"nksrv/lib/fstore"
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/nilthumbnailer"
 	"nksrv/lib/psql"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/thumbnailer/nilthm"
 	"nksrv/lib/webcaptcha"
 )
 
 type PSQLIB struct {
-	db                 psql.PSQL
-	log                Logger
-	src                fstore.FStore
-	thm                fstore.FStore
-	nntpfs             fstore.FStore
-	nntpce             cacheengine.CacheEngine
-	thumbnailer        thumbnailer.Thumbnailer
-	tplan_thread       thumbnailer.ThumbPlan
-	tplan_reply        thumbnailer.ThumbPlan
-	tplan_sage         thumbnailer.ThumbPlan
-	altthumb           altthumber.AltThumber
+	db  psql.PSQL
+	log LogToX
+
+	src    fstore.FStore
+	thm    fstore.FStore
+	nntpfs fstore.FStore
+
+	pending2src fstore.Mover
+	pending2thm fstore.Mover
+
+	nntpce cacheengine.CacheEngine
+
+	thumbnailer  thumbnailer.Thumbnailer
+	tplan_thread thumbnailer.ThumbPlan
+	tplan_reply  thumbnailer.ThumbPlan
+	tplan_sage   thumbnailer.ThumbPlan
+	altthumb     altthumber.AltThumber
+
 	ffo                formFileOpener
 	fpp                form.ParserParams
 	textPostParamFunc  func(string) bool
@@ -57,6 +64,8 @@ type PSQLIB struct {
 	npMutex sync.RWMutex
 
 	puller_nonce int64
+
+	noFileSync bool
 }
 
 type Config struct {
@@ -100,29 +109,13 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 
 	p.db = *cfg.DB
 
-	p.src, err = fstore.OpenFStore(*cfg.SrcCfg)
+	err = p.initDirs(cfg)
 	if err != nil {
 		return nil, err
 	}
-	//p.src.CleanTemp()
 
-	p.thm, err = fstore.OpenFStore(*cfg.ThmCfg)
-	if err != nil {
-		return nil, err
-	}
-	//p.thm.CleanTemp()
-
-	p.nntpfs, err = fstore.OpenFStore(*cfg.NNTPFSCfg)
-	if err != nil {
-		return nil, err
-	}
-	//p.nntpfs.RemoveDir(nntpIncomingTempDir)
-	if err = p.nntpfs.MakeDir(nntpIncomingDir); err != nil {
-		return nil, err
-	}
-	if err = p.nntpfs.MakeDir(nntpPullerDir); err != nil {
-		return nil, err
-	}
+	p.pending2src = fstore.NewMover(&p.src)
+	p.pending2thm = fstore.NewMover(&p.thm)
 
 	if cfg.TBuilder != nil {
 
@@ -149,7 +142,7 @@ func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
 		}
 
 	} else {
-		p.thumbnailer = nilthumbnailer.NilThumbnailer{}
+		p.thumbnailer = nilthm.NilThumbnailer{}
 	}
 
 	p.nntpce = cacheengine.NewCacheEngine(nntpcachemgr{p})

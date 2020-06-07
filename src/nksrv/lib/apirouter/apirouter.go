@@ -180,7 +180,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 				}
 
 				var code int
-				e := cfg.WebPostProvider.IBPostNewBoard(w, r, nbi)
+				e = cfg.WebPostProvider.IBPostNewBoard(w, r, nbi)
 				if e != nil {
 					e, code = ib0.UnpackWebPostError(e)
 				}
@@ -225,7 +225,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					nbi.Name = r.Context().Value("b").(string)
 
 					var code int
-					e := cfg.WebPostProvider.IBUpdateBoard(w, r, nbi)
+					e = cfg.WebPostProvider.IBUpdateBoard(w, r, nbi)
 					if e != nil {
 						e, code = ib0.UnpackWebPostError(e)
 					}
@@ -239,7 +239,7 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 					var code int
 					e := cfg.WebPostProvider.IBDeleteBoard(w, r, b)
 					if e != nil {
-						e, code := ib0.UnpackWebPostError(e)
+						e, code = ib0.UnpackWebPostError(e)
 						http.Error(w, e.Error(), code)
 						return
 					}

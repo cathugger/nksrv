@@ -61,7 +61,7 @@ func (s delModIDState) contain(x uint64) bool {
 }
 
 func (sp *PSQLIB) deleteByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr,
+	tx *sql.Tx, cmsgids TCoreMsgIDStr,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
 	err error) {
@@ -82,7 +82,7 @@ func (sp *PSQLIB) deleteByMsgID(
 }
 
 func (sp *PSQLIB) banByMsgID(
-	tx *sql.Tx, cmsgids CoreMsgIDStr,
+	tx *sql.Tx, cmsgids TCoreMsgIDStr,
 	banbid boardID, banbpid postID, reason string,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
@@ -285,7 +285,7 @@ func (sp *PSQLIB) postDelete(
 	// re-calculate affected references
 	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
 	for _, bpa := range bp_affs {
-		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, CoreMsgIDStr(bpa.mi), xref_up_st)
+		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, TCoreMsgIDStr(bpa.mi), xref_up_st)
 		if err != nil {
 			return
 		}
@@ -309,7 +309,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 	var err error
 
 	for _, s := range msgids {
-		if !mm.ValidMessageIDStr(FullMsgIDStr(s)) {
+		if !mm.ValidMessageIDStr(TFullMsgIDStr(s)) {
 			sp.log.LogPrintf(ERROR, "invalid msgid %q", s)
 			return
 		}
@@ -339,12 +339,12 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 		sp.log.LogPrintf(INFO, "deleting %s", s)
 		if banreason == "" {
 			delmsgids, _, err =
-				sp.deleteByMsgID(tx, cutMsgID(FullMsgIDStr(s)),
+				sp.deleteByMsgID(tx, cutMsgID(TFullMsgIDStr(s)),
 					delmsgids, delModIDState{})
 		} else {
 			delmsgids, _, err =
 				sp.banByMsgID(
-					tx, cutMsgID(FullMsgIDStr(s)), 0, 0, banreason,
+					tx, cutMsgID(TFullMsgIDStr(s)), 0, 0, banreason,
 					delmsgids, delModIDState{})
 		}
 		if err != nil {

@@ -37,10 +37,10 @@ type groupState struct {
 type (
 	Responder         = nntp.Responder
 	AbstractResponder = nntp.AbstractResponder
-	FullMsgID         = nntp.FullMsgID
-	CoreMsgID         = nntp.CoreMsgID
-	FullMsgIDStr      = nntp.FullMsgIDStr
-	CoreMsgIDStr      = nntp.CoreMsgIDStr
+	TFullMsgID        = nntp.TFullMsgID
+	TCoreMsgID        = nntp.TCoreMsgID
+	TFullMsgIDStr     = nntp.TFullMsgIDStr
+	TCoreMsgIDStr     = nntp.TCoreMsgIDStr
 	ConnState         = nntp.ConnState
 )
 
@@ -81,8 +81,8 @@ func (p *PSQLIB) SupportsStream() bool { return true }
 
 func (p *PSQLIB) SupportsXListen() bool { return false }
 
-func unsafeCoreMsgIDToStr(b CoreMsgID) CoreMsgIDStr {
-	return CoreMsgIDStr(unsafeBytesToStr(b))
+func unsafeCoreMsgIDToStr(b TCoreMsgID) TCoreMsgIDStr {
+	return TCoreMsgIDStr(unsafeBytesToStr(b))
 }
 
 var (
@@ -116,32 +116,32 @@ func (sp *PSQLIB) handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 }
 
 func (sp *PSQLIB) getArticleCommonByMsgID(
-	nc nntpCopyer, w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	nc nntpCopyer, w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	sid := unsafeCoreMsgIDToStr(msgid)
 	e := sp.nntpObtainItemByMsgID(nc, cs, sid)
 	return sp.handleNNTPGetError(w, nc, e)
 }
 func (sp *PSQLIB) GetArticleFullByMsgID(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	nc := &fullNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
 func (sp *PSQLIB) GetArticleHeadByMsgID(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	nc := &headNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
 func (sp *PSQLIB) GetArticleBodyByMsgID(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	nc := &bodyNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
 }
 func (sp *PSQLIB) GetArticleStatByMsgID(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	sc := &statNNTPCopyer{w: w}
 	return sp.getArticleCommonByMsgID(sc, w, cs, msgid)
@@ -349,7 +349,7 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 
 	var nbpid postID
 	var ngpid postID
-	var msgid CoreMsgIDStr
+	var msgid TCoreMsgIDStr
 
 	err := sp.st_prep[st_nntp_next].
 		QueryRow(gs.bid, gs.bpid).
@@ -381,7 +381,7 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 
 	var nbpid postID
 	var ngpid postID
-	var msgid CoreMsgIDStr
+	var msgid TCoreMsgIDStr
 
 	err := sp.st_prep[st_nntp_last].
 		QueryRow(gs.bid, gs.bpid).
@@ -685,7 +685,7 @@ func safeHeader(s string) string {
 }
 
 func (sp *PSQLIB) printOver(
-	w io.Writer, bpid postID, msgid CoreMsgIDStr,
+	w io.Writer, bpid postID, msgid TCoreMsgIDStr,
 	hsubject, hfrom, hdate, hrefs string,
 	bnames []string, bpids []int64) {
 
@@ -724,7 +724,7 @@ func (sp *PSQLIB) printOver(
 //   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 //   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
 func (sp *PSQLIB) GetOverByMsgID(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	smsgid := unsafeCoreMsgIDToStr(msgid)
 
@@ -799,7 +799,7 @@ func (sp *PSQLIB) GetOverByRange(
 			bpids  []int64
 			bnames []string
 			cbpid  postID
-			msgid  CoreMsgIDStr
+			msgid  TCoreMsgIDStr
 			title  string
 
 			hsubject, hfrom, hdate, hrefs sql.NullString
@@ -876,7 +876,7 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		bids   []int64
 		bpids  []int64
 		bnames []string
-		msgid  CoreMsgIDStr
+		msgid  TCoreMsgIDStr
 		title  string
 
 		hsubject, hfrom, hdate, hrefs sql.NullString
@@ -932,7 +932,7 @@ func bpidIfGroupEq(cbid, bid boardID, bpid postID) postID {
 }
 
 func (sp *PSQLIB) commonGetHdrByMsgID(
-	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID, rfc bool) bool {
+	w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID, rfc bool) bool {
 
 	sid := unsafeCoreMsgIDToStr(msgid)
 	shdr := canonicalHeaderQueryStr(hdr)
@@ -1183,7 +1183,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	return true
 }
 func (sp *PSQLIB) GetHdrByMsgID(
-	w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID) bool {
 
 	return sp.commonGetHdrByMsgID(w, cs, hdr, msgid, true)
 }
@@ -1196,7 +1196,7 @@ func (sp *PSQLIB) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
 	return sp.commonGetHdrByCurr(w, cs, hdr, true)
 }
 func (sp *PSQLIB) GetXHdrByMsgID(
-	w Responder, hdr []byte, msgid CoreMsgID) bool {
+	w Responder, hdr []byte, msgid TCoreMsgID) bool {
 
 	return sp.commonGetHdrByMsgID(w, nil, hdr, msgid, false)
 }

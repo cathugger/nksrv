@@ -7,10 +7,10 @@ import (
 	mail "nksrv/lib/minimail"
 )
 
-type FullMsgID = mail.FullMsgID // msgid with < and >
-type CoreMsgID = mail.CoreMsgID // msgid without < and >
-type FullMsgIDStr = mail.FullMsgIDStr
-type CoreMsgIDStr = mail.CoreMsgIDStr
+type TFullMsgID = mail.TFullMsgID // msgid with < and >
+type TCoreMsgID = mail.TCoreMsgID // msgid without < and >
+type TFullMsgIDStr = mail.TFullMsgIDStr
+type TCoreMsgIDStr = mail.TCoreMsgIDStr
 
 type ArticleReader = mail.ArticleReader
 
@@ -43,10 +43,10 @@ type NNTPProvider interface {
 	//   <ByMsgID> 430{ResNoArticleWithThatMsgID[false]}
 	//   <ByNum>   412{ResNoNewsgroupSelected} 423{ResNoArticleWithThatNum[false]}
 	//   <ByCurr>  412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetArticleFullByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
-	GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
-	GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
-	GetArticleStatByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool
+	GetArticleFullByMsgID(w Responder, cs *ConnState, msgid TCoreMsgID) bool
+	GetArticleHeadByMsgID(w Responder, cs *ConnState, msgid TCoreMsgID) bool
+	GetArticleBodyByMsgID(w Responder, cs *ConnState, msgid TCoreMsgID) bool
+	GetArticleStatByMsgID(w Responder, cs *ConnState, msgid TCoreMsgID) bool
 	GetArticleFullByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleHeadByNum(w Responder, cs *ConnState, num uint64) bool
 	GetArticleBodyByNum(w Responder, cs *ConnState, num uint64) bool
@@ -80,7 +80,7 @@ type NNTPProvider interface {
 	//   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 	//   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetOverByMsgID(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsOverByMsgID()
+	GetOverByMsgID(w Responder, cs *ConnState, msgid TCoreMsgID) bool // SupportsOverByMsgID()
 	GetOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetXOverByRange(w Responder, cs *ConnState, rmin, rmax int64) bool
 	GetOverByCurr(w Responder, cs *ConnState) bool
@@ -92,10 +92,10 @@ type NNTPProvider interface {
 	//   <XHdrByMsgID> ok: 221{ResXHdrFollow} fail: 430{ResNoArticleWithThatMsgID[false]}
 	//   <XHdrByRange> ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 	//   <XHdrByCurr>  ok: 221{ResXHdrFollow} fail: 412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid CoreMsgID) bool
+	GetHdrByMsgID(w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID) bool
 	GetHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
-	GetXHdrByMsgID(w Responder, hdr []byte, msgid CoreMsgID) bool
+	GetXHdrByMsgID(w Responder, hdr []byte, msgid TCoreMsgID) bool
 	GetXHdrByRange(w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool
 	GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool
 
@@ -105,9 +105,9 @@ type NNTPProvider interface {
 	HandlePost(w Responder, cs *ConnState, ro ReaderOpener) bool // SupportsPost()
 	// + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
 	// cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
-	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid CoreMsgID) bool // SupportsIHave()
+	HandleIHave(w Responder, cs *ConnState, ro ReaderOpener, msgid TCoreMsgID) bool // SupportsIHave()
 	// + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
-	HandleCheck(w Responder, cs *ConnState, msgid CoreMsgID) bool // SupportsStream()
+	HandleCheck(w Responder, cs *ConnState, msgid TCoreMsgID) bool // SupportsStream()
 	// + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
-	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid CoreMsgID) bool // SupportsStream()
+	HandleTakeThis(w Responder, cs *ConnState, r ArticleReader, msgid TCoreMsgID) bool // SupportsStream()
 }

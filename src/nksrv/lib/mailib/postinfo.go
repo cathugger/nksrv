@@ -11,8 +11,8 @@ import (
 )
 
 type PostInfo struct {
-	ID        string       // message identifier, hash of MessageID
-	MessageID CoreMsgIDStr // globally unique message identifier
+	ID        string        // message identifier, hash of MessageID
+	MessageID TCoreMsgIDStr // globally unique message identifier
 	Date      time.Time
 
 	MI MessageInfo
@@ -65,7 +65,7 @@ func (x FileInfo) Equivalent(y FileInfo) bool {
 	return x.ID == y.ID && x.Original == y.Original && x.Size == y.Size
 }
 
-type ThumbInfo struct {
+type TThumbInfo struct {
 	FullTmpName string
 	RelDestName string
 }

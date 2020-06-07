@@ -63,7 +63,10 @@ func (l LogToX) Write(b []byte) (int, error) {
 	return l.logx.Write(b)
 }
 func NewLogToX(logx LoggerX, section string) LogToX {
-	return LogToX{section: section, logx: logx}
+	return LogToX{logx: logx, section: section}
+}
+func (l LogToX) Extend(s string) LogToX {
+	return LogToX{logx: l.logx, section: l.section + "." + s}
 }
 
 var _ Logger = (*LogToXLevel)(nil)

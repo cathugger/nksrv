@@ -1,7 +1,6 @@
 package psqlib
 
 import (
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,7 +18,7 @@ import (
 )
 
 // expensive processing after initial DB lookup but before commit
-func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
+func (sp *PSQLIB) wp_act_process(ctx *postWebContext) (err error) {
 	// use normalised forms
 	// theorically, normalisation could increase size sometimes, which could lead to rejection of previously-fitting message
 	// but it's better than accepting too big message, as that could lead to bad things later on
@@ -106,7 +105,7 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 			var res thumbnailer.ThumbResult
 			res, err = sp.thumbnailer.ThumbProcess(
 				files[i].F,
-				ext, pInfo.FI[x].ContentType, files[i].Size,
+				ext, ctx.pInfo.FI[x].ContentType, files[i].Size,
 				tplan.ThumbConfig)
 			if err != nil {
 				err = fmt.Errorf("error thumbnailing file: %v", err)
@@ -119,28 +118,28 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 				// XXX change
 			}
 			// save it
-			ctx.pInfo.FI[x].Extras.ContentType = pInfo.FI[x].ContentType
+			ctx.pInfo.FI[x].Extras.ContentType = ctx.pInfo.FI[x].ContentType
 			// thumbnail
 			if res.DBSuffix != "" {
-				pInfo.FI[x].ThumbField = tplan.Name + "." + res.DBSuffix
-				pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
-				pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)
+				ctx.pInfo.FI[x].ThumbField = tplan.Name + "." + res.DBSuffix
+				ctx.pInfo.FI[x].ThumbAttrib.Width = uint32(res.Width)
+				ctx.pInfo.FI[x].ThumbAttrib.Height = uint32(res.Height)
 
-				dname := pInfo.FI[x].ID + "." + tplan.Name + "." + res.CF.Suffix
-				ctx.thumbMoves = append(ctx.thumbMoves, thumbMove{
+				dname := ctx.pInfo.FI[x].ID + "." + tplan.Name + "." + res.CF.Suffix
+				ctx.thumbInfos = append(ctx.thumbInfos, mailib.TThumbInfo{
 					FullTmpName: res.CF.FullTmpName,
 					RelDestName: dname,
 				})
 				for _, ce := range res.CE {
-					dname = pInfo.FI[x].ID + "." + tplan.Name + "." + ce.Suffix
-					ctx.thumbMoves = append(ctx.thumbMoves, thumbMove{
+					dname = ctx.pInfo.FI[x].ID + "." + tplan.Name + "." + ce.Suffix
+					ctx.thumbInfos = append(ctx.thumbInfos, mailib.TThumbInfo{
 						FullTmpName: ce.FullTmpName,
 						RelDestName: dname,
 					})
 				}
 			}
 			if len(res.FI.Attrib) != 0 {
-				pInfo.FI[x].FileAttrib = res.FI.Attrib
+				ctx.pInfo.FI[x].FileAttrib = res.FI.Attrib
 			}
 
 			for xx := 0; xx < x; xx++ {
@@ -155,7 +154,7 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 	}
 
 	// is control message?
-	ctx.isctlgrp = board == "ctl"
+	ctx.isctlgrp = ctx.board == "ctl"
 
 	// process references
 	ctx.srefs, ctx.irefs = ibref_nntp.ParseReferences(ctx.pInfo.MI.Message)
@@ -169,15 +168,14 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 	}
 
 	// fill in layout/sign
-	var fmsgids FullMsgIDStr
-	var fref FullMsgIDStr
-	cref := CoreMsgIDStr(ctx.ref.String)
+	var fmsgids TFullMsgIDStr
+	var fref TFullMsgIDStr
+	cref := TCoreMsgIDStr(ctx.ref.String)
 	if cref != "" {
-		fref = FullMsgIDStr(fmt.Sprintf("<%s>", cref))
+		fref = TFullMsgIDStr(fmt.Sprintf("<%s>", cref))
 	}
-	var pubkeystr string
-	pInfo, fmsgids, msgfn, pubkeystr, err = sp.fillWebPostDetails(
-		pInfo, f, board, fref, inreplyto, true, tu, signkeyseed)
+	ctx.pInfo, fmsgids, ctx.msgfn, ctx.pubkeystr, err = sp.fillWebPostDetails(
+		ctx.pInfo, ctx.f, ctx.board, fref, inreplyto, true, tu, signkeyseed)
 	if err != nil {
 		return
 	}
@@ -189,35 +187,36 @@ func (sp *PSQLIB) wp_act_process(ctx *wp_context) (err error) {
 
 	// frontend sign
 	if sp.webFrontendKey != nil {
-		pInfo.H["X-Frontend-PubKey"] =
+		ctx.pInfo.H["X-Frontend-PubKey"] =
 			mail.OneHeaderVal(
 				hex.EncodeToString(sp.webFrontendKey[32:]))
 		signature :=
 			ed25519.Sign(
 				sp.webFrontendKey, unsafeStrToBytes(string(fmsgids)))
-		pInfo.H["X-Frontend-Signature"] =
+		ctx.pInfo.H["X-Frontend-Signature"] =
 			mail.OneHeaderVal(
 				hex.EncodeToString(signature))
 		// XXX store key
 	}
 
-	pInfo.MessageID = cutMsgID(fmsgids)
+	ctx.pInfo.MessageID = cutMsgID(fmsgids)
 
 	// Post ID
-	pInfo.ID = mailib.HashPostID_SHA1(fmsgids)
+	ctx.pInfo.ID = mailib.HashPostID_SHA1(fmsgids)
 
 	// number of attachments
-	pInfo.FC = countRealFiles(pInfo.FI)
+	ctx.pInfo.FC = countRealFiles(ctx.pInfo.FI)
 
 	// before starting transaction, ensure stmt for postinsert is ready
 	// otherwise deadlock is v possible
-	var gstmt *sql.Stmt
-	if !isReply {
-		gstmt, err = sp.getNTStmt(len(pInfo.FI))
+	if !ctx.isReply {
+		ctx.gstmt, err = sp.getNTStmt(len(ctx.pInfo.FI))
 	} else {
-		gstmt, err = sp.getNPStmt(npTuple{len(pInfo.FI), pInfo.MI.Sage})
+		ctx.gstmt, err = sp.getNPStmt(npTuple{len(ctx.pInfo.FI), ctx.pInfo.MI.Sage})
 	}
 	if err != nil {
 		return
 	}
+
+	return
 }

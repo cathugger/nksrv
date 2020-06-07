@@ -35,7 +35,7 @@ type Verifier interface {
 }
 
 func PrepareVerifier(
-	H mail.Headers, ct_t string, ct_par map[string]string, innermsg bool) (
+	H mail.HeaderMap, ct_t string, ct_par map[string]string, innermsg bool) (
 	ver Verifier, iow InnerWriter) {
 
 	if innermsg {

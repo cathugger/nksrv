@@ -8,7 +8,7 @@ import (
 	ht "nksrv/lib/hashtools"
 )
 
-func NewRandomMessageID(t int64, name string) FullMsgIDStr {
+func NewRandomMessageID(t int64, name string) TFullMsgIDStr {
 	// TAI64 format kinda
 	var b [8]byte
 	u := uint64(0x4000000000000000 + t)
@@ -33,13 +33,13 @@ func NewRandomMessageID(t int64, name string) FullMsgIDStr {
 	crand.Read(r[:])
 
 	// non-recent nntpchan (fixed in 2d3c304c81b5) can't handle base64url...
-	return FullMsgIDStr("<" +
+	return TFullMsgIDStr("<" +
 		ht.LowerBase32HexEnc.EncodeToString(b[:]) + "." +
 		ht.LowerBase32HexEnc.EncodeToString(r[:]) + "@" + name + ">")
 }
 
 // TODO: more algos
-func HashPostID_SHA1(coremsgid FullMsgIDStr) string {
+func HashPostID_SHA1(coremsgid TFullMsgIDStr) string {
 	b := sha1.Sum(unsafeStrToBytes(string(coremsgid)))
 	return hex.EncodeToString(b[:])
 }

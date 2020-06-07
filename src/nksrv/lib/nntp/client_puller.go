@@ -38,19 +38,19 @@ type PullerDatabase interface {
 	LoadTempGroup() (group string, new_id int64, old_id uint64, err error)
 
 	IsArticleWanted(
-		msgid FullMsgIDStr, ingroup string) (bool, interface{}, error)
-	DoesReferenceExist(ref FullMsgIDStr) (bool, error)
+		msgid TFullMsgIDStr, ingroup string) (bool, interface{}, error)
+	DoesReferenceExist(ref TFullMsgIDStr) (bool, error)
 
 	ReadArticle(
 		r io.Reader,
-		msgid CoreMsgIDStr, fromgroup string, wdata interface{}) (
-		err error, unexpected bool, wantedroot FullMsgIDStr)
+		msgid TCoreMsgIDStr, fromgroup string, wdata interface{}) (
+		err error, unexpected bool, wantedroot TFullMsgIDStr)
 }
 
 type todoArticle struct {
 	id    uint64
-	msgid FullMsgIDStr
-	ref   FullMsgIDStr
+	msgid TFullMsgIDStr
+	ref   TFullMsgIDStr
 }
 
 // for HDR/XHDR/OVER/XOVER
@@ -388,8 +388,8 @@ func (c *NNTPPuller) doGroup(
 }
 
 func (c *NNTPPuller) eatArticle(
-	msgid FullMsgIDStr, ingroup string, wdata interface{}) (
-	err error, fatal bool, wantroot FullMsgIDStr) {
+	msgid TFullMsgIDStr, ingroup string, wdata interface{}) (
+	err error, fatal bool, wantroot TFullMsgIDStr) {
 
 	dr := c.openDotReader()
 	defer func() {
@@ -414,8 +414,8 @@ func (c *NNTPPuller) eatArticle(
 }
 
 func (c *NNTPPuller) handleArticleResponse(
-	msgid FullMsgIDStr, group string, wdata interface{}) (
-	normalok bool, err error, fatal bool, wantroot FullMsgIDStr) {
+	msgid TFullMsgIDStr, group string, wdata interface{}) (
+	normalok bool, err error, fatal bool, wantroot TFullMsgIDStr) {
 
 	var code uint
 	var rest []byte
@@ -494,7 +494,7 @@ func (c *NNTPPuller) processTODOList(
 	var maxidMu sync.Mutex
 
 	responseHandler := func(
-		id int64, msgid FullMsgIDStr, wdata interface{}) (
+		id int64, msgid TFullMsgIDStr, wdata interface{}) (
 		err error, fatal bool) {
 
 		normalok, err, fatal, _ := c.handleArticleResponse(msgid, group, wdata)
@@ -514,7 +514,7 @@ func (c *NNTPPuller) processTODOList(
 	}
 
 	type todoLoopArticle struct {
-		msgid FullMsgIDStr
+		msgid TFullMsgIDStr
 		id    int64
 		wdata interface{}
 	}
@@ -553,7 +553,7 @@ func (c *NNTPPuller) processTODOList(
 		}
 	}
 
-	queuedRef := func(ref FullMsgIDStr, x int) bool {
+	queuedRef := func(ref TFullMsgIDStr, x int) bool {
 		// it's imperfect but probably will be good enough
 		for i := 0; i < x; i++ {
 			if c.todoList[i].msgid == ref {
@@ -692,7 +692,7 @@ func (c *NNTPPuller) eatHdrOutput(
 
 	for {
 		var id uint64
-		var msgid FullMsgID
+		var msgid TFullMsgID
 
 		id, msgid, err = c.eatHdrMsgIDLine(dr)
 		if err != nil {
@@ -727,7 +727,7 @@ func (c *NNTPPuller) eatHdrOutput(
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
 			id:    id,
-			msgid: FullMsgIDStr(msgid),
+			msgid: TFullMsgIDStr(msgid),
 		})
 	}
 
@@ -746,7 +746,7 @@ func (c *NNTPPuller) eatOverOutput(
 	c.todoList = c.todoList[:0] // reuse
 	for {
 		var id uint64
-		var msgid, ref FullMsgID
+		var msgid, ref TFullMsgID
 		var fatal bool
 		id, msgid, ref, err, fatal = c.getOverLineInfo(dr)
 		if err != nil {
@@ -786,9 +786,9 @@ func (c *NNTPPuller) eatOverOutput(
 			continue
 		}
 
-		sref := FullMsgIDStr("")
+		sref := TFullMsgIDStr("")
 		if len(ref) != 0 {
-			sref = FullMsgIDStr(ref)
+			sref = TFullMsgIDStr(ref)
 		}
 
 		//c.log.LogPrintf(DEBUG,
@@ -797,7 +797,7 @@ func (c *NNTPPuller) eatOverOutput(
 		// add to list to query
 		c.todoList = append(c.todoList, todoArticle{
 			id:    id,
-			msgid: FullMsgIDStr(msgid),
+			msgid: TFullMsgIDStr(msgid),
 			ref:   sref,
 		})
 	}

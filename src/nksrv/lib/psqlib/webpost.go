@@ -60,7 +60,7 @@ func webNotFound(err error) error {
  *   We could use two-phase commits (PREPARE TRANSACTION) maybe, but there are some limitations with them so not yet.
  */
 
-func wp_err_cleanup(ctx *wp_context) {
+func wp_err_cleanup(ctx *postWebContext) {
 	ctx.f.RemoveAll()
 	for _, mov := range ctx.thumbMoves {
 		os.Remove(mov.fulltmpname)
@@ -70,7 +70,7 @@ func wp_err_cleanup(ctx *wp_context) {
 	}
 }
 
-func wp_comm_cleanup(ctx *wp_context) {
+func wp_comm_cleanup(ctx *postWebContext) {
 	var err error
 	// NOTE: don't use os.RemoveAll, as we don't need traces of failed stuff gone
 	err = os.Remove(ctx.src_pending)
@@ -91,7 +91,7 @@ func wp_comm_cleanup(ctx *wp_context) {
 
 // step #1: premature extraction and sanity validation of input data
 func (sp *PSQLIB) wp_validateAndExtract(
-	ctx *wp_context, w http.ResponseWriter, r *http.Request) (err error) {
+	ctx *postWebContext, w http.ResponseWriter, r *http.Request) (err error) {
 
 	// do text inputs processing/checking
 	ctx.xf, err = sp.processTextFields(ctx.f)
@@ -118,13 +118,13 @@ func (sp *PSQLIB) wp_validateAndExtract(
 }
 
 // step #2: extraction from DB
-func (sp *PSQLIB) wp_dbcheck(ctx *wp_context) (err error) {
+func (sp *PSQLIB) wp_dbcheck(ctx *postWebContext) (err error) {
 	ctx.rInfo, ctx.wp_dbinfo, err = sp.getPrePostInfo(nil, ctx.btr, ctx.postOpts)
 	return
 }
 
 func (sp *PSQLIB) commonNewPost(
-	w http.ResponseWriter, r *http.Request, ctx *wp_context) (
+	w http.ResponseWriter, r *http.Request, ctx *postWebContext) (
 	rInfo postedInfo, err error) {
 
 	defer func() {

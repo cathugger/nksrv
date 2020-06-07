@@ -20,12 +20,12 @@ import (
 	"nksrv/lib/nntp"
 )
 
-func validMsgID(s FullMsgIDStr) bool {
+func validMsgID(s TFullMsgIDStr) bool {
 	return nntp.ValidMessageID(unsafeStrToBytes(string(s)))
 }
 
-func cutMsgID(s FullMsgIDStr) CoreMsgIDStr {
-	return CoreMsgIDStr(unsafeBytesToStr(
+func cutMsgID(s TFullMsgIDStr) TCoreMsgIDStr {
+	return TCoreMsgIDStr(unsafeBytesToStr(
 		nntp.CutMessageID(unsafeStrToBytes(string(s)))))
 }
 
@@ -36,7 +36,7 @@ func (sp *PSQLIB) shouldAutoAddNNTPPostGroup(group string) bool {
 }
 
 func (sp *PSQLIB) acceptArticleHead(
-	board string, troot FullMsgIDStr, pdate int64) (
+	board string, troot TFullMsgIDStr, pdate int64) (
 	ins insertSqlInfo, err error, unexpected bool, wantroot bool) {
 
 	var jbPL xtypes.JSONText // board post limits
@@ -243,7 +243,7 @@ ON TRUE`
 }
 
 func (sp *PSQLIB) nntpCheckArticleExistsOrBanned(
-	unsafe_sid CoreMsgIDStr) (exists bool, err error) {
+	unsafe_sid TCoreMsgIDStr) (exists bool, err error) {
 
 	var dummy int64
 
@@ -260,7 +260,7 @@ func (sp *PSQLIB) nntpCheckArticleExistsOrBanned(
 }
 
 func (sp *PSQLIB) nntpCheckArticleValid(
-	unsafe_sid CoreMsgIDStr) (exists bool, err error) {
+	unsafe_sid TCoreMsgIDStr) (exists bool, err error) {
 
 	var dummy int64
 
@@ -276,13 +276,8 @@ func (sp *PSQLIB) nntpCheckArticleValid(
 	return true, nil
 }
 
-var (
-	nntpIncomingTempDir = "_tin"
-	nntpIncomingDir     = "_in"
-)
-
 func (sp *PSQLIB) nntpSendIncomingArticle(
-	name string, H mail.Headers, info nntpParsedInfo) {
+	name string, H mail.HeaderMap, info nntpParsedInfo) {
 
 	defer os.Remove(name)
 
@@ -358,7 +353,7 @@ func (sp *PSQLIB) netnewsHandleSubmissionDirectly(
 // + iok: 335{ResSendArticleToBeTransferred} ifail: 435{ResTransferNotWanted[false]} 436{ResTransferFailed}
 // cok: 235{ResTransferSuccess} cfail: 436{ResTransferFailed} 437{ResTransferRejected}
 func (sp *PSQLIB) HandleIHave(
-	w Responder, cs *ConnState, ro nntp.ReaderOpener, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, ro nntp.ReaderOpener, msgid TCoreMsgID) bool {
 
 	var err error
 
@@ -400,7 +395,7 @@ func (sp *PSQLIB) HandleIHave(
 
 // + ok: 238{ResArticleWanted} fail: 431{ResArticleWantLater} 438{ResArticleNotWanted[false]}
 func (sp *PSQLIB) HandleCheck(
-	w Responder, cs *ConnState, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	var err error
 
@@ -422,7 +417,7 @@ func (sp *PSQLIB) HandleCheck(
 
 // + ok: 239{ResArticleTransferedOK} 439{ResArticleRejected[false]}
 func (sp *PSQLIB) HandleTakeThis(
-	w Responder, cs *ConnState, r nntp.ArticleReader, msgid CoreMsgID) bool {
+	w Responder, cs *ConnState, r nntp.ArticleReader, msgid TCoreMsgID) bool {
 
 	var err error
 
@@ -460,10 +455,10 @@ func (sp *PSQLIB) HandleTakeThis(
 }
 
 func (sp *PSQLIB) handleIncoming(
-	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, incdir string,
+	r io.Reader, unsafe_sid TCoreMsgIDStr, expectgroup string, incdir string,
 	notrace bool) (
-	info nntpParsedInfo, newname string, H mail.Headers,
-	err error, unexpected bool, wantroot FullMsgIDStr) {
+	info nntpParsedInfo, newname string, H mail.HeaderMap,
+	err error, unexpected bool, wantroot TFullMsgIDStr) {
 
 	info, f, H, err, unexpected, wantroot :=
 		sp.handleIncomingIntoFile(r, unsafe_sid, expectgroup, notrace)
@@ -492,9 +487,9 @@ func (sp *PSQLIB) handleIncoming(
 }
 
 func (sp *PSQLIB) handleIncomingIntoFile(
-	r io.Reader, unsafe_sid CoreMsgIDStr, expectgroup string, notrace bool) (
-	info nntpParsedInfo, f *os.File, H mail.Headers,
-	err error, unexpected bool, wantroot FullMsgIDStr) {
+	r io.Reader, unsafe_sid TCoreMsgIDStr, expectgroup string, notrace bool) (
+	info nntpParsedInfo, f *os.File, H mail.HeaderMap,
+	err error, unexpected bool, wantroot TFullMsgIDStr) {
 
 	var mh mail.MessageHead
 	mh, err = mail.ReadHeaders(r, mailib.DefaultHeaderSizeLimit)
@@ -522,7 +517,7 @@ func (sp *PSQLIB) handleIncomingIntoFile(
 var errArticleAlreadyExists = errors.New("article with this Message-ID already exists")
 
 func (sp *PSQLIB) ensureArticleDoesntExist(
-	msgid CoreMsgIDStr) (err error, unexpected bool) {
+	msgid TCoreMsgIDStr) (err error, unexpected bool) {
 
 	// check if we already have it
 	exists, err := sp.nntpCheckArticleExistsOrBanned(msgid)
@@ -543,7 +538,7 @@ func (sp *PSQLIB) ensureArticleDoesntExist(
 }
 
 func (sp *PSQLIB) netnewsCopyArticleToFile(
-	H mail.Headers, B *bufreader.BufReader) (
+	H mail.HeaderMap, B *bufreader.BufReader) (
 	f *os.File, err error, unexpected bool) {
 
 	// TODO file should start with current timestamp/increasing counter

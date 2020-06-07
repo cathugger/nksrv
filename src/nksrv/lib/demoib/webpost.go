@@ -45,7 +45,7 @@ func (IBProviderDemo) IBGetPostParams() (
 	return &form.DefaultParserParams, formFileOpener{}, textFieldFunc
 }
 
-type CoreMsgIDStr = mm.CoreMsgIDStr
+type CoreMsgIDStr = mm.TCoreMsgIDStr
 
 type postedInfo = ib0.IBPostedInfo
 

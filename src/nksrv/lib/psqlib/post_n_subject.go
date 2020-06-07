@@ -2,7 +2,6 @@ package psqlib
 
 import (
 	au "nksrv/lib/asciiutils"
-	. "nksrv/lib/logx"
 )
 
 func isSubjectVoid(x string) bool {

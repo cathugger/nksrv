@@ -17,7 +17,7 @@ func cmdIHave(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	id := FullMsgID(args[0])
+	id := TFullMsgID(args[0])
 	if !ValidMessageID(id) {
 		AbortOnErr(c.w.ResBadMessageID())
 		return true
@@ -40,7 +40,7 @@ func cmdCheck(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	id := FullMsgID(args[0])
+	id := TFullMsgID(args[0])
 	if !ValidMessageID(id) {
 		AbortOnErr(c.w.ResBadMessageID())
 		return true
@@ -70,7 +70,7 @@ func cmdTakeThis(c *ConnState, args [][]byte, rest []byte) bool {
 		return true
 	}
 
-	id := FullMsgID(args[0])
+	id := TFullMsgID(args[0])
 	if !ValidMessageID(id) {
 		AbortOnErr(c.w.ResBadMessageID())
 		return true

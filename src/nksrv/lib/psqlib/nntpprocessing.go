@@ -12,11 +12,11 @@ import (
 	"nksrv/lib/mail"
 )
 
-func (ctx *nntpPostCtx) netnewsSubmitFullArticle(r io.Reader) {
+func (ctx *postNNTPContext) netnewsSubmitFullArticle(r io.Reader) {
 
 	mh, err := mail.SkipHeaders(r)
 	if err != nil {
-		sp.log.LogPrintf(WARN,
+		ctx.sp.log.LogPrintf(WARN,
 			"netnewsSubmitFullArticle: failed skipping headers: %v", err)
 		return
 	}
@@ -25,14 +25,14 @@ func (ctx *nntpPostCtx) netnewsSubmitFullArticle(r io.Reader) {
 	err, unexpected := ctx.netnewsSubmitArticle(mh.B)
 	if err != nil {
 		if !unexpected {
-			sp.log.LogPrintf(WARN, "netnewsSubmitArticle: %v", err)
+			ctx.sp.log.LogPrintf(WARN, "netnewsSubmitArticle: %v", err)
 		} else {
-			sp.log.LogPrintf(ERROR, "netnewsSubmitArticle: %v", err)
+			ctx.sp.log.LogPrintf(ERROR, "netnewsSubmitArticle: %v", err)
 		}
 	}
 }
 
-func (ctx *nntpPostCtx) netnewsSubmitArticle(
+func (ctx *postNNTPContext) netnewsSubmitArticle(
 	br io.Reader) (err error, unexpected bool) {
 
 	defer func() {
@@ -50,9 +50,9 @@ func (ctx *nntpPostCtx) netnewsSubmitArticle(
 	// otherwise deadlock is v possible
 	var gstmt *sql.Stmt
 	if !info.isReply {
-		gstmt, err = sp.getNTStmt(len(pi.FI))
+		ctx.gstmt, err = ctx.sp.getNTStmt(len(ctx.pi.FI))
 	} else {
-		gstmt, err = sp.getNPStmt(npTuple{len(pi.FI), pi.MI.Sage})
+		ctx.gstmt, err = ctx.sp.getNPStmt(npTuple{len(ctx.pi.FI), pi.MI.Sage})
 	}
 	if err != nil {
 		unexpected = true
@@ -60,7 +60,7 @@ func (ctx *nntpPostCtx) netnewsSubmitArticle(
 	}
 
 	// start transaction
-	tx, err := sp.db.DB.Begin()
+	tx, err := ctx.sp.db.DB.Begin()
 	if err != nil {
 		err = sp.sqlError("nntp tx begin", err)
 		unexpected = true
@@ -68,19 +68,19 @@ func (ctx *nntpPostCtx) netnewsSubmitArticle(
 	}
 	defer func() {
 		if err != nil {
-			sp.log.LogPrintf(DEBUG, "nntppost rollback start")
+			ctx.sp.log.LogPrintf(DEBUG, "nntppost rollback start")
 			_ = tx.Rollback()
-			sp.log.LogPrintf(DEBUG, "nntppost rollback done")
+			ctx.sp.log.LogPrintf(DEBUG, "nntppost rollback done")
 		}
 	}()
 
-	err = sp.makeDelTables(tx)
+	err = ctx.sp.makeDelTables(tx)
 	if err != nil {
 		unexpected = true
 		return
 	}
 
-	isctlgrp := info.Newsgroup == "ctl"
+	isctlgrp := ctx.info.Newsgroup == "ctl"
 
 	var modid uint64
 	var hascap bool
@@ -88,16 +88,16 @@ func (ctx *nntpPostCtx) netnewsSubmitArticle(
 
 	if isctlgrp && pubkeystr != "" {
 
-		sp.log.LogPrintf(DEBUG, "REGMOD %s start", pubkeystr)
+		ctx.sp.log.LogPrintf(DEBUG, "REGMOD %s start", ctx.pubkeystr)
 
 		modid, hascap, modCC, err =
-			sp.registeredMod(tx, pubkeystr)
+			ctx.sp.registeredMod(tx, ctx.pubkeystr)
 		if err != nil {
 			unexpected = true
 			return
 		}
 
-		sp.log.LogPrintf(DEBUG, "REGMOD %s done", pubkeystr)
+		sp.log.LogPrintf(DEBUG, "REGMOD %s done", ctx.pubkeystr)
 	}
 
 	var gpid, bpid postID
@@ -128,7 +128,7 @@ func (ctx *nntpPostCtx) netnewsSubmitArticle(
 	// execute mod cmd
 	if hascap {
 
-		var cref CoreMsgIDStr
+		var cref TCoreMsgIDStr
 		if info.FRef != "" {
 			cref = cutMsgID(info.FRef)
 		}

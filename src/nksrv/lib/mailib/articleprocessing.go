@@ -363,12 +363,12 @@ func (ctx pmactx) processMessageAttachment() (
 		fi.ThumbAttrib.Width = uint32(tres.Width)
 		fi.ThumbAttrib.Height = uint32(tres.Height)
 
-		ctx.thumbinfos = append(ctx.thumbinfos, ThumbInfo{
+		ctx.thumbinfos = append(ctx.thumbinfos, TThumbInfo{
 			FullTmpName: tres.CF.FullTmpName,
 			RelDestName: ctx.thmexec.RelDestName(hashname, tres.CF.Suffix),
 		})
 		for _, ce := range tres.CE {
-			ctx.thumbinfos = append(ctx.thumbinfos, ThumbInfo{
+			ctx.thumbinfos = append(ctx.thumbinfos, TThumbInfo{
 				FullTmpName: ce.FullTmpName,
 				RelDestName: ctx.thmexec.RelDestName(hashname, ce.Suffix),
 			})
@@ -398,7 +398,7 @@ type dmbctx struct {
 	cfg          *MailProcessorConfig
 	src          *fstore.FStore
 	thmexec      thumbnailer.ThumbExec
-	thumbinfos   []ThumbInfo
+	thumbinfos   []TThumbInfo
 	tmpfilenames []string
 }
 
@@ -422,7 +422,7 @@ func (cfg *MailProcessorConfig) DevourMessageBody(
 	src *fstore.FStore, thmexec thumbnailer.ThumbExec,
 	ZH mail.HeaderMap, zct_t string, zct_par map[string]string, eatinner bool,
 	zr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thumbinfos []ThumbInfo,
+	pi PostInfo, tmpfilenames []string, thumbinfos []TThumbInfo,
 	IH mail.HeaderMap, zerr error) {
 
 	ctx := dmbctx{
@@ -865,7 +865,7 @@ func DevourMessageBody(
 	src *fstore.FStore, thm thumbnailer.ThumbExec,
 	XH mail.HeaderMap, xct_t string, xct_par map[string]string, eatinner bool,
 	xr io.Reader, oiw io.Writer) (
-	pi PostInfo, tmpfilenames []string, thmis []ThumbInfo,
+	pi PostInfo, tmpfilenames []string, thmis []TThumbInfo,
 	IH mail.HeaderMap, err error) {
 
 	return DefaultMailProcessorConfig.DevourMessageBody(

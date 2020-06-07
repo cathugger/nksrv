@@ -36,10 +36,10 @@ type TestSrv struct {
 type (
 	Responder         = nntp.Responder
 	AbstractResponder = nntp.AbstractResponder
-	FullMsgID         = nntp.FullMsgID
-	CoreMsgID         = nntp.CoreMsgID
-	FullMsgIDStr      = nntp.FullMsgIDStr
-	CoreMsgIDStr      = nntp.CoreMsgIDStr
+	FullMsgID         = nntp.TFullMsgID
+	CoreMsgID         = nntp.TCoreMsgID
+	FullMsgIDStr      = nntp.TFullMsgIDStr
+	CoreMsgIDStr      = nntp.TCoreMsgIDStr
 	ConnState         = nntp.ConnState
 )
 

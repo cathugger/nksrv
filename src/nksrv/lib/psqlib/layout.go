@@ -78,8 +78,8 @@ func tohex(b []byte) string {
 
 func (sp *PSQLIB) fillWebPostDetails(
 	i mailib.PostInfo, frm form.Form, board string,
-	ref FullMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
-	_ mailib.PostInfo, fmsgids FullMsgIDStr, mfn, pubkeystr string, err error) {
+	ref TFullMsgIDStr, inreplyto []string, innermsgid bool, tu int64, signkeyseed []byte) (
+	_ mailib.PostInfo, fmsgids TFullMsgIDStr, mfn, pubkeystr string, err error) {
 
 	i = sp.fillWebPostInner(i, board, ref, inreplyto)
 
@@ -220,7 +220,7 @@ func (sp *PSQLIB) fillWebPostDetails(
 
 func (sp *PSQLIB) fillWebPostInner(
 	i mailib.PostInfo, board string,
-	ref FullMsgIDStr, inreplyto []string) mailib.PostInfo {
+	ref TFullMsgIDStr, inreplyto []string) mailib.PostInfo {
 
 	hastext := len(i.MI.Message) != 0
 	text8bit := !au.Is7BitString(i.MI.Message)
@@ -229,7 +229,7 @@ func (sp *PSQLIB) fillWebPostInner(
 		panic("header should be nil at this point")
 	}
 
-	i.H = make(mail.Headers)
+	i.H = make(mail.HeaderMap)
 
 	// we don't really need to store Message-ID there
 
@@ -345,7 +345,7 @@ func (sp *PSQLIB) fillWebPostInner(
 		xparts[x].ContentType =
 			attachmentConentType(
 				i.FI[a].ContentType, i.FI[a].Original)
-		xparts[x].Headers = mail.Headers{
+		xparts[x].Headers = mail.HeaderMap{
 			"Content-Disposition": mail.OneHeaderVal(
 				attachmentDisposition(i.FI[a].Original)),
 		}

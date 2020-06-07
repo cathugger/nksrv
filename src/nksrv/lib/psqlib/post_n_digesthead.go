@@ -7,7 +7,6 @@ import (
 
 	au "nksrv/lib/asciiutils"
 	"nksrv/lib/date"
-	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/mailib"
 	"nksrv/lib/nntp"
@@ -15,10 +14,10 @@ import (
 
 // extracts info from main message headers into structure
 func (sp *PSQLIB) nntpDigestTransferHead(
-	H mail.Headers, unsafe_sid CoreMsgIDStr, expectgroup string,
+	H mail.HeaderMap, unsafe_sid TCoreMsgIDStr, expectgroup string,
 	post, notrace bool) (
 	info nntpParsedInfo, err error, unexpected bool,
-	wantroot FullMsgIDStr) {
+	wantroot TFullMsgIDStr) {
 
 	var restrictions []headerRestriction
 	if !post {
@@ -46,14 +45,15 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	mailib.CleanContentTypeAndTransferEncoding(H)
 
 	// Message-ID validation
-	hmsgids := H["Message-ID"]
-	if len(hmsgids) != 0 {
+	hmsgid := H.GetOneOrNone("Message-ID")
+
+	if hmsgid != "" {
 
 		// this should be done at parsing time already
 		// yes we modify header there
 		// hmsgids[0].V = au.TrimWSString(hmsgids[0].V)
 
-		hid := FullMsgIDStr(hmsgids[0].V)
+		hid := TFullMsgIDStr(hmsgid)
 
 		if !validMsgID(hid) {
 			err = fmt.Errorf("invalid article Message-ID %q", hid)
@@ -77,7 +77,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 		// just make it on our own
 		fmsgids := fmt.Sprintf("<%s>", unsafe_sid)
 		H["Message-ID"] = mail.OneHeaderVal(fmsgids)
-		info.FullMsgIDStr = FullMsgIDStr(fmsgids)
+		info.FullMsgIDStr = TFullMsgIDStr(fmsgids)
 	} else if !post {
 		// no known Message-ID and not POST, error out
 		err = errors.New("missing Message-ID")

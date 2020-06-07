@@ -57,6 +57,10 @@ func (p APIProxy) IBGetThread(tp *ib0.IBThreadPage, b string, t string) (error, 
 	return p.call("/boards/"+b+"/threads/"+t, tp)
 }
 
+func (p APIProxy) IBGetOverboardCatalog(ocp *ib0.IBOverboardCatalog) (error, int) {
+	return p.call("/overboard/catalog", ocp)
+}
+
 func (p APIProxy) IBGetThreadCatalog(tcp *ib0.IBThreadCatalog, b string) (error, int) {
 	return p.call("/boards/"+b+"/catalog", tcp)
 }

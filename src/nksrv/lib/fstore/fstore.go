@@ -88,7 +88,7 @@ func OpenFStore(cfg Config) (s FStore, err error) {
 }
 
 // Main returns main directory with slash if needed.
-func (fs FStore) Main() string {
+func (fs *FStore) Main() string {
 	return fs.rootdir
 }
 

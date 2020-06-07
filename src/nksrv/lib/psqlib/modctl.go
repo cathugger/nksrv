@@ -15,7 +15,7 @@ import (
 
 func (sp *PSQLIB) modCmdDelete(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	pi mailib.PostInfo, selfid, ref CoreMsgIDStr,
+	pi mailib.PostInfo, selfid, ref TCoreMsgIDStr,
 	cmd string, args []string,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
@@ -25,7 +25,7 @@ func (sp *PSQLIB) modCmdDelete(
 		return
 	}
 
-	fmsgids := FullMsgIDStr(args[0])
+	fmsgids := TFullMsgIDStr(args[0])
 	if !mm.ValidMessageIDStr(fmsgids) {
 		return
 	}
@@ -62,7 +62,7 @@ func (sp *PSQLIB) execModCmd(
 	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
 	modid uint64, modCC ModCombinedCaps,
 	pi mailib.PostInfo, filenames []string,
-	selfid, ref CoreMsgIDStr,
+	selfid, ref TCoreMsgIDStr,
 	_in_delmodids delModIDState) (
 	out_delmodids delModIDState,
 	err error, inputerr bool) {
@@ -230,7 +230,7 @@ requery:
 		for i := range posts {
 			// prepare postinfo good enough for execModCmd
 			pi := mailib.PostInfo{
-				MessageID: CoreMsgIDStr(posts[i].msgid),
+				MessageID: TCoreMsgIDStr(posts[i].msgid),
 				Date:      posts[i].date_sent,
 				MI: mailib.MessageInfo{
 					Title:   posts[i].title,
@@ -252,7 +252,7 @@ requery:
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
 				modid, modCC,
 				pi, posts[i].files, pi.MessageID,
-				CoreMsgIDStr(posts[i].ref), delmodids)
+				TCoreMsgIDStr(posts[i].ref), delmodids)
 
 			if err != nil {
 

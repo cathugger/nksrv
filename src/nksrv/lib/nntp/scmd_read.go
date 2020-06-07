@@ -46,8 +46,8 @@ func commonArticleHandler(c *ConnState, kind int, args [][]byte) {
 	if len(args) > 0 {
 		id := args[0]
 
-		if ValidMessageID(FullMsgID(id)) {
-			mid := FullMsgID(id)
+		if ValidMessageID(TFullMsgID(id)) {
+			mid := TFullMsgID(id)
 			if ReservedMessageID(mid) || !setA[kind].byMsgID(c, CutMessageID(mid)) {
 				AbortOnErr(c.w.ResNoArticleWithThatMsgID())
 			}
@@ -250,12 +250,12 @@ func commonCmdOver(c *ConnState, args [][]byte, over bool) {
 	if len(args) > 0 {
 		id := args[0]
 
-		if ValidMessageID(FullMsgID(id)) {
+		if ValidMessageID(TFullMsgID(id)) {
 			if !c.prov.SupportsOverByMsgID() {
 				AbortOnErr(c.w.PrintfLine("503 OVER MSGID unimplemented"))
 				return
 			}
-			mid := FullMsgID(id)
+			mid := TFullMsgID(id)
 			if ReservedMessageID(mid) || !c.prov.GetOverByMsgID(c.w, c, CutMessageID(mid)) {
 				AbortOnErr(c.w.ResNoArticleWithThatMsgID())
 			}
@@ -316,8 +316,8 @@ func commonCmdHdr(c *ConnState, args [][]byte, hdr bool) {
 	if len(args) > 1 {
 		id := args[1]
 
-		if ValidMessageID(FullMsgID(id)) {
-			mid := FullMsgID(id)
+		if ValidMessageID(TFullMsgID(id)) {
+			mid := TFullMsgID(id)
 			ok := false
 			if !ReservedMessageID(mid) {
 				if hdr {

@@ -282,7 +282,7 @@ type savephdata struct {
 }
 
 func (sp *PSQLIB) checkArticleForPush(
-	cmsgids CoreMsgIDStr) (i articlecheckinfo, e error) {
+	cmsgids TCoreMsgIDStr) (i articlecheckinfo, e error) {
 
 	st := sp.st_prep[st_mod_check_article_for_push]
 

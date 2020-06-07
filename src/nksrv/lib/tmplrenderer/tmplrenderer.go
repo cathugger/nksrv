@@ -363,21 +363,21 @@ func (tr *TmplRenderer) configMessage(cfg TmplRendererCfg) error {
 		tr.m.NonFinalNewline = []byte(mtoml.Newline)
 	}
 
-	t = template.New("pre_reference").Funcs(funcs)
+	t = template.New("pre_reference").Funcs(static_funcs)
 	tr.m.PreRefTmpl, err = t.Parse(mtoml.PreReference)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v",
 			mtoml.PreReference, err)
 	}
 
-	t = template.New("post_reference").Funcs(funcs)
+	t = template.New("post_reference").Funcs(static_funcs)
 	tr.m.PostRefTmpl, err = t.Parse(mtoml.PostReference)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v",
 			mtoml.PostReference, err)
 	}
 
-	t = template.New("truncation_line").Funcs(funcs)
+	t = template.New("truncation_line").Funcs(static_funcs)
 	tr.m.TruncationLineTmpl, err = t.Parse(mtoml.TruncationLine)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %q: %v",

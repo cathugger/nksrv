@@ -86,11 +86,22 @@ func OneHeaderVal(v string) HeaderMapVals {
 
 // case-sensitive
 func (h HeaderMap) GetFirst(x string) string {
-	if s, ok := h[x]; ok {
-		// assumption: will always have at least one value
+	if s := h[x]; len(s) != 0 {
 		return s[0].V
 	}
 	return ""
+}
+
+// case-sensitive, will die if it sees more than one
+func (h HeaderMap) GetOneOrNone(x string) string {
+	s := h[x]
+	if len(s) == 1 {
+		return s[0].V
+	}
+	if len(s) == 0 {
+		return ""
+	}
+	panic("GetOneOrNone: more than one header found")
 }
 
 // case-insensitive lookup

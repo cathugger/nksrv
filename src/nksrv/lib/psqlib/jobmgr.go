@@ -206,7 +206,7 @@ requery:
 		for i := range posts {
 			// prepare postinfo good enough for execModCmd
 			pi := mailib.PostInfo{
-				MessageID: CoreMsgIDStr(posts[i].msgid),
+				MessageID: TCoreMsgIDStr(posts[i].msgid),
 				Date:      posts[i].date_sent,
 				MI: mailib.MessageInfo{
 					Title:   posts[i].title,
@@ -228,7 +228,7 @@ requery:
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
 				mod_id, mcc,
 				pi, posts[i].files, pi.MessageID,
-				CoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
+				TCoreMsgIDStr(posts[i].ref), out_delmsgids, delmodids)
 
 			if err != nil {
 

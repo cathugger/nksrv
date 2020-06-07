@@ -1,9 +1,5 @@
 package psqlib
 
-import (
-	. "nksrv/lib/logx"
-)
-
 type headerRestriction struct {
 	h string // header
 	o bool   // optional (allow absence?)

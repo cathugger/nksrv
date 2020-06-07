@@ -15,21 +15,6 @@ import (
 	ib0 "nksrv/lib/webib0"
 )
 
-func f_list(args ...interface{}) []interface{} {
-	return args
-}
-
-func f_dict(args ...interface{}) (m map[interface{}]interface{}, _ error) {
-	if len(args)%2 != 0 {
-		return nil, errors.New("odd number of arguments to map")
-	}
-	m = make(map[interface{}]interface{})
-	for i := 0; i+1 < len(args); i += 2 {
-		m[args[i]] = args[i+1]
-	}
-	return m, nil
-}
-
 var static_funcs = map[string]interface{}{
 	// basics which should be there by default but aren't
 	"list": f_list,
@@ -115,6 +100,21 @@ var static_funcs = map[string]interface{}{
 	"unitrip":   srndtrip.MakeUnicodeTrip,
 	"fmtmsg":    fmtmsg,
 	"fmtmsgcat": fmtmsgcat,
+}
+
+func f_list(args ...interface{}) []interface{} {
+	return args
+}
+
+func f_dict(args ...interface{}) (m map[interface{}]interface{}, _ error) {
+	if len(args)%2 != 0 {
+		return nil, errors.New("odd number of arguments to map")
+	}
+	m = make(map[interface{}]interface{})
+	for i := 0; i+1 < len(args); i += 2 {
+		m[args[i]] = args[i+1]
+	}
+	return m, nil
 }
 
 func urlPath(p string) string {

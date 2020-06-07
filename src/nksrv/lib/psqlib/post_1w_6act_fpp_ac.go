@@ -3,11 +3,9 @@ package psqlib
 import (
 	"os"
 	"path/filepath"
-
-	. "nksrv/lib/logx"
 )
 
-func (ctx *wp_context) wp_fpp_ac_files() (err error) {
+func (ctx *postWebContext) wp_fpp_ac_files() (err error) {
 
 	// XXX we could replace this with RemoveAll I guess...
 
@@ -16,7 +14,7 @@ func (ctx *wp_context) wp_fpp_ac_files() (err error) {
 		return
 	}
 
-	for x := range pInfo.FI {
+	for x := range ctx.pInfo.FI {
 
 		from := filepath.Join(ctx.src_pending, ctx.pInfo.FI[x].ID)
 
@@ -34,19 +32,16 @@ func (ctx *wp_context) wp_fpp_ac_files() (err error) {
 	return
 }
 
-func (ctx *wp_context) wp_fpp_ac_thumbs() (err error) {
-
-	// XXX we could replace this with RemoveAll I guess...
+func (ctx *postWebContext) wp_fpp_ac_thumbs() (err error) {
 
 	if ctx.thm_pending == "" {
 		// maybe it had no thumbs, skip rest then
 		return nil
 	}
 
-	for x := range ctx.thumbMoves {
-
+	for x := range ctx.thumbInfos {
 		from := filepath.Join(
-			ctx.thm_pending, ctx.thumbMoves[x].destname)
+			ctx.thm_pending, ctx.thumbInfos[x].RelDestName)
 
 		err = os.Remove(from)
 		if err != nil {
@@ -63,7 +58,7 @@ func (ctx *wp_context) wp_fpp_ac_thumbs() (err error) {
 }
 
 // after commit
-func (ctx *wp_context) wp_act_fpp_ac() (err error) {
+func (ctx *postWebContext) wp_act_fpp_ac() (err error) {
 
 	yct := ctx.traceStart("wp_act_fpp_ac")
 	defer yct.Done()

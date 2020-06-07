@@ -240,7 +240,7 @@ func (s *PullerDB) LoadTempGroup() (
 }
 
 func (s *PullerDB) IsArticleWanted(
-	fmsgid FullMsgIDStr, ingroup string) (
+	fmsgid TFullMsgIDStr, ingroup string) (
 	wanted bool, wdata interface{}, err error) {
 
 	cmsgid := cutMsgID(fmsgid)
@@ -275,20 +275,16 @@ func isGlobalCtl(group string) bool {
 }
 
 func (s *PullerDB) DoesReferenceExist(
-	ref FullMsgIDStr) (exists bool, err error) {
+	ref TFullMsgIDStr) (exists bool, err error) {
 
 	exists, err = s.sp.nntpCheckArticleValid(cutMsgID(ref))
 	return
 }
 
-var (
-	nntpPullerDir = "_sin"
-)
-
 func (s *PullerDB) ReadArticle(
 	r io.Reader,
-	msgid CoreMsgIDStr, ingroup string, wdata interface{}) (
-	err error, unexpected bool, wantroot FullMsgIDStr) {
+	msgid TCoreMsgIDStr, ingroup string, wdata interface{}) (
+	err error, unexpected bool, wantroot TFullMsgIDStr) {
 
 	info, newname, H, err, unexpected, wantroot :=
 		s.sp.handleIncoming(r, msgid, ingroup, nntpPullerDir, s.notrace)

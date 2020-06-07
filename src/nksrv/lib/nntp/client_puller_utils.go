@@ -121,7 +121,7 @@ func parseListActiveLine(
 
 func (c *NNTPPuller) getOverLineInfo(
 	dr *bufreader.DotReader) (
-	id uint64, msgid, ref FullMsgID, err error, fatal bool) {
+	id uint64, msgid, ref TFullMsgID, err error, fatal bool) {
 
 	i := 0
 	nomore := false
@@ -230,7 +230,7 @@ func (c *NNTPPuller) getOverLineInfo(
 		return
 	}
 	smsgid = au.TrimWSBytes(smsgid)
-	msgid = FullMsgID(smsgid)
+	msgid = TFullMsgID(smsgid)
 	if !ValidMessageID(msgid) {
 		err = fmt.Errorf("invalid msg-id %q", smsgid)
 		return
@@ -240,7 +240,7 @@ func (c *NNTPPuller) getOverLineInfo(
 	if err != nil {
 		return
 	}
-	ref = FullMsgID(unsafeStrToBytes(
+	ref = TFullMsgID(unsafeStrToBytes(
 		string(mail.ExtractFirstValidReference(unsafeBytesToStr(xref)))))
 
 	return
@@ -248,7 +248,7 @@ func (c *NNTPPuller) getOverLineInfo(
 
 func (c *NNTPPuller) eatHdrMsgIDLine(
 	dr *bufreader.DotReader) (
-	id uint64, msgid FullMsgID, err error) {
+	id uint64, msgid TFullMsgID, err error) {
 
 	line, err := c.readDotLine(dr)
 	if err != nil {
@@ -290,7 +290,7 @@ func (c *NNTPPuller) eatHdrMsgIDLine(
 	skipWS()
 	s = i
 	skipNonWS()
-	msgid = FullMsgID(line[s:i])
+	msgid = TFullMsgID(line[s:i])
 	if !ValidMessageID(msgid) {
 		err = fmt.Errorf("invalid msg-id %q", line[s:i])
 		return

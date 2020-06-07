@@ -1,29 +1,48 @@
 package psqlib
 
 import (
+	"fmt"
+	fu "nksrv/lib/fileutil"
+	. "nksrv/lib/logx"
 	"os"
 
 	"golang.org/x/xerrors"
-
-	fu "nksrv/lib/fileutil"
-	. "nksrv/lib/logx"
 )
 
-func (ctx *wp_context) wp_syncdir(dir string) {
+type traceContext struct {
+	ctx   *postCommonContext
+	label string
+	info  string
+}
+
+func (ctx *postCommonContext) traceStart(f string, args ...interface{}) *traceContext {
+	c := &traceContext{ctx: ctx}
+	c.label = fmt.Sprintf("TRACE %p", c)
+	c.info = fmt.Sprintf(f, args...)
+
+	c.ctx.sp.log.LogPrintf(DEBUG, "%s [START] %s", c.label, c.info)
+	return c
+}
+
+func (c *traceContext) Done() {
+	c.ctx.sp.log.LogPrintf(DEBUG, "%s [ END ] %s", c.label, c.info)
+}
+
+func (ctx *postCommonContext) wp_syncdir(sdir string) {
 	if ctx.sp.noFileSync {
 		return
 	}
 
-	ct := ctx.traceStart("wp_syncdir %q", dir)
+	ct := ctx.traceStart("wp_syncdir %q", sdir)
 	defer ct.Done()
 
 	err := fu.SyncDir(sdir)
 	if err != nil {
-		ctx.log.LogPrintf(WARN, "SyncDir %q fail: %v", dir, err)
+		ctx.log.LogPrintf(WARN, "SyncDir %q fail: %v", sdir, err)
 	}
 }
 
-func (ctx *wp_context) wp_syncfilename(fname string) {
+func (ctx *postCommonContext) wp_syncfilename(fname string) {
 	if ctx.sp.noFileSync {
 		return
 	}
@@ -38,7 +57,7 @@ func (ctx *wp_context) wp_syncfilename(fname string) {
 	}
 }
 
-func (ctx *wp_context) wp_movefile_fast(from, to string) error {
+func (ctx *postCommonContext) wp_movefile_fast(from, to string) error {
 	ct := ctx.traceStart("wp_movefile_fast %q -> %q", from, to)
 	defer ct.Done()
 
@@ -51,7 +70,7 @@ func (ctx *wp_context) wp_movefile_fast(from, to string) error {
 	return nil
 }
 
-func (ctx *wp_context) wp_movefile_or_delet(from, to string) error {
+func (ctx *postCommonContext) wp_movefile_or_delet(from, to string) error {
 	ct := ctx.traceStart("wp_movefile_noclobber %q -> %q", from, to)
 	defer ct.Done()
 

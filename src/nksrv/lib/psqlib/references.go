@@ -527,7 +527,7 @@ type xRefData struct {
 
 func (sp *PSQLIB) findReferences(
 	st *sql.Stmt, off_b boardID, off_b_p postID,
-	pname string, pboard string, msgid CoreMsgIDStr) (
+	pname string, pboard string, msgid TCoreMsgIDStr) (
 	xrefs []xRefData, err error) {
 
 	rows, err := st.Query(off_b, off_b_p, pname, pboard, string(msgid))
@@ -600,7 +600,7 @@ func (sp *PSQLIB) processRefsAfterPost(
 	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
 	prefs []string,
 	b_id boardID, b_t_id, b_p_id postID,
-	postid, newsgroup string, msgid CoreMsgIDStr) (err error) {
+	postid, newsgroup string, msgid TCoreMsgIDStr) (err error) {
 
 	// write our declaration of references
 	xref_wr_st := tx.Stmt(sp.st_prep[st_mod_ref_write])
@@ -633,7 +633,7 @@ func (sp *PSQLIB) processRefsAfterPost(
 }
 
 func (sp *PSQLIB) fixupAffectedXRefsInTx(
-	tx *sql.Tx, p_name, b_name string, msgid CoreMsgIDStr,
+	tx *sql.Tx, p_name, b_name string, msgid TCoreMsgIDStr,
 	xref_up_st *sql.Stmt) (err error) {
 
 	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
