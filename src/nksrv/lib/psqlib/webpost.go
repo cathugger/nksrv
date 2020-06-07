@@ -62,8 +62,8 @@ func webNotFound(err error) error {
 
 func wp_err_cleanup(ctx *postWebContext) {
 	ctx.f.RemoveAll()
-	for _, mov := range ctx.thumbMoves {
-		os.Remove(mov.fulltmpname)
+	for _, mov := range ctx.thumbInfos {
+		os.Remove(mov.FullTmpName)
 	}
 	if ctx.msgfn != "" {
 		os.Remove(ctx.msgfn)

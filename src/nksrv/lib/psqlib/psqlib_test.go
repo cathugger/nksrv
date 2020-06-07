@@ -24,9 +24,9 @@ var cfgAltThm = altthumber.AltThumber(demoib.DemoAltThumber{})
 
 var cfgPSQLIB = Config{
 	NodeName:   "nekochan",
-	SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
-	ThmCfg:     &fstore.Config{"_demo/demoib0/thm"},
-	NNTPFSCfg:  &fstore.Config{"_demo/demoib0/nntp"},
+	SrcCfg:     &fstore.Config{Path: "_demo/demoib0/src", Private: "test"},
+	ThmCfg:     &fstore.Config{Path: "_demo/demoib0/thm", Private: "test"},
+	NNTPFSCfg:  &fstore.Config{Path: "_demo/demoib0/nntp", Private: "test"},
 	AltThumber: &cfgAltThm,
 	TBuilder:   gothm.DefaultConfig,
 	TCfgThread: &thumbnailer.ThumbConfig{

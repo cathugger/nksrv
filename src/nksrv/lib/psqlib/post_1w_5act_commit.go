@@ -98,7 +98,7 @@ func (ctx *postWebContext) wp_insertsql(tx *sql.Tx) (err error) {
 
 	}
 
-	err = sp.processRefsAfterPost(
+	err = ctx.sp.processRefsAfterPost(
 		tx,
 		ctx.srefs, irefs, inreplyto,
 		bid, uint64(tid.Int64), bpid,
@@ -180,7 +180,7 @@ func (ctx *postWebContext) wp_act_commit() (err error) {
 			err = tx.Commit()
 			ct.Done()
 			if err != nil {
-				err = sp.sqlError("webpost tx commit", err)
+				err = ctx.sp.sqlError("webpost tx commit", err)
 				return
 			}
 		}()

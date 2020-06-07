@@ -298,7 +298,7 @@ func (sp *PSQLIB) insertNewThread(
 			args[x+0] = pInfo.FI[i].Type.String()
 			args[x+1] = pInfo.FI[i].Size
 			args[x+2] = pInfo.FI[i].ID
-			args[x+3] = pInfo.FI[i].Thumb
+			args[x+3] = pInfo.FI[i].ThumbField
 			args[x+4] = pInfo.FI[i].Original
 			args[x+5] = FFjson
 			args[x+6] = FTjson
