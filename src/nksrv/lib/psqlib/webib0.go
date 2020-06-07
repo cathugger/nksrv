@@ -64,7 +64,7 @@ func (sp *PSQLIB) ensureThumb(
 	return t
 }
 
-func webCleanHeaders(h mail.Headers) {
+func webCleanHeaders(h mail.HeaderMap) {
 	delete(h, "Message-ID")
 	delete(h, "MIME-Version")
 	delete(h, "Content-Type")

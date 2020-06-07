@@ -23,7 +23,7 @@ type formFileOpener struct {
 var _ form.FileOpener = formFileOpener{}
 
 func (o formFileOpener) OpenFile() (*os.File, error) {
-	return o.FStore.TempFile("webpost-", "")
+	return o.FStore.NewFile("tmp", "webpost-", "")
 }
 
 func allowedFileName(fname string, slimits *submissionLimits, reply bool) bool {
