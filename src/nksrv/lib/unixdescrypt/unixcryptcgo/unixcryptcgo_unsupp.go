@@ -1,4 +1,4 @@
-// +build !darwin,!dragonfly,!freebsd,!linux,!netbsd,!hurd,!solaris
+// +build !darwin,!dragonfly,!freebsd,!linux,!hurd,!netbsd,!solaris
 
 package unixcryptcgo
 
