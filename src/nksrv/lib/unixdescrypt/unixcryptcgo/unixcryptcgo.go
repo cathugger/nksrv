@@ -1,5 +1,5 @@
 // openbsd doesn't support crypt in des mode anymore
-// +build darwin dragonfly freebsd linux netbsd solaris
+// +build darwin dragonfly freebsd linux hurd netbsd solaris
 
 package unixcryptcgo
 
@@ -15,14 +15,15 @@ import (
 // #include <unistd.h>
 import "C"
 
-var crypt_m sync.Mutex
+var cryptMu sync.Mutex
 
+// Crypt invokes POSIX' crypt(3)
 func Crypt(key, salt string) string {
 	ckey := C.CString(key)
 	csalt := C.CString(salt)
-	crypt_m.Lock()
+	cryptMu.Lock()
 	out := C.GoString(C.crypt(ckey, csalt))
-	crypt_m.Unlock()
+	cryptMu.Unlock()
 	C.free(unsafe.Pointer(ckey))
 	C.free(unsafe.Pointer(csalt))
 	return out
