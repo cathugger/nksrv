@@ -21,7 +21,7 @@ type ThumbConfig struct {
 	Grayscale bool   // gray filter for generated thumbnails
 	MakeWebP  bool   // experimental: make webp thumbnail too if possible
 	MakeAVIF  bool   // experimental: make avif thumbnail too if possible
-	MakeJXL   bool   // experimental: make jpeg-xl thumbnail too if possible
+	//MakeJXL   bool   // experimental: make jpeg-xl thumbnail too if possible
 }
 
 // plan: name + config
