@@ -16,7 +16,7 @@ func (sp *PSQLIB) maybeTxStmt(tx *sql.Tx, stmt int) (r *sql.Stmt) {
 	return
 }
 
-func (sp *PSQLIB) getPrePostInfo(
+func (ctx *postWebContext) getPrePostInfo(
 	tx *sql.Tx, btr wp_btr, postOpts PostOptions) (
 	rInfo postedInfo, dbi wp_dbinfo, err error) {
 
@@ -29,7 +29,7 @@ func (sp *PSQLIB) getPrePostInfo(
 
 		// new thread
 
-		err = sp.maybeTxStmt(tx, st_web_prepost_newthread).
+		err = ctx.sp.maybeTxStmt(tx, st_web_prepost_newthread).
 			QueryRow(btr.board).
 			Scan(&dbi.bid, &jbPL, &jbXL)
 		if err != nil {
@@ -37,13 +37,13 @@ func (sp *PSQLIB) getPrePostInfo(
 				err = webNotFound(errNoSuchBoard)
 				return
 			}
-			err = sp.sqlError("board row query scan", err)
+			err = ctx.sp.sqlError("board row query scan", err)
 			return
 		}
 
-		sp.log.LogPrintf(DEBUG,
-			"got bid(%d) post_limits(%q) newthread_limits(%q)",
-			bid, jbPL, jbXL)
+		ctx.sp.log.LogPrintf(
+			DEBUG, "got bid(%d) post_limits(%q) newthread_limits(%q)",
+			ctx.bid, jbPL, jbXL)
 
 		rInfo.Board = btr.board
 

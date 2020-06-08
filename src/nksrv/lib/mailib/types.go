@@ -2,13 +2,13 @@ package mailib
 
 import "nksrv/lib/minimail"
 
-type FullMsgID = minimail.FullMsgID // msgid with < and >
-type CoreMsgID = minimail.CoreMsgID // msgid without < and >
-type FullMsgIDStr = minimail.FullMsgIDStr
-type CoreMsgIDStr = minimail.CoreMsgIDStr
+type TFullMsgID = minimail.TFullMsgID // msgid with < and >
+type TCoreMsgID = minimail.TCoreMsgID // msgid without < and >
+type TFullMsgIDStr = minimail.TFullMsgIDStr
+type TCoreMsgIDStr = minimail.TCoreMsgIDStr
 
 type ParsedMessageInfo struct {
-	FullMsgIDStr FullMsgIDStr
+	FullMsgIDStr TFullMsgIDStr
 	PostedDate   int64
 	Newsgroup    string
 }
