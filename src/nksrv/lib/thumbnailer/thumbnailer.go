@@ -8,7 +8,7 @@ import (
 	. "nksrv/lib/logx"
 )
 
-// config
+// config shared across thumbnailers
 type ThumbConfig struct {
 	// thumbnail box
 	Width  int
@@ -18,7 +18,10 @@ type ThumbConfig struct {
 	AudioHeight int
 	// rest
 	Color     string // background color if needs to be hardcoded
-	Grayscale bool   // makes images gray
+	Grayscale bool   // gray filter for generated thumbnails
+	MakeWebP  bool   // experimental: make webp thumbnail too if possible
+	MakeAVIF  bool   // experimental: make avif thumbnail too if possible
+	MakeJXL   bool   // experimental: make jpeg-xl thumbnail too if possible
 }
 
 // plan: name + config
@@ -62,11 +65,12 @@ type ThumbContent struct {
 }
 
 type ThumbResult struct {
-	FI            FileInfo       // info extracted from file
-	Width, Height int            // width and height of generated thumb(s)
-	DBSuffix      string         // suffix to be stored in database; may be template
-	CF            ThumbContent   // first
-	CE            []ThumbContent // extra, if any
+	FI            FileInfo // info extracted from file
+	Width, Height int      // width and height of generated thumb(s)
+	DBSuffix      string   // suffix to be stored in database; may be template
+	// content infos
+	CF ThumbContent   // first
+	CE []ThumbContent // extra, if any
 }
 
 type ThumbnailerBuilder interface {
