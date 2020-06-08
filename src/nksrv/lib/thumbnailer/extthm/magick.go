@@ -182,10 +182,6 @@ func (b *magickBackend) doThumbnailing(
 	// correct would be first converting to linear RGB, but that's bad for perf
 	args = append(args, "-thumbnail", fmt.Sprintf("%dx%d>", cfg.Width, cfg.Height))
 	args = append(args, "-auto-orient")
-	if cfg.Color != "" && cfgfmt != "jpeg" && cfgfmt != "bmp" {
-		// tbh this should be always set when doing JPEG thumbnails
-		args = append(args, "-background", cfg.Color, "-flatten")
-	}
 	// TODO use profile path?
 	// convert to sRGB colorspace if current is different, and strip profiles and other stuff to make smaller
 	if !useGM {
@@ -194,6 +190,10 @@ func (b *magickBackend) doThumbnailing(
 		// gm's sRGB is super weird one so DON'T
 		// XXX following would kill non-sRGB profiles
 		//args = append(args, "-strip")
+	}
+	// if source format could've had alpha, ensure we properly flatten because JPEG can't do alpha
+	if cfg.Color != "" && cfgfmt != "jpeg" && cfgfmt != "bmp" {
+		args = append(args, "-background", cfg.Color, "-flatten")
 	}
 	// TODO make configurable and let unset (IM can estimate from src)
 	args = append(args, "-quality", "92")

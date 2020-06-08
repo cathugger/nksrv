@@ -1,10 +1,11 @@
 package psqlib
 
 import (
-	"nksrv/lib/fstore"
 	"path"
 	"path/filepath"
 	"sync"
+
+	"nksrv/lib/fstore"
 )
 
 func (ctx *postCommonContext) wp_fpp_bc_movensync(

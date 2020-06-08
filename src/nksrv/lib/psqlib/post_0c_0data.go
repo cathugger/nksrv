@@ -2,9 +2,10 @@ package psqlib
 
 import (
 	"database/sql"
+	"sync"
+
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
-	"sync"
 )
 
 type postCommonContext struct {

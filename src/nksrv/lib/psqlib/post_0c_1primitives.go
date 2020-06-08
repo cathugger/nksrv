@@ -2,9 +2,10 @@ package psqlib
 
 import (
 	"fmt"
+	"os"
+
 	fu "nksrv/lib/fileutil"
 	. "nksrv/lib/logx"
-	"os"
 
 	"golang.org/x/xerrors"
 )

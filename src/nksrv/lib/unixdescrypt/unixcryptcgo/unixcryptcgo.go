@@ -1,8 +1,11 @@
+// openbsd doesn't support crypt in des mode anymore
+// +build darwin dragonfly freebsd linux netbsd solaris
+
 package unixcryptcgo
 
 import (
-	"unsafe"
 	"sync"
+	"unsafe"
 )
 
 // #cgo LDFLAGS: -lcrypt
