@@ -1,7 +1,6 @@
 package extthm
 
 import (
-	"errors"
 	"fmt"
 	"image"
 	"os"
@@ -20,7 +19,7 @@ type magickBackend struct {
 	forceJPEGLimit bool
 }
 
-var errMagickOutputMisunderstod = errors.New("convert output not understod")
+//var errMagickOutputMisunderstod = errors.New("convert output not understod")
 
 // XXX
 func (b *magickBackend) init(magickBin string) (err error) {

@@ -280,11 +280,8 @@ foundfmt:
 					gotBadAudio = true
 				}
 			}
-		} else {
-			// idk
-			//err = fmt.Errorf("unknown codec_type: %q", ctype)
-			//return
 		}
+		// don't process other types (yet?)
 	}
 
 	// OK
