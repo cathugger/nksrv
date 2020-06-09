@@ -7,44 +7,44 @@ import (
 )
 
 const (
-	pendingDir          = "pending" // for src & thm
-	nntpIncomingTempDir = "in_tmp"
-	nntpIncomingDir     = "in_got"
-	nntpPullerDir       = "in_pulled"
+	PendingDir          = "pending" // for src & thm
+	NNTPIncomingTempDir = "in_tmp"
+	NNTPIncomingDir     = "in_got"
+	NNTPPullerDir       = "in_pulled"
 )
 
 func (p *PSQLIB) initDirs(cfg Config) (err error) {
-	p.src, err = fstore.OpenFStore(*cfg.SrcCfg)
+	p.Src, err = fstore.OpenFStore(*cfg.SrcCfg)
 	if err != nil {
 		return
 	}
-	err = p.src.DeclareDir("tmp", false)
-	if err != nil {
-		return
-	}
-
-	p.thm, err = fstore.OpenFStore(*cfg.ThmCfg)
-	if err != nil {
-		return
-	}
-	err = p.thm.DeclareDir("tmp", false)
+	err = p.Src.DeclareDir("tmp", false)
 	if err != nil {
 		return
 	}
 
-	p.nntpfs, err = fstore.OpenFStore(*cfg.NNTPFSCfg)
+	p.Thm, err = fstore.OpenFStore(*cfg.ThmCfg)
 	if err != nil {
 		return
 	}
-	err = p.nntpfs.DeclareDir(nntpIncomingTempDir, false)
+	err = p.Thm.DeclareDir("tmp", false)
 	if err != nil {
 		return
 	}
-	err = p.nntpfs.DeclareDir(nntpIncomingDir, true)
+
+	p.NNTPFS, err = fstore.OpenFStore(*cfg.NNTPFSCfg)
 	if err != nil {
 		return
 	}
-	err = p.nntpfs.DeclareDir(nntpPullerDir, true)
+	err = p.NNTPFS.DeclareDir(NNTPIncomingTempDir, false)
+	if err != nil {
+		return
+	}
+	err = p.NNTPFS.DeclareDir(NNTPIncomingDir, true)
+	if err != nil {
+		return
+	}
+	err = p.NNTPFS.DeclareDir(NNTPPullerDir, true)
 	if err != nil {
 		return
 	}

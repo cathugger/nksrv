@@ -1,4 +1,4 @@
-package psqlib
+package pibase
 
 import (
 	"github.com/lib/pq"
@@ -6,13 +6,13 @@ import (
 	"nksrv/lib/psql"
 )
 
-func (s *PSQLIB) sqlError(when string, err error) error {
+func (s *PSQLIB) SQLError(when string, err error) error {
 	if pqerr, _ := err.(*pq.Error); pqerr != nil {
 		switch pqerr.Code {
 		case "40001" /* serialization_failure */ :
-			err = psqlRetriableError{err}
+			err = PSQLRetriableError{err}
 		case "40P01" /* deadlock_detected */ :
-			err = psqlRetriableError{err}
+			err = PSQLRetriableError{err}
 		default:
 			return psql.SQLError(s.log, when, err)
 		}
@@ -21,3 +21,10 @@ func (s *PSQLIB) sqlError(when string, err error) error {
 	}
 	return psql.SQLError(s.log, when, err)
 }
+
+// indicates that psql error is deadlock
+type PSQLRetriableError struct {
+	error
+}
+
+func (x PSQLRetriableError) Unwrap() error { return x.error }

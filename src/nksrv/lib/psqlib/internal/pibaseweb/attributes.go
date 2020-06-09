@@ -2,13 +2,12 @@ package psqlib
 
 import "nksrv/lib/ibattribs"
 
-type boardID = uint32
-
-type postID = uint64
+type TBoardID = uint32
+type TPostID = uint64
 
 // structures
 
-type submissionLimits struct {
+type SubmissionLimits struct {
 	// message stuff
 	MaxTitleLength   uint32 `json:"title_max_size,omitempty"`
 	MaxNameLength    uint32 `json:"name_max_size,omitempty"`
@@ -26,7 +25,7 @@ type submissionLimits struct {
 	ExtDeny      []string `json:"ext_deny,omitempty"`      // blacklist
 }
 
-var defaultReplySubmissionLimits = submissionLimits{
+var DefaultReplySubmissionLimits = SubmissionLimits{
 	MaxTitleLength:   64,
 	MaxNameLength:    64,
 	MaxMessageLength: 8000,
@@ -35,15 +34,15 @@ var defaultReplySubmissionLimits = submissionLimits{
 	FileMaxSizeAll: 8 * 1024 * 1024,
 }
 
-var maxSubmissionLimits = submissionLimits{FileMaxNum: 0x7FffFFff}
+var MaxSubmissionLimits = SubmissionLimits{FileMaxNum: 0x7FffFFff}
 
 // :^)
-var defaultNewThreadSubmissionLimits = func(l submissionLimits) submissionLimits {
+var DefaultNewThreadSubmissionLimits = func(l SubmissionLimits) SubmissionLimits {
 	l.FileMinNum = 1
 	return l
-}(defaultReplySubmissionLimits)
+}(DefaultReplySubmissionLimits)
 
-type threadOptions struct {
+type ThreadOptions struct {
 	///Locked     bool   `json:"locked,omitempty"`     // do not allow non-mod posts? or any posts at all??
 	///PostLimit  uint32 `json:"post_limit,omitempty"` // do not bump after thread has this much posts. is this behavior good?
 	BumpLimit uint32 `json:"bump_limit,omitempty"` // do not bump after thread has this much (non-sage or sage, doesn't matter) posts
@@ -54,10 +53,10 @@ type threadOptions struct {
 	// current stuff won't count files individually and won't count OP
 }
 
-var defaultThreadOptions = threadOptions{
+var DefaultThreadOptions = ThreadOptions{
 	BumpLimit: 300,
 	FileLimit: 150,
 }
 
-var defaultBoardAttributes = ibattribs.DefaultBoardAttribs
-var defaultThumbAttributes = ibattribs.DefaultThumbAttribs
+var DefaultBoardAttributes = ibattribs.DefaultBoardAttribs
+var DefaultThumbAttributes = ibattribs.DefaultThumbAttribs

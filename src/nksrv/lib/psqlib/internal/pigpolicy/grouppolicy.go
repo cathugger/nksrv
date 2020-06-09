@@ -8,20 +8,20 @@ import (
 	"nksrv/lib/nntp"
 )
 
-type newGroupPolicy struct {
+type NewGroupPolicy struct {
 	check      nntp.Wildmat // run thru these wildmat filters
 	permissive bool
 	allowUTF8  bool
 }
 
-func makeNewGroupPolicy(s string) (ngp newGroupPolicy, err error) {
+func MakeNewGroupPolicy(s string) (ngp NewGroupPolicy, err error) {
 	allowall := false
 	if s == "" {
 		// disallow all, nil policy
 		return
 	}
 
-	if !nntp.ValidWildmat(unsafeStrToBytes(s)) {
+	if !nntp.ValidWildmatStr(s) {
 		err = errors.New("invalid wildmat")
 		return
 	}
@@ -47,7 +47,7 @@ func makeNewGroupPolicy(s string) (ngp newGroupPolicy, err error) {
 	s = strings.Join(ss, ",")
 
 	// put it in
-	ngp.check = nntp.CompileWildmat(unsafeStrToBytes(s))
+	ngp.check = nntp.CompileWildmatStr(s)
 	ngp.allowUTF8 = true
 
 	return
@@ -136,7 +136,7 @@ func validFuckyGroup(s string, allowUTF8 bool) bool {
 	return true
 }
 
-func (ngp newGroupPolicy) checkGroup(group string) bool {
+func (ngp NewGroupPolicy) CheckGroup(group string) bool {
 	// NOTE: it is already assumed that s is valid UTF-8 at this point
 	if !ngp.check.CheckString(group) {
 		return false

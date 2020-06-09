@@ -18,57 +18,60 @@ import (
 	"nksrv/lib/psql"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/webcaptcha"
+
+	"nksrv/lib/psqlib/internal/pigpolicy"
 )
 
 type PSQLIB struct {
-	db  psql.PSQL
-	log LogToX
+	// database handle
+	DB psql.PSQL
+	// this psqlib instance logger
+	Log LogToX
+	// file storage stuff
+	Src    fstore.FStore
+	Thm    fstore.FStore
+	NNTPFS fstore.FStore
+	// movers for posting
+	PendingToSrc fstore.Mover
+	PendingToThm fstore.Mover
+	// for caching of generated NetNews articles
+	NNTPCE cacheengine.CacheEngine
+	// thumbnailing things
+	Thumbnailer      thumbnailer.Thumbnailer
+	ThmPlanForThread thumbnailer.ThumbPlan
+	ThmPlanForReply  thumbnailer.ThumbPlan
+	ThmPlanForSage   thumbnailer.ThumbPlan
+	AltThumber       altthumber.AltThumber
+	// HTTP POST form handling
+	FFO               formFileOpener
+	FPP               form.ParserParams
+	TextPostParamFunc func(string) bool
 
-	src    fstore.FStore
-	thm    fstore.FStore
-	nntpfs fstore.FStore
+	Instance           string
+	MaxArticleBodySize int64
+	WebCaptcha         *webcaptcha.WebCaptcha
+	WebFrontendKey     ed25519.PrivateKey
 
-	pending2src fstore.Mover
-	pending2thm fstore.Mover
+	NGPGlobal    pigpolicy.NewGroupPolicy
+	NGPAnyPuller pigpolicy.NewGroupPolicy
+	NGPAnyServer pigpolicy.NewGroupPolicy
 
-	nntpce cacheengine.CacheEngine
-
-	thumbnailer  thumbnailer.Thumbnailer
-	tplan_thread thumbnailer.ThumbPlan
-	tplan_reply  thumbnailer.ThumbPlan
-	tplan_sage   thumbnailer.ThumbPlan
-	altthumb     altthumber.AltThumber
-
-	ffo                formFileOpener
-	fpp                form.ParserParams
-	textPostParamFunc  func(string) bool
-	instance           string
-	maxArticleBodySize int64
-	webcaptcha         *webcaptcha.WebCaptcha
-	webFrontendKey     ed25519.PrivateKey
-
-	ngp_global    newGroupPolicy
-	ngp_anypuller newGroupPolicy
-	ngp_anyserver newGroupPolicy
-
-	st_prep [st_max]*sql.Stmt
+	StPrep [StMax]*sql.Stmt
 
 	// newthread prepared statements and locking
-	ntStmts map[int]*sql.Stmt
-	ntMutex sync.RWMutex
+	NTStmts map[int]*sql.Stmt
+	NTMutex sync.RWMutex
 
 	// newpost prepared statements and locking
-	npStmts map[npTuple]*sql.Stmt
-	npMutex sync.RWMutex
+	NPStmts map[NPTuple]*sql.Stmt
+	NPMutex sync.RWMutex
 
-	puller_nonce int64
+	PullerNonce int64
 
-	noFileSync bool
+	NoFileSync bool
 }
 
-
 // readonly for now
-
 
 func (sp *PSQLIB) Prepare() (err error) {
 	err = sp.prepareStatements()

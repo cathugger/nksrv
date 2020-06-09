@@ -7,7 +7,6 @@ import (
 	au "nksrv/lib/asciiutils"
 	"nksrv/lib/emime"
 	fu "nksrv/lib/fileutil"
-	"nksrv/lib/fstore"
 	ht "nksrv/lib/hashtools"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
@@ -15,16 +14,6 @@ import (
 )
 
 var FileFields = ib0.IBWebFormFileFields
-
-type formFileOpener struct {
-	*fstore.FStore
-}
-
-var _ form.FileOpener = formFileOpener{}
-
-func (o formFileOpener) OpenFile() (*os.File, error) {
-	return o.FStore.NewFile("tmp", "webpost-", "")
-}
 
 func allowedFileName(fname string, slimits *submissionLimits, reply bool) bool {
 	if strings.IndexByte(fname, '.') < 0 {

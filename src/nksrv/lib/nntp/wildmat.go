@@ -49,6 +49,8 @@ func ValidWildmat(x []byte) bool {
 	return s == sInsidePattern && (!hasunicode || utf8.Valid(x))
 }
 
+func ValidWildmatStr(x string) bool { return ValidWildmat(unsafeStrToBytes(x)) }
+
 type wildmatPiece struct {
 	re     *regexp.Regexp
 	result bool
@@ -143,6 +145,7 @@ func CompileWildmat(x []byte) (w Wildmat) {
 	})
 	return
 }
+func CompileWildmatStr(x string) Wildmat { return CompileWildmat(unsafeStrToBytes(x)) }
 
 func (w Wildmat) CheckString(s string) (result bool) {
 	for i := range w {
