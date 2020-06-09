@@ -1,4 +1,4 @@
-package psqlib
+package pibase
 
 // psqlib directory initializations
 

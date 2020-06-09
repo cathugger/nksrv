@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "src\\nksrv"
+		},
+		{
+			"path": "etc"
+		}
+	],
+	"settings": {
+		"go.formatTool": "goimports",
+		"go.formatFlags": ["-local", "nksrv/"]
+	}
+}
