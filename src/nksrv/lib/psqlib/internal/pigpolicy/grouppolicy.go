@@ -1,4 +1,4 @@
-package psqlib
+package pigpolicy
 
 import (
 	"errors"

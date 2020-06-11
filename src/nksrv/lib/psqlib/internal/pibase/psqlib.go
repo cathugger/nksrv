@@ -22,6 +22,11 @@ import (
 	"nksrv/lib/psqlib/internal/pigpolicy"
 )
 
+type NPTuple struct {
+	N    int
+	Sage bool
+}
+
 type PSQLIB struct {
 	// database handle
 	DB psql.PSQL
@@ -92,7 +97,7 @@ func (dbib *PSQLIB) InitAndPrepare() (err error) {
 		return fmt.Errorf("error checking: %v", err)
 	}
 	if !valid {
-		dbib.log.LogPrint(NOTICE,
+		dbib.Log.LogPrint(NOTICE,
 			"uninitialized db, attempting to initialize")
 
 		err = dbib.InitDB()

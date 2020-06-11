@@ -12,11 +12,6 @@ import (
 	"nksrv/lib/mailib"
 )
 
-type npTuple struct {
-	n    int
-	sage bool
-}
-
 const postRQMsgArgCount = 17
 const postRQFileArgCount = 8
 

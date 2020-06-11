@@ -14,12 +14,12 @@ func (s *PSQLIB) SQLError(when string, err error) error {
 		case "40P01" /* deadlock_detected */ :
 			err = PSQLRetriableError{err}
 		default:
-			return psql.SQLError(s.log, when, err)
+			return psql.SQLError(s.Log, when, err)
 		}
 		// do not log backtrace if we hit expected retriable error
 		return psql.SQLError(nil, when, err)
 	}
-	return psql.SQLError(s.log, when, err)
+	return psql.SQLError(s.Log, when, err)
 }
 
 // indicates that psql error is deadlock
