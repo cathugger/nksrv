@@ -1,4 +1,4 @@
-package pibase
+package pibaseweb
 
 import (
 	"errors"
@@ -16,9 +16,9 @@ var (
 	ErrTooLongTitle          = errors.New("too long title")
 	ErrTooLongName           = errors.New("too long name")
 	ErrInvalidTripcode       = errors.New("invalid tripcode syntax (we expected 64 hex chars)")
-	ErrDuplicateArticle      = errors.New("article with this ID already exists")
-	ErrEmptyMsg              = errors.New("posting empty messages isn't allowed")
-	ErrInvalidOptions        = errors.New("invalid options")
+	//ErrDuplicateArticle      = errors.New("article with this ID already exists")
+	ErrEmptyMsg       = errors.New("posting empty messages isn't allowed")
+	ErrInvalidOptions = errors.New("invalid options")
 )
 
 func ErrTooLongMessage(limit uint32) error {

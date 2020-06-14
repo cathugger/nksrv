@@ -8,10 +8,13 @@ import (
 	"github.com/lib/pq"
 
 	"nksrv/lib/ftypes"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibaseweb"
+	ib0 "nksrv/lib/webib0"
 )
 
-func (sp *pibase.PSQLIB) IBGetThreadCatalog(
-	page *ib0.IBThreadCatalog, board string) (error, int) {
+func GetThreadCatalog(
+	sp *pibase.PSQLIB, page *ib0.IBThreadCatalog, board string) (error, int) {
 
 	rows, err := sp.StPrep[pibase.St_web_thread_catalog].Query(board)
 	if err != nil {
@@ -69,7 +72,7 @@ func (sp *pibase.PSQLIB) IBGetThreadCatalog(
 		}
 
 		if x_bid != bid {
-			battrs := defaultBoardAttributes
+			battrs := pibaseweb.DefaultBoardAttributes
 
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
@@ -108,7 +111,7 @@ func (sp *pibase.PSQLIB) IBGetThreadCatalog(
 
 			if f_id.Int64 != 0 {
 				if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
-					ta := defaultThumbAttributes
+					ta := pibaseweb.DefaultThumbAttributes
 
 					err = thumbcfg_j.Unmarshal(&ta)
 					if err != nil {
@@ -122,13 +125,13 @@ func (sp *pibase.PSQLIB) IBGetThreadCatalog(
 					t.Thumb.Width = ta.Width
 					t.Thumb.Height = ta.Height
 
-					t.Thumb = sp.ensureThumb(t.Thumb, fname.String, ftype.String)
+					t.Thumb = ensureThumb(sp, t.Thumb, fname.String, ftype.String)
 
 					goto thumbnailed
 				}
 			}
 			// fallback if not found thumbnail above
-			t.Thumb = sp.ensureThumb(t.Thumb, "", "")
+			t.Thumb = ensureThumb(sp, t.Thumb, "", "")
 		thumbnailed:
 			// thumbnail done at this point
 
@@ -145,14 +148,14 @@ func (sp *pibase.PSQLIB) IBGetThreadCatalog(
 	}
 
 	if x_bid == 0 {
-		return errNoSuchBoard, http.StatusNotFound
+		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
 	}
 
 	return nil, 0
 }
 
-func (sp *pibase.PSQLIB) IBGetOverboardCatalog(
-	page *ib0.IBOverboardCatalog) (error, int) {
+func GetOverboardCatalog(
+	sp *pibase.PSQLIB, page *ib0.IBOverboardCatalog) (error, int) {
 
 	rows, err := sp.StPrep[pibase.St_web_overboard_catalog].Query(100)
 	if err != nil {
@@ -227,7 +230,7 @@ func (sp *pibase.PSQLIB) IBGetOverboardCatalog(
 
 			if f_id.Int64 != 0 {
 				if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
-					ta := defaultThumbAttributes
+					ta := pibaseweb.DefaultThumbAttributes
 
 					err = thumbcfg_j.Unmarshal(&ta)
 					if err != nil {
@@ -241,13 +244,13 @@ func (sp *pibase.PSQLIB) IBGetOverboardCatalog(
 					t.Thumb.Width = ta.Width
 					t.Thumb.Height = ta.Height
 
-					t.Thumb = sp.ensureThumb(t.Thumb, fname.String, ftype.String)
+					t.Thumb = ensureThumb(sp, t.Thumb, fname.String, ftype.String)
 
 					goto thumbnailed
 				}
 			}
 			// fallback if not found thumbnail above
-			t.Thumb = sp.ensureThumb(t.Thumb, "", "")
+			t.Thumb = ensureThumb(sp, t.Thumb, "", "")
 		thumbnailed:
 			// thumbnail done at this point
 

@@ -5,10 +5,12 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibaseweb"
 	ib0 "nksrv/lib/webib0"
 )
 
-func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
+func GetBoardList(sp *pibase.PSQLIB, bl *ib0.IBBoardList) (error, int) {
 	var err error
 
 	rows, err := sp.StPrep[pibase.St_web_listboards].Query()
@@ -21,7 +23,7 @@ func (sp *PSQLIB) IBGetBoardList(bl *ib0.IBBoardList) (error, int) {
 
 	for rows.Next() {
 		var b ib0.IBBoardListBoard
-		cfg := defaultBoardAttributes
+		cfg := pibaseweb.DefaultBoardAttributes
 
 		err = rows.Scan(&b.BNum, &b.Name, &b.Description, &jcfg, &b.NumThreads, &b.NumPosts)
 		if err != nil {

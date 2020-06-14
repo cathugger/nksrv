@@ -8,10 +8,13 @@ import (
 	"github.com/lib/pq"
 
 	"nksrv/lib/ftypes"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibaseweb"
 	ib0 "nksrv/lib/webib0"
 )
 
-func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
+func GetThread(
+	sp *pibase.PSQLIB, page *ib0.IBThreadPage,
 	board string, threadid string) (error, int) {
 
 	rows, err := sp.StPrep[pibase.St_web_thread].Query(board, threadid)
@@ -91,7 +94,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 		if x_bid != bid {
 
-			battrs := defaultBoardAttributes
+			battrs := pibaseweb.DefaultBoardAttributes
 
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
@@ -188,7 +191,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 		if x_fid != f_id.Int64 {
 			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
-				ta := defaultThumbAttributes
+				ta := pibaseweb.DefaultThumbAttributes
 
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
@@ -214,7 +217,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				fi.Original = oname.String
 				fi.Size = fsize.Int64
 
-				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+				fi.Thumb = ensureThumb(sp, fi.Thumb, fi.ID, fi.Type)
 
 				l_post.Files = append(l_post.Files, fi)
 
@@ -229,16 +232,17 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	}
 
 	if x_bid == 0 {
-		return errNoSuchBoard, http.StatusNotFound
+		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
 	}
 	if x_tid == 0 {
-		return errNoSuchThread, http.StatusNotFound
+		return pibaseweb.ErrNoSuchThread, http.StatusNotFound
 	}
 
 	return nil, 0
 }
 
-func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
+func GetThreadListPage(
+	sp *pibase.PSQLIB, page *ib0.IBThreadListPage,
 	board string, num uint32) (error, int) {
 
 	rows, err := sp.StPrep[pibase.St_web_thread_list_page].Query(board, num)
@@ -320,7 +324,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		f_id)*/
 
 		if x_bid != bid {
-			battrs := defaultBoardAttributes
+			battrs := pibaseweb.DefaultBoardAttributes
 
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
@@ -430,7 +434,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 		if x_fid != f_id.Int64 {
 			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
-				ta := defaultThumbAttributes
+				ta := pibaseweb.DefaultThumbAttributes
 
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
@@ -456,7 +460,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				fi.Original = oname.String
 				fi.Size = fsize.Int64
 
-				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+				fi.Thumb = ensureThumb(sp, fi.Thumb, fi.ID, fi.Type)
 
 				l_post.Files = append(l_post.Files, fi)
 
@@ -471,22 +475,22 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	}
 
 	if x_bid == 0 {
-		return errNoSuchBoard, http.StatusNotFound
+		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
 	}
 	if x_tid == 0 && num > 0 {
-		return errNoSuchPage, http.StatusNotFound
+		return pibaseweb.ErrNoSuchPage, http.StatusNotFound
 	}
 
 	return nil, 0
 }
 
-func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
-	error, int) {
+func GetOverboardPage(
+	sp *pibase.PSQLIB, page *ib0.IBOverboardPage, num uint32) (error, int) {
 
 	page.Number = num
 	page.Available = 10
 	if page.Number >= page.Available {
-		return errNoSuchPage, http.StatusNotFound
+		return pibaseweb.ErrNoSuchPage, http.StatusNotFound
 	}
 
 	rows, err := sp.StPrep[pibase.St_web_overboard_page].Query(num, 10)
@@ -639,7 +643,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		if x_fid != f_id.Int64 {
 			if ft := ftypes.StringToFType(ftype.String); ft.Normal() {
 				var fi ib0.IBFileInfo
-				ta := defaultThumbAttributes
+				ta := pibaseweb.DefaultThumbAttributes
 
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
@@ -665,7 +669,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 				fi.Original = oname.String
 				fi.Size = fsize.Int64
 
-				fi.Thumb = sp.ensureThumb(fi.Thumb, fi.ID, fi.Type)
+				fi.Thumb = ensureThumb(sp, fi.Thumb, fi.ID, fi.Type)
 
 				l_post.Files = append(l_post.Files, fi)
 
@@ -680,7 +684,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 	}
 
 	if (x_bid == 0 || x_tid == 0) && num > 0 {
-		return errNoSuchPage, http.StatusNotFound
+		return pibaseweb.ErrNoSuchPage, http.StatusNotFound
 	}
 
 	return nil, 0

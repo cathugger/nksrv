@@ -1,19 +1,22 @@
 package pireadweb
 
-// implements web imageboard interface v0
-
 import (
 	"nksrv/lib/mail"
+	"nksrv/lib/psqlib/internal/pibase"
 	ib0 "nksrv/lib/webib0"
 )
 
-// functionality
+type (
+	boardID = pibase.TBoardID
+	postID  = pibase.TPostID
+)
 
-func (sp *PSQLIB) ensureThumb(
+func ensureThumb(
+	sp *pibase.PSQLIB,
 	t ib0.IBThumbInfo, fname, ftype string) ib0.IBThumbInfo {
 
 	if t.ID == "" {
-		t.Alt, t.Width, t.Height = sp.altthumb.GetAltThumb(fname, ftype)
+		t.Alt, t.Width, t.Height = sp.AltThumber.GetAltThumb(fname, ftype)
 	}
 	return t
 }

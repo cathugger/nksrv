@@ -19,8 +19,10 @@ import (
 	"nksrv/lib/psqlib/internal/pibase"
 )
 
-type boardID = pibase.TBoardID
-type postID = pibase.TPostID
+type (
+	boardID = pibase.TBoardID
+	postID  = pibase.TPostID
+)
 
 func nntpAbortOnErr(err error) {
 	if err != nil {
