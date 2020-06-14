@@ -1,4 +1,4 @@
-package psqlib
+package pireadnntp
 
 import (
 	"io"
@@ -22,17 +22,17 @@ type nntpCopyer interface {
 }
 
 // full
-type fullNNTPCopyer struct {
+type FullNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
 	gs *groupState
 }
 
-func (c *fullNNTPCopyer) SetGroupState(gs *groupState) {
+func (c *FullNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *fullNNTPCopyer) CopyFrom(
+func (c *FullNNTPCopyer) CopyFrom(
 	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
 
@@ -98,23 +98,23 @@ func (c *fullNNTPCopyer) CopyFrom(
 	return
 }
 
-func (c *fullNNTPCopyer) IsClosed() bool {
+func (c *FullNNTPCopyer) IsClosed() bool {
 	return c.dw == nil
 }
 
 // head
-type headNNTPCopyer struct {
+type HeadNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
 	gs *groupState
 	st int
 }
 
-func (c *headNNTPCopyer) SetGroupState(gs *groupState) {
+func (c *HeadNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *headNNTPCopyer) CopyFrom(
+func (c *HeadNNTPCopyer) CopyFrom(
 	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
 
@@ -209,23 +209,23 @@ func (c *headNNTPCopyer) CopyFrom(
 	return
 }
 
-func (c *headNNTPCopyer) IsClosed() bool {
+func (c *HeadNNTPCopyer) IsClosed() bool {
 	return c.dw == nil
 }
 
 // body
-type bodyNNTPCopyer struct {
+type BodyNNTPCopyer struct {
 	w  Responder
 	dw io.WriteCloser
 	gs *groupState
 	st int
 }
 
-func (c *bodyNNTPCopyer) SetGroupState(gs *groupState) {
+func (c *BodyNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c *bodyNNTPCopyer) CopyFrom(
+func (c *BodyNNTPCopyer) CopyFrom(
 	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
 
@@ -312,21 +312,21 @@ func (c *bodyNNTPCopyer) CopyFrom(
 	return
 }
 
-func (c *bodyNNTPCopyer) IsClosed() bool {
+func (c *BodyNNTPCopyer) IsClosed() bool {
 	return c.dw == nil
 }
 
 // stat
-type statNNTPCopyer struct {
+type StatNNTPCopyer struct {
 	w  Responder
 	gs *groupState
 }
 
-func (c *statNNTPCopyer) SetGroupState(gs *groupState) {
+func (c *StatNNTPCopyer) SetGroupState(gs *groupState) {
 	c.gs = gs
 }
 
-func (c statNNTPCopyer) CopyFrom(
+func (c *StatNNTPCopyer) CopyFrom(
 	src io.Reader, objid string, objinfo interface{}) (
 	written int64, err error) {
 
@@ -346,6 +346,6 @@ func (c statNNTPCopyer) CopyFrom(
 	return 0, nil
 }
 
-func (statNNTPCopyer) IsClosed() bool {
+func (*StatNNTPCopyer) IsClosed() bool {
 	return true
 }

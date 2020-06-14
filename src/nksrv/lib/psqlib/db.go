@@ -106,7 +106,7 @@ func (sp *PSQLIB) CheckDB() (initialised bool, versionerror error) {
 	var vernum int64
 	err := sp.db.DB.QueryRow(q).Scan(&vernum)
 	if err != nil {
-		return false, sp.sqlError("server version query", err)
+		return false, sp.SQLError("server version query", err)
 	}
 	const verreq = 100000
 	if vernum < verreq {
@@ -120,7 +120,7 @@ func (sp *PSQLIB) CheckDB() (initialised bool, versionerror error) {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-		return false, sp.sqlError("version row query", err)
+		return false, sp.SQLError("version row query", err)
 	}
 
 	if ver != currDbVersion {

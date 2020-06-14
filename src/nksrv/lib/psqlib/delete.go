@@ -67,10 +67,10 @@ func (sp *PSQLIB) deleteByMsgID(
 	err error) {
 
 	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
-	delst := tx.Stmt(sp.st_prep[st_mod_delete_by_msgid])
+	delst := tx.Stmt(sp.StPrep[pibase.St_mod_delete_by_msgid])
 	_, err = delst.Exec(string(cmsgids))
 	if err != nil {
-		err = sp.sqlError("delete by msgid query", err)
+		err = sp.SQLError("delete by msgid query", err)
 		return
 	}
 
@@ -99,10 +99,10 @@ func (sp *PSQLIB) banByMsgID(
 
 	sp.log.LogPrintf(
 		DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
-	banst := tx.Stmt(sp.st_prep[st_mod_ban_by_msgid])
+	banst := tx.Stmt(sp.StPrep[pibase.St_mod_ban_by_msgid])
 	_, err = banst.Exec(string(cmsgids), bidn, bpidn, reason)
 	if err != nil {
-		err = sp.sqlError("ban by msgid query", err)
+		err = sp.SQLError("ban by msgid query", err)
 		return
 	}
 
@@ -151,7 +151,7 @@ func (sp *PSQLIB) postDelete(
 		err = rows.Scan(&msgid)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("rows.Scan", err)
+			err = sp.SQLError("rows.Scan", err)
 			return
 		}
 
@@ -179,7 +179,7 @@ func (sp *PSQLIB) postDelete(
 		}
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("drainDelMsgIDs rows", err)
+		err = sp.SQLError("drainDelMsgIDs rows", err)
 		return
 	}
 
@@ -203,14 +203,14 @@ func (sp *PSQLIB) postDelete(
 		err = rows.Scan(&aff.bn, &aff.pn, &aff.mi)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("rows.Scan", err)
+			err = sp.SQLError("rows.Scan", err)
 			return
 		}
 
 		bp_affs = append(bp_affs, aff)
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("drainDelGPosts rows", err)
+		err = sp.SQLError("drainDelGPosts rows", err)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (sp *PSQLIB) postDelete(
 		err = rows.Scan(&fname)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("rows.Scan", err)
+			err = sp.SQLError("rows.Scan", err)
 			return
 		}
 
@@ -248,7 +248,7 @@ func (sp *PSQLIB) postDelete(
 		err = rows.Scan(&fname, &tname)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("rows.Scan", err)
+			err = sp.SQLError("rows.Scan", err)
 			return
 		}
 
@@ -271,19 +271,19 @@ func (sp *PSQLIB) postDelete(
 		err = rows.Scan(&mod_id)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("rows.Scan", err)
+			err = sp.SQLError("rows.Scan", err)
 			return
 		}
 
 		out_delmodids.add(mod_id)
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("drainDelGPosts rows", err)
+		err = sp.SQLError("drainDelGPosts rows", err)
 		return
 	}
 
 	// re-calculate affected references
-	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
+	xref_up_st := tx.Stmt(sp.StPrep[pibase.St_mod_update_bpost_activ_refs])
 	for _, bpa := range bp_affs {
 		err = sp.fixupAffectedXRefsInTx(tx, bpa.pn, bpa.bn, TCoreMsgIDStr(bpa.mi), xref_up_st)
 		if err != nil {
@@ -317,7 +317,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 
 	tx, err := sp.db.DB.Begin()
 	if err != nil {
-		err = sp.sqlError("tx begin", err)
+		err = sp.SQLError("tx begin", err)
 		sp.log.LogPrintf(ERROR, "%v", err)
 		return
 	}
@@ -355,7 +355,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 
 	err = tx.Commit()
 	if err != nil {
-		err = sp.sqlError("tx commit", err)
+		err = sp.SQLError("tx commit", err)
 		sp.log.LogPrintf(ERROR, "%v", err)
 		return
 	}

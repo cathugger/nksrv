@@ -3,7 +3,6 @@ package pibase
 import (
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/lib/pq"
 
@@ -99,18 +98,18 @@ const (
 	St_puller_unset_group_id
 	St_puller_load_temp_groups
 
-	StMax
+	stMax
 )
 
-var StListX [StMax]string
-var st_loaderr error
+var StListX [stMax]string
+var StLoadErr error
 
 type StReference struct {
 	Bucket string
 	Name   string
 }
 
-var st_names = [StMax]StReference{
+var stNames = [stMax]StReference{
 
 	// NNTP stuff
 
@@ -211,18 +210,18 @@ var st_names = [StMax]StReference{
 	StReference{"puller", "puller_load_temp_groups"},
 }
 
-func loadStatements() {
+func LoadStatements() {
 	if StListX[0] != "" {
 		panic("already loaded")
 	}
 	bm := make(map[string]sqlbucket.Bucket)
-	for i := range st_names {
-		sn := st_names[i]
+	for i := range stNames {
+		sn := stNames[i]
 		if bm[sn.Bucket] == nil {
 			fn := "etc/psqlib/" + sn.Bucket + ".sql"
 			stmts, err := sqlbucket.LoadFromFile(fn)
 			if err != nil {
-				st_loaderr = fmt.Errorf("err loading %s: %v", fn, err)
+				StLoadErr = fmt.Errorf("err loading %s: %v", fn, err)
 				return
 			}
 			bm[sn.Bucket] = stmts
@@ -230,7 +229,7 @@ func loadStatements() {
 		sm := bm[sn.Bucket]
 		sl := sm[sn.Name]
 		if len(sl) != 1 {
-			st_loaderr = fmt.Errorf(
+			StLoadErr = fmt.Errorf(
 				"wrong count %d for statement %s", len(sl), sn)
 			return
 		}
@@ -238,16 +237,14 @@ func loadStatements() {
 	}
 }
 
-var st_once sync.Once
-
 func (sp *PSQLIB) prepareStatements() (err error) {
-	if sp.st_prep[0] != nil {
+	if sp.StPrep[0] != nil {
 		panic("already prepared")
 	}
 	for i := range StListX {
 
 		s := StListX[i]
-		sp.st_prep[i], err = sp.db.DB.Prepare(s)
+		sp.StPrep[i], err = sp.DB.DB.Prepare(s)
 		if err != nil {
 
 			if pe, _ := err.(*pq.Error); pe != nil {
@@ -263,11 +260,11 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 
 				return fmt.Errorf(
 					"err preparing %d %q stmt: pos[%s] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
-					i, st_names[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se], s)
+					i, stNames[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se], s)
 			}
 
 			return fmt.Errorf("error preparing %d %q stmt: %v",
-				i, st_names[i].Name, err)
+				i, stNames[i].Name, err)
 		}
 	}
 	return
@@ -275,12 +272,12 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 
 func (sp *PSQLIB) closeStatements() (err error) {
 	for i := range StListX {
-		if sp.st_prep[i] != nil {
-			ex := sp.st_prep[i].Close()
+		if sp.StPrep[i] != nil {
+			ex := sp.StPrep[i].Close()
 			if err == nil {
 				err = ex
 			}
-			sp.st_prep[i] = nil
+			sp.StPrep[i] = nil
 		}
 	}
 	return

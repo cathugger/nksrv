@@ -189,7 +189,7 @@ LIMIT
 		// do query
 		rows, err = qq.Query(q)
 		if err != nil {
-			err = sp.sqlError("references query", err)
+			err = sp.SQLError("references query", err)
 			return
 		}
 		defer rows.Close()
@@ -205,7 +205,7 @@ LIMIT
 			if r_id <= i && rows.Next() {
 				err = rows.Scan(&r_id, &r_msgid)
 				if err != nil {
-					err = sp.sqlError("references query scan", err)
+					err = sp.SQLError("references query scan", err)
 					return
 				}
 			}
@@ -248,7 +248,7 @@ LIMIT
 	if rows != nil {
 		err = rows.Err()
 		if err != nil {
-			err = sp.sqlError("references query rows", err)
+			err = sp.SQLError("references query rows", err)
 			return
 		}
 	}
@@ -355,7 +355,7 @@ LIMIT
 
 		rows, err = qq.Query(b.String())
 		if err != nil {
-			err = sp.sqlError("references query", err)
+			err = sp.SQLError("references query", err)
 			return
 		}
 		defer rows.Close()
@@ -378,7 +378,7 @@ LIMIT
 					&r_tid, &r_tname,
 					&r_pname)
 				if err != nil {
-					err = sp.sqlError("references query scan", err)
+					err = sp.SQLError("references query scan", err)
 					return
 				}
 			}
@@ -465,7 +465,7 @@ LIMIT
 	if rows != nil {
 		err = rows.Err()
 		if err != nil {
-			err = sp.sqlError("references query rows", err)
+			err = sp.SQLError("references query rows", err)
 			return
 		}
 	}
@@ -509,7 +509,7 @@ func (sp *PSQLIB) insertXRefs(
 		pq.Array(boards),
 		pq.Array(msgids))
 	if err != nil {
-		err = sp.sqlError("xrefs insert exec", err)
+		err = sp.SQLError("xrefs insert exec", err)
 		return
 	}
 
@@ -532,7 +532,7 @@ func (sp *PSQLIB) findReferences(
 
 	rows, err := st.Query(off_b, off_b_p, pname, pboard, string(msgid))
 	if err != nil {
-		err = sp.sqlError("mod_ref_find_post query", err)
+		err = sp.SQLError("mod_ref_find_post query", err)
 		return
 	}
 
@@ -548,7 +548,7 @@ func (sp *PSQLIB) findReferences(
 			&b_id, &b_p_id, &msg, &inreplyto, &j_activ_refs, &b_t_id)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("mod_ref_find_post query rows scan", err)
+			err = sp.SQLError("mod_ref_find_post query rows scan", err)
 			return
 		}
 
@@ -556,7 +556,7 @@ func (sp *PSQLIB) findReferences(
 		err = j_activ_refs.Unmarshal(&activ_refs)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("mod_ref_find_post json unmarshal", err)
+			err = sp.SQLError("mod_ref_find_post json unmarshal", err)
 			return
 		}
 
@@ -570,7 +570,7 @@ func (sp *PSQLIB) findReferences(
 		})
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.sqlError("mod_ref_find_post query rows", err)
+		err = sp.SQLError("mod_ref_find_post query rows", err)
 		return
 	}
 
@@ -589,7 +589,7 @@ func (sp *PSQLIB) updatePostReferences(
 
 	_, err = st.Exec(b_id, b_p_id, Ajson)
 	if err != nil {
-		return sp.sqlError("mod_update_bpost_activ_refs exec", err)
+		return sp.SQLError("mod_update_bpost_activ_refs exec", err)
 	}
 
 	return
@@ -603,7 +603,7 @@ func (sp *PSQLIB) processRefsAfterPost(
 	postid, newsgroup string, msgid TCoreMsgIDStr) (err error) {
 
 	// write our declaration of references
-	xref_wr_st := tx.Stmt(sp.st_prep[st_mod_ref_write])
+	xref_wr_st := tx.Stmt(sp.StPrep[pibase.St_mod_ref_write])
 	err = sp.insertXRefs(xref_wr_st, b_id, b_p_id, srefs)
 	if err != nil {
 		return
@@ -615,7 +615,7 @@ func (sp *PSQLIB) processRefsAfterPost(
 		return
 	}
 	// then, put proper references in our bpost
-	xref_up_st := tx.Stmt(sp.st_prep[st_mod_update_bpost_activ_refs])
+	xref_up_st := tx.Stmt(sp.StPrep[pibase.St_mod_update_bpost_activ_refs])
 	err = sp.updatePostReferences(
 		xref_up_st,
 		b_id, b_p_id,
@@ -636,7 +636,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 	tx *sql.Tx, p_name, b_name string, msgid TCoreMsgIDStr,
 	xref_up_st *sql.Stmt) (err error) {
 
-	xref_fn_st := tx.Stmt(sp.st_prep[st_mod_ref_find_post])
+	xref_fn_st := tx.Stmt(sp.StPrep[pibase.St_mod_ref_find_post])
 
 	if p_name == "" || b_name == "" || msgid == "" {
 		panic("wtf")

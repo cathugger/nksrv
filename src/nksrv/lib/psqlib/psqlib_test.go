@@ -260,7 +260,7 @@ func validateChangeList1(t *testing.T, dbib *PSQLIB) {
 		var f modPrivFetch
 
 		err = dbib.
-			st_prep[st_mod_joblist_modlist_changes_get].
+			st_prep[pibase.St_mod_joblist_modlist_changes_get].
 			QueryRow().
 			Scan(
 				&x.j_id,
@@ -298,7 +298,7 @@ func validateChangeList1(t *testing.T, dbib *PSQLIB) {
 			t.Errorf("cl: %d not equal, got: %#v", i, x)
 		}
 
-		_, err = dbib.st_prep[st_mod_joblist_modlist_changes_del].Exec(x.j_id)
+		_, err = dbib.StPrep[pibase.St_mod_joblist_modlist_changes_del].Exec(x.j_id)
 		panicErr(err, "cl del exec err")
 
 		cmt()

@@ -5,12 +5,18 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"sync"
 
 	"nksrv/lib/altthumber"
 	"nksrv/lib/cacheengine"
 	"nksrv/lib/fstore"
+	. "nksrv/lib/logx"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/psql"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibaseweb"
+	"nksrv/lib/psqlib/internal/pigpolicy"
+	"nksrv/lib/psqlib/internal/pireadnntp"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/nilthm"
 	"nksrv/lib/webcaptcha"
@@ -25,8 +31,8 @@ type Config struct {
 	ThmCfg         *fstore.Config
 	NNTPFSCfg      *fstore.Config
 	TBuilder       thumbnailer.ThumbnailerBuilder
-	TCfgThread     *thumbnailer.ThumbConfig
-	TCfgReply      *thumbnailer.ThumbConfig
+	TCfgPost       *thumbnailer.ThumbConfig
+	TCfgOP         *thumbnailer.ThumbConfig
 	TCfgSage       *thumbnailer.ThumbConfig
 	AltThumber     *altthumber.AltThumber
 	WebCaptcha     *webcaptcha.WebCaptcha
@@ -36,94 +42,101 @@ type Config struct {
 	InstanceName   string
 }
 
-func NewPSQLIB(cfg Config) (p *PSQLIB, err error) {
-	p = new(PSQLIB)
+var stOnce sync.Once
 
-	st_once.Do(loadStatements)
-	if st_loaderr != nil {
-		return nil, st_loaderr
+func ConfigPSQLIB(p *pibase.PSQLIB, cfg Config) (err error) {
+
+	stOnce.Do(pibase.LoadStatements)
+	if pibase.StLoadErr != nil {
+		return pibase.StLoadErr
 	}
 
-	p.log = NewLogToX(*cfg.Logger, fmt.Sprintf("psqlib.%p", p))
+	p.Log = NewLogToX(*cfg.Logger, fmt.Sprintf("psqlib.%p", p))
 
-	p.db = *cfg.DB
+	p.DB = *cfg.DB
 
-	err = p.initDirs(cfg)
+	err = initDirs(p, cfg)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	p.pending2src = fstore.NewMover(&p.src)
-	p.pending2thm = fstore.NewMover(&p.thm)
+	p.PendingToSrc = fstore.NewMover(&p.Src)
+	p.PendingToThm = fstore.NewMover(&p.Thm)
 
 	if cfg.TBuilder != nil {
 
-		p.thumbnailer, err = cfg.TBuilder.BuildThumbnailer(&p.thm, *cfg.Logger)
+		p.Thumbnailer, err = cfg.TBuilder.BuildThumbnailer(&p.Thm, *cfg.Logger)
 		if err != nil {
-			return nil, err
+			return
 		}
 
-		p.tplan_thread = thumbnailer.ThumbPlan{
-			Name:        "t",
-			ThumbConfig: *cfg.TCfgThread,
+		p.ThmPlanForPost = thumbnailer.ThumbPlan{
+			Name:        "p",
+			ThumbConfig: *cfg.TCfgPost,
 		}
-		p.tplan_reply = thumbnailer.ThumbPlan{
-			Name:        "r",
-			ThumbConfig: *cfg.TCfgReply,
+
+		if cfg.TCfgOP != nil {
+			p.ThmPlanForOP = thumbnailer.ThumbPlan{
+				Name:        "t",
+				ThumbConfig: *cfg.TCfgOP,
+			}
+		} else {
+			p.ThmPlanForOP = p.ThmPlanForPost
 		}
+
 		if cfg.TCfgSage != nil {
-			p.tplan_sage = thumbnailer.ThumbPlan{
+			p.ThmPlanForSage = thumbnailer.ThumbPlan{
 				Name:        "s",
 				ThumbConfig: *cfg.TCfgSage,
 			}
 		} else {
-			p.tplan_sage = p.tplan_reply
+			p.ThmPlanForSage = p.ThmPlanForPost
 		}
 
 	} else {
-		p.thumbnailer = nilthm.NilThumbnailer{}
+		p.Thumbnailer = nilthm.NilThumbnailer{}
 	}
 
-	p.nntpce = cacheengine.NewCacheEngine(nntpcachemgr{p})
+	p.NNTPCE = cacheengine.NewCacheEngine(pireadnntp.NNTPCacheMgr{p})
 
-	p.altthumb = *cfg.AltThumber
+	p.AltThumber = *cfg.AltThumber
 
-	p.ffo = formFileOpener{&p.src}
+	p.FFO = pibase.FormFileOpener{&p.Src}
 
-	p.instance = nonEmptyStrOrPanic(cfg.NodeName)
+	p.Instance = nonEmptyStrOrPanic(cfg.NodeName)
 	if cfg.WebFrontendKey != "" {
 		seed, e := hex.DecodeString(cfg.WebFrontendKey)
 		if e != nil {
 			panic("bad web frontend key")
 		}
-		p.webFrontendKey = ed25519.NewKeyFromSeed(seed)
+		p.WebFrontendKey = ed25519.NewKeyFromSeed(seed)
 	}
 
-	p.fpp = form.DefaultParserParams
+	p.FPP = form.DefaultParserParams
 	// TODO make configurable
-	p.fpp.MaxFileCount = 1000
-	p.fpp.MaxFileAllSize = 1 << 30
+	p.FPP.MaxFileCount = 1000
+	p.FPP.MaxFileAllSize = 1 << 30
 
-	p.maxArticleBodySize = (2 << 30) - 1 // TODO config
+	p.MaxArticleBodySize = (2 << 30) - 1 // TODO config
 
-	p.webcaptcha = cfg.WebCaptcha
-	p.textPostParamFunc = makePostParamFunc(cfg.WebCaptcha)
+	p.WebCaptcha = cfg.WebCaptcha
+	p.TextPostParamFunc = pibaseweb.MakePostParamFunc(cfg.WebCaptcha)
 
-	p.ngp_global, err = makeNewGroupPolicy(cfg.NGPGlobal)
+	p.NGPGlobal, err = pigpolicy.MakeNewGroupPolicy(cfg.NGPGlobal)
 	if err != nil {
 		return
 	}
-	p.ngp_anyserver, err = makeNewGroupPolicy(cfg.NGPAnyServer)
+	p.NGPAnyPuller, err = pigpolicy.MakeNewGroupPolicy(cfg.NGPAnyServer)
 	if err != nil {
 		return
 	}
-	p.ngp_anyserver, err = makeNewGroupPolicy(cfg.NGPAnyPuller)
+	p.NGPAnyServer, err = pigpolicy.MakeNewGroupPolicy(cfg.NGPAnyPuller)
 	if err != nil {
 		return
 	}
 
-	p.ntStmts = make(map[int]*sql.Stmt)
-	p.npStmts = make(map[npTuple]*sql.Stmt)
+	p.NTStmts = make(map[int]*sql.Stmt)
+	p.NPStmts = make(map[pibase.NPTuple]*sql.Stmt)
 
 	return
 }

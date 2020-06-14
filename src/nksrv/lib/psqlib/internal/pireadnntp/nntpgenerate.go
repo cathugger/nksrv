@@ -1,4 +1,4 @@
-package psqlib
+package pireadnntp
 
 import (
 	"database/sql"
@@ -10,6 +10,7 @@ import (
 	"nksrv/lib/fstore"
 	"nksrv/lib/mail"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 )
@@ -23,13 +24,14 @@ func (fl NormalFileList) OpenFileAt(i int) (io.ReadCloser, error) {
 	return os.Open(fl.src.Main() + fl.FI[i].ID)
 }
 
-func (sp *PSQLIB) nntpGenerate(
-	w io.Writer, msgid TCoreMsgIDStr, gpid postID) (err error) {
+func nntpGenerate(
+	sp *pibase.PSQLIB, w io.Writer,
+	msgid TCoreMsgIDStr, gpid postID) (err error) {
 
 	// fetch info about post. some of info we don't care about
-	rows, err := sp.st_prep[st_nntp_article_get_gpid].Query(gpid)
+	rows, err := sp.StPrep[pibase.St_nntp_article_get_gpid].Query(gpid)
 	if err != nil {
-		return sp.sqlError("posts x files query", err)
+		return sp.SQLError("posts x files query", err)
 	}
 
 	pi := mailib.PostInfo{}
@@ -47,7 +49,7 @@ func (sp *PSQLIB) nntpGenerate(
 			&fid, &fsize)
 		if err != nil {
 			rows.Close()
-			return sp.sqlError("posts x files query rows scan", err)
+			return sp.SQLError("posts x files query rows scan", err)
 		}
 
 		//sp.log.LogPrintf(DEBUG,
@@ -58,13 +60,13 @@ func (sp *PSQLIB) nntpGenerate(
 			err = jH.Unmarshal(&pi.H)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError("jH unmarshal", err)
+				return sp.SQLError("jH unmarshal", err)
 			}
 
 			err = jL.Unmarshal(&pi.L)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError("jL unmarshal", err)
+				return sp.SQLError("jL unmarshal", err)
 			}
 
 			//sp.log.LogPrintf(DEBUG,
@@ -82,7 +84,7 @@ func (sp *PSQLIB) nntpGenerate(
 		havesomething = true
 	}
 	if err = rows.Err(); err != nil {
-		return sp.sqlError("posts x files query rows iteration", err)
+		return sp.SQLError("posts x files query rows iteration", err)
 	}
 
 	if !havesomething {
@@ -99,5 +101,5 @@ func (sp *PSQLIB) nntpGenerate(
 		pi.H["Subject"] = mail.OneHeaderVal(pi.MI.Title)
 	}
 
-	return mailib.GenerateMessage(w, pi, NormalFileList{FI: pi.FI, src: &sp.src})
+	return mailib.GenerateMessage(w, pi, NormalFileList{FI: pi.FI, src: &sp.Src})
 }

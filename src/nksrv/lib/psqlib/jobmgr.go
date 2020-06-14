@@ -18,7 +18,7 @@ func (sp *PSQLIB) modset_processJobOnce(
 		var tx *sql.Tx
 		tx, err = sp.db.DB.Begin()
 		if err != nil {
-			err = sp.sqlError("begin tx", err)
+			err = sp.SQLError("begin tx", err)
 			return
 		}
 
@@ -34,7 +34,7 @@ func (sp *PSQLIB) modset_processJobOnce(
 		if err == nil {
 			err = tx.Commit()
 			if err != nil {
-				err = sp.sqlError("tx commit", err)
+				err = sp.SQLError("tx commit", err)
 			}
 		}
 		if err != nil {
@@ -59,11 +59,11 @@ func (sp *PSQLIB) modset_processJobOnce_tx(
 
 	srcdir := sp.src.Main()
 
-	mcg := tx.Stmt(sp.st_prep[st_mod_joblist_modlist_changes_get])
-	mcs := tx.Stmt(sp.st_prep[st_mod_joblist_modlist_changes_set])
-	mcd := tx.Stmt(sp.st_prep[st_mod_joblist_modlist_changes_del])
-	xfcs := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs_start])
-	xfcc := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs_continue])
+	mcg := tx.Stmt(sp.StPrep[pibase.St_mod_joblist_modlist_changes_get])
+	mcs := tx.Stmt(sp.StPrep[pibase.St_mod_joblist_modlist_changes_set])
+	mcd := tx.Stmt(sp.StPrep[pibase.St_mod_joblist_modlist_changes_del])
+	xfcs := tx.Stmt(sp.StPrep[pibase.St_mod_fetch_and_clear_mod_msgs_start])
+	xfcc := tx.Stmt(sp.StPrep[pibase.St_mod_fetch_and_clear_mod_msgs_continue])
 
 	var (
 		j_id   uint64
@@ -102,7 +102,7 @@ func (sp *PSQLIB) modset_processJobOnce_tx(
 			return
 		}
 
-		err = sp.sqlError("queryrowscan", err)
+		err = sp.SQLError("queryrowscan", err)
 		return
 	}
 
@@ -163,7 +163,7 @@ requery:
 		}
 
 		if err != nil {
-			err = sp.sqlError("query", err)
+			err = sp.SQLError("query", err)
 			return
 		}
 
@@ -178,7 +178,7 @@ requery:
 				&p.title, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
-				err = sp.sqlError("rows scan", err)
+				err = sp.SQLError("rows scan", err)
 				return
 			}
 
@@ -198,7 +198,7 @@ requery:
 			}
 		}
 		if err = rows.Err(); err != nil {
-			err = sp.sqlError("rows it", err)
+			err = sp.SQLError("rows it", err)
 			return
 		}
 
@@ -304,13 +304,13 @@ requery:
 	if t_g_p_id.Valid {
 		_, err = mcs.Exec(j_id, t_date_sent, t_g_p_id, t_b_id)
 		if err != nil {
-			err = sp.sqlError("job set", err)
+			err = sp.SQLError("job set", err)
 			return
 		}
 	} else {
 		_, err = mcd.Exec(j_id)
 		if err != nil {
-			err = sp.sqlError("job del", err)
+			err = sp.SQLError("job del", err)
 			return
 		}
 	}

@@ -16,23 +16,11 @@ import (
 
 // FIXME: this probably in future should go thru some sort of abstractation
 
-func makePostParamFunc(c *webcaptcha.WebCaptcha) func(string) bool {
-	tfields := []string{
-		ib0.IBWebFormTextTitle,
-		ib0.IBWebFormTextName,
-		ib0.IBWebFormTextMessage,
-		ib0.IBWebFormTextOptions,
-	}
-	if c != nil {
-		tfields = append(tfields, c.TextFields()...)
-	}
-	return form.FieldsCheckFunc(tfields)
-}
 
 func (sp *PSQLIB) IBGetPostParams() (
 	*form.ParserParams, form.FileOpener, func(string) bool) {
 
-	return &sp.fpp, sp.ffo, sp.textPostParamFunc
+	return &sp.FPP, sp.FFO, sp.TextPostParamFunc
 }
 
 type postedInfo = ib0.IBPostedInfo
@@ -211,7 +199,7 @@ RETURNING
 			err = errors.New("such board already exists")
 			return
 		}
-		err = sp.sqlError("board insertion query row scan", e)
+		err = sp.SQLError("board insertion query row scan", e)
 		return
 	}
 	return nil, false
@@ -261,12 +249,12 @@ WHERE bname = $1`
 	res, e := sp.db.DB.Exec(q, bi.Name, bi.Description,
 		bi.ThreadsPerPage, bi.MaxActivePages, bi.MaxPages)
 	if e != nil {
-		err = sp.sqlError("board update query row scan", e)
+		err = sp.SQLError("board update query row scan", e)
 		return
 	}
 	aff, e := res.RowsAffected()
 	if e != nil {
-		err = sp.sqlError("board update query result check", e)
+		err = sp.SQLError("board update query result check", e)
 		return
 	}
 	if aff == 0 {
@@ -287,7 +275,7 @@ func (sp *PSQLIB) IBDeleteBoard(
 		if e == sql.ErrNoRows {
 			return webNotFound(errNoSuchBoard)
 		}
-		err = sp.sqlError("board delete query row scan", e)
+		err = sp.SQLError("board delete query row scan", e)
 		return
 	}
 

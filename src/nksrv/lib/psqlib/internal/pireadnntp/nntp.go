@@ -1,4 +1,4 @@
-package psqlib
+package pireadnntp
 
 import (
 	"database/sql"
@@ -16,7 +16,11 @@ import (
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/nntp"
+	"nksrv/lib/psqlib/internal/pibase"
 )
+
+type boardID = pibase.TBoardID
+type postID = pibase.TPostID
 
 func nntpAbortOnErr(err error) {
 	if err != nil {
@@ -24,8 +28,6 @@ func nntpAbortOnErr(err error) {
 		panic(nntp.ErrAbortHandler)
 	}
 }
-
-var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 
 type groupState struct {
 	bname string
@@ -71,16 +73,6 @@ func currSelectedGroupID(cs *ConnState) boardID {
 	return 0
 }
 
-func (*PSQLIB) SupportsNewNews() bool     { return true }
-func (*PSQLIB) SupportsOverByMsgID() bool { return true }
-func (*PSQLIB) SupportsHdr() bool         { return true }
-
-func (p *PSQLIB) SupportsIHave() bool  { return true }
-func (p *PSQLIB) SupportsPost() bool   { return true }
-func (p *PSQLIB) SupportsStream() bool { return true }
-
-func (p *PSQLIB) SupportsXListen() bool { return false }
-
 func unsafeCoreMsgIDToStr(b TCoreMsgID) TCoreMsgIDStr {
 	return TCoreMsgIDStr(unsafeBytesToStr(b))
 }
@@ -90,14 +82,14 @@ var (
 	errNoBoardSelected = errors.New("no board selected")
 )
 
-func (sp *PSQLIB) handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
+func handleNNTPGetError(sp *pibase.PSQLIB, w Responder, nc nntpCopyer, e error) bool {
 	if e == nil {
 		// no error - handled successfuly
 		return true
 	}
 	notexist := os.IsNotExist(e)
 	if !notexist {
-		sp.log.LogPrintf(ERROR, "handleNNTPGetError: err: %v", e)
+		sp.Log.LogPrintf(ERROR, "handleNNTPGetError: err: %v", e)
 	}
 	if !nc.IsClosed() {
 		// writer wasn't properly closed -- we should reset connection
@@ -115,100 +107,40 @@ func (sp *PSQLIB) handleNNTPGetError(w Responder, nc nntpCopyer, e error) bool {
 	return true
 }
 
-func (sp *PSQLIB) getArticleCommonByMsgID(
-	nc nntpCopyer, w Responder, cs *ConnState, msgid TCoreMsgID) bool {
+func GetArticleCommonByMsgID(
+	sp *pibase.PSQLIB, nc nntpCopyer, w Responder, cs *ConnState,
+	msgid TCoreMsgID) bool {
 
 	sid := unsafeCoreMsgIDToStr(msgid)
-	e := sp.nntpObtainItemByMsgID(nc, cs, sid)
-	return sp.handleNNTPGetError(w, nc, e)
-}
-func (sp *PSQLIB) GetArticleFullByMsgID(
-	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
-
-	nc := &fullNNTPCopyer{w: w}
-	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
-}
-func (sp *PSQLIB) GetArticleHeadByMsgID(
-	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
-
-	nc := &headNNTPCopyer{w: w}
-	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
-}
-func (sp *PSQLIB) GetArticleBodyByMsgID(
-	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
-
-	nc := &bodyNNTPCopyer{w: w}
-	return sp.getArticleCommonByMsgID(nc, w, cs, msgid)
-}
-func (sp *PSQLIB) GetArticleStatByMsgID(
-	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
-
-	sc := &statNNTPCopyer{w: w}
-	return sp.getArticleCommonByMsgID(sc, w, cs, msgid)
+	e := nntpObtainItemByMsgID(sp, nc, cs, sid)
+	return handleNNTPGetError(sp, w, nc, e)
 }
 
-func (sp *PSQLIB) getArticleCommonByNum(
-	nc nntpCopyer, w Responder, cs *ConnState, num uint64) bool {
+func GetArticleCommonByNum(
+	sp *pibase.PSQLIB, nc nntpCopyer, w Responder, cs *ConnState,
+	num uint64) bool {
 
-	e := sp.nntpObtainItemByNum(nc, cs, num)
-	return sp.handleNNTPGetError(w, nc, e)
-}
-func (sp *PSQLIB) GetArticleFullByNum(
-	w Responder, cs *ConnState, num uint64) bool {
-
-	nc := &fullNNTPCopyer{w: w}
-	return sp.getArticleCommonByNum(nc, w, cs, num)
-}
-func (sp *PSQLIB) GetArticleHeadByNum(
-	w Responder, cs *ConnState, num uint64) bool {
-
-	nc := &headNNTPCopyer{w: w}
-	return sp.getArticleCommonByNum(nc, w, cs, num)
-}
-func (sp *PSQLIB) GetArticleBodyByNum(
-	w Responder, cs *ConnState, num uint64) bool {
-
-	nc := &bodyNNTPCopyer{w: w}
-	return sp.getArticleCommonByNum(nc, w, cs, num)
-}
-func (sp *PSQLIB) GetArticleStatByNum(
-	w Responder, cs *ConnState, num uint64) bool {
-
-	sc := &statNNTPCopyer{w: w}
-	return sp.getArticleCommonByNum(sc, w, cs, num)
+	e := nntpObtainItemByNum(sp, nc, cs, num)
+	return handleNNTPGetError(sp, w, nc, e)
 }
 
-func (sp *PSQLIB) getArticleCommonByCurr(
-	nc nntpCopyer, w Responder, cs *ConnState) bool {
+func GetArticleCommonByCurr(
+	sp *pibase.PSQLIB, nc nntpCopyer, w Responder, cs *ConnState) bool {
 
-	e := sp.nntpObtainItemByCurr(nc, cs)
-	return sp.handleNNTPGetError(w, nc, e)
-}
-func (sp *PSQLIB) GetArticleFullByCurr(w Responder, cs *ConnState) bool {
-	nc := &fullNNTPCopyer{w: w}
-	return sp.getArticleCommonByCurr(nc, w, cs)
-}
-func (sp *PSQLIB) GetArticleHeadByCurr(w Responder, cs *ConnState) bool {
-	nc := &headNNTPCopyer{w: w}
-	return sp.getArticleCommonByCurr(nc, w, cs)
-}
-func (sp *PSQLIB) GetArticleBodyByCurr(w Responder, cs *ConnState) bool {
-	nc := &bodyNNTPCopyer{w: w}
-	return sp.getArticleCommonByCurr(nc, w, cs)
-}
-func (sp *PSQLIB) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
-	sc := &statNNTPCopyer{w: w}
-	return sp.getArticleCommonByCurr(sc, w, cs)
+	e := nntpObtainItemByCurr(sp, nc, cs)
+	return handleNNTPGetError(sp, w, nc, e)
 }
 
-func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
+func SelectGroup(
+	sp *pibase.PSQLIB, w Responder, cs *ConnState, group []byte) bool {
+
 	sgroup := unsafeBytesToStr(group)
 
 	var bid uint32
 	var cnt uint64
 	var lo, hi, g_lo sql.NullInt64
 
-	err := sp.st_prep[st_nntp_select].
+	err := sp.StPrep[pibase.St_nntp_select].
 		QueryRow(sgroup).
 		Scan(&bid, &cnt, &lo, &hi, &g_lo)
 	if err != nil {
@@ -216,7 +148,7 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 			return false
 		}
 		nntpAbortOnErr(w.ResInternalError(
-			sp.sqlError("board-posts row query scan", err)))
+			sp.SQLError("board-posts row query scan", err)))
 		return true
 	}
 
@@ -245,8 +177,9 @@ func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
 
 	return true
 }
-func (sp *PSQLIB) SelectAndListGroup(
-	w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
+func SelectAndListGroup(
+	sp *pibase.PSQLIB, w Responder, cs *ConnState,
+	group []byte, rmin, rmax int64) bool {
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
@@ -267,11 +200,11 @@ func (sp *PSQLIB) SelectAndListGroup(
 		sgroup = gs.bname
 	}
 
-	rows, err := sp.st_prep[st_nntp_select_and_list].
+	rows, err := sp.StPrep[pibase.St_nntp_select_and_list].
 		Query(sgroup, rmin, rmax)
 	if err != nil {
 		nntpAbortOnErr(w.ResInternalError(
-			sp.sqlError("board-posts query", err)))
+			sp.SQLError("board-posts query", err)))
 		return true
 	}
 
@@ -282,7 +215,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 		err = rows.Scan(&bid, &pcnt, &lo, &hi, &g_lo, &bpid)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("board-post query rows scan", err)
+			err = sp.SQLError("board-post query rows scan", err)
 			if dw == nil {
 				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
@@ -320,7 +253,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		err = sp.sqlError("board-post query rows iteration", err)
+		err = sp.SQLError("board-post query rows iteration", err)
 		if dw == nil {
 			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
@@ -336,7 +269,7 @@ func (sp *PSQLIB) SelectAndListGroup(
 		return false
 	}
 }
-func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
+func SelectNextArticle(sp *pibase.PSQLIB, w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		nntpAbortOnErr(w.ResNoNewsgroupSelected())
@@ -351,7 +284,7 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	var ngpid postID
 	var msgid TCoreMsgIDStr
 
-	err := sp.st_prep[st_nntp_next].
+	err := sp.StPrep[pibase.St_nntp_next].
 		QueryRow(gs.bid, gs.bpid).
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
@@ -360,7 +293,7 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 			return
 		}
 		nntpAbortOnErr(w.ResInternalError(
-			sp.sqlError("posts row query scan", err)))
+			sp.SQLError("posts row query scan", err)))
 		return
 	}
 
@@ -368,7 +301,7 @@ func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
 	gs.gpid = ngpid
 	nntpAbortOnErr(w.ResArticleFound(nbpid, msgid))
 }
-func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
+func SelectPrevArticle(sp *pibase.PSQLIB, w Responder, cs *ConnState) {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		nntpAbortOnErr(w.ResNoNewsgroupSelected())
@@ -383,7 +316,7 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 	var ngpid postID
 	var msgid TCoreMsgIDStr
 
-	err := sp.st_prep[st_nntp_last].
+	err := sp.StPrep[pibase.St_nntp_last].
 		QueryRow(gs.bid, gs.bpid).
 		Scan(&nbpid, &ngpid, &msgid)
 	if err != nil {
@@ -392,7 +325,7 @@ func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
 			return
 		}
 		nntpAbortOnErr(w.ResInternalError(
-			sp.sqlError("posts row query scan", err)))
+			sp.SQLError("posts row query scan", err)))
 		return
 	}
 
@@ -405,8 +338,8 @@ func emptyWildmat(w []byte) bool {
 	return len(w) == 0 || (len(w) == 1 && w[0] == '*')
 }
 
-func (sp *PSQLIB) ListNewNews(
-	aw AbstractResponder, wildmat []byte, qt time.Time) {
+func ListNewNews(
+	sp *pibase.PSQLIB, aw AbstractResponder, wildmat []byte, qt time.Time) {
 
 	var rows *sql.Rows
 	var err error
@@ -418,13 +351,13 @@ func (sp *PSQLIB) ListNewNews(
 
 	if wmany || wmgrp {
 		if wmany {
-			rows, err = sp.st_prep[st_nntp_newnews_all].Query(qt)
+			rows, err = sp.StPrep[pibase.St_nntp_newnews_all].Query(qt)
 		} else {
-			rows, err = sp.st_prep[st_nntp_newnews_one].Query(qt, swildmat)
+			rows, err = sp.StPrep[pibase.St_nntp_newnews_one].Query(qt, swildmat)
 		}
 		if err != nil {
 			nntpAbortOnErr(aw.GetResponder().ResInternalError(
-				sp.sqlError("newnews query", err)))
+				sp.SQLError("newnews query", err)))
 			return
 		}
 
@@ -439,7 +372,7 @@ func (sp *PSQLIB) ListNewNews(
 			err = rows.Scan(&msgid)
 			if err != nil {
 				rows.Close()
-				_ = sp.sqlError("newnews query rows scan", err)
+				_ = sp.SQLError("newnews query rows scan", err)
 				aw.Abort()
 				return
 			}
@@ -448,13 +381,13 @@ func (sp *PSQLIB) ListNewNews(
 		}
 	} else {
 		// TODO maybe we should use SQL LIKE to implement filtering?
-		// that would be a little complicated, though
+		// that would be a little bit complicated, though
 		wm := nntp.CompileWildmat(wildmat)
 
-		rows, err = sp.st_prep[st_nntp_newnews_all_group].Query(qt)
+		rows, err = sp.StPrep[pibase.St_nntp_newnews_all_group].Query(qt)
 		if err != nil {
 			nntpAbortOnErr(aw.GetResponder().ResInternalError(
-				sp.sqlError("newnews query", err)))
+				sp.SQLError("newnews query", err)))
 			return
 		}
 
@@ -471,7 +404,7 @@ func (sp *PSQLIB) ListNewNews(
 			err = rows.Scan(&msgid, &bname)
 			if err != nil {
 				rows.Close()
-				_ = sp.sqlError("newnews query rows scan", err)
+				_ = sp.SQLError("newnews query rows scan", err)
 				aw.Abort()
 				return
 			}
@@ -489,39 +422,40 @@ func (sp *PSQLIB) ListNewNews(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		_ = sp.sqlError("newnews query rows iteration", err)
+		_ = sp.SQLError("newnews query rows iteration", err)
 		aw.Abort()
 		return
 	}
 
-	// TODO? maybe check error of close operation
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 }
 
-func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
+func ListNewGroups(sp *pibase.PSQLIB, aw AbstractResponder, qt time.Time) {
 	// name hiwm lowm status
 	// for now lets use status of "y"
 	// TODO put something else in status when needed
-	rows, err := sp.st_prep[st_nntp_newgroups].Query(qt)
+	rows, err := sp.StPrep[pibase.St_nntp_newgroups].Query(qt)
 	if err != nil {
 		nntpAbortOnErr(aw.GetResponder().ResInternalError(
-			sp.sqlError("newgroups query", err)))
+			sp.SQLError("newgroups query", err)))
 		return
 	}
+	defer func() {
+		if err != nil {
+			rows.Close()
+		}
+	}()
 
 	dw, err := aw.OpenDotWriter()
-	if err != nil {
-		rows.Close()
-		nntpAbortOnErr(err)
-	}
+	nntpAbortOnErr(err)
+
 	for rows.Next() {
 		var bname []byte
 		var lo, hi sql.NullInt64
 
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
-			rows.Close()
-			_ = sp.sqlError("newgroups query rows scan", err)
+			_ = sp.SQLError("newgroups query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -530,20 +464,20 @@ func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
 			hi = lo // paranoia
 		}
 
-		fmt.Fprintf(dw, "%s %d %d y\n",
+		_, err = fmt.Fprintf(dw, "%s %d %d y\n",
 			bname, uint64(hi.Int64), uint64(lo.Int64))
+		nntpAbortOnErr(err)
 	}
 	if err = rows.Err(); err != nil {
-		rows.Close()
-		_ = sp.sqlError("newgroups query rows iteration", err)
+		_ = sp.SQLError("newgroups query rows iteration", err)
 		aw.Abort()
 		return
 	}
 
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 }
 
-func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
+func ListActiveGroups(sp *pibase.PSQLIB, aw AbstractResponder, wildmat []byte) {
 	// name hiwm lowm status
 	// for now lets use status of "y"
 	// TODO put something else in status when needed
@@ -560,29 +494,32 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 	}
 
 	if !wmgrp {
-		rows, err = sp.st_prep[st_nntp_listactive_all].Query()
+		rows, err = sp.StPrep[pibase.St_nntp_listactive_all].Query()
 	} else {
-		rows, err = sp.st_prep[st_nntp_listactive_one].Query(wildmat)
+		rows, err = sp.StPrep[pibase.St_nntp_listactive_one].Query(wildmat)
 	}
 	if err != nil {
 		nntpAbortOnErr(aw.GetResponder().ResInternalError(
-			sp.sqlError("list active query", err)))
+			sp.SQLError("list active query", err)))
 		return
 	}
 
+	defer func() {
+		if err != nil {
+			rows.Close()
+		}
+	}()
+
 	dw, err := aw.OpenDotWriter()
-	if err != nil {
-		rows.Close()
-		nntpAbortOnErr(err)
-	}
+	nntpAbortOnErr(err)
+
 	for rows.Next() {
 		var bname []byte
 		var lo, hi sql.NullInt64
 
 		err = rows.Scan(&bname, &lo, &hi)
 		if err != nil {
-			rows.Close()
-			_ = sp.sqlError("list active query rows scan", err)
+			_ = sp.SQLError("list active query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -595,21 +532,21 @@ func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
 			hi = lo // paranoia
 		}
 
-		fmt.Fprintf(dw, "%s %d %d y\n",
+		_, err = fmt.Fprintf(dw, "%s %d %d y\n",
 			bname, uint64(hi.Int64), uint64(lo.Int64))
+		nntpAbortOnErr(err)
 	}
 	if err = rows.Err(); err != nil {
-		rows.Close()
-		_ = sp.sqlError("list active query rows iteration", err)
+		_ = sp.SQLError("list active query rows iteration", err)
 		aw.Abort()
 		return
 	}
 
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 }
 
-func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
-	// name\tdescription
+func ListNewsgroups(sp *pibase.PSQLIB, aw AbstractResponder, wildmat []byte) {
+	// name[tab]description
 
 	var rows *sql.Rows
 	var err error
@@ -624,29 +561,32 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 
 	if !wmgrp {
 		q := `SELECT b_name,bdesc FROM ib0.boards ORDER BY b_name`
-		rows, err = sp.db.DB.Query(q)
+		rows, err = sp.DB.DB.Query(q)
 	} else {
 		q := `SELECT b_name,bdesc FROM ib0.boards WHERE b_name = $1 LIMIT 1`
-		rows, err = sp.db.DB.Query(q, wildmat)
+		rows, err = sp.DB.DB.Query(q, wildmat)
 	}
 	if err != nil {
 		nntpAbortOnErr(aw.GetResponder().ResInternalError(
-			sp.sqlError("list newsgroups query", err)))
+			sp.SQLError("list newsgroups query", err)))
 		return
 	}
 
+	defer func() {
+		if err != nil {
+			rows.Close()
+		}
+	}()
+
 	dw, err := aw.OpenDotWriter()
-	if err != nil {
-		rows.Close()
-		nntpAbortOnErr(err)
-	}
+	nntpAbortOnErr(err)
+
 	for rows.Next() {
 		var bname, bdesc string
 
 		err = rows.Scan(&bname, &bdesc)
 		if err != nil {
-			rows.Close()
-			_ = sp.sqlError("list newsgroups query rows scan", err)
+			_ = sp.SQLError("list newsgroups query rows scan", err)
 			aw.Abort()
 			return
 		}
@@ -661,16 +601,16 @@ func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
 			bdesc = "-"
 		}
 
-		fmt.Fprintf(dw, "%s\t%s\n", bname, bdesc)
+		_, err = fmt.Fprintf(dw, "%s\t%s\n", bname, bdesc)
+		nntpAbortOnErr(err)
 	}
 	if err = rows.Err(); err != nil {
-		rows.Close()
-		_ = sp.sqlError("list active newsgroups rows iteration", err)
+		_ = sp.SQLError("list active newsgroups rows iteration", err)
 		aw.Abort()
 		return
 	}
 
-	dw.Close()
+	nntpAbortOnErr(dw.Close())
 }
 
 var headerReplacer = strings.NewReplacer(
@@ -684,8 +624,8 @@ func safeHeader(s string) string {
 	return headerReplacer.Replace(s)
 }
 
-func (sp *PSQLIB) printOver(
-	w io.Writer, bpid postID, msgid TCoreMsgIDStr,
+func printOver(
+	sp *pibase.PSQLIB, w io.Writer, bpid postID, msgid TCoreMsgIDStr,
 	hsubject, hfrom, hdate, hrefs string,
 	bnames []string, bpids []int64) {
 
@@ -710,7 +650,7 @@ func (sp *PSQLIB) printOver(
 	fmt.Fprintf(w,
 		"%d\t%s\t%s\t%s\t<%s>\t%s\t%s\t%s\tXref: %s", bpid,
 		safeHeader(hsubject), safeHeader(hfrom), safeHeader(hdate), msgid,
-		safeHeader(hrefs), "", "", sp.instance)
+		safeHeader(hrefs), "", "", sp.Instance)
 	for i := range bnames {
 		fmt.Fprintf(w, " %s:%d", bnames[i], bpids[i])
 	}
@@ -723,8 +663,8 @@ func (sp *PSQLIB) printOver(
 //   <OverByRange>  412{ResNoNewsgroupSelected} 423{ResNoArticlesInThatRange[false]}
 //   <XOverByRange> 412{ResNoNewsgroupSelected} 420{ResXNoArticles[false]}
 //   <ByCurr>       412{ResNoNewsgroupSelected} 420{ResCurrentArticleNumberIsInvalid[false]}
-func (sp *PSQLIB) GetOverByMsgID(
-	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
+func GetOverByMsgID(
+	sp *pibase.PSQLIB, w Responder, cs *ConnState, msgid TCoreMsgID) bool {
 
 	smsgid := unsafeCoreMsgIDToStr(msgid)
 
@@ -739,7 +679,7 @@ func (sp *PSQLIB) GetOverByMsgID(
 		isbanned bool
 	)
 
-	err := sp.st_prep[st_nntp_over_msgid].
+	err := sp.StPrep[pibase.St_nntp_over_msgid].
 		QueryRow(smsgid).
 		Scan(
 			pq.Array(&bids),
@@ -755,7 +695,7 @@ func (sp *PSQLIB) GetOverByMsgID(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("overview query", err)))
 		return true
 	}
 	if isbanned {
@@ -768,15 +708,15 @@ func (sp *PSQLIB) GetOverByMsgID(
 
 	nntpAbortOnErr(w.ResOverviewInformationFollows())
 	dw := w.DotWriter()
-	sp.printOver(dw, artnumInGroups(cs, bids, bpids), smsgid,
+	printOver(sp, dw, artnumInGroups(cs, bids, bpids), smsgid,
 		hsubject.String, hfrom.String, hdate.String, hrefs.String,
 		bnames, bpids)
 	dw.Close()
 	return true
 }
 
-func (sp *PSQLIB) GetOverByRange(
-	w Responder, cs *ConnState, rmin, rmax int64) bool {
+func GetOverByRange(
+	sp *pibase.PSQLIB, w Responder, cs *ConnState, rmin, rmax int64) bool {
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
@@ -786,10 +726,10 @@ func (sp *PSQLIB) GetOverByRange(
 
 	var dw io.WriteCloser
 
-	rows, err := sp.st_prep[st_nntp_over_range].
+	rows, err := sp.StPrep[pibase.St_nntp_over_range].
 		Query(gs.bid, rmin, rmax)
 	if err != nil {
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("overview query", err)))
 		return true
 	}
 
@@ -818,7 +758,7 @@ func (sp *PSQLIB) GetOverByRange(
 			&hrefs)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("overview query rows scan", err)
+			err = sp.SQLError("overview query rows scan", err)
 			if dw == nil {
 				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
@@ -835,13 +775,13 @@ func (sp *PSQLIB) GetOverByRange(
 			dw = w.DotWriter()
 		}
 
-		sp.printOver(dw, cbpid, msgid,
+		printOver(sp, dw, cbpid, msgid,
 			hsubject.String, hfrom.String, hdate.String, hrefs.String,
 			bnames, bpids)
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		err = sp.sqlError("overview query rows iteration", err)
+		err = sp.SQLError("overview query rows iteration", err)
 		if dw == nil {
 			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
@@ -857,12 +797,8 @@ func (sp *PSQLIB) GetOverByRange(
 		return false
 	}
 }
-func (sp *PSQLIB) GetXOverByRange(
-	w Responder, cs *ConnState, rmin, rmax int64) bool {
 
-	return sp.GetOverByRange(w, cs, rmin, rmax)
-}
-func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
+func GetOverByCurr(sp *pibase.PSQLIB, w Responder, cs *ConnState) bool {
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		nntpAbortOnErr(w.ResNoNewsgroupSelected())
@@ -882,7 +818,7 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		hsubject, hfrom, hdate, hrefs sql.NullString
 	)
 
-	err := sp.st_prep[st_nntp_over_curr].
+	err := sp.StPrep[pibase.St_nntp_over_curr].
 		QueryRow(gs.gpid).
 		Scan(
 			pq.Array(&bids),
@@ -898,7 +834,7 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 		if err == sql.ErrNoRows {
 			return false
 		}
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("overview query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("overview query", err)))
 		return true
 	}
 	if !hsubject.Valid {
@@ -907,7 +843,7 @@ func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
 
 	nntpAbortOnErr(w.ResOverviewInformationFollows())
 	dw := w.DotWriter()
-	sp.printOver(dw, gs.bpid, msgid,
+	printOver(sp, dw, gs.bpid, msgid,
 		hsubject.String, hfrom.String, hdate.String, hrefs.String,
 		bnames, bpids)
 	nntpAbortOnErr(dw.Close())
@@ -931,7 +867,8 @@ func bpidIfGroupEq(cbid, bid boardID, bpid postID) postID {
 	return 0
 }
 
-func (sp *PSQLIB) commonGetHdrByMsgID(
+func CommonGetHdrByMsgID(
+	sp *pibase.PSQLIB,
 	w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID, rfc bool) bool {
 
 	sid := unsafeCoreMsgIDToStr(msgid)
@@ -946,7 +883,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 	if shdr == "Message-ID" {
 
-		err = sp.st_prep[st_nntp_hdr_msgid_msgid].
+		err = sp.StPrep[pibase.St_nntp_hdr_msgid_msgid].
 			QueryRow(msgid, cbid).
 			Scan(&bid, &bpid, &isbanned)
 		if err == nil {
@@ -957,7 +894,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 		var title string
 
-		err = sp.st_prep[st_nntp_hdr_msgid_subject].
+		err = sp.StPrep[pibase.St_nntp_hdr_msgid_subject].
 			QueryRow(msgid, cbid).
 			Scan(&bid, &bpid, &title, &h, &isbanned)
 		if err == nil && !h.Valid {
@@ -974,7 +911,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		return true
 	} else {
 
-		err = sp.st_prep[st_nntp_hdr_msgid_any].
+		err = sp.StPrep[pibase.St_nntp_hdr_msgid_any].
 			QueryRow(msgid, cbid, shdr).
 			Scan(&bid, &bpid, &h, &isbanned)
 
@@ -983,7 +920,7 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("hdr query", err)))
 		return true
 	}
 	if isbanned {
@@ -1006,7 +943,8 @@ func (sp *PSQLIB) commonGetHdrByMsgID(
 
 	return true
 }
-func (sp *PSQLIB) commonGetHdrByRange(
+func CommonGetHdrByRange(
+	sp *pibase.PSQLIB,
 	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64, rfc bool) bool {
 
 	gs := getGroupState(cs)
@@ -1026,12 +964,12 @@ func (sp *PSQLIB) commonGetHdrByRange(
 
 	if shdr == "Message-ID" {
 
-		rows, err = sp.st_prep[st_nntp_hdr_range_msgid].
+		rows, err = sp.StPrep[pibase.St_nntp_hdr_range_msgid].
 			Query(gs.bid, rmin, rmax)
 
 	} else if shdr == "Subject" {
 
-		rows, err = sp.st_prep[st_nntp_hdr_range_subject].
+		rows, err = sp.StPrep[pibase.St_nntp_hdr_range_subject].
 			Query(gs.bid, rmin, rmax)
 
 		rowsscan = func(r *sql.Rows, pid *postID, h *sql.NullString) error {
@@ -1053,12 +991,12 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		return true
 	} else {
 
-		rows, err = sp.st_prep[st_nntp_hdr_range_any].
+		rows, err = sp.StPrep[pibase.St_nntp_hdr_range_any].
 			Query(gs.bid, rmin, rmax, shdr)
 
 	}
 	if err != nil {
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("hdr query", err)))
 		return true
 	}
 
@@ -1071,7 +1009,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		err = rowsscan(rows, &pid, &h)
 		if err != nil {
 			rows.Close()
-			err = sp.sqlError("hdr query rows scan", err)
+			err = sp.SQLError("hdr query rows scan", err)
 			if dw == nil {
 				nntpAbortOnErr(w.ResInternalError(err))
 			} else {
@@ -1093,7 +1031,7 @@ func (sp *PSQLIB) commonGetHdrByRange(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		err = sp.sqlError("hdr query rows iteration", err)
+		err = sp.SQLError("hdr query rows iteration", err)
 		if dw == nil {
 			nntpAbortOnErr(w.ResInternalError(err))
 		} else {
@@ -1109,7 +1047,8 @@ func (sp *PSQLIB) commonGetHdrByRange(
 		return false
 	}
 }
-func (sp *PSQLIB) commonGetHdrByCurr(
+func CommonGetHdrByCurr(
+	sp *pibase.PSQLIB,
 	w Responder, cs *ConnState, hdr []byte, rfc bool) bool {
 
 	gs := getGroupState(cs)
@@ -1133,11 +1072,11 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 
 	if shdr == "Message-ID" {
 
-		row = sp.st_prep[st_nntp_hdr_curr_msgid].QueryRow(gs.gpid)
+		row = sp.StPrep[pibase.St_nntp_hdr_curr_msgid].QueryRow(gs.gpid)
 
 	} else if shdr == "Subject" {
 
-		row = sp.st_prep[st_nntp_hdr_curr_subject].QueryRow(gs.gpid)
+		row = sp.StPrep[pibase.St_nntp_hdr_curr_subject].QueryRow(gs.gpid)
 
 		rowscan = func(r *sql.Row, h *sql.NullString) error {
 			var title string
@@ -1158,7 +1097,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		return true
 	} else {
 
-		row = sp.st_prep[st_nntp_hdr_curr_any].QueryRow(gs.gpid, shdr)
+		row = sp.StPrep[pibase.St_nntp_hdr_curr_any].QueryRow(gs.gpid, shdr)
 
 	}
 	err = rowscan(row, &h)
@@ -1166,7 +1105,7 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 		if err == sql.ErrNoRows {
 			return false
 		}
-		nntpAbortOnErr(w.ResInternalError(sp.sqlError("hdr query", err)))
+		nntpAbortOnErr(w.ResInternalError(sp.SQLError("hdr query", err)))
 		return true
 	}
 
@@ -1181,30 +1120,4 @@ func (sp *PSQLIB) commonGetHdrByCurr(
 	nntpAbortOnErr(dw.Close())
 
 	return true
-}
-func (sp *PSQLIB) GetHdrByMsgID(
-	w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID) bool {
-
-	return sp.commonGetHdrByMsgID(w, cs, hdr, msgid, true)
-}
-func (sp *PSQLIB) GetHdrByRange(
-	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
-
-	return sp.commonGetHdrByRange(w, cs, hdr, rmin, rmax, true)
-}
-func (sp *PSQLIB) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
-	return sp.commonGetHdrByCurr(w, cs, hdr, true)
-}
-func (sp *PSQLIB) GetXHdrByMsgID(
-	w Responder, hdr []byte, msgid TCoreMsgID) bool {
-
-	return sp.commonGetHdrByMsgID(w, nil, hdr, msgid, false)
-}
-func (sp *PSQLIB) GetXHdrByRange(
-	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
-
-	return sp.commonGetHdrByRange(w, cs, hdr, rmin, rmax, false)
-}
-func (sp *PSQLIB) GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
-	return sp.commonGetHdrByCurr(w, cs, hdr, false)
 }

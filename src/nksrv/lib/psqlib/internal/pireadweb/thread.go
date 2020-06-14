@@ -14,9 +14,9 @@ import (
 func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	board string, threadid string) (error, int) {
 
-	rows, err := sp.st_prep[st_web_thread].Query(board, threadid)
+	rows, err := sp.StPrep[pibase.St_web_thread].Query(board, threadid)
 	if err != nil {
-		return sp.sqlError("Web_thread query", err),
+		return sp.SQLError("Web_thread query", err),
 			http.StatusInternalServerError
 	}
 
@@ -84,7 +84,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 
 		if err != nil {
 			rows.Close()
-			return sp.sqlError(
+			return sp.SQLError(
 					"web_thread query rows scan", err),
 				http.StatusInternalServerError
 		}
@@ -96,7 +96,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread board attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -144,7 +144,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread post attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -152,7 +152,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 			err = pheaders_j.Unmarshal(&pi.Headers)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread post headers json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -193,7 +193,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"web_thread thumbcfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -201,7 +201,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 				err = filecfg_j.Unmarshal(&fi.Options)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"web_thread filecfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -224,7 +224,7 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError("web_thread query rows iteration", err),
+		return sp.SQLError("web_thread query rows iteration", err),
 			http.StatusInternalServerError
 	}
 
@@ -241,9 +241,9 @@ func (sp *PSQLIB) IBGetThread(page *ib0.IBThreadPage,
 func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	board string, num uint32) (error, int) {
 
-	rows, err := sp.st_prep[st_web_thread_list_page].Query(board, num)
+	rows, err := sp.StPrep[pibase.St_web_thread_list_page].Query(board, num)
 	if err != nil {
-		return sp.sqlError("Web_thread_list_page query", err),
+		return sp.SQLError("Web_thread_list_page query", err),
 			http.StatusInternalServerError
 	}
 
@@ -308,7 +308,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 
 		if err != nil {
 			rows.Close()
-			return sp.sqlError(
+			return sp.SQLError(
 					"web_thread_list_page query rows scan", err),
 				http.StatusInternalServerError
 		}
@@ -325,7 +325,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread_list_page board attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -378,7 +378,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread_list_page post attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -386,7 +386,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 			err = pheaders_j.Unmarshal(&pi.Headers)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"web_thread_list_page post headers json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -435,7 +435,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"web_thread_list_page thumbcfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -443,7 +443,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 				err = filecfg_j.Unmarshal(&fi.Options)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"web_thread_list_page filecfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -466,7 +466,7 @@ func (sp *PSQLIB) IBGetThreadListPage(page *ib0.IBThreadListPage,
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError("web_thread_list_page query rows iteration", err),
+		return sp.SQLError("web_thread_list_page query rows iteration", err),
 			http.StatusInternalServerError
 	}
 
@@ -489,9 +489,9 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 		return errNoSuchPage, http.StatusNotFound
 	}
 
-	rows, err := sp.st_prep[st_web_overboard_page].Query(num, 10)
+	rows, err := sp.StPrep[pibase.St_web_overboard_page].Query(num, 10)
 	if err != nil {
-		return sp.sqlError("Web_overboard_page query", err),
+		return sp.SQLError("Web_overboard_page query", err),
 			http.StatusInternalServerError
 	}
 
@@ -553,7 +553,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 
 		if err != nil {
 			rows.Close()
-			return sp.sqlError(
+			return sp.SQLError(
 					"Web_overboard_page query rows scan", err),
 				http.StatusInternalServerError
 		}
@@ -587,7 +587,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			err = b_p_activ_refs.Unmarshal(&pi.References)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"Web_overboard_page post attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -595,7 +595,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 			err = pheaders_j.Unmarshal(&pi.Headers)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"Web_overboard_page post headers json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -644,7 +644,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 				err = thumbcfg_j.Unmarshal(&ta)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"Web_overboard_page thumbcfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -652,7 +652,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 				err = filecfg_j.Unmarshal(&fi.Options)
 				if err != nil {
 					rows.Close()
-					return sp.sqlError(
+					return sp.SQLError(
 							"Web_overboard_page filecfg json unmarshal", err),
 						http.StatusInternalServerError
 				}
@@ -675,7 +675,7 @@ func (sp *PSQLIB) IBGetOverboardPage(page *ib0.IBOverboardPage, num uint32) (
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError("Web_overboard_page query rows iteration", err),
+		return sp.SQLError("Web_overboard_page query rows iteration", err),
 			http.StatusInternalServerError
 	}
 

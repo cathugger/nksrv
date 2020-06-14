@@ -9,7 +9,7 @@ import (
 )
 
 func (sp *PSQLIB) maybeTxStmt(tx *sql.Tx, stmt int) (r *sql.Stmt) {
-	r = sp.st_prep[st_web_prepost_newthread]
+	r = sp.StPrep[pibase.St_web_prepost_newthread]
 	if tx != nil {
 		r = tx.Stmt(r)
 	}
@@ -37,7 +37,7 @@ func (ctx *postWebContext) getPrePostInfo(
 				err = webNotFound(errNoSuchBoard)
 				return
 			}
-			err = ctx.sp.sqlError("board row query scan", err)
+			err = ctx.sp.SQLError("board row query scan", err)
 			return
 		}
 
@@ -61,7 +61,7 @@ func (ctx *postWebContext) getPrePostInfo(
 				err = webNotFound(errNoSuchBoard)
 				return
 			}
-			err = sp.sqlError("board x thread row query scan", err)
+			err = sp.SQLError("board x thread row query scan", err)
 			return
 		}
 

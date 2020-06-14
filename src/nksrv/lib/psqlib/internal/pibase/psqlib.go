@@ -4,8 +4,6 @@ package pibase
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
 	"sync"
 
 	"golang.org/x/crypto/ed25519"
@@ -22,10 +20,20 @@ import (
 	"nksrv/lib/psqlib/internal/pigpolicy"
 )
 
+type TBoardID = uint32
+type TPostID = uint64
+
 type NPTuple struct {
 	N    int
 	Sage bool
 }
+
+const (
+	PendingDir          = "pending" // for src & thm
+	NNTPIncomingTempDir = "in_tmp"
+	NNTPIncomingDir     = "in_got"
+	NNTPPullerDir       = "in_pulled"
+)
 
 type PSQLIB struct {
 	// database handle
@@ -42,13 +50,13 @@ type PSQLIB struct {
 	// for caching of generated NetNews articles
 	NNTPCE cacheengine.CacheEngine
 	// thumbnailing things
-	Thumbnailer      thumbnailer.Thumbnailer
-	ThmPlanForThread thumbnailer.ThumbPlan
-	ThmPlanForReply  thumbnailer.ThumbPlan
-	ThmPlanForSage   thumbnailer.ThumbPlan
-	AltThumber       altthumber.AltThumber
+	Thumbnailer    thumbnailer.Thumbnailer
+	ThmPlanForPost thumbnailer.ThumbPlan
+	ThmPlanForOP   thumbnailer.ThumbPlan
+	ThmPlanForSage thumbnailer.ThumbPlan
+	AltThumber     altthumber.AltThumber
 	// HTTP POST form handling
-	FFO               formFileOpener
+	FFO               FormFileOpener
 	FPP               form.ParserParams
 	TextPostParamFunc func(string) bool
 
@@ -61,7 +69,7 @@ type PSQLIB struct {
 	NGPAnyPuller pigpolicy.NewGroupPolicy
 	NGPAnyServer pigpolicy.NewGroupPolicy
 
-	StPrep [StMax]*sql.Stmt
+	StPrep [stMax]*sql.Stmt
 
 	// newthread prepared statements and locking
 	NTStmts map[int]*sql.Stmt
@@ -89,49 +97,4 @@ func (sp *PSQLIB) Prepare() (err error) {
 
 func (sp *PSQLIB) Close() error {
 	return sp.closeStatements()
-}
-
-func (dbib *PSQLIB) InitAndPrepare() (err error) {
-	valid, err := dbib.CheckDB()
-	if err != nil {
-		return fmt.Errorf("error checking: %v", err)
-	}
-	if !valid {
-		dbib.Log.LogPrint(NOTICE,
-			"uninitialized db, attempting to initialize")
-
-		err = dbib.InitDB()
-		if err != nil {
-			return fmt.Errorf("error initializing: %v", err)
-		}
-
-		valid, err = dbib.CheckDB()
-		if err != nil {
-			return fmt.Errorf("error checking (2): %v", err)
-		}
-		if !valid {
-			return errors.New("database still not valid after initialization")
-		}
-	}
-
-	err = dbib.Prepare()
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func NewInitAndPrepare(cfg Config) (db *PSQLIB, err error) {
-	db, err = NewPSQLIB(cfg)
-	if err != nil {
-		return
-	}
-
-	err = db.InitAndPrepare()
-	if err != nil {
-		return
-	}
-
-	return
 }

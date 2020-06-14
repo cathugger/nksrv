@@ -1,9 +1,14 @@
-package psqlib
+package pibaseweb
 
-import "nksrv/lib/ibattribs"
+import (
+	"nksrv/lib/ibattribs"
+	"nksrv/lib/psqlib/internal/pibase"
+)
 
-type TBoardID = uint32
-type TPostID = uint64
+type (
+	TBoardID = pibase.TBoardID
+	TPostID  = pibase.TPostID
+)
 
 // structures
 

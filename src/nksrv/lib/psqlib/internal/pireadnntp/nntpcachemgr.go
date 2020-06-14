@@ -1,4 +1,4 @@
-package psqlib
+package pireadnntp
 
 import (
 	"database/sql"
@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/blake2s"
 
 	ht "nksrv/lib/hashtools"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
 type nntpidinfo struct {
@@ -15,32 +16,33 @@ type nntpidinfo struct {
 	gpid postID
 }
 
-type nntpcachemgr struct {
-	sp *PSQLIB
+type NNTPCacheMgr struct {
+	*pibase.PSQLIB
 }
 
-func (mgr nntpcachemgr) MakeFilename(id string) string {
+func (mgr NNTPCacheMgr) MakeFilename(id string) string {
 	// id can contain invalid chars like /
 	// we could just base32 id itself but that would allow it to grow over common file name limit of 255
 	// so do blake2s
+	// TODO we should just store cache key in DB itself
 	idsum := blake2s.Sum256(unsafeStrToBytes(id))
 	enc := ht.LowerBase32Enc.EncodeToString(idsum[:])
-	return mgr.sp.nntpfs.Main() + enc + ".eml"
+	return mgr.NNTPFS.Main() + enc + ".eml"
 }
 
-func (mgr nntpcachemgr) NewTempFile() (*os.File, error) {
-	return mgr.sp.nntpfs.NewFile("tmp", "", "")
+func (mgr NNTPCacheMgr) NewTempFile() (*os.File, error) {
+	return mgr.NNTPFS.NewFile("tmp", "", "")
 }
 
-func (mgr nntpcachemgr) Generate(
+func (mgr NNTPCacheMgr) Generate(
 	w io.Writer, objid string, objinfo interface{}) error {
 
 	x := objinfo.(nntpidinfo)
-	return mgr.sp.nntpGenerate(w, TCoreMsgIDStr(objid), x.gpid)
+	return nntpGenerate(mgr.PSQLIB, w, TCoreMsgIDStr(objid), x.gpid)
 }
 
-func (sp *PSQLIB) nntpObtainItemByMsgID(
-	w nntpCopyer, cs *ConnState, msgid TCoreMsgIDStr) error {
+func nntpObtainItemByMsgID(
+	sp *pibase.PSQLIB, w nntpCopyer, cs *ConnState, msgid TCoreMsgIDStr) error {
 
 	cb_bid := currSelectedGroupID(cs)
 
@@ -49,14 +51,14 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(
 	var p_gpid postID
 	var p_isbanned bool
 
-	err := sp.st_prep[st_nntp_article_num_by_msgid].
+	err := sp.StPrep[pibase.St_nntp_article_num_by_msgid].
 		QueryRow(string(msgid), cb_bid).
 		Scan(&p_bid, &p_bpid, &p_gpid, &p_isbanned)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
-		return sp.sqlError("posts row query scan", err)
+		return sp.SQLError("posts row query scan", err)
 	}
 	if p_isbanned {
 		// we could signal this in some other way later maybe
@@ -67,11 +69,11 @@ func (sp *PSQLIB) nntpObtainItemByMsgID(
 
 	cb_bpid := bpidIfGroupEq(cb_bid, p_bid, p_bpid)
 
-	return sp.nntpObtainItemOrStat(w, cb_bpid, msgid, p_gpid)
+	return nntpObtainItemOrStat(sp, w, cb_bpid, msgid, p_gpid)
 }
 
-func (sp *PSQLIB) nntpObtainItemByNum(
-	w nntpCopyer, cs *ConnState, num uint64) error {
+func nntpObtainItemByNum(
+	sp *pibase.PSQLIB, w nntpCopyer, cs *ConnState, num uint64) error {
 
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
@@ -81,24 +83,26 @@ func (sp *PSQLIB) nntpObtainItemByNum(
 	var p_msgid TCoreMsgIDStr
 	var p_gpid postID
 
-	err := sp.st_prep[st_nntp_article_msgid_by_num].
+	err := sp.StPrep[pibase.St_nntp_article_msgid_by_num].
 		QueryRow(gs.bid, num).
 		Scan(&p_msgid, &p_gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
-		return sp.sqlError("posts row query scan", err)
+		return sp.SQLError("posts row query scan", err)
 	}
 
 	// this kind of query modifies current article ID
 	// therefore pass state to copyer so it can set it
 	w.SetGroupState(gs)
 
-	return sp.nntpObtainItemOrStat(w, num, p_msgid, p_gpid)
+	return nntpObtainItemOrStat(sp, w, num, p_msgid, p_gpid)
 }
 
-func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
+func nntpObtainItemByCurr(
+	sp *pibase.PSQLIB, w nntpCopyer, cs *ConnState) error {
+
 	gs := getGroupState(cs)
 	if !isGroupSelected(gs) {
 		return errNoBoardSelected
@@ -110,28 +114,29 @@ func (sp *PSQLIB) nntpObtainItemByCurr(w nntpCopyer, cs *ConnState) error {
 	var msgid TCoreMsgIDStr
 	var gpid postID
 
-	err := sp.st_prep[st_nntp_article_msgid_by_num].
+	err := sp.StPrep[pibase.St_nntp_article_msgid_by_num].
 		QueryRow(gs.bid, gs.bpid).
 		Scan(&msgid, &gpid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errNotExist
 		}
-		return sp.sqlError("posts row query scan", err)
+		return sp.SQLError("posts row query scan", err)
 	}
 
 	// current article ID isn't to be modified because it'd be the same
 
-	return sp.nntpObtainItemOrStat(w, gs.bpid, msgid, gpid)
+	return nntpObtainItemOrStat(sp, w, gs.bpid, msgid, gpid)
 }
 
-func (sp *PSQLIB) nntpObtainItemOrStat(
-	w nntpCopyer, bpid postID, msgid TCoreMsgIDStr, gpid postID) error {
+func nntpObtainItemOrStat(
+	sp *pibase.PSQLIB, w nntpCopyer,
+	bpid postID, msgid TCoreMsgIDStr, gpid postID) error {
 
 	nii := nntpidinfo{bpid: bpid, gpid: gpid}
 
-	if _, ok := w.(*statNNTPCopyer); !ok {
-		return sp.nntpce.ObtainItem(w, string(msgid), nii)
+	if _, ok := w.(*StatNNTPCopyer); !ok {
+		return sp.NNTPCE.ObtainItem(w, string(msgid), nii)
 	} else {
 		// interface abuse
 		_, err := w.CopyFrom(nil, string(msgid), nii)

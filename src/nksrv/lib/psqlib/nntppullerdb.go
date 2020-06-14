@@ -51,43 +51,43 @@ func (s *PullerDB) nextNonce() int64 {
 }
 
 func (s *PullerDB) GetLastNewNews() (t int64, err error) {
-	e := s.sp.st_prep[st_puller_get_last_newnews].
+	e := s.sp.StPrep[pibase.St_puller_get_last_newnews].
 		QueryRow(s.id).
 		Scan(&t)
 	if e != nil {
 		if e == sql.ErrNoRows {
 			return 0, nil
 		}
-		return 0, s.sp.sqlError("puller_get_last_newnews query scan", e)
+		return 0, s.sp.SQLError("puller_get_last_newnews query scan", e)
 	}
 	return
 }
 func (s *PullerDB) UpdateLastNewNews(t int64) error {
-	_, e := s.sp.st_prep[st_puller_set_last_newnews].
+	_, e := s.sp.StPrep[pibase.St_puller_set_last_newnews].
 		Exec(s.id, t)
 	if e != nil {
-		return s.sp.sqlError("puller_set_last_newnews query execution", e)
+		return s.sp.SQLError("puller_set_last_newnews query execution", e)
 	}
 	return nil
 }
 
 func (s *PullerDB) GetLastNewGroups() (t int64, err error) {
-	e := s.sp.st_prep[st_puller_get_last_newsgroups].
+	e := s.sp.StPrep[pibase.St_puller_get_last_newsgroups].
 		QueryRow(s.id).
 		Scan(&t)
 	if e != nil {
 		if e == sql.ErrNoRows {
 			return 0, nil
 		}
-		return 0, s.sp.sqlError("puller_get_last_newsgroups query scan", e)
+		return 0, s.sp.SQLError("puller_get_last_newsgroups query scan", e)
 	}
 	return
 }
 func (s *PullerDB) UpdateLastNewGroups(t int64) error {
-	_, e := s.sp.st_prep[st_puller_set_last_newsgroups].
+	_, e := s.sp.StPrep[pibase.St_puller_set_last_newsgroups].
 		Exec(s.id, t)
 	if e != nil {
-		return s.sp.sqlError("puller_set_last_newsgroups query execution", e)
+		return s.sp.SQLError("puller_set_last_newsgroups query execution", e)
 	}
 	return nil
 }
@@ -100,7 +100,7 @@ func (s *PullerDB) GetGroupID(group []byte) (int64, error) {
 		var bid boardID
 		var lid sql.NullInt64
 
-		e := s.sp.st_prep[st_puller_get_group_id].
+		e := s.sp.StPrep[pibase.St_puller_get_group_id].
 			QueryRow(s.id, unsafe_sgroup).
 			Scan(&bid, &lid)
 		if e != nil {
@@ -111,7 +111,7 @@ func (s *PullerDB) GetGroupID(group []byte) (int64, error) {
 				// proceed with adding
 			} else {
 				// SQL error
-				return -1, s.sp.sqlError("puller_get_group_id query scan", e)
+				return -1, s.sp.SQLError("puller_get_group_id query scan", e)
 			}
 		} else {
 			// found something. board exists but ID may be NULL. which is OK
@@ -134,15 +134,15 @@ func (s *PullerDB) UpdateGroupID(group string, id uint64) error {
 	var e error
 	if id != 0 {
 		es = "puller_set_group_id query execution"
-		_, e = s.sp.st_prep[st_puller_set_group_id].
+		_, e = s.sp.StPrep[pibase.St_puller_set_group_id].
 			Exec(s.id, group, id)
 	} else {
 		es = "puller_unset_group_id query execution"
-		_, e = s.sp.st_prep[st_puller_unset_group_id].
+		_, e = s.sp.StPrep[pibase.St_puller_unset_group_id].
 			Exec(s.id, group)
 	}
 	if e != nil {
-		return s.sp.sqlError(es, e)
+		return s.sp.SQLError(es, e)
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (s *PullerDB) FinishTempGroups(partial bool) (err error) {
 WHERE sid = $1 AND last_use <> $2`
 		_, err = s.sp.db.DB.Exec(q, s.id, nonce)
 		if err != nil {
-			return s.sp.sqlError("puller_group_track delete query execution", err)
+			return s.sp.SQLError("puller_group_track delete query execution", err)
 		}
 	}
 	return
@@ -185,7 +185,7 @@ ON CONFLICT (sid,bid)
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce, new_id)
 	if e != nil {
-		return s.sp.sqlError("puller_group_track upsert query execution", e)
+		return s.sp.SQLError("puller_group_track upsert query execution", e)
 	}
 	return nil
 }
@@ -200,7 +200,7 @@ ON CONFLICT (sid,bid)
 	nonce := s.getNonce()
 	_, e := s.sp.db.DB.Exec(q, s.id, group, nonce)
 	if e != nil {
-		return s.sp.sqlError("puller_group_track upsert query execution", e)
+		return s.sp.SQLError("puller_group_track upsert query execution", e)
 	}
 	return nil
 }
@@ -209,11 +209,11 @@ func (s *PullerDB) LoadTempGroup() (
 
 	// TODO throw out this deadlock-inducing logic
 	if s.temp_rows == nil {
-		s.temp_rows, err = s.sp.st_prep[st_puller_load_temp_groups].
+		s.temp_rows, err = s.sp.StPrep[pibase.St_puller_load_temp_groups].
 			Query(s.id, s.nonce)
 		if err != nil {
 			s.temp_rows = nil
-			err = s.sp.sqlError("puller_group_track load query", err)
+			err = s.sp.SQLError("puller_group_track load query", err)
 			return
 		}
 	}
@@ -233,7 +233,7 @@ func (s *PullerDB) LoadTempGroup() (
 	}
 	err = s.temp_rows.Scan(&group, &new_id, &old_id)
 	if err != nil {
-		err = s.sp.sqlError("puller_group_track load query scan", err)
+		err = s.sp.SQLError("puller_group_track load query scan", err)
 		return
 	}
 	return
@@ -329,7 +329,7 @@ RETURNING sid`
 		QueryRow(q, name, nonce).
 		Scan(&db.id)
 	if e != nil {
-		return nil, sp.sqlError("puller_list upsert query scan", e)
+		return nil, sp.SQLError("puller_list upsert query scan", e)
 	}
 	return db, nil
 }
@@ -339,7 +339,7 @@ func (sp *PSQLIB) ClearPullerDBs() error {
 	q := `DELETE FROM ib0.puller_list WHERE last_use <> $1`
 	_, e := sp.db.DB.Exec(q, nonce)
 	if e != nil {
-		return sp.sqlError("puller_list delete query execution", e)
+		return sp.SQLError("puller_list delete query execution", e)
 	}
 	return nil
 }

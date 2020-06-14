@@ -10,12 +10,12 @@ import (
 	"nksrv/lib/ftypes"
 )
 
-func (sp *PSQLIB) IBGetThreadCatalog(
+func (sp *pibase.PSQLIB) IBGetThreadCatalog(
 	page *ib0.IBThreadCatalog, board string) (error, int) {
 
-	rows, err := sp.st_prep[st_web_thread_catalog].Query(board)
+	rows, err := sp.StPrep[pibase.St_web_thread_catalog].Query(board)
 	if err != nil {
-		return sp.sqlError("Web_catalog query", err),
+		return sp.SQLError("Web_catalog query", err),
 			http.StatusInternalServerError
 	}
 
@@ -64,7 +64,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 
 		if err != nil {
 			rows.Close()
-			return sp.sqlError("Web_catalog query rows scan", err),
+			return sp.SQLError("Web_catalog query rows scan", err),
 				http.StatusInternalServerError
 		}
 
@@ -74,7 +74,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 			err = battrib_j.Unmarshal(&battrs)
 			if err != nil {
 				rows.Close()
-				return sp.sqlError(
+				return sp.SQLError(
 						"Web_catalog board attr json unmarshal", err),
 					http.StatusInternalServerError
 			}
@@ -113,7 +113,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 					err = thumbcfg_j.Unmarshal(&ta)
 					if err != nil {
 						rows.Close()
-						return sp.sqlError(
+						return sp.SQLError(
 								"Web_catalog thumbcfg json unmarshal", err),
 							http.StatusInternalServerError
 					}
@@ -139,7 +139,7 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError(
+		return sp.SQLError(
 				"Web_catalog query rows iteration", err),
 			http.StatusInternalServerError
 	}
@@ -151,12 +151,12 @@ func (sp *PSQLIB) IBGetThreadCatalog(
 	return nil, 0
 }
 
-func (sp *PSQLIB) IBGetOverboardCatalog(
+func (sp *pibase.PSQLIB) IBGetOverboardCatalog(
 	page *ib0.IBOverboardCatalog) (error, int) {
 
-	rows, err := sp.st_prep[st_web_overboard_catalog].Query(100)
+	rows, err := sp.StPrep[pibase.St_web_overboard_catalog].Query(100)
 	if err != nil {
-		return sp.sqlError("web_overboard_catalog query", err),
+		return sp.SQLError("web_overboard_catalog query", err),
 			http.StatusInternalServerError
 	}
 
@@ -202,7 +202,7 @@ func (sp *PSQLIB) IBGetOverboardCatalog(
 
 		if err != nil {
 			rows.Close()
-			return sp.sqlError(
+			return sp.SQLError(
 					"web_overboard_catalog query rows scan", err),
 				http.StatusInternalServerError
 		}
@@ -232,7 +232,7 @@ func (sp *PSQLIB) IBGetOverboardCatalog(
 					err = thumbcfg_j.Unmarshal(&ta)
 					if err != nil {
 						rows.Close()
-						return sp.sqlError(
+						return sp.SQLError(
 								"web_overboard_catalog thumbcfg json unmarshal", err),
 							http.StatusInternalServerError
 					}
@@ -259,7 +259,7 @@ func (sp *PSQLIB) IBGetOverboardCatalog(
 	}
 	if err = rows.Err(); err != nil {
 		rows.Close()
-		return sp.sqlError(
+		return sp.SQLError(
 				"web_overboard_catalog query rows iteration", err),
 			http.StatusInternalServerError
 	}

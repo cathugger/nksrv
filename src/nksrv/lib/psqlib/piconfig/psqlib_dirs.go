@@ -1,19 +1,13 @@
-package pibase
+package piconfig
 
 // psqlib directory initializations
 
 import (
 	"nksrv/lib/fstore"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
-const (
-	PendingDir          = "pending" // for src & thm
-	NNTPIncomingTempDir = "in_tmp"
-	NNTPIncomingDir     = "in_got"
-	NNTPPullerDir       = "in_pulled"
-)
-
-func (p *PSQLIB) initDirs(cfg Config) (err error) {
+func initDirs(p *pibase.PSQLIB, cfg Config) (err error) {
 	p.Src, err = fstore.OpenFStore(*cfg.SrcCfg)
 	if err != nil {
 		return
@@ -36,15 +30,15 @@ func (p *PSQLIB) initDirs(cfg Config) (err error) {
 	if err != nil {
 		return
 	}
-	err = p.NNTPFS.DeclareDir(NNTPIncomingTempDir, false)
+	err = p.NNTPFS.DeclareDir(pibase.NNTPIncomingTempDir, false)
 	if err != nil {
 		return
 	}
-	err = p.NNTPFS.DeclareDir(NNTPIncomingDir, true)
+	err = p.NNTPFS.DeclareDir(pibase.NNTPIncomingDir, true)
 	if err != nil {
 		return
 	}
-	err = p.NNTPFS.DeclareDir(NNTPPullerDir, true)
+	err = p.NNTPFS.DeclareDir(pibase.NNTPPullerDir, true)
 	if err != nil {
 		return
 	}
