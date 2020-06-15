@@ -1,4 +1,4 @@
-package psqlib
+package pipostbase
 
 import (
 	"fmt"

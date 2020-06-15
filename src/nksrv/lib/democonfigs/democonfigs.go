@@ -5,7 +5,7 @@ import (
 	"nksrv/lib/captchainfo"
 	"nksrv/lib/demoib"
 	"nksrv/lib/fstore"
-	"nksrv/lib/psqlib"
+	"nksrv/lib/psqlib/piconfig"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/gothm"
 )
@@ -14,21 +14,21 @@ import (
 
 var CfgAltThm = altthumber.AltThumber(demoib.DemoAltThumber{})
 
-var CfgPSQLIB = psqlib.Config{
+var CfgPSQLIB = piconfig.Config{
 	NodeName:   "nekochan",
 	SrcCfg:     &fstore.Config{"_demo/demoib0/src"},
 	ThmCfg:     &fstore.Config{"_demo/demoib0/thm"},
 	NNTPFSCfg:  &fstore.Config{"_demo/demoib0/nntp"},
 	AltThumber: &CfgAltThm,
 	TBuilder:   gothm.DefaultConfig,
-	TCfgThread: &thumbnailer.ThumbConfig{
+	TCfgOP: &thumbnailer.ThumbConfig{
 		Width:       250,
 		Height:      250,
 		AudioWidth:  350,
 		AudioHeight: 350,
 		Color:       "#EEF2FF",
 	},
-	TCfgReply: &thumbnailer.ThumbConfig{
+	TCfgPost: &thumbnailer.ThumbConfig{
 		Width:       200,
 		Height:      200,
 		AudioWidth:  350,

@@ -113,101 +113,101 @@ var stNames = [stMax]StReference{
 
 	// NNTP stuff
 
-	StReference{"nntp", "nntp_article_exists_or_banned_by_msgid"},
-	StReference{"nntp", "nntp_article_valid_by_msgid"},
+	{"nntp", "nntp_article_exists_or_banned_by_msgid"},
+	{"nntp", "nntp_article_valid_by_msgid"},
 
-	StReference{"nntp", "nntp_article_num_by_msgid"},
-	StReference{"nntp", "nntp_article_msgid_by_num"},
+	{"nntp", "nntp_article_num_by_msgid"},
+	{"nntp", "nntp_article_msgid_by_num"},
 
-	StReference{"nntp", "nntp_article_get_gpid"},
+	{"nntp", "nntp_article_get_gpid"},
 
-	StReference{"nntp", "nntp_select"},
-	StReference{"nntp", "nntp_select_and_list"},
+	{"nntp", "nntp_select"},
+	{"nntp", "nntp_select_and_list"},
 
-	StReference{"nntp", "nntp_next"},
-	StReference{"nntp", "nntp_last"},
+	{"nntp", "nntp_next"},
+	{"nntp", "nntp_last"},
 
-	StReference{"nntp", "nntp_newnews_all"},
-	StReference{"nntp", "nntp_newnews_one"},
-	StReference{"nntp", "nntp_newnews_all_group"},
+	{"nntp", "nntp_newnews_all"},
+	{"nntp", "nntp_newnews_one"},
+	{"nntp", "nntp_newnews_all_group"},
 
-	StReference{"nntp", "nntp_newgroups"},
+	{"nntp", "nntp_newgroups"},
 
-	StReference{"nntp", "nntp_listactive_all"},
-	StReference{"nntp", "nntp_listactive_one"},
+	{"nntp", "nntp_listactive_all"},
+	{"nntp", "nntp_listactive_one"},
 
-	StReference{"nntp", "nntp_over_msgid"},
-	StReference{"nntp", "nntp_over_range"},
-	StReference{"nntp", "nntp_over_curr"},
+	{"nntp", "nntp_over_msgid"},
+	{"nntp", "nntp_over_range"},
+	{"nntp", "nntp_over_curr"},
 
-	StReference{"nntp", "nntp_hdr_msgid_msgid"},
-	StReference{"nntp", "nntp_hdr_msgid_subject"},
-	StReference{"nntp", "nntp_hdr_msgid_any"},
-	StReference{"nntp", "nntp_hdr_range_msgid"},
-	StReference{"nntp", "nntp_hdr_range_subject"},
-	StReference{"nntp", "nntp_hdr_range_any"},
-	StReference{"nntp", "nntp_hdr_curr_msgid"},
-	StReference{"nntp", "nntp_hdr_curr_subject"},
-	StReference{"nntp", "nntp_hdr_curr_any"},
+	{"nntp", "nntp_hdr_msgid_msgid"},
+	{"nntp", "nntp_hdr_msgid_subject"},
+	{"nntp", "nntp_hdr_msgid_any"},
+	{"nntp", "nntp_hdr_range_msgid"},
+	{"nntp", "nntp_hdr_range_subject"},
+	{"nntp", "nntp_hdr_range_any"},
+	{"nntp", "nntp_hdr_curr_msgid"},
+	{"nntp", "nntp_hdr_curr_subject"},
+	{"nntp", "nntp_hdr_curr_any"},
 
 	// web stuff
 
-	StReference{"web", "web_listboards"},
-	StReference{"web", "web_thread_list_page"},
-	StReference{"web", "web_overboard_page"},
-	StReference{"web", "web_thread_catalog"},
-	StReference{"web", "web_overboard_catalog"},
-	StReference{"web", "web_thread"},
+	{"web", "web_listboards"},
+	{"web", "web_thread_list_page"},
+	{"web", "web_overboard_page"},
+	{"web", "web_thread_catalog"},
+	{"web", "web_overboard_catalog"},
+	{"web", "web_thread"},
 
-	StReference{"web", "web_prepost_newthread"},
-	StReference{"web", "web_prepost_newpost"},
+	{"web", "web_prepost_newthread"},
+	{"web", "web_prepost_newpost"},
 
 	// database-modification
 
-	StReference{"mod", "mod_ref_write"},
-	StReference{"mod", "mod_ref_find_post"},
-	StReference{"mod", "mod_update_bpost_activ_refs"},
+	{"mod", "mod_ref_write"},
+	{"mod", "mod_ref_find_post"},
+	{"mod", "mod_update_bpost_activ_refs"},
 
-	StReference{"mod", "mod_autoregister_mod"},
-	StReference{"mod", "mod_delete_by_msgid"},
-	StReference{"mod", "mod_ban_by_msgid"},
-	StReference{"mod", "mod_bname_topts_by_tid"},
-	StReference{"mod", "mod_refresh_bump_by_tid"},
+	{"mod", "mod_autoregister_mod"},
+	{"mod", "mod_delete_by_msgid"},
+	{"mod", "mod_ban_by_msgid"},
+	{"mod", "mod_bname_topts_by_tid"},
+	{"mod", "mod_refresh_bump_by_tid"},
 
-	StReference{"mod", "mod_set_mod_priv"},
-	StReference{"mod", "mod_set_mod_priv_group"},
-	StReference{"mod", "mod_unset_mod"},
-	StReference{"mod", "mod_fetch_and_clear_mod_msgs_start"},
-	StReference{"mod", "mod_fetch_and_clear_mod_msgs_continue"},
+	{"mod", "mod_set_mod_priv"},
+	{"mod", "mod_set_mod_priv_group"},
+	{"mod", "mod_unset_mod"},
+	{"mod", "mod_fetch_and_clear_mod_msgs_start"},
+	{"mod", "mod_fetch_and_clear_mod_msgs_continue"},
 
-	StReference{"mod", "mod_load_files"},
+	{"mod", "mod_load_files"},
 
-	StReference{"mod", "mod_check_article_for_push"},
-	StReference{"mod", "mod_delete_ph_for_push"},
-	StReference{"mod", "mod_add_ph_after_push"},
+	{"mod", "mod_check_article_for_push"},
+	{"mod", "mod_delete_ph_for_push"},
+	{"mod", "mod_add_ph_after_push"},
 
 	// job list management
 
-	StReference{"mod_joblist", "mod_joblist_modlist_changes_get"},
-	StReference{"mod_joblist", "mod_joblist_modlist_changes_set"},
-	StReference{"mod_joblist", "mod_joblist_modlist_changes_del"},
+	{"mod_joblist", "mod_joblist_modlist_changes_get"},
+	{"mod_joblist", "mod_joblist_modlist_changes_set"},
+	{"mod_joblist", "mod_joblist_modlist_changes_del"},
 
-	StReference{"mod_joblist", "mod_joblist_refs_deps_recalc_get"},
-	StReference{"mod_joblist", "mod_joblist_refs_deps_recalc_set"},
-	StReference{"mod_joblist", "mod_joblist_refs_deps_recalc_del"},
+	{"mod_joblist", "mod_joblist_refs_deps_recalc_get"},
+	{"mod_joblist", "mod_joblist_refs_deps_recalc_set"},
+	{"mod_joblist", "mod_joblist_refs_deps_recalc_del"},
 
-	StReference{"mod_joblist", "mod_joblist_refs_recalc_get"},
+	{"mod_joblist", "mod_joblist_refs_recalc_get"},
 
 	// puller-related
 
-	StReference{"puller", "puller_get_last_newnews"},
-	StReference{"puller", "puller_set_last_newnews"},
-	StReference{"puller", "puller_get_last_newsgroups"},
-	StReference{"puller", "puller_set_last_newsgroups"},
-	StReference{"puller", "puller_get_group_id"},
-	StReference{"puller", "puller_set_group_id"},
-	StReference{"puller", "puller_unset_group_id"},
-	StReference{"puller", "puller_load_temp_groups"},
+	{"puller", "puller_get_last_newnews"},
+	{"puller", "puller_set_last_newnews"},
+	{"puller", "puller_get_last_newsgroups"},
+	{"puller", "puller_set_last_newsgroups"},
+	{"puller", "puller_get_group_id"},
+	{"puller", "puller_set_group_id"},
+	{"puller", "puller_unset_group_id"},
+	{"puller", "puller_load_temp_groups"},
 }
 
 func LoadStatements() {

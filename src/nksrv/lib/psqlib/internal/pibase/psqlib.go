@@ -11,7 +11,7 @@ import (
 	"nksrv/lib/altthumber"
 	"nksrv/lib/cacheengine"
 	"nksrv/lib/fstore"
-	. "nksrv/lib/logx"
+	"nksrv/lib/logx"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/psql"
 	"nksrv/lib/thumbnailer"
@@ -39,7 +39,7 @@ type PSQLIB struct {
 	// database handle
 	DB psql.PSQL
 	// this psqlib instance logger
-	Log LogToX
+	Log logx.LogToX
 	// file storage stuff
 	Src    fstore.FStore
 	Thm    fstore.FStore
