@@ -6,40 +6,41 @@ import (
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
-type postCommonContext struct {
-	sp  *PSQLIB
-	log LogToX
+type PostCommonContext struct {
+	sp  *pibase.PSQLIB
+	Log LogToX
 
 	// global statement handle used for insertion. acquired before transaction start
-	gstmt *sql.Stmt
+	GStmt *sql.Stmt
 
-	wg_TP sync.WaitGroup // for tmp->pending
-	wg_PA sync.WaitGroup // for pending->active storage
+	TPWG sync.WaitGroup // for tmp->pending
+	PAWG sync.WaitGroup // for pending->active storage
 
-	werr_mu sync.Mutex
-	werr    error
+	WErrMu sync.Mutex
+	WErr   error
 
-	isSage bool
+	IsSage bool
 
-	src_pending string // full dir name without slash of pending dir in src
-	thm_pending string // full dir name without slash of pending dir in thm
+	SrcPending string // full dir name without slash of pending dir in src
+	ThmPending string // full dir name without slash of pending dir in thm
 
-	thumbInfos []mailib.TThumbInfo
+	ThumbInfos []mailib.TThumbInfo
 }
 
-func (c *postCommonContext) set_werr(e error) {
-	c.werr_mu.Lock()
-	if (c.werr == nil) != (e == nil) {
-		c.werr = e
+func (c *PostCommonContext) set_werr(e error) {
+	c.WErrMu.Lock()
+	if (c.WErr == nil) != (e == nil) {
+		c.WErr = e
 	}
-	c.werr_mu.Unlock()
+	c.WErrMu.Unlock()
 }
 
-func (c *postCommonContext) get_werr() (e error) {
-	c.werr_mu.Lock()
-	e = c.werr
-	c.werr_mu.Unlock()
+func (c *PostCommonContext) get_werr() (e error) {
+	c.WErrMu.Lock()
+	e = c.WErr
+	c.WErrMu.Unlock()
 	return
 }

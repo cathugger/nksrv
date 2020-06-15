@@ -8,7 +8,7 @@ import (
 	"nksrv/lib/fstore"
 )
 
-func (ctx *postCommonContext) wp_fpp_bc_movensync(
+func (ctx *PostCommonContext) wp_fpp_bc_movensync(
 	pendir string, iterf func(func(fromfull, tofull string))) {
 
 	// move & sync individual files
@@ -38,7 +38,7 @@ func (ctx *postCommonContext) wp_fpp_bc_movensync(
 	ctx.wp_syncdir(path.Dir(pendir))
 }
 
-func (ctx *postCommonContext) wp_act_fpp_bc_afiw_any(
+func (ctx *PostCommonContext) wp_act_fpp_bc_afiw_any(
 	fromdir, rootdir string, mover *fstore.Mover,
 	iterf func(func(id string))) {
 

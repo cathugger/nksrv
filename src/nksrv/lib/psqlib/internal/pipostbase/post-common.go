@@ -9,10 +9,11 @@ import (
 	"github.com/lib/pq"
 
 	. "nksrv/lib/logx"
+	"nksrv/lib/psqlib/internal/pibase"
 	"nksrv/lib/thumbnailer"
 )
 
-func (sp *PSQLIB) pickThumbPlan(isReply, isSage bool) thumbnailer.ThumbPlan {
+func PickThumbPlan(sp *pibase.PSQLIB, isReply, isSage bool) thumbnailer.ThumbPlan {
 	if !isReply {
 		return sp.tplan_thread
 	} else if !isSage {
@@ -91,7 +92,7 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, e
 
 	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
 
-	st := tx.Stmt(sp.st_prep[st_mod_autoregister_mod])
+	st := tx.Stmt(sp.StPrep[pibase.St_mod_autoregister_mod])
 	x := 0
 	for {
 
