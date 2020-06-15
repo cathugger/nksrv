@@ -3,6 +3,7 @@ package pipostbase
 import (
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"strings"
 
 	xtypes "github.com/jmoiron/sqlx/types"
@@ -25,10 +26,18 @@ func PickThumbPlan(sp *pibase.PSQLIB, isReply, isSage bool) thumbnailer.ThumbPla
 	}
 }
 
+func MustMarshal(x interface{}) string {
+	s, err := json.Marshal(x)
+	if err != nil {
+		panic("JSON Marshal: " + err.Error())
+	}
+	return s
+}
+
 func MustUnmarshal(x interface{}, j xtypes.JSONText) {
 	err := j.Unmarshal(&x)
 	if err != nil {
-		panic("json unmarshal")
+		panic("JSON Unmarshal: " + err.Error())
 	}
 }
 

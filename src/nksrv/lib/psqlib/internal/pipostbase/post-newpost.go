@@ -2,7 +2,6 @@ package pipostbase
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -10,25 +9,26 @@ import (
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
 const postRQMsgArgCount = 17
 const postRQFileArgCount = 8
 
-func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
-	sp.npMutex.RLock()
-	s = sp.npStmts[t]
-	sp.npMutex.RUnlock()
+func getNPStmt(sp *pibase.PSQLIB, t npTuple) (s *sql.Stmt, err error) {
+	sp.NPMutex.RLock()
+	s = sp.NPStmts[t]
+	sp.NPMutex.RUnlock()
 
 	if s != nil {
 		return
 	}
 
-	sp.npMutex.Lock()
-	defer sp.npMutex.Unlock()
+	sp.NPMutex.Lock()
+	defer sp.NPMutex.Unlock()
 
 	// there couldve been race so re-examine situation
-	s = sp.npStmts[t]
+	s = sp.NPStmts[t]
 	if s != nil {
 		return
 	}
@@ -177,7 +177,7 @@ FROM
 	}
 	sp.log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.n, t.sage)
 
-	sp.npStmts[t] = s
+	sp.NPStmts[t] = s
 	return
 }
 
@@ -186,7 +186,8 @@ type replyTargetInfo struct {
 	tid postID
 }
 
-func (sp *PSQLIB) insertNewReply(
+func insertNewReply(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx, gstmt *sql.Stmt,
 	rti replyTargetInfo, pInfo mailib.PostInfo, modid uint64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
@@ -197,26 +198,11 @@ func (sp *PSQLIB) insertNewReply(
 
 	stmt := tx.Stmt(gstmt)
 
-	Hjson, err := json.Marshal(pInfo.H)
-	if err != nil {
-		panic(err)
-	}
-	GAjson, err := json.Marshal(pInfo.GA)
-	if err != nil {
-		panic(err)
-	}
-	Ljson, err := json.Marshal(&pInfo.L)
-	if err != nil {
-		panic(err)
-	}
-	Ejson, err := json.Marshal(&pInfo.E)
-	if err != nil {
-		panic(err)
-	}
-	BAjson, err := json.Marshal(pInfo.BA)
-	if err != nil {
-		panic(err)
-	}
+	Hjson := MustMarshal(pInfo.H)
+	GAjson := MustMarshal(pInfo.GA)
+	Ljson := MustMarshal(&pInfo.L)
+	Ejson := MustMarshal(&pInfo.E)
+	BAjson := MustMarshal(pInfo.BA)
 
 	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
@@ -272,18 +258,9 @@ func (sp *PSQLIB) insertNewReply(
 
 		for i := range pInfo.FI {
 
-			FFjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
-			if err != nil {
-				panic(err)
-			}
-			FTjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
-			if err != nil {
-				panic(err)
-			}
-			FEjson, err := json.Marshal(pInfo.FI[i].Extras)
-			if err != nil {
-				panic(err)
-			}
+			FFjson := MustMarshal(pInfo.FI[i].FileAttrib)
+			FTjson := MustMarshal(pInfo.FI[i].ThumbAttrib)
+			FEjson := MustMarshal(pInfo.FI[i].Extras)
 
 			args[x+0] = pInfo.FI[i].Type.String()
 			args[x+1] = pInfo.FI[i].Size
