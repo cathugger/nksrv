@@ -1,4 +1,4 @@
-package pibase
+package pipostbase
 
 // SendError sends error to channel if it can
 func SendError(c chan<- error, e error) {

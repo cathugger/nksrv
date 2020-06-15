@@ -7,6 +7,11 @@ import (
 	"nksrv/lib/psqlib/internal/pibaseweb"
 )
 
+type (
+	boardID = pibase.TBoardID
+	postID  = pibase.TPostID
+)
+
 func unmarshalBoardConfig(
 	sp *pibase.PSQLIB,
 	postLimits *pibaseweb.SubmissionLimits, jbPL, jbXL xtypes.JSONText) (err error) {

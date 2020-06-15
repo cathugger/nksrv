@@ -10,25 +10,26 @@ import (
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
 const postRQMsgArgCount = 17
 const postRQFileArgCount = 8
 
-func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
-	sp.npMutex.RLock()
-	s = sp.npStmts[t]
-	sp.npMutex.RUnlock()
+func getNPStmt(sp *pibase.PSQLIB, t pibase.NPTuple) (s *sql.Stmt, err error) {
+	sp.NPMutex.RLock()
+	s = sp.NPStmts[t]
+	sp.NPMutex.RUnlock()
 
 	if s != nil {
 		return
 	}
 
-	sp.npMutex.Lock()
-	defer sp.npMutex.Unlock()
+	sp.NPMutex.Lock()
+	defer sp.NPMutex.Unlock()
 
 	// there couldve been race so re-examine situation
-	s = sp.npStmts[t]
+	s = sp.NPStmts[t]
 	if s != nil {
 		return
 	}
@@ -116,7 +117,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 	)`
 	b.WriteString(st2)
 
-	if t.n != 0 {
+	if t.N != 0 {
 		stf1 := `,
 	uf AS (
 		INSERT INTO
@@ -142,7 +143,7 @@ func (sp *PSQLIB) getNPStmt(t npTuple) (s *sql.Stmt, err error) {
 		b.WriteString(stf1)
 
 		x := postRQMsgArgCount + 1 // counting from 1
-		for i := 0; i < t.n; i++ {
+		for i := 0; i < t.N; i++ {
 			if i != 0 {
 				b.WriteString(", ")
 			}
@@ -170,14 +171,14 @@ FROM
 	st := b.String()
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
-	sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement", t.n, t.sage)
-	s, err = sp.db.DB.Prepare(st)
+	sp.Log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement", t.n, t.sage)
+	s, err = sp.DB.DB.Prepare(st)
 	if err != nil {
-		return nil, sp.sqlError("newreply statement preparation", err)
+		return nil, sp.SQLError("newreply statement preparation", err)
 	}
-	sp.log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.n, t.sage)
+	sp.Log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.n, t.sage)
 
-	sp.npStmts[t] = s
+	sp.NPStmts[t] = s
 	return
 }
 
@@ -186,7 +187,8 @@ type replyTargetInfo struct {
 	tid postID
 }
 
-func (sp *PSQLIB) insertNewReply(
+func insertNewReply(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx, gstmt *sql.Stmt,
 	rti replyTargetInfo, pInfo mailib.PostInfo, modid uint64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
@@ -220,7 +222,7 @@ func (sp *PSQLIB) insertNewReply(
 
 	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
-	sp.log.LogPrintf(DEBUG, "NEWPOST %s start <%s>", pInfo.ID, pInfo.MessageID)
+	sp.Log.LogPrintf(DEBUG, "NEWPOST %s start <%s>", pInfo.ID, pInfo.MessageID)
 
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
@@ -299,7 +301,7 @@ func (sp *PSQLIB) insertNewReply(
 		r = stmt.QueryRow(args...)
 	}
 
-	sp.log.LogPrintf(DEBUG, "NEWPOST %s process", pInfo.ID)
+	sp.Log.LogPrintf(DEBUG, "NEWPOST %s process", pInfo.ID)
 
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
@@ -307,11 +309,11 @@ func (sp *PSQLIB) insertNewReply(
 			// duplicate
 			return 0, 0, true, nil
 		}
-		err = sp.sqlError("newreply insert query scan", err)
+		err = sp.SQLError("newreply insert query scan", err)
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "NEWPOST %s done", pInfo.ID)
+	sp.Log.LogPrintf(DEBUG, "NEWPOST %s done", pInfo.ID)
 
 	// done
 	return
