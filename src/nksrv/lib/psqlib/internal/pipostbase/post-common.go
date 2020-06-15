@@ -14,67 +14,69 @@ import (
 )
 
 func PickThumbPlan(sp *pibase.PSQLIB, isReply, isSage bool) thumbnailer.ThumbPlan {
-	if !isReply {
-		return sp.tplan_thread
-	} else if !isSage {
-		return sp.tplan_reply
+	if isReply {
+		if !isSage {
+			return sp.ThmPlanForPost
+		} else {
+			return sp.ThmPlanForSage
+		}
 	} else {
-		return sp.tplan_sage
+		return sp.ThmPlanForOP
 	}
 }
 
-func mustUnmarshal(x interface{}, j xtypes.JSONText) {
+func MustUnmarshal(x interface{}, j xtypes.JSONText) {
 	err := j.Unmarshal(&x)
 	if err != nil {
 		panic("json unmarshal")
 	}
 }
 
-type modPrivFetch struct {
-	m_g_cap   sql.NullString
-	m_b_cap   map[string]string
-	m_b_cap_j xtypes.JSONText
+type ModPrivFetch struct {
+	ModGlobalCap    sql.NullString
+	ModBoardCap     map[string]string
+	ModBoardCapJSON xtypes.JSONText
 
-	m_g_caplvl   []sql.NullInt32
-	m_b_caplvl   map[string]string
-	m_b_caplvl_j xtypes.JSONText
+	ModGlobalCapLvl    []sql.NullInt32
+	ModBoardCapLvl     map[string]string
+	ModBoardCapLvlJSON xtypes.JSONText
 
-	mi_g_cap   sql.NullString
-	mi_b_cap   map[string]string
-	mi_b_cap_j xtypes.JSONText
+	ModIGlobalCap    sql.NullString
+	ModIBoardCap     map[string]string
+	ModIBoardCapJSON xtypes.JSONText
 
-	mi_g_caplvl   []sql.NullInt32
-	mi_b_caplvl   map[string]string
-	mi_b_caplvl_j xtypes.JSONText
+	ModIGlobalCapLvl    []sql.NullInt32
+	ModIBoardCapLvl     map[string]string
+	ModIBoardCapLvlJSON xtypes.JSONText
 }
 
-func (f *modPrivFetch) unmarshalJSON() {
-	mustUnmarshal(&f.m_b_cap, f.m_b_cap_j)
-	mustUnmarshal(&f.m_b_caplvl, f.m_b_caplvl_j)
-	mustUnmarshal(&f.mi_b_cap, f.mi_b_cap_j)
-	mustUnmarshal(&f.mi_b_caplvl, f.mi_b_caplvl_j)
+func (f *ModPrivFetch) unmarshalJSON() {
+	MustUnmarshal(&f.ModBoardCap, f.ModBoardCapJSON)
+	MustUnmarshal(&f.ModBoardCapLvl, f.ModBoardCapLvlJSON)
+	MustUnmarshal(&f.ModIBoardCap, f.ModIBoardCapJSON)
+	MustUnmarshal(&f.ModIBoardCapLvl, f.ModIBoardCapLvlJSON)
 }
 
-func (f *modPrivFetch) parse() (mcc ModCombinedCaps) {
-	if f.m_g_cap.Valid {
-		mcc.ModCap.Cap = StrToCap(f.m_g_cap.String)
+func (f *ModPrivFetch) parse() (mcc ModCombinedCaps) {
+	if f.ModGlobalCap.Valid {
+		mcc.ModCap.Cap = StrToCap(f.ModGlobalCap.String)
 	}
-	if f.m_g_caplvl != nil {
-		mcc.ModCap = processCapLevel(mcc.ModCap, f.m_g_caplvl)
+	if f.ModGlobalCapLvl != nil {
+		mcc.ModCap = processCapLevel(mcc.ModCap, f.ModGlobalCapLvl)
 	}
 
-	if f.mi_g_cap.Valid {
-		mcc.ModInheritCap.Cap = StrToCap(f.mi_g_cap.String)
+	if f.ModIGlobalCap.Valid {
+		mcc.ModInheritCap.Cap = StrToCap(f.ModIGlobalCap.String)
 	}
-	if f.mi_g_caplvl != nil {
-		mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, f.mi_g_caplvl)
+	if f.ModIGlobalCapLvl != nil {
+		mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, f.ModIGlobalCapLvl)
 	}
 
 	mcc.ModBoardCap = make(ModBoardCap)
-	mcc.ModBoardCap.TakeIn(f.m_b_cap, f.m_b_caplvl)
+	mcc.ModBoardCap.TakeIn(f.ModBoardCap, f.ModBoardCapLvl)
 
 	mcc.ModInheritBoardCap = make(ModBoardCap)
-	mcc.ModInheritBoardCap.TakeIn(f.mi_b_cap, f.mi_b_caplvl)
+	mcc.ModInheritBoardCap.TakeIn(f.ModIBoardCap, f.ModIBoardCapLvl)
 
 	return
 }
@@ -96,20 +98,20 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, e
 	x := 0
 	for {
 
-		var f modPrivFetch
+		var f ModPrivFetch
 
 		err = st.QueryRow(pubkeystr).Scan(
 			&rmi.modid,
 
-			&f.m_g_cap,
-			&f.m_b_cap_j,
-			pq.Array(&f.m_g_caplvl),
-			&f.m_b_caplvl_j,
+			&f.ModGlobalCap,
+			&f.ModBoardCapJSON,
+			pq.Array(&f.ModGlobalCapLvl),
+			&f.ModBoardCapLvlJSON,
 
-			&f.mi_g_cap,
-			&f.mi_b_cap_j,
-			pq.Array(&f.mi_g_caplvl),
-			&f.mi_b_caplvl_j)
+			&f.ModIGlobalCap,
+			&f.ModIBoardCapJSON,
+			pq.Array(&f.ModIGlobalCapLvl),
+			&f.ModIBoardCapLvlJSON)
 
 		if err != nil {
 
@@ -129,8 +131,8 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, e
 		f.unmarshalJSON()
 
 		// enough to check only usable flags
-		rmi.actionable = f.m_g_cap.Valid || len(f.m_b_cap) != 0 ||
-			f.m_g_caplvl != nil || len(f.m_b_caplvl) != 0
+		rmi.actionable = f.ModGlobalCap.Valid || len(f.ModBoardCap) != 0 ||
+			f.ModGlobalCapLvl != nil || len(f.ModBoardCapLvl) != 0
 
 		rmi.ModCombinedCaps = f.parse()
 

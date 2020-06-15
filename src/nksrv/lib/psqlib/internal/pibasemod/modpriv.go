@@ -1,4 +1,4 @@
-package psqlib
+package pibasemod
 
 import (
 	"database/sql"
@@ -7,7 +7,7 @@ import (
 	"github.com/lib/pq"
 )
 
-type cap_type uint16
+type CapType uint16
 
 const (
 	cap_reserved0 = 1 << iota
@@ -27,7 +27,7 @@ const (
 	capx_onlyglobal     = cap_delboard
 )
 
-func (c cap_type) String() string {
+func (c CapType) String() string {
 	var buf [capx_bits]byte
 	for i := range buf {
 		buf[i] = "01"[(c>>i)&1]
@@ -35,7 +35,7 @@ func (c cap_type) String() string {
 	return string(buf[:])
 }
 
-func StrToCap(s string) (c cap_type) {
+func StrToCap(s string) (c CapType) {
 	if len(s) != capx_bits {
 		panic("StrToCap: wrong length")
 	}
@@ -59,19 +59,19 @@ const (
 	caplvlx_num
 )
 
-var caplvlx_mask = [caplvlx_num]cap_type{cap_delpost}
+var caplvlx_mask = [caplvlx_num]CapType{cap_delpost}
 
 type caplvl_type = int16
 
 const caplvl_maxval = 0x7Fff
 
 type ModCap struct {
-	Cap cap_type
+	Cap CapType
 
 	CapLevel [caplvlx_num]caplvl_type // -1 = unset
 }
 
-var noneModCap = ModCap{
+var NoneModCap = ModCap{
 	Cap:      0,
 	CapLevel: [caplvlx_num]caplvl_type{-1},
 }
@@ -86,7 +86,7 @@ func (c ModCap) String() string {
 
 // MorePriv tells whether o is privileged more by even
 // one relevant capability bit or relevant privilege level
-func (c ModCap) MorePriv(o ModCap, mask cap_type) bool {
+func (c ModCap) MorePriv(o ModCap, mask CapType) bool {
 
 	cc, oc := c.Cap&mask, o.Cap&mask
 	if cc|oc != cc {
