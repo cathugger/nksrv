@@ -15,19 +15,19 @@ const postTQMsgArgCount = 16
 const postTQFileArgCount = 8
 
 func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
-	sp.ntMutex.RLock()
-	s = sp.ntStmts[n]
-	sp.ntMutex.RUnlock()
+	sp.NTMutex.RLock()
+	s = sp.NTStmts[n]
+	sp.NTMutex.RUnlock()
 
 	if s != nil {
 		return
 	}
 
-	sp.ntMutex.Lock()
-	defer sp.ntMutex.Unlock()
+	sp.NTMutex.Lock()
+	defer sp.NTMutex.Unlock()
 
 	// there couldve been race so re-examine situation
-	s = sp.ntStmts[n]
+	s = sp.NTStmts[n]
 	if s != nil {
 		return
 	}
@@ -189,13 +189,13 @@ FROM
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
 	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement", n)
-	s, err = sp.db.DB.Prepare(st)
+	s, err = sp.DB.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.sqlError("newthread statement preparation", err)
 	}
 	sp.log.LogPrintf(DEBUG, "newthread(%d) statement prepared successfully", n)
 
-	sp.ntStmts[n] = s
+	sp.NTStmts[n] = s
 	return
 }
 
