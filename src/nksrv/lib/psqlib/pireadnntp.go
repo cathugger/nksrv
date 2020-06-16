@@ -128,7 +128,7 @@ func (sp *PSQLIB) GetOverByRange(
 func (sp *PSQLIB) GetXOverByRange(
 	w Responder, cs *ConnState, rmin, rmax int64) bool {
 
-	return pireadnntp.GetOverByRange(w, cs, rmin, rmax)
+	return pireadnntp.GetOverByRange(&sp.PSQLIB, w, cs, rmin, rmax)
 }
 func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
     return pireadnntp.GetOverByCurr(&sp.PSQLIB, w, cs)

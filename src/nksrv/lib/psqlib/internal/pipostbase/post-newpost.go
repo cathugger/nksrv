@@ -2,7 +2,6 @@ package pipostbase
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -199,26 +198,11 @@ func insertNewReply(
 
 	stmt := tx.Stmt(gstmt)
 
-	Hjson, err := json.Marshal(pInfo.H)
-	if err != nil {
-		panic(err)
-	}
-	GAjson, err := json.Marshal(pInfo.GA)
-	if err != nil {
-		panic(err)
-	}
-	Ljson, err := json.Marshal(&pInfo.L)
-	if err != nil {
-		panic(err)
-	}
-	Ejson, err := json.Marshal(&pInfo.E)
-	if err != nil {
-		panic(err)
-	}
-	BAjson, err := json.Marshal(pInfo.BA)
-	if err != nil {
-		panic(err)
-	}
+	Hjson := MustMarshal(pInfo.H)
+	GAjson := MustMarshal(pInfo.GA)
+	Ljson := MustMarshal(&pInfo.L)
+	Ejson := MustMarshal(&pInfo.E)
+	BAjson := MustMarshal(pInfo.BA)
 
 	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
@@ -274,18 +258,9 @@ func insertNewReply(
 
 		for i := range pInfo.FI {
 
-			FFjson, err := json.Marshal(pInfo.FI[i].FileAttrib)
-			if err != nil {
-				panic(err)
-			}
-			FTjson, err := json.Marshal(pInfo.FI[i].ThumbAttrib)
-			if err != nil {
-				panic(err)
-			}
-			FEjson, err := json.Marshal(pInfo.FI[i].Extras)
-			if err != nil {
-				panic(err)
-			}
+			FFjson := MustMarshal(pInfo.FI[i].FileAttrib)
+			FTjson := MustMarshal(pInfo.FI[i].ThumbAttrib)
+			FEjson := MustMarshal(pInfo.FI[i].Extras)
 
 			args[x+0] = pInfo.FI[i].Type.String()
 			args[x+1] = pInfo.FI[i].Size
