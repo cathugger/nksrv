@@ -1,4 +1,4 @@
-package psqlib
+package pipostnntp
 
 type headerRestriction struct {
 	h string // header

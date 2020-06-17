@@ -1,4 +1,4 @@
-package psqlib
+package pipostnntp
 
 import (
 	"database/sql"
@@ -18,6 +18,14 @@ import (
 	"nksrv/lib/mailib"
 	mm "nksrv/lib/minimail"
 	"nksrv/lib/nntp"
+	"nksrv/lib/psqlib/internal/pibase"
+)
+
+type (
+	TFullMsgID    = nntp.TFullMsgID
+	TCoreMsgID    = nntp.TCoreMsgID
+	TFullMsgIDStr = nntp.TFullMsgIDStr
+	TCoreMsgIDStr = nntp.TCoreMsgIDStr
 )
 
 func validMsgID(s TFullMsgIDStr) bool {
@@ -29,13 +37,14 @@ func cutMsgID(s TFullMsgIDStr) TCoreMsgIDStr {
 		nntp.CutMessageID(unsafeStrToBytes(string(s)))))
 }
 
-func (sp *PSQLIB) shouldAutoAddNNTPPostGroup(group string) bool {
-	return sp.ngp_global.checkGroup(group) ||
-		sp.ngp_anyserver.checkGroup(group)
+func shouldAutoAddNNTPPostGroup(sp *pibase.PSQLIB, group string) bool {
+	return sp.NGPGlobal.CheckGroup(group) ||
+		sp.NGPAnyServer.CheckGroup(group)
 	// TODO per-server-client privileges
 }
 
-func (sp *PSQLIB) acceptArticleHead(
+func acceptArticleHead(
+	sp *pibase.PSQLIB,
 	board string, troot TFullMsgIDStr, pdate int64) (
 	ins insertSqlInfo, err error, unexpected bool, wantroot bool) {
 
@@ -47,7 +56,7 @@ func (sp *PSQLIB) acceptArticleHead(
 
 	ins.isReply = troot != ""
 
-	ins.threadOpts = defaultThreadOptions
+	ins.threadOpts = pibase.DefaultThreadOptions
 
 	// get info about board, if reply, also thread, its limits and shit.
 	// does it even exists?
@@ -62,17 +71,17 @@ WHERE b_name=$1`
 
 		nadd := 0
 		for {
-			err = sp.db.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
+			err = sp.DB.DB.QueryRow(q, board).Scan(&ins.bid, &jbPL, &jbXL)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					if !sp.shouldAutoAddNNTPPostGroup(board) || nadd >= 20 {
-						err = errNoSuchBoard
+					if !shouldAutoAddNNTPPostGroup(sp, board) || nadd >= 20 {
+						err = pibase.ErrNoSuchBoard
 						return
 					}
 					// try adding new
 				} else {
 					unexpected = true
-					err = sp.sqlError("board row query scan", err)
+					err = sp.SQLError("board row query scan", err)
 					return
 				}
 			} else {
@@ -86,7 +95,7 @@ WHERE b_name=$1`
 			bi := sp.IBDefaultBoardInfo()
 			bi.Name = board
 			var dup bool
-			err, dup = sp.addNewBoard(bi)
+			err, dup = addNewBoard(sp, bi)
 			if err != nil && !dup {
 				unexpected = true
 				err = fmt.Errorf("addNewBoard error: %v", err)

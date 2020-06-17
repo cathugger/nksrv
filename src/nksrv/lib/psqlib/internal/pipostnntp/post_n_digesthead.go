@@ -1,4 +1,4 @@
-package psqlib
+package pipostnntp
 
 import (
 	"errors"
@@ -10,10 +10,12 @@ import (
 	"nksrv/lib/mail"
 	"nksrv/lib/mailib"
 	"nksrv/lib/nntp"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
 // extracts info from main message headers into structure
-func (sp *PSQLIB) nntpDigestTransferHead(
+func nntpDigestTransferHead(
+	sp *pibase.PSQLIB,
 	H mail.HeaderMap, unsafe_sid TCoreMsgIDStr, expectgroup string,
 	post, notrace bool) (
 	info nntpParsedInfo, err error, unexpected bool,
@@ -143,7 +145,7 @@ func (sp *PSQLIB) nntpDigestTransferHead(
 	// actual DB check on group and refered article
 	var wr bool
 	info.insertSqlInfo, err, unexpected, wr =
-		sp.acceptArticleHead(hgroup, info.FRef, info.PostedDate)
+		acceptArticleHead(sp, hgroup, info.FRef, info.PostedDate)
 	if err != nil {
 		if err == errNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)

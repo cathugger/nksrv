@@ -9,14 +9,14 @@ func (ctx *postWebContext) wp_fpp_ac_files() (err error) {
 
 	// XXX we could replace this with RemoveAll I guess...
 
-	if ctx.src_pending == "" {
+	if ctx.SrcPending == "" {
 		// maybe it had no files, skip rest then
 		return
 	}
 
 	for x := range ctx.pInfo.FI {
 
-		from := filepath.Join(ctx.src_pending, ctx.pInfo.FI[x].ID)
+		from := filepath.Join(ctx.SrcPending, ctx.pInfo.FI[x].ID)
 
 		err = os.Remove(from)
 		if err != nil {
@@ -24,7 +24,7 @@ func (ctx *postWebContext) wp_fpp_ac_files() (err error) {
 		}
 	}
 
-	err = os.Remove(ctx.src_pending)
+	err = os.Remove(ctx.SrcPending)
 	if err != nil {
 		return
 	}
@@ -34,14 +34,14 @@ func (ctx *postWebContext) wp_fpp_ac_files() (err error) {
 
 func (ctx *postWebContext) wp_fpp_ac_thumbs() (err error) {
 
-	if ctx.thm_pending == "" {
+	if ctx.ThmPending == "" {
 		// maybe it had no thumbs, skip rest then
 		return nil
 	}
 
-	for x := range ctx.thumbInfos {
+	for x := range ctx.ThumbInfos {
 		from := filepath.Join(
-			ctx.thm_pending, ctx.thumbInfos[x].RelDestName)
+			ctx.ThmPending, ctx.ThumbInfos[x].RelDestName)
 
 		err = os.Remove(from)
 		if err != nil {
@@ -49,7 +49,7 @@ func (ctx *postWebContext) wp_fpp_ac_thumbs() (err error) {
 		}
 	}
 
-	err = os.Remove(ctx.thm_pending)
+	err = os.Remove(ctx.ThmPending)
 	if err != nil {
 		return
 	}

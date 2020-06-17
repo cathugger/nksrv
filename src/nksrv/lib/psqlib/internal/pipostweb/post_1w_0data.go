@@ -8,6 +8,7 @@ import (
 	"nksrv/lib/ibref_nntp"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pipostbase"
 )
 
 // info for thumbnail tmpfile location and intended final filename
@@ -21,7 +22,7 @@ type wp_btr struct {
 }
 
 type postWebContext struct {
-	postCommonContext
+	pipostbase.PostCommonContext
 
 	f form.Form
 

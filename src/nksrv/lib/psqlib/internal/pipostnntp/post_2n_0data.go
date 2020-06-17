@@ -1,4 +1,4 @@
-package psqlib
+package pipostnntp
 
 import (
 	"nksrv/lib/mail"

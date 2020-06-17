@@ -6,8 +6,6 @@ import (
 )
 
 var (
-	ErrNoSuchBoard           = errors.New("board does not exist")
-	ErrNoSuchThread          = errors.New("thread does not exist")
 	ErrNoSuchPage            = errors.New("page does not exist")
 	ErrInvalidSubmission     = errors.New("invalid form submission")
 	ErrBadSubmissionEncoding = errors.New("bad form submission encoding")

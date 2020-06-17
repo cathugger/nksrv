@@ -1,4 +1,4 @@
-package psqlib
+package pipostnntp
 
 import (
 	au "nksrv/lib/asciiutils"
