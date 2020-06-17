@@ -41,8 +41,7 @@
 			sage,
 			f_count
 	)
--- :namet post_template_newthread_ut
-	ut AS (
+-- :namet post_template_newthread_ut_common_insert
 		INSERT INTO
 			ib0.threads (
 				b_id,
@@ -51,6 +50,13 @@
 				bump,
 				skip_over
 			)
+-- :namet post_template_newthread_ut_common_return
+		RETURNING
+			b_id,
+			b_t_id
+-- :namet post_template_newthread_ut_sb
+	ut AS (
+{{ .post_template_newthread_ut_common_insert }}
 		SELECT
 			$12,        -- b_id
 			ugp.g_p_id, -- g_t_id
@@ -59,9 +65,28 @@
 			$14         -- skip_over
 		FROM
 			ugp
-		RETURNING
-			b_id,
-			b_t_id
+{{ .post_template_newthread_ut_common_return }}
+	)
+-- :namet post_template_newthread_ut_sb
+	ut AS (
+{{ .post_template_newthread_ut_common_insert }}
+		SELECT
+			x.b_id,     -- b_id
+			ugp.g_p_id, -- g_t_id
+			x.b_t_name  -- b_t_name
+			$1,         -- date_sent
+			$14         -- skip_over
+		FROM
+			ugp
+		CROSS JOIN
+			UNNEST(
+				$12,
+				$13
+			) AS x (
+				b_id,
+				b_t_name
+			)
+{{ .post_template_newthread_ut_common_return }}
 	)
 
 -- :namet post_template_common_ubp_insert
@@ -103,6 +128,29 @@
 			ugp
 {{ .post_template_common_ubp_return }}
 	)
+-- :namet post_template_newpost_ubp_mb
+	ubp AS (
+{{ .post_template_common_ubp_insert }}
+		SELECT
+			x.*,           -- b_id,b_t_id,p_name
+			ugp.g_p_id,    -- g_p_id
+			$4,            -- msgid
+			ugp.date_sent, -- date_sent
+			ugp.date_recv, -- date_recv
+			ugp.sage,      -- sage
+			ugp.f_count,   -- f_count
+			$16,           -- mod_id
+			$17            -- attrib
+		FROM
+			ugp
+		CROSS JOIN
+			UNNEST(
+				$13,
+				$14,
+				$15
+			) AS x
+{{ .post_template_common_ubp_return }}
+	)
 -- :namet post_template_newthread_ubp
 	ubp AS (
 {{ .post_template_common_ubp_insert }}
@@ -129,44 +177,61 @@
 
 
 
--- :namet bepis
-WITH
-	
-,
-	ubp AS (
+-- :namet post_template_common_uf_one
+	uf AS (
 		INSERT INTO
-			ib0.bposts (
-				b_id,
-				b_t_id,
-				b_p_id,
-				p_name,
+			ib0.files (
 				g_p_id,
-				msgid,
-				date_sent,
-				date_recv,
-				sage,
-				f_count,
-				mod_id,
-				attrib
+				ftype,
+				fsize,
+				fname,
+				thumb,
+				oname,
+				filecfg,
+				thumbcfg,
+				extras
 			)
 		SELECT
-			$12,           -- b_id
-			ut.b_t_id,     -- b_t_id
-			ut.b_t_id,     -- b_p_id
-			$13,           -- p_name
-			ugp.g_p_id,    -- g_p_id
-			$3,            -- msgid
-			ugp.date_sent, -- date_sent
-			ugp.date_recv, -- date_recv
-			FALSE,         -- sage
-			ugp.f_count,   -- f_count
-			$15,           -- mod_id
-			$16            -- attrib
+			g_p_id, -- g_p_id
+			$18,    -- ftype
+			$19,    -- fsize
+			$20,    -- fname
+			$21,    -- thumb
+			$22,    -- oname
+			$23,    -- filecfg
+			$24,    -- thumbcfg
+			$25     -- extras
 		FROM
-			ut
-		CROSS JOIN
 			ugp
-		RETURNING
-			g_p_id,
-			b_p_id
+	)
+-- :namet post_template_common_uf_many
+	uf AS (
+		INSERT INTO
+			ib0.files (
+				g_p_id,
+				ftype,
+				fsize,
+				fname,
+				thumb,
+				oname,
+				filecfg,
+				thumbcfg,
+				extras
+			)
+		SELECT
+			ugp.g_p_id, -- g_p_id
+			x.*
+		FROM
+			ugp
+		CROSS JOIN
+			UNNEST(
+				$18, -- ftype
+				$19, -- fsize
+				$20, -- fname
+				$21, -- thumb
+				$22, -- oname
+				$23, -- filecfg
+				$24, -- thumbcfg
+				$25  -- extras
+			) AS x
 	)
