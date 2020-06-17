@@ -1,4 +1,4 @@
-package psqlib
+package pipostweb
 
 import (
 	"strings"
@@ -9,6 +9,7 @@ import (
 	. "nksrv/lib/logx"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibaseweb"
 	ib0 "nksrv/lib/webib0"
 )
 
@@ -34,11 +35,11 @@ func optimiseFormLine(line string) (s string) {
 }
 
 func checkTextLimits(
-	slimits *submissionLimits, reply bool,
+	slimits *pibaseweb.SubmissionLimits, reply bool,
 	mInfo mailib.MessageInfo) error {
 
 	if len(mInfo.Title) > int(slimits.MaxTitleLength) {
-		return errTooLongTitle
+		return pipostweb.ErrTooLongTitle
 	}
 	if len(mInfo.Author) > int(slimits.MaxNameLength) {
 		return errTooLongName

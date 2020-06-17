@@ -26,7 +26,7 @@ func PickThumbPlan(sp *pibase.PSQLIB, isReply, isSage bool) thumbnailer.ThumbPla
 	}
 }
 
-func MustMarshal(x interface{}) string {
+func MustMarshal(x interface{}) []byte {
 	s, err := json.Marshal(x)
 	if err != nil {
 		panic("JSON Marshal: " + err.Error())

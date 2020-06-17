@@ -33,7 +33,7 @@ func unmarshalBoardConfig(
 
 func unmarshalBoardThreadOpts(
 	sp *pibase.PSQLIB,
-	threadOpts *pibaseweb.ThreadOptions, jbTO, jtTO xtypes.JSONText) (err error) {
+	threadOpts *pibase.ThreadOptions, jbTO, jtTO xtypes.JSONText) (err error) {
 
 	// jbTO - b.thread_opts
 	err = jbTO.Unmarshal(threadOpts)
@@ -52,7 +52,7 @@ func unmarshalBoardThreadOpts(
 
 func unmarshalThreadConfig(
 	sp *pibase.PSQLIB,
-	postLimits *pibaseweb.SubmissionLimits, threadOpts *pibaseweb.ThreadOptions,
+	postLimits *pibaseweb.SubmissionLimits, threadOpts *pibase.ThreadOptions,
 	jtRL, jbTO, jtTO xtypes.JSONText) (err error) {
 
 	// jtRL - t.reply_limits

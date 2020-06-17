@@ -1,4 +1,4 @@
-package psqlib
+package pipostweb
 
 import (
 	"encoding/hex"

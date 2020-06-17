@@ -170,12 +170,12 @@ FROM
 	st := b.String()
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement:\n%s\n", t.n, t.sage, st)
-	sp.Log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement", t.n, t.sage)
+	sp.Log.LogPrintf(DEBUG, "will prepare newreply(%d,%t) statement", t.N, t.Sage)
 	s, err = sp.DB.DB.Prepare(st)
 	if err != nil {
 		return nil, sp.SQLError("newreply statement preparation", err)
 	}
-	sp.Log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.n, t.sage)
+	sp.Log.LogPrintf(DEBUG, "newreply(%d,%t) statement prepared successfully", t.N, t.Sage)
 
 	sp.NPStmts[t] = s
 	return

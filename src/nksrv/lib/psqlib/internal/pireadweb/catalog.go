@@ -148,7 +148,7 @@ func GetThreadCatalog(
 	}
 
 	if x_bid == 0 {
-		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
+		return pibase.ErrNoSuchBoard, http.StatusNotFound
 	}
 
 	return nil, 0

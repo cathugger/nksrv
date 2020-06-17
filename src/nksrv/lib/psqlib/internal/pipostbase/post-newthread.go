@@ -9,12 +9,13 @@ import (
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
 )
 
 const postTQMsgArgCount = 16
 const postTQFileArgCount = 8
 
-func (sp *PSQLIB) getNTStmt(n int) (s *sql.Stmt, err error) {
+func getNTStmt(sp *pibase.PSQLIB, n int) (s *sql.Stmt, err error) {
 	sp.NTMutex.RLock()
 	s = sp.NTStmts[n]
 	sp.NTMutex.RUnlock()
@@ -188,18 +189,19 @@ FROM
 	}
 
 	//sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement:\n%s\n", n, st)
-	sp.log.LogPrintf(DEBUG, "will prepare newthread(%d) statement", n)
+	sp.Log.LogPrintf(DEBUG, "will prepare newthread(%d) statement", n)
 	s, err = sp.DB.DB.Prepare(st)
 	if err != nil {
-		return nil, sp.sqlError("newthread statement preparation", err)
+		return nil, sp.SQLError("newthread statement preparation", err)
 	}
-	sp.log.LogPrintf(DEBUG, "newthread(%d) statement prepared successfully", n)
+	sp.Log.LogPrintf(DEBUG, "newthread(%d) statement prepared successfully", n)
 
 	sp.NTStmts[n] = s
 	return
 }
 
-func (sp *PSQLIB) insertNewThread(
+func insertNewThread(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx, gstmt *sql.Stmt,
 	bid boardID, pInfo mailib.PostInfo, skipover bool, modid uint64) (
 	gpid postID, bpid postID, duplicate bool, err error) {
@@ -218,7 +220,7 @@ func (sp *PSQLIB) insertNewThread(
 
 	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
 
-	sp.log.LogPrintf(DEBUG, "NEWTHREAD %s start <%s>", pInfo.ID, pInfo.MessageID)
+	sp.Log.LogPrintf(DEBUG, "NEWTHREAD %s start <%s>", pInfo.ID, pInfo.MessageID)
 
 	var r *sql.Row
 	if len(pInfo.FI) == 0 {
@@ -284,7 +286,7 @@ func (sp *PSQLIB) insertNewThread(
 		r = stmt.QueryRow(args...)
 	}
 
-	sp.log.LogPrintf(DEBUG, "NEWTHREAD %s process", pInfo.ID)
+	sp.Log.LogPrintf(DEBUG, "NEWTHREAD %s process", pInfo.ID)
 
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
@@ -292,11 +294,11 @@ func (sp *PSQLIB) insertNewThread(
 			// duplicate
 			return 0, 0, true, nil
 		}
-		err = sp.sqlError("newthread insert query scan", err)
+		err = sp.SQLError("newthread insert query scan", err)
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "NEWTHREAD %s done", pInfo.ID)
+	sp.Log.LogPrintf(DEBUG, "NEWTHREAD %s done", pInfo.ID)
 
 	// done
 	return

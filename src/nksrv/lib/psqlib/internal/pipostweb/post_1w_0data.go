@@ -1,4 +1,4 @@
-package psqlib
+package pipostweb
 
 import (
 	"database/sql"
@@ -8,7 +8,14 @@ import (
 	"nksrv/lib/ibref_nntp"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/mailib"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibaseweb"
 	"nksrv/lib/psqlib/internal/pipostbase"
+)
+
+type (
+	boardID = pibase.TBoardID
+	postID  = pibase.TPostID
 )
 
 // info for thumbnail tmpfile location and intended final filename
@@ -43,9 +50,9 @@ type postWebContext struct {
 }
 
 type wp_dbinfo struct {
-	bid        boardID          // board being posted into
-	tid        sql.NullInt64    // thread id if replying to thread
-	ref        sql.NullString   // if replying, referenced msgid
-	postLimits submissionLimits // post limits applying for this transaction
-	opdate     pq.NullTime      // date of OP for validity checking
+	bid        boardID                    // board being posted into
+	tid        sql.NullInt64              // thread id if replying to thread
+	ref        sql.NullString             // if replying, referenced msgid
+	postLimits pibaseweb.SubmissionLimits // post limits applying for this transaction
+	opdate     pq.NullTime                // date of OP for validity checking
 }

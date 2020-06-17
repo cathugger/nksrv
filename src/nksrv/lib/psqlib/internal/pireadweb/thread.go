@@ -232,10 +232,10 @@ func GetThread(
 	}
 
 	if x_bid == 0 {
-		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
+		return pibase.ErrNoSuchBoard, http.StatusNotFound
 	}
 	if x_tid == 0 {
-		return pibaseweb.ErrNoSuchThread, http.StatusNotFound
+		return pibase.ErrNoSuchThread, http.StatusNotFound
 	}
 
 	return nil, 0
@@ -475,7 +475,7 @@ func GetThreadListPage(
 	}
 
 	if x_bid == 0 {
-		return pibaseweb.ErrNoSuchBoard, http.StatusNotFound
+		return pibase.ErrNoSuchBoard, http.StatusNotFound
 	}
 	if x_tid == 0 && num > 0 {
 		return pibaseweb.ErrNoSuchPage, http.StatusNotFound
