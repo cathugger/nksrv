@@ -1,5 +1,11 @@
 package psqlib
 
+import (
+	"nksrv/lib/nntp"
+	"nksrv/lib/psqlib/internal/pireadnntp"
+	"time"
+)
+
 var _ nntp.NNTPProvider = (*PSQLIB)(nil)
 
 func (*PSQLIB) SupportsNewNews() bool     { return true }
@@ -84,46 +90,46 @@ func (sp *PSQLIB) GetArticleStatByCurr(w Responder, cs *ConnState) bool {
 
 // navigation
 func (sp *PSQLIB) SelectGroup(w Responder, cs *ConnState, group []byte) bool {
-    return pireadnntp.SelectGroup(&sp.PSQLIB, w, cs, group)
+	return pireadnntp.SelectGroup(&sp.PSQLIB, w, cs, group)
 }
 func (sp *PSQLIB) SelectAndListGroup(
 	w Responder, cs *ConnState, group []byte, rmin, rmax int64) bool {
-        
-    return pireadnntp.SelectAndListGroup(&sp.PSQLIB, w, cs, group, rmin, rmax)
+
+	return pireadnntp.SelectAndListGroup(&sp.PSQLIB, w, cs, group, rmin, rmax)
 }
 func (sp *PSQLIB) SelectNextArticle(w Responder, cs *ConnState) {
-    return pireadnntp.SelectNextArticle(&sp.PSQLIB, w, cs)
+	return pireadnntp.SelectNextArticle(&sp.PSQLIB, w, cs)
 }
 func (sp *PSQLIB) SelectPrevArticle(w Responder, cs *ConnState) {
-    return pireadnntp.SelectPrevArticle(&sp.PSQLIB, w, cs)
+	return pireadnntp.SelectPrevArticle(&sp.PSQLIB, w, cs)
 }
 
 // listings
 func (sp *PSQLIB) ListNewNews(
 	aw AbstractResponder, wildmat []byte, qt time.Time) {
-    
-    return pireadnntp.ListNewNews(&sp.PSQLIB, aw, wildmat, qt)
+
+	return pireadnntp.ListNewNews(&sp.PSQLIB, aw, wildmat, qt)
 }
 func (sp *PSQLIB) ListNewGroups(aw AbstractResponder, qt time.Time) {
-    return pireadnntp.ListNewGroups(&sp.PSQLIB, aw, qt)
+	return pireadnntp.ListNewGroups(&sp.PSQLIB, aw, qt)
 }
 func (sp *PSQLIB) ListActiveGroups(aw AbstractResponder, wildmat []byte) {
-    return pireadnntp.ListActiveGroups(&sp.PSQLIB, aw, wildmat)
+	return pireadnntp.ListActiveGroups(&sp.PSQLIB, aw, wildmat)
 }
 func (sp *PSQLIB) ListNewsgroups(aw AbstractResponder, wildmat []byte) {
-    return pireadnntp.ListNewsgroups(&sp.PSQLIB, aw, wildmat)
+	return pireadnntp.ListNewsgroups(&sp.PSQLIB, aw, wildmat)
 }
 
 // over stuff
 func (sp *PSQLIB) GetOverByMsgID(
 	w Responder, cs *ConnState, msgid TCoreMsgID) bool {
-    
-    return pireadnntp.GetOverByMsgID(&sp.PSQLIB, w, cs, msgid)
+
+	return pireadnntp.GetOverByMsgID(&sp.PSQLIB, w, cs, msgid)
 }
 func (sp *PSQLIB) GetOverByRange(
 	w Responder, cs *ConnState, rmin, rmax int64) bool {
-    
-    return pireadnntp.GetOverByRange(&sp.PSQLIB, w, cs, rmin, rmax)
+
+	return pireadnntp.GetOverByRange(&sp.PSQLIB, w, cs, rmin, rmax)
 }
 func (sp *PSQLIB) GetXOverByRange(
 	w Responder, cs *ConnState, rmin, rmax int64) bool {
@@ -131,7 +137,7 @@ func (sp *PSQLIB) GetXOverByRange(
 	return pireadnntp.GetOverByRange(&sp.PSQLIB, w, cs, rmin, rmax)
 }
 func (sp *PSQLIB) GetOverByCurr(w Responder, cs *ConnState) bool {
-    return pireadnntp.GetOverByCurr(&sp.PSQLIB, w, cs)
+	return pireadnntp.GetOverByCurr(&sp.PSQLIB, w, cs)
 }
 
 // hdr stuff
@@ -139,13 +145,13 @@ func (sp *PSQLIB) GetHdrByMsgID(
 	w Responder, cs *ConnState, hdr []byte, msgid TCoreMsgID) bool {
 
 	return pireadnntp.CommonGetHdrByMsgID(
-        &sp.PSQLIB, w, cs, hdr, msgid, true)
+		&sp.PSQLIB, w, cs, hdr, msgid, true)
 }
 func (sp *PSQLIB) GetHdrByRange(
 	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
 
 	return pireadnntp.CommonGetHdrByRange(
-        &sp.PSQLIB, w, cs, hdr, rmin, rmax, true)
+		&sp.PSQLIB, w, cs, hdr, rmin, rmax, true)
 }
 func (sp *PSQLIB) GetHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
 	return sp.CommonGetHdrByCurr(&sp.PSQLIB, w, cs, hdr, true)
@@ -154,13 +160,13 @@ func (sp *PSQLIB) GetXHdrByMsgID(
 	w Responder, hdr []byte, msgid TCoreMsgID) bool {
 
 	return pireadnntp.CommonGetHdrByMsgID(
-        &sp.PSQLIB, w, nil, hdr, msgid, false)
+		&sp.PSQLIB, w, nil, hdr, msgid, false)
 }
 func (sp *PSQLIB) GetXHdrByRange(
 	w Responder, cs *ConnState, hdr []byte, rmin, rmax int64) bool {
 
 	return sp.CommonGetHdrByRange(
-        &sp.PSQLIB, w, cs, hdr, rmin, rmax, false)
+		&sp.PSQLIB, w, cs, hdr, rmin, rmax, false)
 }
 func (sp *PSQLIB) GetXHdrByCurr(w Responder, cs *ConnState, hdr []byte) bool {
 	return pireadnntp.CommonGetHdrByCurr(&sp.PSQLIB, w, cs, hdr, false)
