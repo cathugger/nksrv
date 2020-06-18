@@ -1,3 +1,28 @@
+-- SQL statements used for posting
+-- single post can be for new thread or new reply
+-- single post can add to single or multiple boards
+-- single post can have zero, one or many attachments
+-- these categories are optimized looking at actual usage
+-- it will result in 2×2×3 = 12 statements
+--
+-- this stuff uses templates a lot
+--
+-- * post_template_common_ugp
+-- - for global post insertion into gposts table.
+--   same fragment is used for all statements because structurically it's pretty much the same for all non-placeholder posts.
+--
+-- * post_template_newthread_ut_common_insert, post_template_newthread_ut_common_return
+--   post_template_newthread_ut_sb, post_template_newthread_ut_mb
+-- - insertion into threads table (single and multi board cases)
+--
+-- * post_template_common_ubp_insert, post_template_common_ubp_return
+--   post_template_newthread_ubp, post_template_newreply_ubp_sb, post_template_newreply_ubp_mb
+-- - insertion into bposts table
+--
+-- * post_template_common_uf_one, post_template_common_uf_many
+-- - fragments for one and many files
+
+
 
 
 -- :namet post_template_common_ugp
@@ -109,6 +134,28 @@
 			g_p_id,
 			b_p_id
 
+-- :namet post_template_newthread_ubp
+	ubp AS (
+{{ .post_template_common_ubp_insert }}
+		SELECT
+			ut.b_id,       -- b_id
+			ut.b_t_id,     -- b_t_id
+			ut.b_t_id,     -- b_p_id
+			$14,           -- p_name
+			ugp.g_p_id,    -- g_p_id
+			$4,            -- msgid
+			ugp.date_sent, -- date_sent
+			ugp.date_recv, -- date_recv
+			ugp.sage,      -- sage
+			ugp.f_count,   -- f_count
+			$16,           -- mod_id
+			$17            -- attrib
+		FROM
+			ut
+		CROSS JOIN
+			ugp
+{{ .post_template_common_ubp_return }}
+	)
 -- :namet post_template_newreply_ubp_sb
 	ubp AS (
 {{ .post_template_common_ubp_insert }}
@@ -149,28 +196,6 @@
 				$14,
 				$15
 			) AS x
-{{ .post_template_common_ubp_return }}
-	)
--- :namet post_template_newthread_ubp
-	ubp AS (
-{{ .post_template_common_ubp_insert }}
-		SELECT
-			ut.b_id,       -- b_id
-			ut.b_t_id,     -- b_t_id
-			ut.b_t_id,     -- b_p_id
-			$14,           -- p_name
-			ugp.g_p_id,    -- g_p_id
-			$4,            -- msgid
-			ugp.date_sent, -- date_sent
-			ugp.date_recv, -- date_recv
-			ugp.sage,      -- sage
-			ugp.f_count,   -- f_count
-			$16,           -- mod_id
-			$17            -- attrib
-		FROM
-			ut
-		CROSS JOIN
-			ugp
 {{ .post_template_common_ubp_return }}
 	)
 
