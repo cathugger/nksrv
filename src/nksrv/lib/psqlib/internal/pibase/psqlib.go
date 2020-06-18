@@ -23,11 +23,6 @@ import (
 type TBoardID = uint32
 type TPostID = uint64
 
-type NPTuple struct {
-	N    int
-	Sage bool
-}
-
 const (
 	PendingDir          = "pending" // for src & thm
 	NNTPIncomingTempDir = "in_tmp"
@@ -70,14 +65,6 @@ type PSQLIB struct {
 	NGPAnyServer pigpolicy.NewGroupPolicy
 
 	StPrep [stMax]*sql.Stmt
-
-	// newthread prepared statements and locking
-	NTStmts map[int]*sql.Stmt
-	NTMutex sync.RWMutex
-
-	// newpost prepared statements and locking
-	NPStmts map[NPTuple]*sql.Stmt
-	NPMutex sync.RWMutex
 
 	PullerNonce int64
 

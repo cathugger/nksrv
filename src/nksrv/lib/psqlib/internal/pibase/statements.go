@@ -102,6 +102,8 @@ const (
 	St_mod_delete_ph_for_push
 	St_mod_add_ph_after_push
 
+	// joblist
+
 	St_mod_joblist_modlist_changes_get
 	St_mod_joblist_modlist_changes_set
 	St_mod_joblist_modlist_changes_del

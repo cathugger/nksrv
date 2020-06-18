@@ -135,9 +135,6 @@ func ConfigPSQLIB(p *pibase.PSQLIB, cfg Config) (err error) {
 		return
 	}
 
-	p.NTStmts = make(map[int]*sql.Stmt)
-	p.NPStmts = make(map[pibase.NPTuple]*sql.Stmt)
-
 	return
 }
 
