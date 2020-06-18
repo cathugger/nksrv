@@ -10,6 +10,9 @@ import (
 )
 
 const (
+
+	// NNTP
+
 	St_nntp_article_exists_or_banned_by_msgid = iota
 	St_nntp_article_valid_by_msgid
 
@@ -47,6 +50,8 @@ const (
 	St_nntp_hdr_curr_subject
 	St_nntp_hdr_curr_any
 
+	// web
+
 	St_web_listboards
 	St_web_thread_list_page
 	St_web_overboard_page
@@ -56,6 +61,24 @@ const (
 
 	St_web_prepost_newthread
 	St_web_prepost_newpost
+
+	// post
+
+	St_post_newthread_sb_nf
+	St_post_newthread_mb_nf
+	St_post_newthread_sb_sf
+	St_post_newthread_mb_sf
+	St_post_newthread_sb_mf
+	St_post_newthread_mb_mf
+
+	St_post_newreply_sb_nf
+	St_post_newreply_mb_nf
+	St_post_newreply_sb_sf
+	St_post_newreply_mb_sf
+	St_post_newreply_sb_mf
+	St_post_newreply_mb_mf
+
+	// various modification
 
 	St_mod_ref_write
 	St_mod_ref_find_post
@@ -88,6 +111,8 @@ const (
 	St_mod_joblist_refs_deps_recalc_del
 
 	St_mod_joblist_refs_recalc_get
+
+	// puller specific
 
 	St_puller_get_last_newnews
 	St_puller_set_last_newnews
@@ -161,6 +186,22 @@ var stNames = [stMax]StReference{
 
 	{"web", "web_prepost_newthread"},
 	{"web", "web_prepost_newpost"},
+
+	// post stuff
+
+	{"post", "post_newthread_sb_nf"},
+	{"post", "post_newthread_mb_nf"},
+	{"post", "post_newthread_sb_sf"},
+	{"post", "post_newthread_mb_sf"},
+	{"post", "post_newthread_sb_mf"},
+	{"post", "post_newthread_mb_mf"},
+
+	{"post", "post_newreply_sb_nf"},
+	{"post", "post_newreply_mb_nf"},
+	{"post", "post_newreply_sb_sf"},
+	{"post", "post_newreply_mb_sf"},
+	{"post", "post_newreply_sb_mf"},
+	{"post", "post_newreply_mb_mf"},
 
 	// database-modification
 
