@@ -262,6 +262,8 @@ func InsertNewThreadMB(
 		return
 	}
 
+	defer r.Close()
+
 	sp.Log.LogPrintf(logx.DEBUG, "NEWTHREAD %s process", pInfo.ID)
 
 	for r.Next() {

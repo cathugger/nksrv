@@ -270,6 +270,8 @@ func InsertNewReplyMB(
 		return
 	}
 
+	defer r.Close()
+
 	sp.Log.LogPrintf(DEBUG, "NEWPOST %s process", pInfo.ID)
 
 	for r.Next() {
