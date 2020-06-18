@@ -55,6 +55,7 @@ func InsertNewThread(
 				smodid,
 				BAjson)
 	} else if len(pInfo.FI) == 1 {
+		sfs := makeSingleFileStuff(pInfo.FI[0])
 		r = tx.
 			Stmt(sp.StPrep[pibase.St_post_newthread_sb_sf]).
 			QueryRow(
@@ -77,43 +78,16 @@ func InsertNewThread(
 				smodid,
 				BAjson,
 
-				pInfo.FI[0].Type.String(),
-				pInfo.FI[0].Size,
-				pInfo.FI[0].ID,
-				pInfo.FI[0].ThumbField,
-				pInfo.FI[0].Original,
-				pipostbase.MustMarshal(pInfo.FI[0].FileAttrib),
-				pipostbase.MustMarshal(pInfo.FI[0].ThumbAttrib),
-				pipostbase.MustMarshal(pInfo.FI[0].Extras))
+				sfs.ftype,
+				sfs.fsize,
+				sfs.fid,
+				sfs.fthumb,
+				sfs.forig,
+				sfs.fattrib,
+				sfs.ftattrib,
+				sfs.fextra)
 	} else {
-		var ftypes []string
-		var fsizes []int64
-		var fids []string
-		var fthumbs []string
-		var forigs []string
-		var fattribs [][]byte
-		var ftattribs [][]byte
-		var fextras [][]byte
-
-		for i := range pInfo.FI {
-			ftypes = append(ftypes,
-				pInfo.FI[i].Type.String())
-			fsizes = append(fsizes,
-				pInfo.FI[i].Size)
-			fids = append(fids,
-				pInfo.FI[i].ID)
-			fthumbs = append(fthumbs,
-				pInfo.FI[i].ThumbField)
-			forigs = append(forigs,
-				pInfo.FI[i].Original)
-			fattribs = append(fattribs,
-				pipostbase.MustMarshal(pInfo.FI[i].FileAttrib))
-			ftattribs = append(ftattribs,
-				pipostbase.MustMarshal(pInfo.FI[i].ThumbAttrib))
-			fextras = append(fextras,
-				pipostbase.MustMarshal(pInfo.FI[i].Extras))
-		}
-
+		mfs := makeMultiFileStuff(pInfo.FI)
 		r = tx.
 			Stmt(sp.StPrep[pibase.St_post_newthread_sb_mf]).
 			QueryRow(
@@ -136,25 +110,179 @@ func InsertNewThread(
 				smodid,
 				BAjson,
 
-				pq.Array(ftypes),
-				pq.Array(fsizes),
-				pq.Array(fids),
-				pq.Array(fthumbs),
-				pq.Array(forigs),
-				pq.Array(fattribs),
-				pq.Array(ftattribs),
-				pq.Array(fextras))
+				pq.Array(mfs.ftypes),
+				pq.Array(mfs.fsizes),
+				pq.Array(mfs.fids),
+				pq.Array(mfs.fthumbs),
+				pq.Array(mfs.forigs),
+				pq.Array(mfs.fattribs),
+				pq.Array(mfs.ftattribs),
+				pq.Array(mfs.fextras))
 	}
 
 	sp.Log.LogPrintf(logx.DEBUG, "NEWTHREAD %s process", pInfo.ID)
 
 	err = r.Scan(&gpid, &bpid)
 	if err != nil {
-		if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == "23505" {
+		if sqlerrIsDuplicate(err) {
 			// duplicate
 			return 0, 0, true, nil
 		}
 		err = sp.SQLError("newthread insert query scan", err)
+		return
+	}
+
+	sp.Log.LogPrintf(logx.DEBUG, "NEWTHREAD %s done", pInfo.ID)
+
+	// done
+	return
+}
+
+func InsertNewThreadMB(
+	sp *pibase.PSQLIB, tx *sql.Tx,
+	bids []pibase.TBoardID, pInfo mailib.PostInfo, skipover bool, modid uint64) (
+	gpid pibase.TPostID, bpids []pibase.TPostID, duplicate bool, err error) {
+
+	if len(pInfo.H) == 0 {
+		panic("post should have header filled")
+	}
+
+	// XXX until I decide how else it should be
+	var postids []string
+	for range bids {
+		postids = append(postids, pInfo.ID)
+	}
+
+	Hjson := pipostbase.MustMarshal(pInfo.H)
+	GAjson := pipostbase.MustMarshal(pInfo.GA)
+	Ljson := pipostbase.MustMarshal(&pInfo.L)
+	Ejson := pipostbase.MustMarshal(&pInfo.E)
+	BAjson := pipostbase.MustMarshal(pInfo.BA)
+
+	smodid := sql.NullInt64{Int64: int64(modid), Valid: modid != 0}
+
+	sp.Log.LogPrintf(logx.DEBUG, "NEWTHREAD %s start <%s>", pInfo.ID, pInfo.MessageID)
+
+	var r *sql.Rows
+
+	if len(pInfo.FI) == 0 {
+		r, err = tx.
+			Stmt(sp.StPrep[pibase.St_post_newthread_mb_nf]).
+			Query(
+				pInfo.Date,
+				pInfo.MI.Sage,
+				pInfo.FC,
+				pInfo.MessageID,
+				pInfo.MI.Title,
+				pInfo.MI.Author,
+				pInfo.MI.Trip,
+				pInfo.MI.Message,
+				Hjson,
+				GAjson,
+				Ljson,
+				Ejson,
+
+				pq.Array(bids),
+				pq.Array(postids),
+				skipover,
+				smodid,
+				BAjson)
+	} else if len(pInfo.FI) == 1 {
+		sfs := makeSingleFileStuff(pInfo.FI[0])
+		r, err = tx.
+			Stmt(sp.StPrep[pibase.St_post_newthread_mb_sf]).
+			Query(
+				pInfo.Date,
+				pInfo.MI.Sage,
+				pInfo.FC,
+				pInfo.MessageID,
+				pInfo.MI.Title,
+				pInfo.MI.Author,
+				pInfo.MI.Trip,
+				pInfo.MI.Message,
+				Hjson,
+				GAjson,
+				Ljson,
+				Ejson,
+
+				pq.Array(bids),
+				pq.Array(postids),
+				skipover,
+				smodid,
+				BAjson,
+
+				sfs.ftype,
+				sfs.fsize,
+				sfs.fid,
+				sfs.fthumb,
+				sfs.forig,
+				sfs.fattrib,
+				sfs.ftattrib,
+				sfs.fextra)
+	} else {
+		mfs := makeMultiFileStuff(pInfo.FI)
+		r, err = tx.
+			Stmt(sp.StPrep[pibase.St_post_newthread_mb_mf]).
+			Query(
+				pInfo.Date,
+				pInfo.MI.Sage,
+				pInfo.FC,
+				pInfo.MessageID,
+				pInfo.MI.Title,
+				pInfo.MI.Author,
+				pInfo.MI.Trip,
+				pInfo.MI.Message,
+				Hjson,
+				GAjson,
+				Ljson,
+				Ejson,
+
+				pq.Array(bids),
+				pq.Array(postids),
+				skipover,
+				smodid,
+				BAjson,
+
+				pq.Array(mfs.ftypes),
+				pq.Array(mfs.fsizes),
+				pq.Array(mfs.fids),
+				pq.Array(mfs.fthumbs),
+				pq.Array(mfs.forigs),
+				pq.Array(mfs.fattribs),
+				pq.Array(mfs.ftattribs),
+				pq.Array(mfs.fextras))
+	}
+
+	if err != nil {
+		if sqlerrIsDuplicate(err) {
+			// duplicate
+			return 0, nil, true, nil
+		}
+		err = sp.SQLError("newreplymb insert query", err)
+		return
+	}
+
+	sp.Log.LogPrintf(logx.DEBUG, "NEWTHREAD %s process", pInfo.ID)
+
+	for r.Next() {
+		var bpid pibase.TPostID
+		err = r.Scan(&gpid, &bpid)
+		if err != nil {
+			if sqlerrIsDuplicate(err) {
+				// duplicate
+				return 0, nil, true, nil
+			}
+			err = sp.SQLError("newthreadmb insert scan", err)
+			return
+		}
+		bpids = append(bpids, bpid)
+	}
+	if err = r.Err(); err != nil {
+		if sqlerrIsDuplicate(err) {
+			// duplicate
+			return 0, nil, true, nil
+		}
+		err = sp.SQLError("newreplymb insert iteration", err)
 		return
 	}
 
