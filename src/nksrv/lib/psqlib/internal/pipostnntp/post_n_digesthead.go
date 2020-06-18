@@ -147,9 +147,9 @@ func nntpDigestTransferHead(
 	info.insertSqlInfo, err, unexpected, wr =
 		acceptArticleHead(sp, hgroup, info.FRef, info.PostedDate)
 	if err != nil {
-		if err == errNoSuchBoard {
+		if err == pibase.ErrNoSuchBoard {
 			err = fmt.Errorf("newsgroup %q not wanted", hgroup)
-		} else if err == errNoSuchThread {
+		} else if err == pibase.ErrNoSuchThread {
 			err = fmt.Errorf(
 				"refering to non-existing root post %s not allowed", info.FRef)
 		}
@@ -161,10 +161,10 @@ func nntpDigestTransferHead(
 
 	if len(H["Path"]) != 0 && au.TrimWSString(H["Path"][0].V) != "" {
 		if !notrace {
-			H["Path"][0].V = sp.instance + "!" + H["Path"][0].V
+			H["Path"][0].V = sp.Instance + "!" + H["Path"][0].V
 		}
 	} else {
-		H["Path"] = mail.OneHeaderVal(sp.instance + "!.POSTED!not-for-mail")
+		H["Path"] = mail.OneHeaderVal(sp.Instance + "!.POSTED!not-for-mail")
 	}
 
 	//sp.log.LogPrintf(DEBUG, "nntpDigestTransferHead done")
