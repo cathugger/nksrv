@@ -363,7 +363,7 @@ func (sp *PSQLIB) deletePHForPush(
 
 func (sp *PSQLIB) addPHAfterPush(g_p_id uint64, sphd savephdata) (e error) {
 
-	st := sp.st_prep[st_mod_add_ph_after_push]
+	st := sp.st_prep[pibase.St_mod_add_ph_after_push]
 
 	_, e = st.
 		Exec(
