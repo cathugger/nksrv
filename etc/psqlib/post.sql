@@ -264,28 +264,31 @@
 
 
 
+-- :namet post_template_common_result
+SELECT
+	g_p_id,
+	b_p_id
+FROM
+	ubp
+
+
+
+
+
 -- :name post_newthread_sb_nf
 -- single board, no files
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newthread_ut_sb }},
 {{ .post_template_newthread_ubp }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newthread_mb_nf
 -- multi board, no files
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newthread_ut_mb }},
 {{ .post_template_newthread_ubp }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 
 -- :name post_newthread_sb_sf
 -- single board, single file
@@ -294,11 +297,7 @@ WITH
 {{ .post_template_newthread_ut_sb }},
 {{ .post_template_newthread_ubp }},
 {{ .post_template_common_uf_one }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newthread_mb_sf
 -- multi board, single file
 WITH
@@ -306,11 +305,7 @@ WITH
 {{ .post_template_newthread_ut_mb }},
 {{ .post_template_newthread_ubp }},
 {{ .post_template_common_uf_one }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 
 -- :name post_newthread_sb_mf
 -- single board, many files
@@ -319,11 +314,7 @@ WITH
 {{ .post_template_newthread_ut_sb }},
 {{ .post_template_newthread_ubp }},
 {{ .post_template_common_uf_many }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newthread_mb_mf
 -- multi board, many files
 WITH
@@ -331,11 +322,7 @@ WITH
 {{ .post_template_newthread_ut_mb }},
 {{ .post_template_newthread_ubp }},
 {{ .post_template_common_uf_many }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 
 
 
@@ -344,21 +331,13 @@ FROM
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_sb }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newreply_mb_nf
 -- multi board, no files
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_mb }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 
 -- :name post_newreply_sb_sf
 -- single board, single file
@@ -366,22 +345,14 @@ WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_sb }},
 {{ .post_template_common_uf_one }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newreply_mb_sf
 -- multi board, single file
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_mb }},
 {{ .post_template_common_uf_one }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 
 -- :name post_newreply_sb_mf
 -- single board, many files
@@ -389,19 +360,11 @@ WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_sb }},
 {{ .post_template_common_uf_many }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}
 -- :name post_newreply_mb_mf
 -- multi board, many files
 WITH
 {{ .post_template_common_ugp }},
 {{ .post_template_newreply_ubp_mb }},
 {{ .post_template_common_uf_many }}
-SELECT
-	g_p_id,
-	b_p_id
-FROM
-	ubp
+{{ .post_template_common_result }}

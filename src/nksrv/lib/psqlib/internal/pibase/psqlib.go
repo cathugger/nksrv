@@ -4,7 +4,6 @@ package pibase
 
 import (
 	"database/sql"
-	"sync"
 
 	"golang.org/x/crypto/ed25519"
 
