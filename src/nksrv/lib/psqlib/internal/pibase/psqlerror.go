@@ -6,6 +6,14 @@ import (
 	"nksrv/lib/psql"
 )
 
+// indicates that psql error is deadlock
+type PSQLRetriableError struct {
+	error
+}
+
+func (x PSQLRetriableError) Unwrap() error { return x.error }
+
+// SQLError wraps and logs error
 func (s *PSQLIB) SQLError(when string, err error) error {
 	if pqerr, _ := err.(*pq.Error); pqerr != nil {
 		switch pqerr.Code {
@@ -21,10 +29,3 @@ func (s *PSQLIB) SQLError(when string, err error) error {
 	}
 	return psql.SQLError(s.Log, when, err)
 }
-
-// indicates that psql error is deadlock
-type PSQLRetriableError struct {
-	error
-}
-
-func (x PSQLRetriableError) Unwrap() error { return x.error }

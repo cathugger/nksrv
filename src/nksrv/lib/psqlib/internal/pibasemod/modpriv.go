@@ -135,7 +135,7 @@ type ModCombinedCaps struct {
 	ModInheritBoardCap ModBoardCap
 }
 
-func processCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
+func ProcessCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
 	for i := range mc.CapLevel {
 		if i < len(arr) && arr[i].Valid {
 			if uint32(arr[i].Int32) > caplvl_maxval {
@@ -172,7 +172,7 @@ func (c ModBoardCap) TakeIn(
 			}
 		}
 
-		mc = processCapLevel(mc, arr)
+		mc = ProcessCapLevel(mc, arr)
 
 		c[k] = mc
 	}

@@ -2,11 +2,12 @@ package psqlib
 
 import (
 	"database/sql"
-	"os"
 
 	"nksrv/lib/cacheengine"
 	. "nksrv/lib/logx"
 	mm "nksrv/lib/minimail"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibasenntp"
 )
 
 // NOTE: nuking OP also nukes whole thread
@@ -60,13 +61,14 @@ func (s delModIDState) contain(x uint64) bool {
 	return doesit
 }
 
-func (sp *PSQLIB) deleteByMsgID(
-	tx *sql.Tx, cmsgids TCoreMsgIDStr,
+func deleteByMsgID(
+	sp *pibase.PSQLIB,
+	tx *sql.Tx, cmsgids pibasenntp.TCoreMsgIDStr,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
 	err error) {
 
-	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
+	sp.Log.LogPrintf(DEBUG, "DELET ARTICLE <%s> start", cmsgids)
 	delst := tx.Stmt(sp.StPrep[pibase.St_mod_delete_by_msgid])
 	_, err = delst.Exec(string(cmsgids))
 	if err != nil {
@@ -74,16 +76,17 @@ func (sp *PSQLIB) deleteByMsgID(
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> processing", cmsgids)
+	sp.Log.LogPrintf(DEBUG, "DELET ARTICLE <%s> processing", cmsgids)
 	out_delmsgids, out_delmodids, err =
-		sp.postDelete(tx, in_delmsgids, in_delmodids)
-	sp.log.LogPrintf(DEBUG, "DELET ARTICLE <%s> end", cmsgids)
+		postDelete(sp, tx, in_delmsgids, in_delmodids)
+	sp.Log.LogPrintf(DEBUG, "DELET ARTICLE <%s> end", cmsgids)
 	return
 }
 
-func (sp *PSQLIB) banByMsgID(
-	tx *sql.Tx, cmsgids TCoreMsgIDStr,
-	banbid boardID, banbpid postID, reason string,
+func banByMsgID(
+	sp *pibase.PSQLIB,
+	tx *sql.Tx, cmsgids pibasenntp.TCoreMsgIDStr,
+	banbid pibase.TBoardID, banbpid pibase.TPostID, reason string,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
 	err error) {
@@ -97,7 +100,7 @@ func (sp *PSQLIB) banByMsgID(
 		Valid: banbid != 0 && banbpid != 0,
 	}
 
-	sp.log.LogPrintf(
+	sp.Log.LogPrintf(
 		DEBUG, "BAN ARTICLE <%s> (reason: %q) start", cmsgids, reason)
 	banst := tx.Stmt(sp.StPrep[pibase.St_mod_ban_by_msgid])
 	_, err = banst.Exec(string(cmsgids), bidn, bpidn, reason)
@@ -106,30 +109,15 @@ func (sp *PSQLIB) banByMsgID(
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids)
+	sp.Log.LogPrintf(DEBUG, "BAN ARTICLE <%s> processing", cmsgids)
 	out_delmsgids, out_delmodids, err =
-		sp.postDelete(tx, in_delmsgids, in_delmodids)
-	sp.log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
+		postDelete(sp, tx, in_delmsgids, in_delmodids)
+	sp.Log.LogPrintf(DEBUG, "BAN ARTICLE <%s> end", cmsgids)
 	return
 }
 
-func (sp *PSQLIB) removeSrcFile(fname string) (err error) {
-	err = os.Remove(sp.src.Main() + fname)
-	if err != nil && os.IsNotExist(err) {
-		err = nil
-	}
-	return
-}
-
-func (sp *PSQLIB) removeThmFile(fname, tname string) (err error) {
-	err = os.Remove(sp.thm.Main() + fname + "." + tname)
-	if err != nil && os.IsNotExist(err) {
-		err = nil
-	}
-	return
-}
-
-func (sp *PSQLIB) postDelete(
+func postDelete(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx,
 	_in_delmsgids delMsgIDState, _in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
@@ -141,7 +129,7 @@ func (sp *PSQLIB) postDelete(
 	var rows *sql.Rows
 
 	// global msgids for cached netnews messages invalidation
-	rows, err = sp.drainDelGPosts(tx)
+	rows, err = drainDelGPosts(sp, tx)
 	if err != nil {
 		return
 	}
@@ -156,10 +144,10 @@ func (sp *PSQLIB) postDelete(
 		}
 
 		if out_delmsgids.isNotPresent(msgid) {
-			sp.log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid)
+			sp.Log.LogPrintf(DEBUG, "DELET cached NNTP <%s>", msgid)
 
 			var h *cacheengine.CacheObj
-			h, err = sp.nntpce.RemoveItemStart(msgid)
+			h, err = sp.NNTPCE.RemoveItemStart(msgid)
 			if err != nil {
 				// XXX wrap error?
 				rows.Close()
@@ -173,7 +161,7 @@ func (sp *PSQLIB) postDelete(
 				})
 		} else {
 			// XXX this shouldn't happen
-			sp.log.LogPrintf(
+			sp.Log.LogPrintf(
 				DEBUG,
 				"DELET cached NNTP <%s> (ignored duplicate)", msgid)
 		}
@@ -193,7 +181,7 @@ func (sp *PSQLIB) postDelete(
 	}
 	var bp_affs []affBPost
 
-	rows, err = sp.drainDelGPosts(tx)
+	rows, err = drainDelGPosts(sp, tx)
 	if err != nil {
 		return
 	}
@@ -214,54 +202,8 @@ func (sp *PSQLIB) postDelete(
 		return
 	}
 
-	// file deletion
-	rows, err = sp.drainDelFiles(tx)
-	if err != nil {
-		return
-	}
-	for rows.Next() {
-		var fname string
-
-		err = rows.Scan(&fname)
-		if err != nil {
-			rows.Close()
-			err = sp.SQLError("rows.Scan", err)
-			return
-		}
-
-		sp.log.LogPrintf(DEBUG, "DELET file %q", fname)
-		err = sp.removeSrcFile(fname)
-		if err != nil {
-			rows.Close()
-			return
-		}
-	}
-
-	// thumbnail deletion
-	rows, err = sp.drainDelFThumbs(tx)
-	if err != nil {
-		return
-	}
-	for rows.Next() {
-		var fname, tname string
-
-		err = rows.Scan(&fname, &tname)
-		if err != nil {
-			rows.Close()
-			err = sp.SQLError("rows.Scan", err)
-			return
-		}
-
-		sp.log.LogPrintf(DEBUG, "DELET thumb %q %q", fname, tname)
-		err = sp.removeThmFile(fname, tname)
-		if err != nil {
-			rows.Close()
-			return
-		}
-	}
-
 	// modids of nuked bposts
-	rows, err = sp.drainDelModIDs(tx)
+	rows, err = drainDelModIDs(sp, tx)
 	if err != nil {
 		return
 	}
@@ -309,7 +251,7 @@ func (sp *PSQLIB) DemoDeleteOrBanByMsgID(
 	var err error
 
 	for _, s := range msgids {
-		if !mm.ValidMessageIDStr(TFullMsgIDStr(s)) {
+		if !mm.ValidMessageIDStr(pibasenntp.TFullMsgIDStr(s)) {
 			sp.log.LogPrintf(ERROR, "invalid msgid %q", s)
 			return
 		}

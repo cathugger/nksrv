@@ -1,5 +1,7 @@
 package pibase
 
+// in idea this should be in pibaseweb but since we sorta need to init it from pibase...
+
 import (
 	"os"
 

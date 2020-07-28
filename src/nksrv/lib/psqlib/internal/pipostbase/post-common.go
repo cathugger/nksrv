@@ -11,6 +11,7 @@ import (
 
 	. "nksrv/lib/logx"
 	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibasemod"
 	"nksrv/lib/thumbnailer"
 )
 
@@ -66,25 +67,25 @@ func (f *ModPrivFetch) unmarshalJSON() {
 	MustUnmarshal(&f.ModIBoardCapLvl, f.ModIBoardCapLvlJSON)
 }
 
-func (f *ModPrivFetch) parse() (mcc ModCombinedCaps) {
+func (f *ModPrivFetch) parse() (mcc pibasemod.ModCombinedCaps) {
 	if f.ModGlobalCap.Valid {
-		mcc.ModCap.Cap = StrToCap(f.ModGlobalCap.String)
+		mcc.ModCap.Cap = pibasemod.StrToCap(f.ModGlobalCap.String)
 	}
 	if f.ModGlobalCapLvl != nil {
-		mcc.ModCap = processCapLevel(mcc.ModCap, f.ModGlobalCapLvl)
+		mcc.ModCap = pibasemod.ProcessCapLevel(mcc.ModCap, f.ModGlobalCapLvl)
 	}
 
 	if f.ModIGlobalCap.Valid {
-		mcc.ModInheritCap.Cap = StrToCap(f.ModIGlobalCap.String)
+		mcc.ModInheritCap.Cap = pibasemod.StrToCap(f.ModIGlobalCap.String)
 	}
 	if f.ModIGlobalCapLvl != nil {
-		mcc.ModInheritCap = processCapLevel(mcc.ModInheritCap, f.ModIGlobalCapLvl)
+		mcc.ModInheritCap = pibasemod.ProcessCapLevel(mcc.ModInheritCap, f.ModIGlobalCapLvl)
 	}
 
-	mcc.ModBoardCap = make(ModBoardCap)
+	mcc.ModBoardCap = make(pibasemod.ModBoardCap)
 	mcc.ModBoardCap.TakeIn(f.ModBoardCap, f.ModBoardCapLvl)
 
-	mcc.ModInheritBoardCap = make(ModBoardCap)
+	mcc.ModInheritBoardCap = make(pibasemod.ModBoardCap)
 	mcc.ModInheritBoardCap.TakeIn(f.ModIBoardCap, f.ModIBoardCapLvl)
 
 	return

@@ -11,11 +11,15 @@ import (
 	. "nksrv/lib/logx"
 	"nksrv/lib/mailib"
 	mm "nksrv/lib/minimail"
+	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/psqlib/internal/pibasemod"
+	"nksrv/lib/psqlib/internal/pibasenntp"
 )
 
-func (sp *PSQLIB) modCmdDelete(
-	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	pi mailib.PostInfo, selfid, ref TCoreMsgIDStr,
+func ModCmdDelete(
+	sp *pibase.PSQLIB,
+	tx *sql.Tx, gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
+	pi mailib.PostInfo, selfid, ref pibasenntp.TCoreMsgIDStr,
 	cmd string, args []string,
 	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
 	out_delmsgids delMsgIDState, out_delmodids delModIDState,
@@ -58,11 +62,12 @@ func getModCmdInput(
 	return f, f, nil
 }
 
-func (sp *PSQLIB) execModCmd(
-	tx *sql.Tx, gpid postID, bid boardID, bpid postID,
-	modid uint64, modCC ModCombinedCaps,
+func ExecModCmd(
+	sp *pibase.PSQLIB,
+	tx *sql.Tx, gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
+	modid uint64, modCC pibasemod.ModCombinedCaps,
 	pi mailib.PostInfo, filenames []string,
-	selfid, ref TCoreMsgIDStr,
+	selfid, ref pibasenntp.TCoreMsgIDStr,
 	_in_delmodids delModIDState) (
 	out_delmodids delModIDState,
 	err error, inputerr bool) {
@@ -108,8 +113,8 @@ func (sp *PSQLIB) execModCmd(
 
 		if len(unsafe_fields) != 0 {
 
-			cmd := strings.ToLower(unsafe_fields[0])
-			args := unsafe_fields[1:]
+			unsafe_cmd := strings.ToLower(unsafe_fields[0])
+			unsafe_args := unsafe_fields[1:]
 
 			// TODO log commands we couldn't understand
 			switch cmd {
@@ -119,8 +124,9 @@ func (sp *PSQLIB) execModCmd(
 				if modCC.ModCap.Cap&cap_delpost != 0 {
 					// global delete by msgid
 					out_delmodids, err =
-						sp.modCmdDelete(
-							tx, gpid, bid, bpid, pi, selfid, ref, cmd, args,
+						ModCmdDelete(
+							sp,
+							tx, gpid, bid, bpid, pi, selfid, ref, unsafe_cmd, unsafe_args,
 							out_delmodids)
 				}
 			}
@@ -139,13 +145,14 @@ func (sp *PSQLIB) execModCmd(
 	return
 }
 
-func (sp *PSQLIB) xxxx(
+func xxxx(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx,
-	modid uint64, modCC ModCombinedCaps) (
+	modid uint64, modCC pibasemod.ModCombinedCaps) (
 	err error) {
 
-	srcdir := sp.src.Main()
-	xst := tx.Stmt(sp.st_prep[st_mod_fetch_and_clear_mod_msgs_continue])
+	srcdir := sp.Src.Main()
+	xst := tx.Stmt(sp.StPrep[pibase.St_mod_fetch_and_clear_mod_msgs_continue])
 
 	// 666 days in the future
 	off_pdate := time.Now().Add(time.Hour * 24 * 666).UTC()
@@ -153,11 +160,11 @@ func (sp *PSQLIB) xxxx(
 	off_b_id := uint32(0)
 
 	type idt struct {
-		bid  boardID
-		bpid postID
+		bid  pibase.TBoardID
+		bpid pibase.TPostID
 	}
 	type postinfo struct {
-		gpid      postID
+		gpid      pibase.TPostID
 		xid       idt
 		bname     string
 		msgid     string
@@ -176,7 +183,7 @@ requery:
 		var rows *sql.Rows
 		rows, err = xst.Query(modid, off_pdate, off_g_p_id, off_b_id)
 		if err != nil {
-			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs query", err)
+			err = sp.SQLError("st_web_fetch_and_clear_mod_msgs query", err)
 			return
 		}
 
@@ -206,7 +213,7 @@ requery:
 				&p.title, &p.message, &txtidx, &fname)
 			if err != nil {
 				rows.Close()
-				err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows scan", err)
+				err = sp.SQLError("st_web_fetch_and_clear_mod_msgs rows scan", err)
 				return
 			}
 
@@ -223,14 +230,14 @@ requery:
 			}
 		}
 		if err = rows.Err(); err != nil {
-			err = sp.sqlError("st_web_fetch_and_clear_mod_msgs rows it", err)
+			err = sp.SQLError("st_web_fetch_and_clear_mod_msgs rows it", err)
 			return
 		}
 
 		for i := range posts {
 			// prepare postinfo good enough for execModCmd
 			pi := mailib.PostInfo{
-				MessageID: TCoreMsgIDStr(posts[i].msgid),
+				MessageID: pibasenntp.TCoreMsgIDStr(posts[i].msgid),
 				Date:      posts[i].date_sent,
 				MI: mailib.MessageInfo{
 					Title:   posts[i].title,
@@ -241,18 +248,19 @@ requery:
 				},
 			}
 
-			sp.log.LogPrintf(DEBUG,
+			sp.Log.LogPrintf(DEBUG,
 				"setmodpriv: executing <%s> from board[%s]",
 				posts[i].msgid, posts[i].bname)
 
 			var delmodids delModIDState
 			var inputerr bool
 
-			delmodids, err, inputerr = sp.execModCmd(
+			delmodids, err, inputerr = ExecModCmd(
+				sp,
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
 				modid, modCC,
 				pi, posts[i].files, pi.MessageID,
-				TCoreMsgIDStr(posts[i].ref), delmodids)
+				pibasenntp.TCoreMsgIDStr(posts[i].ref), delmodids)
 
 			if err != nil {
 
@@ -260,7 +268,7 @@ requery:
 					// mod msg is just fucked at this point
 					// this shouldn't happen
 					// XXX should we delete this bad msg??
-					sp.log.LogPrintf(ERROR,
+					sp.Log.LogPrintf(ERROR,
 						"setmodpriv: [proceeding anyway] inputerr while execing <%s>: %v",
 						posts[i].msgid, err)
 					err = nil
@@ -272,7 +280,7 @@ requery:
 			}
 
 			if delmodids.contain(modid) {
-				sp.log.LogPrintf(
+				sp.Log.LogPrintf(
 					DEBUG, "setmodpriv: delmodid %d is ours, requerying", modid)
 				// msg we just deleted was made by mod we just upp'd
 				// that means that it may be msg in query we just made

@@ -19,16 +19,6 @@ import (
 	"nksrv/lib/psqlib/internal/pigpolicy"
 )
 
-type TBoardID = uint32
-type TPostID = uint64
-
-const (
-	PendingDir          = "pending" // for src & thm
-	NNTPIncomingTempDir = "in_tmp"
-	NNTPIncomingDir     = "in_got"
-	NNTPPullerDir       = "in_pulled"
-)
-
 type PSQLIB struct {
 	// database handle
 	DB psql.PSQL
