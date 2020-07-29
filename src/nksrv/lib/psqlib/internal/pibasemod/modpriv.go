@@ -10,10 +10,10 @@ import (
 type CapType uint16
 
 const (
-	cap_reserved0 = 1 << iota
-	cap_delpost
-	cap_delboardpost
-	cap_delboard
+	cap_Reserved0 = 1 << iota
+	Cap_DelPost
+	Cap_DelBoardPost
+	Cap_DelBoard
 	_
 	_
 	_
@@ -23,12 +23,12 @@ const (
 	_
 	_
 
-	capx_bits       int = iota
-	capx_onlyglobal     = cap_delboard
+	capX_Bits       int = iota
+	CapX_OnlyGlobal     = Cap_DelBoard
 )
 
 func (c CapType) String() string {
-	var buf [capx_bits]byte
+	var buf [capX_Bits]byte
 	for i := range buf {
 		buf[i] = "01"[(c>>i)&1]
 	}
@@ -36,10 +36,10 @@ func (c CapType) String() string {
 }
 
 func StrToCap(s string) (c CapType) {
-	if len(s) != capx_bits {
+	if len(s) != capX_Bits {
 		panic("StrToCap: wrong length")
 	}
-	for i := 0; i < capx_bits; i++ {
+	for i := 0; i < capX_Bits; i++ {
 		ch := s[i]
 		if ch == '0' {
 			// no action need to be taken as zeros are default
@@ -54,26 +54,26 @@ func StrToCap(s string) (c CapType) {
 }
 
 const (
-	caplvl_delpost = iota
+	CapLvl_DelPost = iota
 
-	caplvlx_num
+	CapLvlX_Num
 )
 
-var caplvlx_mask = [caplvlx_num]CapType{cap_delpost}
+var caplvlx_mask = [CapLvlX_Num]CapType{Cap_DelBoard}
 
-type caplvl_type = int16
+type TCapLvl = int16
 
-const caplvl_maxval = 0x7Fff
+const CapLvl_MaxVal = 0x7Fff
 
 type ModCap struct {
 	Cap CapType
 
-	CapLevel [caplvlx_num]caplvl_type // -1 = unset
+	CapLevel [CapLvlX_Num]TCapLvl // -1 = unset
 }
 
 var NoneModCap = ModCap{
 	Cap:      0,
-	CapLevel: [caplvlx_num]caplvl_type{-1},
+	CapLevel: [CapLvlX_Num]TCapLvl{-1},
 }
 
 func (c ModCap) String() string {
@@ -138,10 +138,10 @@ type ModCombinedCaps struct {
 func ProcessCapLevel(mc ModCap, arr []sql.NullInt32) ModCap {
 	for i := range mc.CapLevel {
 		if i < len(arr) && arr[i].Valid {
-			if uint32(arr[i].Int32) > caplvl_maxval {
+			if uint32(arr[i].Int32) > CapLvl_MaxVal {
 				panic("too large val")
 			}
-			mc.CapLevel[i] = caplvl_type(arr[i].Int32)
+			mc.CapLevel[i] = TCapLvl(arr[i].Int32)
 		} else {
 			mc.CapLevel[i] = -1
 		}

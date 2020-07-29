@@ -12,6 +12,7 @@ import (
 	. "nksrv/lib/logx"
 	"nksrv/lib/psqlib/internal/pibase"
 	"nksrv/lib/psqlib/internal/pibasemod"
+	"nksrv/lib/psqlib/internal/pibasenntp"
 	"nksrv/lib/thumbnailer"
 )
 
@@ -91,18 +92,18 @@ func (f *ModPrivFetch) parse() (mcc pibasemod.ModCombinedCaps) {
 	return
 }
 
-func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, err error) {
+func registeredMod(sp *pibase.PSQLIB, tx *sql.Tx, pubkeystr string) (rmi regModInfo, err error) {
 
 	// mod posts MAY later come back and want more of things in this table (if they eval/GC modposts)
 	// at which point we're fucked because moddel posts also will exclusively block files table
 	// and then we won't be able to insert into it..
 	_, err = tx.Exec("LOCK ib0.modlist IN EXCLUSIVE MODE")
 	if err != nil {
-		err = sp.sqlError("lock ib0.modlist query", err)
+		err = sp.SQLError("lock ib0.modlist query", err)
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
+	sp.Log.LogPrintf(DEBUG, "REGMOD %s done locking ib0.modlist", pubkeystr)
 
 	st := tx.Stmt(sp.StPrep[pibase.St_mod_autoregister_mod])
 	x := 0
@@ -129,12 +130,12 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, e
 
 				x++
 
-				sp.log.LogPrintf(DEBUG, "REGMOD %s retry", pubkeystr)
+				sp.Log.LogPrintf(DEBUG, "REGMOD %s retry", pubkeystr)
 
 				continue
 			}
 
-			err = sp.sqlError("st_web_autoregister_mod queryrowscan", err)
+			err = sp.SQLError("st_web_autoregister_mod queryrowscan", err)
 			return
 		}
 
@@ -150,8 +151,8 @@ func (sp *PSQLIB) registeredMod(tx *sql.Tx, pubkeystr string) (rmi regModInfo, e
 	}
 }
 
-func makeCapLvlArray(mc ModCap) interface{} {
-	var x [caplvlx_num]sql.NullInt32
+func makeCapLvlArray(mc pibasemod.ModCap) interface{} {
+	var x [pibasemod.CapLvlX_Num]sql.NullInt32
 	for i := range x {
 		x[i].Int32 = int32(mc.CapLevel[i])
 		x[i].Valid = mc.CapLevel[i] >= 0
@@ -159,8 +160,9 @@ func makeCapLvlArray(mc ModCap) interface{} {
 	return pq.Array(x)
 }
 
-func (sp *PSQLIB) setModCap(
-	tx *sql.Tx, pubkeystr, group string, m_cap, mi_cap ModCap) (err error) {
+func setModCap(
+	sp *pibase.PSQLIB, tx *sql.Tx,
+	pubkeystr, group string, m_cap, mi_cap pibasemod.ModCap) (err error) {
 
 	// do key update
 	var dummy int32
@@ -174,7 +176,7 @@ func (sp *PSQLIB) setModCap(
 
 	if group == "" {
 
-		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv])
+		ust := tx.Stmt(sp.StPrep[pibase.St_mod_set_mod_priv])
 
 		r = ust.QueryRow(
 
@@ -188,7 +190,7 @@ func (sp *PSQLIB) setModCap(
 
 	} else {
 
-		ust := tx.Stmt(sp.st_prep[st_mod_set_mod_priv_group])
+		ust := tx.Stmt(sp.StPrep[pibase.St_mod_set_mod_priv_group])
 
 		r = ust.QueryRow(
 
@@ -208,38 +210,39 @@ func (sp *PSQLIB) setModCap(
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// we changed nothing so return now
-			sp.log.LogPrintf(DEBUG, "setmodpriv: %s priv unchanged", pubkeystr)
+			sp.Log.LogPrintf(DEBUG, "setmodpriv: %s priv unchanged", pubkeystr)
 			err = nil
 			return
 		}
-		err = sp.sqlError("st_web_set_mod_priv queryrowscan", err)
+		err = sp.SQLError("st_web_set_mod_priv queryrowscan", err)
 		return
 	}
 
-	sp.log.LogPrintf(DEBUG,
+	sp.Log.LogPrintf(DEBUG,
 		"setmodpriv: %s priv changed", pubkeystr)
 
 	return
 }
 
-func (sp *PSQLIB) DemoSetModCap(
-	mods []string, group string, modCap, modInheritCap ModCap) {
+func DemoSetModCap(
+	sp *pibase.PSQLIB,
+	mods []string, group string, modCap, modInheritCap pibasemod.ModCap) {
 
 	var err error
 
 	for i, s := range mods {
 		if _, err = hex.DecodeString(s); err != nil {
-			sp.log.LogPrintf(ERROR, "invalid modid %q", s)
+			sp.Log.LogPrintf(ERROR, "invalid modid %q", s)
 			return
 		}
 		// we use uppercase (I forgot why)
 		mods[i] = strings.ToUpper(s)
 	}
 
-	tx, err := sp.db.DB.Begin()
+	tx, err := sp.DB.DB.Begin()
 	if err != nil {
-		err = sp.sqlError("tx begin", err)
-		sp.log.LogPrintf(ERROR, "%v", err)
+		err = sp.SQLError("tx begin", err)
+		sp.Log.LogPrintf(ERROR, "%v", err)
 		return
 	}
 	defer func() {
@@ -255,31 +258,31 @@ func (sp *PSQLIB) DemoSetModCap(
 	modCap = modCap.Merge(modInheritCap)
 
 	for _, s := range mods {
-		sp.log.LogPrintf(INFO, "setmodpriv %s %s", s, modCap.String())
+		sp.Log.LogPrintf(INFO, "setmodpriv %s %s", s, modCap.String())
 
-		err = sp.setModCap(tx, s, group, modCap, modInheritCap)
+		err = setModCap(sp, tx, s, group, modCap, modInheritCap)
 		if err != nil {
-			sp.log.LogPrintf(ERROR, "%v", err)
+			sp.Log.LogPrintf(ERROR, "%v", err)
 			return
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		err = sp.sqlError("tx commit", err)
-		sp.log.LogPrintf(ERROR, "%v", err)
+		err = sp.SQLError("tx commit", err)
+		sp.Log.LogPrintf(ERROR, "%v", err)
 		return
 	}
 }
 
-func (sp *PSQLIB) checkFiles() {
+func checkFiles(sp *pibase.PSQLIB) {
 	//
 	//sp.st_prep[st_mod_load_files].
 }
 
 type phdata struct {
 	ph_ban     bool
-	ph_banpriv caplvl_type
+	ph_banpriv pibasemod.TCapLvl
 }
 
 type articlecheckinfo struct {
@@ -294,10 +297,11 @@ type savephdata struct {
 	ph_banpriv sql.NullInt32
 }
 
-func (sp *PSQLIB) checkArticleForPush(
-	cmsgids TCoreMsgIDStr) (i articlecheckinfo, e error) {
+func checkArticleForPush(
+	sp *pibase.PSQLIB,
+	cmsgids pibasenntp.TCoreMsgIDStr) (i articlecheckinfo, e error) {
 
-	st := sp.st_prep[st_mod_check_article_for_push]
+	st := sp.StPrep[pibase.St_mod_check_article_for_push]
 
 	var banpriv sql.NullInt32
 	e = st.QueryRow(cmsgids).
@@ -313,7 +317,7 @@ func (sp *PSQLIB) checkArticleForPush(
 			e = nil
 			return
 		}
-		e = sp.sqlError("", e)
+		e = sp.SQLError("", e)
 		return
 	}
 
@@ -322,10 +326,10 @@ func (sp *PSQLIB) checkArticleForPush(
 	}
 
 	if banpriv.Valid {
-		if uint32(banpriv.Int32) > caplvl_maxval {
+		if uint32(banpriv.Int32) > pibasemod.CapLvl_MaxVal {
 			panic("too big")
 		}
-		i.ph_banpriv = caplvl_type(banpriv.Int32)
+		i.ph_banpriv = pibasemod.TCapLvl(banpriv.Int32)
 	} else {
 		i.ph_banpriv = -1
 	}
@@ -333,10 +337,11 @@ func (sp *PSQLIB) checkArticleForPush(
 	return
 }
 
-func (sp *PSQLIB) deletePHForPush(
+func deletePHForPush(
+	sp *pibase.PSQLIB,
 	g_p_id uint64, phd phdata) (ok bool, sphd savephdata, e error) {
 
-	st := sp.st_prep[st_mod_delete_ph_for_push]
+	st := sp.StPrep[pibase.St_mod_delete_ph_for_push]
 
 	banpriv := sql.NullInt32{
 		Valid: phd.ph_banpriv >= 0,
@@ -355,16 +360,16 @@ func (sp *PSQLIB) deletePHForPush(
 			e = nil
 			return
 		}
-		e = sp.sqlError("", e)
+		e = sp.SQLError("", e)
 		return
 	}
 	ok = true
 	return
 }
 
-func (sp *PSQLIB) addPHAfterPush(g_p_id uint64, sphd savephdata) (e error) {
+func addPHAfterPush(sp *pibase.PSQLIB, g_p_id uint64, sphd savephdata) (e error) {
 
-	st := sp.st_prep[pibase.St_mod_add_ph_after_push]
+	st := sp.StPrep[pibase.St_mod_add_ph_after_push]
 
 	_, e = st.
 		Exec(
@@ -372,7 +377,7 @@ func (sp *PSQLIB) addPHAfterPush(g_p_id uint64, sphd savephdata) (e error) {
 			sphd.ph_ban,
 			sphd.ph_banpriv)
 	if e != nil {
-		e = sp.sqlError("", e)
+		e = sp.SQLError("", e)
 	}
 	return
 }
