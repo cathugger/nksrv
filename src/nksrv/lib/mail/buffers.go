@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"nksrv/lib/bufreader"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 var bufPool = sync.Pool{

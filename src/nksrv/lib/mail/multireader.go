@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"nksrv/lib/bufreader"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 type PartReader struct {

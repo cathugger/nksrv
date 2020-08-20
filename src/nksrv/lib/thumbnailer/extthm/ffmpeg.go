@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"nksrv/lib/ftypes"
+	"nksrv/lib/app/base/ftypes"
 	"nksrv/lib/thumbnailer"
 )
 

@@ -1,7 +1,7 @@
 package mail
 
 import (
-	mm "nksrv/lib/minimail"
+	mm "nksrv/lib/utils/minimail"
 )
 
 func NextValidReference(s string) (mm.TFullMsgIDStr, string) {

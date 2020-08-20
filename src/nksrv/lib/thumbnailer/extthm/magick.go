@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/exec"
 
-	"nksrv/lib/ftypes"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/base/ftypes"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/internal/exifhelper"
+	. "nksrv/lib/utils/logx"
 )
 
 type magickBackend struct {

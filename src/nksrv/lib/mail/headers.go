@@ -6,7 +6,7 @@ import (
 	"sort"
 	"unicode/utf8"
 
-	au "nksrv/lib/asciiutils"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 /*

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/bufreader"
+	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 type MessageHead struct {

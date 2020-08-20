@@ -8,9 +8,9 @@ import (
 
 	"github.com/gobwas/glob"
 
-	"nksrv/lib/fstore"
-	. "nksrv/lib/logx"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/utils/fs/fstore"
+	. "nksrv/lib/utils/logx"
 )
 
 /*

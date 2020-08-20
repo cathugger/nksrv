@@ -3,9 +3,9 @@ package thumbnailer
 import (
 	"os"
 
-	"nksrv/lib/fstore"
-	"nksrv/lib/ftypes"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/base/ftypes"
+	"nksrv/lib/utils/fs/fstore"
+	. "nksrv/lib/utils/logx"
 )
 
 // config shared across thumbnailers
