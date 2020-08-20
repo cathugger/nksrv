@@ -14,8 +14,8 @@ import (
 	"time"
 	"unsafe"
 
-	"nksrv/lib/bufreader"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/text/bufreader"
+	. "nksrv/lib/utils/logx"
 )
 
 // net.Conn with additional CloseWrite() function

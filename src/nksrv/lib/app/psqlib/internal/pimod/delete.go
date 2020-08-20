@@ -3,11 +3,12 @@ package psqlib
 import (
 	"database/sql"
 
-	"nksrv/lib/cacheengine"
-	. "nksrv/lib/logx"
-	mm "nksrv/lib/minimail"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibasenntp"
+	"nksrv/lib/utils/fs/cacheengine"
+	. "nksrv/lib/utils/logx"
+	mm "nksrv/lib/utils/minimail"
+
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibasenntp"
 )
 
 // NOTE: nuking OP also nukes whole thread

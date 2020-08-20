@@ -11,10 +11,10 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
-	"nksrv/lib/ibref_nntp"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/ibref/ibrefsrnd"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
-	ib0 "nksrv/lib/webib0"
+	ib0 "nksrv/lib/app/webib0"
 )
 
 // PostgreSQL doesn't wanna optimize LIKE operations at all when used
@@ -80,7 +80,7 @@ type queryable interface {
 }
 
 func (sp *PSQLIB) processReferencesOnPost(qq queryable,
-	srefs []ibref_nntp.Reference,
+	srefs []ibrefsrnd.Reference,
 	bid boardID, tid postID, isctl bool) (
 	inreplyto []string, err error) {
 
@@ -257,7 +257,7 @@ LIMIT
 }
 
 func (sp *PSQLIB) processReferencesOnIncoming(qq queryable,
-	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
+	srefs []ibrefsrnd.Reference, irefs []ibrefsrnd.Index,
 	prefs []string,
 	bid boardID, tid postID) (
 	arefs []ib0.IBMessageReference,
@@ -474,7 +474,7 @@ LIMIT
 }
 
 func (sp *PSQLIB) insertXRefs(
-	st *sql.Stmt, bid boardID, bpid postID, xrefs []ibref_nntp.Reference) (err error) {
+	st *sql.Stmt, bid boardID, bpid postID, xrefs []ibrefsrnd.Reference) (err error) {
 
 	if len(xrefs) == 0 {
 		// don't waste resources if we have no refs
@@ -597,7 +597,7 @@ func (sp *PSQLIB) updatePostReferences(
 
 func (sp *PSQLIB) processRefsAfterPost(
 	tx *sql.Tx,
-	srefs []ibref_nntp.Reference, irefs []ibref_nntp.Index,
+	srefs []ibrefsrnd.Reference, irefs []ibrefsrnd.Index,
 	prefs []string,
 	b_id boardID, b_t_id, b_p_id postID,
 	postid, newsgroup string, msgid TCoreMsgIDStr) (err error) {
@@ -664,7 +664,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 
 			// update references and collect new failed references
 			srefs, irefs :=
-				ibref_nntp.ParseReferences(xrefpostsinfos[i].message)
+				ibrefsrnd.ParseReferences(xrefpostsinfos[i].message)
 			arefs, err = sp.processReferencesOnIncoming(
 				tx,
 				srefs, irefs,

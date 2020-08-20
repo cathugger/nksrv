@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	. "nksrv/lib/logx"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/nntp"
 )
 

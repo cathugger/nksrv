@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/date"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	au "nksrv/lib/utils/text/asciiutils"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
 	"nksrv/lib/nntp"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/utils/date"
 )
 
 // extracts info from main message headers into structure

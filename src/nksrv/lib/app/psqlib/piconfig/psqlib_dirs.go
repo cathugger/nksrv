@@ -3,8 +3,8 @@ package piconfig
 // psqlib directory initializations
 
 import (
-	"nksrv/lib/fstore"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/utils/fs/fstore"
 )
 
 func initDirs(p *pibase.PSQLIB, cfg Config) (err error) {

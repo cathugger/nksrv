@@ -1,6 +1,6 @@
 package nntp
 
-import . "nksrv/lib/logx"
+import . "nksrv/lib/utils/logx"
 
 func cmdAuthInfo(c *ConnState, args [][]byte, rest []byte) bool {
 	args = args[:0] // reuse

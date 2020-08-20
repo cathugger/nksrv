@@ -1,7 +1,7 @@
 package pipostnntp
 
 import (
-	au "nksrv/lib/asciiutils"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 func isSubjectVoid(x string) bool {

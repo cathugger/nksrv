@@ -5,12 +5,12 @@ import (
 
 	"github.com/lib/pq"
 
-	"nksrv/lib/ibref_nntp"
+	"nksrv/lib/app/ibref/ibrefsrnd"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
+	"nksrv/lib/app/psqlib/internal/pipostbase"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibaseweb"
-	"nksrv/lib/psqlib/internal/pipostbase"
 )
 
 type (
@@ -43,8 +43,8 @@ type postWebContext struct {
 	pInfo     mailib.PostInfo
 	isctlgrp  bool
 	pubkeystr string
-	srefs     []ibref_nntp.Reference
-	irefs     []ibref_nntp.Index
+	srefs     []ibrefsrnd.Reference
+	irefs     []ibrefSrnd.Index
 
 	msgfn string // full filename of inner msg (if doing primitive signing)
 }

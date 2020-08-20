@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	. "nksrv/lib/logx"
+	. "nksrv/lib/utils/logx"
 )
 
 type regModInfo struct {

@@ -1,8 +1,9 @@
 package pipostinsert
 
 import (
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pipostbase"
+	"nksrv/lib/app/mailib"
+
+	"nksrv/lib/app/psqlib/internal/pipostbase"
 )
 
 type singleFileStuff struct {

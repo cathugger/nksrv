@@ -6,7 +6,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	au "nksrv/lib/asciiutils"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 func parseKeyword(b []byte) int {

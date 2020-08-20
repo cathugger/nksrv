@@ -10,13 +10,13 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/ftypes"
-	ht "nksrv/lib/hashtools"
-	. "nksrv/lib/logx"
+	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/app/base/ftypes"
+	ht "nksrv/lib/utils/hashtools"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
+	"nksrv/lib/app/mailib"
 )
 
 func attachmentDisposition(oname string) (cdis string) {

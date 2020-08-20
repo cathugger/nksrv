@@ -3,8 +3,8 @@ package pipostbase
 import (
 	xtypes "github.com/jmoiron/sqlx/types"
 
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibaseweb"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
 )
 
 type (

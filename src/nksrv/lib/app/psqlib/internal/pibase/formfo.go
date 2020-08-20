@@ -5,8 +5,8 @@ package pibase
 import (
 	"os"
 
-	"nksrv/lib/fstore"
 	"nksrv/lib/mail/form"
+	"nksrv/lib/utils/fs/fstore"
 )
 
 type FormFileOpener struct {

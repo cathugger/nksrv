@@ -7,16 +7,16 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"nksrv/lib/democonfigs"
-	"nksrv/lib/demohelper"
-	fl "nksrv/lib/filelogger"
-	"nksrv/lib/logx"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/demo/democonfigs"
+	"nksrv/lib/app/demo/demohelper"
+	fl "nksrv/lib/utils/logx/filelogger"
+	"nksrv/lib/utils/logx"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/nntp"
-	"nksrv/lib/psql"
-	"nksrv/lib/psqlib"
+	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/psqlib"
 	"nksrv/lib/thumbnailer/extthm"
-	"nksrv/lib/xdialer"
+	"nksrv/lib/utils/xdialer"
 )
 
 func main() {

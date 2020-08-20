@@ -7,10 +7,10 @@ import (
 	xtypes "github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 
-	"nksrv/lib/ftypes"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibaseweb"
-	ib0 "nksrv/lib/webib0"
+	"nksrv/lib/app/base/ftypes"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
+	ib0 "nksrv/lib/app/webib0"
 )
 
 func GetThread(

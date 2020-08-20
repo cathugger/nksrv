@@ -3,7 +3,7 @@ package pireadnntp
 import (
 	"io"
 
-	"nksrv/lib/cacheengine"
+	"nksrv/lib/utils/fs/cacheengine"
 )
 
 func generic2nntpcopyer(

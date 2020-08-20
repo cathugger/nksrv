@@ -1,7 +1,7 @@
 package jsonrenderer
 
 import (
-	//. "nksrv/lib/logx"
+	//. "nksrv/lib/utils/logx"
 	"encoding/json"
 	"net/http"
 

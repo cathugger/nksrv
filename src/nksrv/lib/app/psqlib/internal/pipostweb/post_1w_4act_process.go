@@ -8,13 +8,13 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"nksrv/lib/date"
-	"nksrv/lib/ibref_nntp"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/ibref/ibrefsrnd"
+	"nksrv/lib/app/mailib"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
-	tu "nksrv/lib/textutils"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/utils/date"
+	tu "nksrv/lib/utils/text/textutils"
 )
 
 // expensive processing after initial DB lookup but before commit
@@ -157,7 +157,7 @@ func (sp *PSQLIB) wp_act_process(ctx *postWebContext) (err error) {
 	ctx.isctlgrp = ctx.board == "ctl"
 
 	// process references
-	ctx.srefs, ctx.irefs = ibref_nntp.ParseReferences(ctx.pInfo.MI.Message)
+	ctx.srefs, ctx.irefs = ibrefsrnd.ParseReferences(ctx.pInfo.MI.Message)
 	var inreplyto []string
 	// we need to build In-Reply-To beforehand
 	// best-effort basis, in most cases it'll be okay

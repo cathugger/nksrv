@@ -5,14 +5,14 @@ import (
 	"io"
 	"unicode/utf8"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/date"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/base/mailibsign"
+	"nksrv/lib/app/mailib"
+	au "nksrv/lib/utils/text/asciiutils"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
-	"nksrv/lib/mailibsign"
-	tu "nksrv/lib/textutils"
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/utils/date"
+	tu "nksrv/lib/utils/text/textutils"
 )
 
 func isInnerMessage(t string, h mail.HeaderMap) bool {

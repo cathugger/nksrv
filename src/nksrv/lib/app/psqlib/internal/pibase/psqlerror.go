@@ -3,7 +3,7 @@ package pibase
 import (
 	"github.com/lib/pq"
 
-	"nksrv/lib/psql"
+	"nksrv/lib/app/base/psql"
 )
 
 // indicates that psql error is deadlock

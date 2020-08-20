@@ -5,10 +5,11 @@ import (
 
 	"github.com/lib/pq"
 
-	"nksrv/lib/logx"
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pipostbase"
+	"nksrv/lib/utils/logx"
+	"nksrv/lib/app/mailib"
+
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pipostbase"
 )
 
 func InsertNewThread(

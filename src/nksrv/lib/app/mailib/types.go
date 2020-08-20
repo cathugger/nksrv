@@ -1,6 +1,6 @@
 package mailib
 
-import "nksrv/lib/minimail"
+import "nksrv/lib/utils/minimail"
 
 type TFullMsgID = minimail.TFullMsgID // msgid with < and >
 type TCoreMsgID = minimail.TCoreMsgID // msgid without < and >

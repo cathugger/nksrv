@@ -9,10 +9,10 @@ import (
 	xtypes "github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 
-	. "nksrv/lib/logx"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibasemod"
-	"nksrv/lib/psqlib/internal/pibasenntp"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibasemod"
+	"nksrv/lib/app/psqlib/internal/pibasenntp"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/thumbnailer"
 )
 

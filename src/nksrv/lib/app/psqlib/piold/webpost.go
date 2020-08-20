@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	. "nksrv/lib/logx"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
+	"nksrv/lib/app/base/webcaptcha"
+	ib0 "nksrv/lib/app/webib0"
 )
 
 // TODO make this file less messy

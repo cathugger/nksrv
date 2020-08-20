@@ -6,7 +6,7 @@ import (
 
 	"github.com/lib/pq"
 
-	"nksrv/lib/sqlbucket"
+	"nksrv/lib/utils/sqlbucket"
 )
 
 const (

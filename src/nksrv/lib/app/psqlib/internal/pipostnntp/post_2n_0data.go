@@ -1,8 +1,8 @@
 package pipostnntp
 
 import (
+	"nksrv/lib/app/mailib"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
 )
 
 type insertSqlInfo struct {

@@ -2,24 +2,23 @@ package piconfig
 
 import (
 	"crypto/ed25519"
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"sync"
 
-	"nksrv/lib/altthumber"
-	"nksrv/lib/cacheengine"
-	"nksrv/lib/fstore"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/base/altthumber"
+	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/base/webcaptcha"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
+	"nksrv/lib/app/psqlib/internal/pigpolicy"
+	"nksrv/lib/app/psqlib/internal/pireadnntp"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/psql"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibaseweb"
-	"nksrv/lib/psqlib/internal/pigpolicy"
-	"nksrv/lib/psqlib/internal/pireadnntp"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/nilthm"
-	"nksrv/lib/webcaptcha"
+	"nksrv/lib/utils/fs/cacheengine"
+	"nksrv/lib/utils/fs/fstore"
+	. "nksrv/lib/utils/logx"
 )
 
 type Config struct {

@@ -10,17 +10,17 @@ import (
 	"runtime"
 	"syscall"
 
-	ar "nksrv/lib/apirouter"
-	"nksrv/lib/democonfigs"
-	di "nksrv/lib/demoib"
-	"nksrv/lib/demousrdb"
-	fl "nksrv/lib/filelogger"
-	ir "nksrv/lib/ibrouter"
-	rj "nksrv/lib/jsonrenderer"
-	"nksrv/lib/logx"
-	"nksrv/lib/oauth2"
-	"nksrv/lib/psql"
-	"nksrv/lib/psqlib"
+	ar "nksrv/lib/app/base/apirouter"
+	"nksrv/lib/app/demo/democonfigs"
+	di "nksrv/lib/app/demo/demoib"
+	"nksrv/lib/app/demo/demousrdb"
+	fl "nksrv/lib/utils/logx/filelogger"
+	ir "nksrv/lib/app/base/ibrouter"
+	rj "nksrv/lib/app/renderer/jsonrenderer"
+	"nksrv/lib/utils/logx"
+	"nksrv/lib/app/base/oauth2"
+	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/psqlib"
 )
 
 func main() {

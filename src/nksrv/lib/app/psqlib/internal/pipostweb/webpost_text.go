@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/text/unicode/norm"
 
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
+	ib0 "nksrv/lib/app/webib0"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pibaseweb"
-	ib0 "nksrv/lib/webib0"
 )
 
 func readableText(s string) bool {

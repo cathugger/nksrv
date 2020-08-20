@@ -8,14 +8,14 @@ import (
 
 	"github.com/lib/pq"
 
-	"nksrv/lib/altthumber"
-	"nksrv/lib/demoib"
-	"nksrv/lib/emime"
-	fl "nksrv/lib/filelogger"
-	"nksrv/lib/fstore"
-	"nksrv/lib/logx"
-	"nksrv/lib/psql"
-	"nksrv/lib/psql/testutil"
+	"nksrv/lib/app/base/altthumber"
+	"nksrv/lib/app/demo/demoib"
+	"nksrv/lib/utils/emime"
+	fl "nksrv/lib/utils/logx/filelogger"
+	"nksrv/lib/utils/fs/fstore"
+	"nksrv/lib/utils/logx"
+	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/base/psql/testutil"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/gothm"
 )

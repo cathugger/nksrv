@@ -12,13 +12,13 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
-	"nksrv/lib/bufreader"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
-	mm "nksrv/lib/minimail"
+	mm "nksrv/lib/utils/minimail"
 	"nksrv/lib/nntp"
-	"nksrv/lib/psqlib/internal/pibase"
+	. "nksrv/lib/utils/logx"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 type (

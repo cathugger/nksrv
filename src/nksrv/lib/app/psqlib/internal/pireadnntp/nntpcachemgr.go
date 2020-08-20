@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/crypto/blake2s"
 
-	ht "nksrv/lib/hashtools"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	ht "nksrv/lib/utils/hashtools"
 )
 
 type nntpidinfo struct {

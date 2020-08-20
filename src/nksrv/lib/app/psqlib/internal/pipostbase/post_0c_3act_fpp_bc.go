@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"nksrv/lib/fstore"
+	"nksrv/lib/utils/fs/fstore"
 )
 
 func (ctx *PostCommonContext) wp_fpp_bc_movensync(

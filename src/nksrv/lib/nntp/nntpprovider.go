@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	mail "nksrv/lib/minimail"
+	mail "nksrv/lib/utils/minimail"
 )
 
 type TFullMsgID = mail.TFullMsgID // msgid with < and >

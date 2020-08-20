@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	ht "nksrv/lib/hashtools"
+	ht "nksrv/lib/utils/hashtools"
 )
 
 func printUsage(f io.Writer) {

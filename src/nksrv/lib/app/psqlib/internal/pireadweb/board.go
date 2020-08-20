@@ -5,9 +5,9 @@ import (
 
 	xtypes "github.com/jmoiron/sqlx/types"
 
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibaseweb"
-	ib0 "nksrv/lib/webib0"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibaseweb"
+	ib0 "nksrv/lib/app/webib0"
 )
 
 func GetBoardList(sp *pibase.PSQLIB, bl *ib0.IBBoardList) (error, int) {

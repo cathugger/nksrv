@@ -1,8 +1,9 @@
 package pibaseweb
 
 import (
-	"nksrv/lib/ibattribs"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/app/base/ibattribs"
+
+	"nksrv/lib/app/psqlib/internal/pibase"
 )
 
 type (

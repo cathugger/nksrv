@@ -6,11 +6,11 @@ import (
 	"io"
 	"os"
 
-	//. "nksrv/lib/logx"
-	"nksrv/lib/fstore"
+	//. "nksrv/lib/utils/logx"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/mail"
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/utils/fs/fstore"
 
 	xtypes "github.com/jmoiron/sqlx/types"
 )

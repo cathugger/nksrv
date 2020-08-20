@@ -1,8 +1,8 @@
 package testsrv
 
 import (
-	au "nksrv/lib/asciiutils"
-	. "nksrv/lib/logx"
+	au "nksrv/lib/utils/text/asciiutils"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/nntp"
 )

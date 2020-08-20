@@ -2,7 +2,7 @@ package tmplrenderer
 
 /*
 import (
-	"nksrv/lib/webib0"
+	"nksrv/lib/app/webib0"
 	"io"
 	"strings"
 	t "text/template"

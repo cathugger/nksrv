@@ -3,7 +3,7 @@ package nntp
 import (
 	"crypto/tls"
 
-	. "nksrv/lib/logx"
+	. "nksrv/lib/utils/logx"
 )
 
 type UserPriv struct {

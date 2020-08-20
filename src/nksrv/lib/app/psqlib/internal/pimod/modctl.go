@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"nksrv/lib/bufreader"
-	. "nksrv/lib/logx"
-	"nksrv/lib/mailib"
-	mm "nksrv/lib/minimail"
-	"nksrv/lib/psqlib/internal/pibase"
-	"nksrv/lib/psqlib/internal/pibasemod"
-	"nksrv/lib/psqlib/internal/pibasenntp"
+	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/text/bufreader"
+	. "nksrv/lib/utils/logx"
+	mm "nksrv/lib/utils/minimail"
+
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibasemod"
+	"nksrv/lib/app/psqlib/internal/pibasenntp"
 )
 
 func ModCmdDelete(

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"nksrv/lib/mail/form"
-	mm "nksrv/lib/minimail"
+	mm "nksrv/lib/utils/minimail"
 )
 
 type IBPostedInfo struct {

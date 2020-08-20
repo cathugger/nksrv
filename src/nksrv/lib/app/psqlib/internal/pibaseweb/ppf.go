@@ -1,9 +1,9 @@
 package pibaseweb
 
 import (
+	"nksrv/lib/app/base/webcaptcha"
+	ib0 "nksrv/lib/app/webib0"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/webcaptcha"
-	ib0 "nksrv/lib/webib0"
 )
 
 func MakePostParamFunc(c *webcaptcha.WebCaptcha) func(string) bool {

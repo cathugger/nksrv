@@ -7,16 +7,16 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"nksrv/lib/altthumber"
-	"nksrv/lib/cacheengine"
-	"nksrv/lib/fstore"
-	"nksrv/lib/logx"
+	"nksrv/lib/app/base/altthumber"
+	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/base/webcaptcha"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/psql"
 	"nksrv/lib/thumbnailer"
-	"nksrv/lib/webcaptcha"
+	"nksrv/lib/utils/fs/cacheengine"
+	"nksrv/lib/utils/fs/fstore"
+	"nksrv/lib/utils/logx"
 
-	"nksrv/lib/psqlib/internal/pigpolicy"
+	"nksrv/lib/app/psqlib/internal/pigpolicy"
 )
 
 type PSQLIB struct {

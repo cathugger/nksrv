@@ -4,13 +4,13 @@ import (
 	"os"
 	"strings"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/emime"
+	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/utils/emime"
 	fu "nksrv/lib/fileutil"
-	ht "nksrv/lib/hashtools"
+	ht "nksrv/lib/utils/hashtools"
 	"nksrv/lib/mail/form"
-	"nksrv/lib/mailib"
-	ib0 "nksrv/lib/webib0"
+	"nksrv/lib/app/mailib"
+	ib0 "nksrv/lib/app/webib0"
 )
 
 var FileFields = ib0.IBWebFormFileFields

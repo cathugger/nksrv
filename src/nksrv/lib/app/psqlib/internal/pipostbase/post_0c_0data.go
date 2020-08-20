@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"sync"
 
-	. "nksrv/lib/logx"
-	"nksrv/lib/mailib"
-	"nksrv/lib/psqlib/internal/pibase"
+	"nksrv/lib/app/mailib"
+	. "nksrv/lib/utils/logx"
+
+	"nksrv/lib/app/psqlib/internal/pibase"
 )
 
 type PostCommonContext struct {

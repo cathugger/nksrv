@@ -1,6 +1,6 @@
 package nntp
 
-import . "nksrv/lib/logx"
+import . "nksrv/lib/utils/logx"
 
 /*
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	fu "nksrv/lib/fileutil"
-	. "nksrv/lib/logx"
+	. "nksrv/lib/utils/logx"
+	fu "nksrv/lib/utils/fs/fileutil"
 
 	"golang.org/x/xerrors"
 )

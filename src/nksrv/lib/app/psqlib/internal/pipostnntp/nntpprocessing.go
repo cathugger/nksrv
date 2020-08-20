@@ -6,10 +6,10 @@ import (
 	"io"
 	"os"
 
-	fu "nksrv/lib/fileutil"
-	"nksrv/lib/ibref_nntp"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/ibref/ibrefsrnd"
+	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
+	fu "nksrv/lib/utils/fs/fileutil"
 )
 
 func (ctx *postNNTPContext) netnewsSubmitFullArticle(r io.Reader) {
@@ -154,7 +154,7 @@ func (ctx *postNNTPContext) netnewsSubmitArticle(
 	}
 
 	// parse msg itself
-	srefs, irefs := ibref_nntp.ParseReferences(pi.MI.Message)
+	srefs, irefs := ibrefsrnd.ParseReferences(pi.MI.Message)
 	// In-Reply-To helps
 	prefs :=
 		mail.ExtractAllValidReferences(nil, H.GetFirst("In-Reply-To"))

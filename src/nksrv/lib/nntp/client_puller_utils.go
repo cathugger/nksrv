@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	au "nksrv/lib/asciiutils"
-	"nksrv/lib/bufreader"
+	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/app/text/bufreader"
 	"nksrv/lib/mail"
 )
 

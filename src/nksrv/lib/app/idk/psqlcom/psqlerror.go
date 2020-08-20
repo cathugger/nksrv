@@ -1,7 +1,7 @@
 package psqlcom
 
 import (
-	"nksrv/lib/psql"
+	"nksrv/lib/app/base/psql"
 )
 
 func (s PSQLCOM) sqlError(when string, err error) error {

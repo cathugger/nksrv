@@ -16,7 +16,7 @@ import (
 	"nksrv/lib/app/base/webcaptcha"
 	"nksrv/lib/app/renderer"
 	. "nksrv/lib/utils/logx"
-	ib0 "nksrv/lib/webib0"
+	ib0 "nksrv/lib/app/webib0"
 
 	"github.com/BurntSushi/toml"
 )

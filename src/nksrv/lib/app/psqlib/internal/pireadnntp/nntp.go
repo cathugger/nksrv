@@ -12,11 +12,11 @@ import (
 
 	"github.com/lib/pq"
 
-	au "nksrv/lib/asciiutils"
-	. "nksrv/lib/logx"
+	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/mail"
 	"nksrv/lib/nntp"
-	"nksrv/lib/psqlib/internal/pibase"
+	. "nksrv/lib/utils/logx"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 type (

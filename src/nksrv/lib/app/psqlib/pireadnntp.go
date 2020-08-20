@@ -1,8 +1,8 @@
 package psqlib
 
 import (
+	"nksrv/lib/app/psqlib/internal/pireadnntp"
 	"nksrv/lib/nntp"
-	"nksrv/lib/psqlib/internal/pireadnntp"
 	"time"
 )
 
