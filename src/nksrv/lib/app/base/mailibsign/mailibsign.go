@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"nksrv/lib/mail"
-	au "nksrv/lib/utils/asciiutils"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 func fromhex(str string) ([]byte, error) {

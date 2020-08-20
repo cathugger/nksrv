@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"nksrv/lib/mail"
-	au "nksrv/lib/utils/asciiutils"
 	ht "nksrv/lib/utils/hashtools"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 var errNoContentType = errors.New("no Content-Type")

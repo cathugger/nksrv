@@ -9,7 +9,7 @@ import (
 	qp "mime/quotedprintable"
 
 	"nksrv/lib/mail"
-	au "nksrv/lib/utils/asciiutils"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 var (

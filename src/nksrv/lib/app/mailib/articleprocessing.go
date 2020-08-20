@@ -18,11 +18,11 @@ import (
 	"nksrv/lib/app/base/ftypes"
 	"nksrv/lib/mail"
 	"nksrv/lib/thumbnailer"
-	au "nksrv/lib/utils/asciiutils"
 	"nksrv/lib/utils/emime"
 	fu "nksrv/lib/utils/fs/fileutil"
 	"nksrv/lib/utils/fs/fstore"
 	ht "nksrv/lib/utils/hashtools"
+	au "nksrv/lib/utils/text/asciiutils"
 	tu "nksrv/lib/utils/text/textutils"
 )
 
