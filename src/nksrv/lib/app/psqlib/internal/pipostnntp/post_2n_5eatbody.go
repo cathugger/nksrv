@@ -3,15 +3,16 @@ package pipostnntp
 import (
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf8"
 
 	"nksrv/lib/app/base/mailibsign"
 	"nksrv/lib/app/mailib"
-	au "nksrv/lib/utils/text/asciiutils"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/utils/date"
+	. "nksrv/lib/utils/logx"
+	au "nksrv/lib/utils/text/asciiutils"
 	tu "nksrv/lib/utils/text/textutils"
 )
 
@@ -118,14 +119,23 @@ func (ctx *postNNTPContext) pn_eatbody(
 
 	if fromhdr := au.TrimWSString(ctx.H.GetFirst("From")); fromhdr != "" {
 
-		a, e := mail.ParseAddressX(fromhdr)
-		if e == nil && utf8.ValidString(a.Name) {
-			// XXX should we filter out "Anonymous" names? would save some bytes
-			ctx.pi.MI.Author = au.TrimWSString(safeHeader(
-				tu.TruncateText(a.Name, maxNameSize)))
+		var authorstr string
+		if a, e := mail.ParseAddressX(fromhdr); e == nil {
+			// if it was valid syntax, use a.Name
+			authorstr = a.Name
 		} else {
-			ctx.pi.MI.Author = "[Invalid From header]"
+			// otherwise, syntax wasn't valid but try to use it anyway
+			// XXX somehow log warning about this message?
+			authorstr = fromhdr
 		}
+
+		// XXX should we filter out "Anonymous" names? would save some bytes
+		// XXX should we check for utf8.ValidString and log warn?
+		ctx.pi.MI.Author = au.TrimWSString(
+			safeHeader(
+				tu.TruncateText(
+					strings.ToValidUTF8(authorstr, string(utf8.RuneError)), maxNameSize)))
+
 	}
 
 	ctx.pi.MI.Sage = ctx.isSage
