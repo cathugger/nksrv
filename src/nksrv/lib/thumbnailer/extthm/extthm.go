@@ -41,7 +41,8 @@ func (c Config) BuildThumbnailer(
 
 	// XXX customization
 	imt := new(magickBackend)
-	err = imt.init("convert")
+	// XXX "gm" for graphicsmagick
+	err = imt.init("magick")
 	if err != nil {
 		return
 	}

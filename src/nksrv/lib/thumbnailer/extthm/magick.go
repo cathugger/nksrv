@@ -157,10 +157,7 @@ func (b *magickBackend) doThumbnailing(
 
 	runfile := b.binPath
 	useGM := b.useGM
-	args := []string{runfile}
-	if useGM {
-		args = append(args, "convert")
-	}
+	args := []string{runfile, "convert"}
 
 	if cfgfmt == "jpeg" {
 		// special jpeg thing
