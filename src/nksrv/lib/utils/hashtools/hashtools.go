@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"sync"
 
-	//"github.com/zeebo/blake3"
+	"github.com/zeebo/blake3"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sys/cpu"
 )
@@ -49,14 +49,14 @@ const (
 	ht_BLAKE2b_224        // fastest on most 64bit CPUs without dedicated crypto instructions
 	//_                     // ht_BLAKE2s_224 // faster on weak 32bit CPUs -- waiting on when x/crypto provides New224 or equivalent
 	//_                     // ht_SHA3_224 // maybe once I get some hardware to test
-	//ht_BLAKE3_224
+	ht_BLAKE3_224
 	ht_max = iota - 1
 )
 
 var h_hashes = [ht_max]fhash{
 	{newHasher: func() hash.Hash { return sha256.New224() }},
 	{newHasher: func() hash.Hash { x, _ := blake2b.New(28, nil); return x }},
-	//{newHasher: func() hash.Hash { return blake3.New() }},
+	{newHasher: func() hash.Hash { return blake3.New() }},
 }
 var h_pools [ht_max]sync.Pool
 var h_use_id byte
