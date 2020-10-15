@@ -54,8 +54,8 @@ const (
 
 var hexp = [...][ht_max]string{
 	[ht_max]string{
-		"w0j113u5ji16ilsh1c5iznmbd3jzym6a7jgj1rwho3r4", // SHA2-224
-		"bad5pcjc4456kvi9ilcc6upal65nx0zrrvm1b5iblti6", // BLAKE2b-224
+		"ms0bmq9elpsvml0zh5klbwjcl5fbevm3uxigmyeabcs5", // SHA2-224
+		"banl818ny8i178t8z7x93fwo51c5zumjmr8mb5v6bcm6", // BLAKE2b-224
 	},
 	[ht_max]string{
 		"scdpymqbxyn8zwgrevmz7227jhzipuwa6d94dsp10pf4", // SHA2-224
@@ -76,7 +76,7 @@ func doxbench(b *testing.B, id byte, sizeidx int) {
 	dobench(b, hexp[sizeidx][id-1], sizeidx)
 }
 
-var sizes = [...]int64{2 << 20, 16 << 10}
+var sizes = [...]int64{4 << 20, 16 << 10}
 
 func TestHashAutoSmol(t *testing.T) {
 	autopickhash()
