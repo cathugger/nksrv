@@ -4,6 +4,7 @@
 
 if [ x"$1" = x'-u' ]
 then
+	cd # otherwise it'll add dep to current go.mod
 	go get -u golang.org/x/tools/cmd/goimports
 	echo "Updated." >&2
 	exit
