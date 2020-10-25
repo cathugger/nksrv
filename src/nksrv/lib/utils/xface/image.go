@@ -12,25 +12,6 @@ var palWB = [2]color.Color{
 	color.RGBA{0x00, 0x00, 0x00, 0xff},
 }
 
-func XFaceStringToImg(in string) (img image.Image, err error) {
-	var bitmap [xface_pixels]byte
-
-	err = xface_decode_string(&bitmap, in)
-	if err != nil {
-		return
-	}
-
-	// make actual image out of it
-	// 0=white 1=black
-	img = &image.Paletted{
-		Pix:     bitmap[:],
-		Stride:  xface_width,
-		Rect:    image.Rect(0, 0, xface_width, xface_height),
-		Palette: palWB[:],
-	}
-	return
-}
-
 func paleq(a, b color.Palette) bool {
 	if &a[0] == &b[0] {
 		return true
@@ -48,6 +29,25 @@ func paleq(a, b color.Palette) bool {
 	return true
 }
 
+func XFaceStringToImg(in string) (img image.Image, err error) {
+	var bitmap [xfacePixels]byte
+
+	err = xfaceDecodeString(&bitmap, in)
+	if err != nil {
+		return
+	}
+
+	// make actual image out of it
+	// 0=white 1=black
+	img = &image.Paletted{
+		Pix:     bitmap[:],
+		Stride:  xfaceWidth,
+		Rect:    image.Rect(0, 0, xfaceWidth, xfaceHeight),
+		Palette: palWB[:],
+	}
+	return
+}
+
 func XFaceImgToString(img image.Image) (s string, err error) {
 	ib := img.Bounds()
 	if ib.Dx() != 48 || ib.Dy() != 48 {
@@ -62,6 +62,6 @@ func XFaceImgToString(img image.Image) (s string, err error) {
 		draw.FloydSteinberg.Draw(pimg, ib, img, image.ZP)
 	}
 	// all gucci
-	s = xface_encode_string(pimg.Pix)
+	s = xfaceEncodeString(pimg.Pix)
 	return
 }

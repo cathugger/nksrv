@@ -2,7 +2,7 @@ package xface
 
 import "math/big"
 
-var xface_prints_big = new(big.Int).SetUint64(xface_prints)
+var xfacePrintsBig = new(big.Int).SetUint64(xfacePrints)
 
 func firstword(w []big.Word) big.Word {
 	if len(w) != 0 {
