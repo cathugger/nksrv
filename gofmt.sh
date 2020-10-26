@@ -2,6 +2,12 @@
 
 #exec find ./ -iname '*.go' -exec gofmt -s -w '{}' ';'
 
+if [ "$#" -lt 1 ]
+then
+	printf "Usage:\n\t%s a.go ...\n\t%s -all\n\t%s -u\n" "$0" "$0" "$0" >&2
+	exit 1
+fi
+
 if [ x"$1" = x'-u' ]
 then
 	cd # otherwise it'll add dep to current go.mod
@@ -14,14 +20,17 @@ export GOPATH=`go env GOPATH`:`pwd`
 
 if [ x"$1" = x"-all" ]
 then
-	find src/nksrv -type f -name '*.go' -not -regex ".*_nofmt[._].*" -exec goimports -local 'nksrv/' -w '{}' ';'
-	exit
+	exec find src/nksrv \
+		-type f \
+		-name '*.go' \
+		-not -regex ".*_nofmt[._].*" \
+		-exec \
+			goimports -local 'nksrv/' -w '{}' ';'
 fi
 
-if [ "$#" -lt 1 ]
-then
-	printf "Usage:\n\t%s a.go ...\n\t%s -all\n\t%s -u\n" "$0" "$0" "$0" >&2
-	exit 1
-fi
-
-exec goimports -local 'nksrv/' -w "$@"
+exec find "$@" \
+	-type f \
+	-name '*.go' \
+	-not -regex ".*_nofmt[._].*" \
+	-exec \
+		goimports -local 'nksrv/' -w '{}' ';'
