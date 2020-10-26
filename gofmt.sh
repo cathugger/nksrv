@@ -14,7 +14,8 @@ export GOPATH=`go env GOPATH`:`pwd`
 
 if [ x"$1" = x"-all" ]
 then
-	exec goimports -local 'nksrv/' -w src/nksrv
+	find src/nksrv -type f -name '*.go' -not -regex ".*_nofmt[._].*" -exec goimports -local 'nksrv/' -w '{}' ';'
+	exit
 fi
 
 if [ "$#" -lt 1 ]
