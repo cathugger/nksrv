@@ -43,7 +43,7 @@ func generateFace(dst, src []uint8) {
 						continue
 					}
 					if l <= xfaceWidth && m > 0 {
-						k = 2*k + uint32(src[l + m*xfaceWidth])
+						k = 2*k + uint32(src[l+m*xfaceWidth])
 					}
 				}
 			}
