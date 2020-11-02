@@ -1,4 +1,4 @@
-package psqlib
+package pimod
 
 import (
 	"database/sql"
@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"nksrv/lib/app/mailib"
-	"nksrv/lib/app/text/bufreader"
 	. "nksrv/lib/utils/logx"
 	mm "nksrv/lib/utils/minimail"
+	"nksrv/lib/utils/text/bufreader"
 
 	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/app/psqlib/internal/pibasemod"
@@ -18,13 +18,14 @@ import (
 )
 
 func ModCmdDelete(
-	sp *pibase.PSQLIB,
-	tx *sql.Tx, gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
-	pi mailib.PostInfo, selfid, ref pibasenntp.TCoreMsgIDStr,
+	mc *modCtx,
+	gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
+	pi mailib.PostInfo,
+	selfid, ref pibasenntp.TCoreMsgIDStr,
 	cmd string, args []string,
-	in_delmsgids delMsgIDState, in_delmodids delModIDState) (
-	out_delmsgids delMsgIDState, out_delmodids delModIDState,
-	err error) {
+) (
+	err error,
+) {
 
 	if len(args) == 0 {
 		return
@@ -39,10 +40,7 @@ func ModCmdDelete(
 		return
 	}
 
-	out_delmsgids, out_delmodids, err =
-		sp.banByMsgID(
-			tx, cmsgids, bid, bpid, pi.MI.Title,
-			in_delmsgids, in_delmodids)
+	err = BanByMsgID(sp, tx, cmsgids, bid, bpid, pi.MI.Title)
 	if err != nil {
 		return
 	}
@@ -64,16 +62,14 @@ func getModCmdInput(
 }
 
 func ExecModCmd(
-	sp *pibase.PSQLIB,
-	tx *sql.Tx, gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
+	mc *modCtx,
+	gpid pibase.TPostID, bid pibase.TBoardID, bpid pibase.TPostID,
 	modid uint64, modCC pibasemod.ModCombinedCaps,
 	pi mailib.PostInfo, filenames []string,
 	selfid, ref pibasenntp.TCoreMsgIDStr,
-	_in_delmodids delModIDState) (
-	out_delmodids delModIDState,
-	err error, inputerr bool) {
-
-	out_delmodids = _in_delmodids
+) (
+	err error, inputerr bool,
+) {
 
 	r, c, err := getModCmdInput(pi, filenames)
 	if err != nil {
@@ -118,18 +114,17 @@ func ExecModCmd(
 			unsafe_args := unsafe_fields[1:]
 
 			// TODO log commands we couldn't understand
-			switch cmd {
+			switch unsafe_cmd {
 			case "delete":
 				// TODO per-board stuff
 				// TODO TODO TODO
-				if modCC.ModCap.Cap&cap_delpost != 0 {
+				if modCC.ModCap.Cap&pibasemod.Cap_DelPost != 0 {
 					// global delete by msgid
-					out_delmodids, err =
+					err =
 						ModCmdDelete(
-							sp,
-							tx, gpid, bid, bpid, pi, selfid, ref, unsafe_cmd, unsafe_args,
-							out_delmodids)
-				}
+							mc,
+							gpid, bid, bpid, pi, selfid, ref,
+							unsafe_cmd, unsafe_args)
 			}
 			if err != nil {
 				return
@@ -253,15 +248,14 @@ requery:
 				"setmodpriv: executing <%s> from board[%s]",
 				posts[i].msgid, posts[i].bname)
 
-			var delmodids delModIDState
 			var inputerr bool
 
-			delmodids, err, inputerr = ExecModCmd(
+			del_our_mod_id, err, inputerr = ExecModCmd(
 				sp,
 				tx, posts[i].gpid, posts[i].xid.bid, posts[i].xid.bpid,
 				modid, modCC,
 				pi, posts[i].files, pi.MessageID,
-				pibasenntp.TCoreMsgIDStr(posts[i].ref), delmodids)
+				pibasenntp.TCoreMsgIDStr(posts[i].ref))
 
 			if err != nil {
 
@@ -280,7 +274,7 @@ requery:
 				return
 			}
 
-			if delmodids.contain(modid) {
+			if del_our_mod_id {
 				sp.Log.LogPrintf(
 					DEBUG, "setmodpriv: delmodid %d is ours, requerying", modid)
 				// msg we just deleted was made by mod we just upp'd

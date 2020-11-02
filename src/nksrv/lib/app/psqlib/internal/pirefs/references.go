@@ -1,4 +1,4 @@
-package psqlib
+package pirefs
 
 import (
 	"database/sql"
@@ -12,9 +12,11 @@ import (
 	xtypes "github.com/jmoiron/sqlx/types"
 
 	"nksrv/lib/app/ibref/ibrefsrnd"
-	. "nksrv/lib/utils/logx"
-	"nksrv/lib/mail"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	"nksrv/lib/app/psqlib/internal/pibasenntp"
 	ib0 "nksrv/lib/app/webib0"
+	"nksrv/lib/mail"
+	. "nksrv/lib/utils/logx"
 )
 
 // PostgreSQL doesn't wanna optimize LIKE operations at all when used
@@ -79,10 +81,15 @@ type queryable interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-func (sp *PSQLIB) processReferencesOnPost(qq queryable,
+func ProcessReferencesOnPost(
+	sp *pibase.PSQLIB,
+	qq queryable,
 	srefs []ibrefsrnd.Reference,
-	bid boardID, tid postID, isctl bool) (
-	inreplyto []string, err error) {
+	bid pibase.TBoardID, tid pibase.TPostID,
+	isctl bool,
+) (
+	inreplyto []string, err error,
+) {
 
 	// build query
 	b := &strings.Builder{}
@@ -184,7 +191,7 @@ LIMIT
 
 		q := b.String()
 
-		sp.log.LogPrintf(DEBUG, "SQL for post references:\n%s", q)
+		sp.Log.LogPrintf(DEBUG, "SQL for post references:\n%s", q)
 
 		// do query
 		rows, err = qq.Query(q)
@@ -221,12 +228,12 @@ LIMIT
 
 			if r_id == i+1 {
 				addirt(r_msgid)
-				sp.log.LogPrintf(DEBUG, "ref: %#v %q", srefs[i], r_msgid)
+				sp.Log.LogPrintf(DEBUG, "ref: %#v %q", srefs[i], r_msgid)
 			}
 
 		} else if len(srefs[i].Board) != 0 {
 
-			sp.log.LogPrintf(DEBUG, "bref: %#v", srefs[i])
+			sp.Log.LogPrintf(DEBUG, "bref: %#v", srefs[i])
 
 		} else if len(srefs[i].MsgID) != 0 {
 
@@ -237,7 +244,7 @@ LIMIT
 
 			if r_id == i+1 {
 				addirt(r_msgid)
-				sp.log.LogPrintf(DEBUG, "mref: %#v %q", srefs[i], r_msgid)
+				sp.Log.LogPrintf(DEBUG, "mref: %#v %q", srefs[i], r_msgid)
 			}
 
 		} else {
@@ -256,12 +263,16 @@ LIMIT
 	return
 }
 
-func (sp *PSQLIB) processReferencesOnIncoming(qq queryable,
+func ProcessReferencesOnIncoming(
+	sp *pibase.PSQLIB,
+	qq queryable,
 	srefs []ibrefsrnd.Reference, irefs []ibrefsrnd.Index,
 	prefs []string,
-	bid boardID, tid postID) (
+	bid pibase.TBoardID, tid pibase.TPostID,
+) (
 	arefs []ib0.IBMessageReference,
-	err error) {
+	err error,
+) {
 
 	if len(srefs) == 0 {
 		return
@@ -362,9 +373,9 @@ LIMIT
 	}
 
 	var r_id int
-	var r_bid boardID
+	var r_bid pibase.TBoardID
 	var r_bname string
-	var r_tid postID
+	var r_tid pibase.TPostID
 	var r_tname string
 	var r_pname string
 
@@ -473,8 +484,14 @@ LIMIT
 	return
 }
 
-func (sp *PSQLIB) insertXRefs(
-	st *sql.Stmt, bid boardID, bpid postID, xrefs []ibrefsrnd.Reference) (err error) {
+func InsertXRefs(
+	sp *pibase.PSQLIB,
+	st *sql.Stmt,
+	bid pibase.TBoardID, bpid pibase.TPostID,
+	xrefs []ibrefsrnd.Reference,
+) (
+	err error,
+) {
 
 	if len(xrefs) == 0 {
 		// don't waste resources if we have no refs
@@ -517,18 +534,22 @@ func (sp *PSQLIB) insertXRefs(
 }
 
 type xRefData struct {
-	b_id       boardID
-	b_p_id     postID
+	b_id       pibase.TBoardID
+	b_p_id     pibase.TPostID
 	message    string
 	inreplyto  []string
 	activ_refs []ib0.IBMessageReference
-	b_t_id     postID
+	b_t_id     pibase.TPostID
 }
 
-func (sp *PSQLIB) findReferences(
-	st *sql.Stmt, off_b boardID, off_b_p postID,
-	pname string, pboard string, msgid TCoreMsgIDStr) (
-	xrefs []xRefData, err error) {
+func FindReferences(
+	sp *pibase.PSQLIB,
+	st *sql.Stmt,
+	off_b pibase.TBoardID, off_b_p pibase.TPostID,
+	pname string, pboard string, msgid pibasenntp.TCoreMsgIDStr,
+) (
+	xrefs []xRefData, err error,
+) {
 
 	rows, err := st.Query(off_b, off_b_p, pname, pboard, string(msgid))
 	if err != nil {
@@ -537,12 +558,12 @@ func (sp *PSQLIB) findReferences(
 	}
 
 	for rows.Next() {
-		var b_id boardID
-		var b_p_id postID
+		var b_id pibase.TBoardID
+		var b_p_id pibase.TPostID
 		var msg string
 		var inreplyto sql.NullString
 		var j_activ_refs xtypes.JSONText
-		var b_t_id postID
+		var b_t_id pibase.TPostID
 
 		err = rows.Scan(
 			&b_id, &b_p_id, &msg, &inreplyto, &j_activ_refs, &b_t_id)
@@ -577,10 +598,14 @@ func (sp *PSQLIB) findReferences(
 	return
 }
 
-func (sp *PSQLIB) updatePostReferences(
-	st *sql.Stmt, b_id boardID, b_p_id postID,
-	activ_refs []ib0.IBMessageReference) (
-	err error) {
+func UpdatePostReferences(
+	sp *pibase.PSQLIB,
+	st *sql.Stmt,
+	b_id pibase.TBoardID, b_p_id pibase.TPostID,
+	activ_refs []ib0.IBMessageReference,
+) (
+	err error,
+) {
 
 	Ajson, err := json.Marshal(activ_refs)
 	if err != nil {
@@ -595,28 +620,35 @@ func (sp *PSQLIB) updatePostReferences(
 	return
 }
 
-func (sp *PSQLIB) processRefsAfterPost(
+func ProcessRefsAfterPost(
+	sp *pibase.PSQLIB,
 	tx *sql.Tx,
 	srefs []ibrefsrnd.Reference, irefs []ibrefsrnd.Index,
 	prefs []string,
-	b_id boardID, b_t_id, b_p_id postID,
-	postid, newsgroup string, msgid TCoreMsgIDStr) (err error) {
+	b_id pibase.TBoardID, b_t_id, b_p_id pibase.TPostID,
+	postid, newsgroup string,
+	msgid pibasenntp.TCoreMsgIDStr,
+) (
+	err error,
+) {
 
 	// write our declaration of references
 	xref_wr_st := tx.Stmt(sp.StPrep[pibase.St_mod_ref_write])
-	err = sp.insertXRefs(xref_wr_st, b_id, b_p_id, srefs)
+	err = InsertXRefs(sp, xref_wr_st, b_id, b_p_id, srefs)
 	if err != nil {
 		return
 	}
 	// process our stuff
-	arefs, err := sp.processReferencesOnIncoming(
+	arefs, err := ProcessReferencesOnIncoming(
+		sp,
 		tx, srefs, irefs, prefs, b_id, b_t_id)
 	if err != nil {
 		return
 	}
 	// then, put proper references in our bpost
 	xref_up_st := tx.Stmt(sp.StPrep[pibase.St_mod_update_bpost_activ_refs])
-	err = sp.updatePostReferences(
+	err = UpdatePostReferences(
+		sp,
 		xref_up_st,
 		b_id, b_p_id,
 		arefs)
@@ -624,7 +656,7 @@ func (sp *PSQLIB) processRefsAfterPost(
 		return
 	}
 	// then, fixup any other stuff possibly referring to us
-	err = sp.fixupAffectedXRefsInTx(tx, postid, newsgroup, msgid, xref_up_st)
+	err = FixupAffectedXRefsInTx(sp, tx, postid, newsgroup, msgid, xref_up_st)
 	if err != nil {
 		return
 	}
@@ -632,9 +664,13 @@ func (sp *PSQLIB) processRefsAfterPost(
 	return
 }
 
-func (sp *PSQLIB) fixupAffectedXRefsInTx(
-	tx *sql.Tx, p_name, b_name string, msgid TCoreMsgIDStr,
-	xref_up_st *sql.Stmt) (err error) {
+func FixupAffectedXRefsInTx(
+	sp *pibase.PSQLIB,
+	tx *sql.Tx, p_name, b_name string, msgid pibasenntp.TCoreMsgIDStr,
+	xref_up_st *sql.Stmt,
+) (
+	err error,
+) {
 
 	xref_fn_st := tx.Stmt(sp.StPrep[pibase.St_mod_ref_find_post])
 
@@ -644,17 +680,18 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 
 	var xrefpostsinfos []xRefData
 	// in loop because can repeat
-	off_b, off_b_p := boardID(0), postID(0)
+	off_b, off_b_p := pibase.TBoardID(0), pibase.TPostID(0)
 	for {
 		// obtain infos about posts with refs
-		xrefpostsinfos, err = sp.findReferences(
+		xrefpostsinfos, err = FindReferences(
+			sp,
 			xref_fn_st, off_b, off_b_p, p_name, b_name, msgid)
 		if err != nil {
 			return
 		}
 
 		if len(xrefpostsinfos) != 0 {
-			sp.log.LogPrintf(
+			sp.Log.LogPrintf(
 				DEBUG, "found %d revref posts", len(xrefpostsinfos))
 		}
 
@@ -665,7 +702,8 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 			// update references and collect new failed references
 			srefs, irefs :=
 				ibrefsrnd.ParseReferences(xrefpostsinfos[i].message)
-			arefs, err = sp.processReferencesOnIncoming(
+			arefs, err = ProcessReferencesOnIncoming(
+				sp,
 				tx,
 				srefs, irefs,
 				xrefpostsinfos[i].inreplyto,
@@ -677,12 +715,12 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 			if reflect.DeepEqual(
 				xrefpostsinfos[i].activ_refs, arefs) {
 
-				sp.log.LogPrintf(
+				sp.Log.LogPrintf(
 					DEBUG, "fixupAffectedXRefsInTx %d: unchanged", i)
 				continue
 			}
 
-			sp.log.LogPrintf(
+			sp.Log.LogPrintf(
 				DEBUG,
 				"fixupAffectedXRefsInTx %d: %d arefs %d srefs",
 				i,
@@ -690,7 +728,8 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 				len(srefs))
 
 			// store updated refs
-			err = sp.updatePostReferences(
+			err = UpdatePostReferences(
+				sp,
 				xref_up_st,
 				xrefpostsinfos[i].b_id, xrefpostsinfos[i].b_p_id,
 				arefs)
@@ -711,7 +750,7 @@ func (sp *PSQLIB) fixupAffectedXRefsInTx(
 				xrefpostsinfos[len(xrefpostsinfos)-1].b_id,
 				xrefpostsinfos[len(xrefpostsinfos)-1].b_p_id
 
-			sp.log.LogPrintf(DEBUG, "continuing failref loop")
+			sp.Log.LogPrintf(DEBUG, "continuing failref loop")
 
 			continue
 
