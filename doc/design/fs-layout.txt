@@ -1,0 +1,27 @@
+work - main dir
+work/psqlib - psqlib backend files
+work/psqlib/src - main source files storage
+work/psqlib/thm - main thumbnails storage
+work/psqlib/src/_/{node} - private individual service files
+work/psqlib/src/_/{node}/tmp - temporary files (clear on startup/shutdown)
+work/psqlib/src/_/{node}/pre-add - staging area for files being added
+work/psqlib/src/_/{node}/pre-del - staging/backup area for files being deleted
+work/psqlib/nntp - main netnews articles cache storage
+
+for src, we could have several layouts:
+ - flat:
+   all files in one folder, factor 1
+ - b36-36:
+   36 directories, factor 36
+ - b36-1296:
+   1296 directories, factor 1296
+ - b36-36-36:
+   36 directories, 36 subdirectories, factor 1296
+ - b36-36-1296:
+   36 directories, 1296 subdirectories, factor 46656
+unfortunately, using values like 36*36/4=324 would make it harder to work with, so it was omitted.
+one of intended use cases is transparently rewriting queries from flat layout to nested one inside nginx.
+layout would preferably be picked so that there are around 1000 files per dir.
+upto 10k should be fine; more - depending on filesystem;
+iirc XFS doesn't recommend going over 100k with default settings.
+having only 5 files per dir would v likely be inefficient so don't pick overkill values.
