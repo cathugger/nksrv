@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	. "nksrv/lib/utils/logx"
 	fu "nksrv/lib/utils/fs/fileutil"
-
-	"golang.org/x/xerrors"
+	. "nksrv/lib/utils/logx"
 )
 
 type traceContext struct {
@@ -65,7 +63,7 @@ func (ctx *PostCommonContext) wp_movefile_fast(from, to string) error {
 	// TODO use something more optimized?
 	err := os.Rename(from, to)
 	if err != nil {
-		return xerrors.Errorf("Rename (fast) %q -> %q fail: %v", from, to, err)
+		return fmt.Errorf("Rename (fast) %q -> %q fail: %v", from, to, err)
 	}
 
 	return nil
@@ -86,13 +84,13 @@ func (ctx *PostCommonContext) wp_movefile_or_delet(from, to string) error {
 
 			err = os.Remove(from)
 			if err != nil {
-				return xerrors.Errorf("Remove %q fail: %v", from, err)
+				return fmt.Errorf("Remove %q fail: %v", from, err)
 			}
 
 			return nil
 		}
 
-		return xerrors.Errorf("RenameNoClobber %q -> %q fail: %v", from, to, err)
+		return fmt.Errorf("RenameNoClobber %q -> %q fail: %v", from, to, err)
 	}
 
 	return nil

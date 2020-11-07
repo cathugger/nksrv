@@ -1,9 +1,9 @@
 package pireadweb
 
 import (
-	"nksrv/lib/mail"
 	"nksrv/lib/app/psqlib/internal/pibase"
 	ib0 "nksrv/lib/app/webib0"
+	"nksrv/lib/mail"
 )
 
 type (

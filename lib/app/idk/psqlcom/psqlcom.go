@@ -3,8 +3,8 @@ package psqlcom
 import (
 	"fmt"
 
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/app/base/psql"
+	. "nksrv/lib/utils/logx"
 )
 
 type PSQLCOM struct {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/date"
 	"nksrv/lib/nntp"
 )

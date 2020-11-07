@@ -3,6 +3,7 @@ package psqlib
 import (
 	"database/sql"
 
+	"nksrv/lib/app/psqlib/internal/pibase"
 	. "nksrv/lib/utils/logx"
 
 	xtypes "github.com/jmoiron/sqlx/types"

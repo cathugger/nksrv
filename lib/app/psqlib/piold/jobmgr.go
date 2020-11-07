@@ -2,13 +2,14 @@ package psqlib
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
-	"golang.org/x/xerrors"
 
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/app/mailib"
+	"nksrv/lib/app/psqlib/internal/pibase"
+	. "nksrv/lib/utils/logx"
 )
 
 func (sp *PSQLIB) modset_processJobOnce(
@@ -44,7 +45,7 @@ func (sp *PSQLIB) modset_processJobOnce(
 		sp.cleanDeletedMsgIDs(delmsgids)
 
 		var dlerr psqlDeadlockError
-		if xerrors.As(err, &dlerr) {
+		if errors.As(err, &dlerr) {
 			// if deadlock, try again
 			continue
 		}

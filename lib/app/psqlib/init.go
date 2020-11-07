@@ -1,5 +1,10 @@
 package psqlib
 
+import (
+	"errors"
+	"fmt"
+)
+
 func (dbib *PSQLIB) InitAndPrepare() (err error) {
 	valid, err := dbib.CheckDB()
 	if err != nil {

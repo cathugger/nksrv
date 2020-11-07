@@ -15,9 +15,9 @@ import (
 	"nksrv/lib/app/mailib"
 	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/mail"
-	mm "nksrv/lib/utils/minimail"
 	"nksrv/lib/nntp"
 	. "nksrv/lib/utils/logx"
+	mm "nksrv/lib/utils/minimail"
 	"nksrv/lib/utils/text/bufreader"
 )
 

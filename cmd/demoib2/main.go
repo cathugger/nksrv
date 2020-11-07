@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	ir "nksrv/lib/app/base/ibrouter"
 	"nksrv/lib/app/demo/demohelper"
 	di "nksrv/lib/app/demo/demoib"
-	fl "nksrv/lib/utils/logx/filelogger"
-	ir "nksrv/lib/app/base/ibrouter"
-	"nksrv/lib/utils/logx"
 	rt "nksrv/lib/app/renderer/tmplrenderer"
+	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

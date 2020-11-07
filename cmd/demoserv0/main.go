@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	fl "nksrv/lib/utils/logx/filelogger"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/nntp"
 	nntptest "nksrv/lib/nntp/testsrv"
+	. "nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

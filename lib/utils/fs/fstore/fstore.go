@@ -3,13 +3,12 @@ package fstore
 // abstracts and automates some filestore operations
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"golang.org/x/xerrors"
 )
 
 type Config struct {
@@ -152,7 +151,7 @@ func (fs *FStore) ensureDir(fulldir, dir string) (err error) {
 	// perform mkdir
 	err = os.MkdirAll(fulldir, newDirMode)
 	if err != nil {
-		return xerrors.Errorf("error at os.MkdirAll: %w", err)
+		return fmt.Errorf("error at os.MkdirAll: %w", err)
 	}
 
 	// mark as inited

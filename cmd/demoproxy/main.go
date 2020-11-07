@@ -9,16 +9,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"nksrv/lib/app/remote/apiproxy"
 	ar "nksrv/lib/app/base/apirouter"
+	ir "nksrv/lib/app/base/ibrouter"
 	"nksrv/lib/app/demo/demohelper"
 	di "nksrv/lib/app/demo/demoib"
-	fl "nksrv/lib/utils/logx/filelogger"
+	"nksrv/lib/app/remote/apiproxy"
 	"nksrv/lib/app/remote/fileproxy"
-	ir "nksrv/lib/app/base/ibrouter"
 	rj "nksrv/lib/app/renderer/jsonrenderer"
-	"nksrv/lib/utils/logx"
 	rt "nksrv/lib/app/renderer/tmplrenderer"
+	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

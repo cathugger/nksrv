@@ -20,7 +20,7 @@ export GOPATH=`go env GOPATH`:`pwd`
 
 if [ x"$1" = x"-all" ]
 then
-	exec find src/nksrv \
+	exec find \
 		-type f \
 		-name '*.go' \
 		-not -regex ".*_nofmt[._].*" \

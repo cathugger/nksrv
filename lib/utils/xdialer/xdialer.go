@@ -2,11 +2,11 @@ package xdialer
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 
 	"golang.org/x/net/proxy"
-	"golang.org/x/xerrors"
 )
 
 type Dialer = proxy.Dialer
@@ -29,7 +29,7 @@ func XDial(addr string) (d Dialer, proto, host string, err error) {
 			}
 			d, e = proxy.SOCKS5("tcp", host, a, d)
 			if e != nil {
-				err = xerrors.Errorf("SOCKS5 error: %w", e)
+				err = fmt.Errorf("SOCKS5 error: %w", e)
 				return
 			}
 			addr = u.Path

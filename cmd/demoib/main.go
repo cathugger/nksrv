@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	di "nksrv/lib/app/demo/demoib"
 	ir "nksrv/lib/app/base/ibrouter"
+	di "nksrv/lib/app/demo/demoib"
 	rs "nksrv/lib/rendererstatic"
 )
 

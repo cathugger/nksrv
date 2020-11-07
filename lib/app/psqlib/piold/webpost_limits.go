@@ -1,8 +1,8 @@
 package psqlib
 
 import (
-	"nksrv/lib/mail/form"
 	"nksrv/lib/app/mailib"
+	"nksrv/lib/mail/form"
 )
 
 func checkSubmissionLimits(

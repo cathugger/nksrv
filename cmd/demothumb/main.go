@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"nksrv/lib/app/demo/demohelper"
-	"nksrv/lib/utils/emime"
-	fl "nksrv/lib/utils/logx/filelogger"
-	"nksrv/lib/utils/fs/fstore"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/extthm"
 	"nksrv/lib/thumbnailer/gothm"
+	"nksrv/lib/utils/emime"
+	"nksrv/lib/utils/fs/fstore"
+	. "nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func doFile(

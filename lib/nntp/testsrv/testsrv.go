@@ -5,8 +5,8 @@ import (
 	"io"
 	"time"
 
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/nntp"
+	. "nksrv/lib/utils/logx"
 )
 
 var _ nntp.NNTPProvider = (*TestSrv)(nil)

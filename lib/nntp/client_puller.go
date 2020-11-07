@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	au "nksrv/lib/utils/text/asciiutils"
 	"nksrv/lib/app/text/bufreader"
 	. "nksrv/lib/utils/logx"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 type PullerDatabase interface {

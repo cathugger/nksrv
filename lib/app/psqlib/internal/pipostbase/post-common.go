@@ -12,8 +12,8 @@ import (
 	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/app/psqlib/internal/pibasemod"
 	"nksrv/lib/app/psqlib/internal/pibasenntp"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/thumbnailer"
+	. "nksrv/lib/utils/logx"
 )
 
 func PickThumbPlan(sp *pibase.PSQLIB, isReply, isSage bool) thumbnailer.ThumbPlan {

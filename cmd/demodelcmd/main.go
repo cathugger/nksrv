@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"nksrv/lib/app/demo/democonfigs"
-	fl "nksrv/lib/utils/logx/filelogger"
-	"nksrv/lib/utils/logx"
 	"nksrv/lib/app/base/psql"
+	"nksrv/lib/app/demo/democonfigs"
 	"nksrv/lib/app/psqlib"
+	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

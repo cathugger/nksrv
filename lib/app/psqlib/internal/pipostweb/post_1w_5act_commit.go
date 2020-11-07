@@ -2,8 +2,7 @@ package pipostweb
 
 import (
 	"database/sql"
-
-	"golang.org/x/xerrors"
+	"errors"
 
 	. "nksrv/lib/utils/logx"
 )
@@ -116,7 +115,7 @@ var sqlSerializedOpts = sql.TxOptions{Isolation: sql.LevelSerializable}
 // isRetriableError returns true if error is sort-of expected and operation shall be retried.
 func isRetriableError(err error) bool {
 	var rerr psqlRetriableError
-	return xerrors.As(err, &rerr)
+	return errors.As(err, &rerr)
 }
 
 func (ctx *postWebContext) wp_act_commit() (err error) {

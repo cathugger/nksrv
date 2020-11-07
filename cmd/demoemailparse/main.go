@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	fl "nksrv/lib/utils/logx/filelogger"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
+	. "nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

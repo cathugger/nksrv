@@ -9,15 +9,16 @@ import (
 	"github.com/lib/pq"
 
 	"nksrv/lib/app/base/altthumber"
-	"nksrv/lib/app/demo/demoib"
-	"nksrv/lib/utils/emime"
-	fl "nksrv/lib/utils/logx/filelogger"
-	"nksrv/lib/utils/fs/fstore"
-	"nksrv/lib/utils/logx"
 	"nksrv/lib/app/base/psql"
 	"nksrv/lib/app/base/psql/testutil"
+	"nksrv/lib/app/demo/demoib"
+	"nksrv/lib/app/psqlib/internal/pibase"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/gothm"
+	"nksrv/lib/utils/emime"
+	"nksrv/lib/utils/fs/fstore"
+	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 var cfgAltThm = altthumber.AltThumber(demoib.DemoAltThumber{})

@@ -1,9 +1,10 @@
 package psqlib
 
 import (
+	"time"
+
 	"nksrv/lib/app/psqlib/internal/pireadnntp"
 	"nksrv/lib/nntp"
-	"time"
 )
 
 var _ nntp.NNTPProvider = (*PSQLIB)(nil)

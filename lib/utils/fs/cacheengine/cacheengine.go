@@ -2,14 +2,13 @@ package cacheengine
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/xerrors"
 
 	"nksrv/lib/utils/cachepub"
 	fu "nksrv/lib/utils/fs/fileutil"
@@ -203,7 +202,7 @@ begin:
 			fx, ex = os.Open(filename)
 			if ex != nil {
 				if !os.IsNotExist(ex) {
-					ex = xerrors.Errorf("failed opening passive file: %w", ex)
+					ex = fmt.Errorf("failed opening passive file: %w", ex)
 					oo_broken(ex)
 					return ex
 				}
@@ -211,7 +210,7 @@ begin:
 				// passive file doesn't exist, so we'll generate new one
 				fx, ex = ce.b.NewTempFile()
 				if ex != nil {
-					ex = xerrors.Errorf("failed making temporary file: %w", ex)
+					ex = fmt.Errorf("failed making temporary file: %w", ex)
 					oo_broken(ex)
 					return ex
 				}
@@ -231,7 +230,7 @@ begin:
 
 					we = ce.b.Generate(px, objid, objinfo)
 					if we != nil {
-						we = xerrors.Errorf("worker failed generating: %w", we)
+						we = fmt.Errorf("worker failed generating: %w", we)
 						px.Cancel(we)
 					} else {
 						px.Finish()
@@ -250,7 +249,7 @@ begin:
 					oo.m.Unlock()
 					// don't notify yet, do that once we've opened file for reading
 					if we == nil && cle != nil {
-						we = xerrors.Errorf("worker failed closing file: %w", cle)
+						we = fmt.Errorf("worker failed closing file: %w", cle)
 					}
 					if we == nil {
 						// move from tmp to stable
@@ -259,7 +258,7 @@ begin:
 							we = nil
 						}
 						if we != nil {
-							we = xerrors.Errorf("worker failed renaming file: %w", we)
+							we = fmt.Errorf("worker failed renaming file: %w", we)
 						}
 					}
 					if we != nil {
@@ -288,7 +287,7 @@ begin:
 						fx, we = os.Open(filename)
 						if we != nil {
 							// not supposed to happen - file we've just closed is gone
-							we = xerrors.Errorf("worker failed reopening file: %w", we)
+							we = fmt.Errorf("worker failed reopening file: %w", we)
 						}
 					}
 					if we != nil {
@@ -340,7 +339,7 @@ begin:
 		if ex == errRestart {
 			goto begin
 		}
-		return xerrors.Errorf("reported object error: %w", ex)
+		return fmt.Errorf("reported object error: %w", ex)
 	}
 	if fx != nil {
 		goto feedFromReadFile
@@ -358,7 +357,7 @@ feedFromCachePub:
 
 		// nil(which would mean full success) or non-recoverable error
 		if ex != nil {
-			ex = xerrors.Errorf("cachepub consumption error: %w", ex)
+			ex = fmt.Errorf("cachepub consumption error: %w", ex)
 		}
 
 		wg.Wait() // ensure writer thread is done
@@ -375,7 +374,7 @@ feedFromCachePub:
 
 		unregister_from_o()
 
-		return xerrors.Errorf(
+		return fmt.Errorf(
 			"CachePub in unexpected error state: %w", ex)
 	}
 
@@ -388,14 +387,14 @@ feedFromCachePub:
 
 	if ex != nil {
 		unregister_from_o()
-		return xerrors.Errorf("reported object error: %w", ex)
+		return fmt.Errorf("reported object error: %w", ex)
 	}
 
 feedFromReadFile:
 	r = &sharedReader{f: fx, n: done}
 	_, ex = w.CopyFrom(r, objid, objinfo)
 	if ex != nil {
-		ex = xerrors.Errorf("sharedreader consumption error: %w", ex)
+		ex = fmt.Errorf("sharedreader consumption error: %w", ex)
 	}
 	unregister_from_o()
 	return ex

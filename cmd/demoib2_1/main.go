@@ -8,11 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	di "nksrv/lib/app/demo/demoib"
-	fl "nksrv/lib/utils/logx/filelogger"
 	ir "nksrv/lib/app/base/ibrouter"
+	di "nksrv/lib/app/demo/demoib"
 	rj "nksrv/lib/app/renderer/jsonrenderer"
 	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

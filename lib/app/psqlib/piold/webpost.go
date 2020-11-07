@@ -6,16 +6,14 @@ import (
 	"net/http"
 	"os"
 
-	. "nksrv/lib/utils/logx"
-	"nksrv/lib/mail/form"
-	"nksrv/lib/app/base/webcaptcha"
 	ib0 "nksrv/lib/app/webib0"
+	"nksrv/lib/mail/form"
+	. "nksrv/lib/utils/logx"
 )
 
 // TODO make this file less messy
 
 // FIXME: this probably in future should go thru some sort of abstractation
-
 
 func (sp *PSQLIB) IBGetPostParams() (
 	*form.ParserParams, form.FileOpener, func(string) bool) {

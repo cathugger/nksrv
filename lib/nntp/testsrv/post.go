@@ -1,10 +1,10 @@
 package testsrv
 
 import (
-	au "nksrv/lib/utils/text/asciiutils"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
 	"nksrv/lib/nntp"
+	. "nksrv/lib/utils/logx"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 func validMsgID(s FullMsgIDStr) bool {

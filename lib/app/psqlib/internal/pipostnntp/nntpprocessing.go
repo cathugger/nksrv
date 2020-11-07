@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"nksrv/lib/app/ibref/ibrefsrnd"
-	. "nksrv/lib/utils/logx"
 	"nksrv/lib/mail"
 	fu "nksrv/lib/utils/fs/fileutil"
+	. "nksrv/lib/utils/logx"
 )
 
 func (ctx *postNNTPContext) netnewsSubmitFullArticle(r io.Reader) {

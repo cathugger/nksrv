@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	fl "nksrv/lib/utils/logx/filelogger"
-	"nksrv/lib/utils/logx"
 	"nksrv/lib/app/base/psql/testutil"
+	"nksrv/lib/utils/logx"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func newLogger() (lgr logx.LoggerX) {

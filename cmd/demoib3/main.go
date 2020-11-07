@@ -14,15 +14,15 @@ import (
 	"github.com/luna-duclos/instrumentedsql"
 
 	ar "nksrv/lib/app/base/apirouter"
+	ir "nksrv/lib/app/base/ibrouter"
+	"nksrv/lib/app/base/psql"
 	"nksrv/lib/app/demo/democonfigs"
 	"nksrv/lib/app/demo/demohelper"
 	di "nksrv/lib/app/demo/demoib"
-	fl "nksrv/lib/utils/logx/filelogger"
-	ir "nksrv/lib/app/base/ibrouter"
+	"nksrv/lib/app/psqlib"
 	rj "nksrv/lib/app/renderer/jsonrenderer"
 	"nksrv/lib/utils/logx"
-	"nksrv/lib/app/base/psql"
-	"nksrv/lib/app/psqlib"
+	fl "nksrv/lib/utils/logx/filelogger"
 )
 
 func main() {

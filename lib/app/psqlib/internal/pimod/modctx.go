@@ -2,6 +2,7 @@ package pimod
 
 import (
 	"database/sql"
+
 	"nksrv/lib/app/psqlib/internal/pibase"
 )
 

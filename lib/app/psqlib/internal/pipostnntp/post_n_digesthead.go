@@ -7,10 +7,10 @@ import (
 
 	"nksrv/lib/app/mailib"
 	"nksrv/lib/app/psqlib/internal/pibase"
-	au "nksrv/lib/utils/text/asciiutils"
 	"nksrv/lib/mail"
 	"nksrv/lib/nntp"
 	"nksrv/lib/utils/date"
+	au "nksrv/lib/utils/text/asciiutils"
 )
 
 // extracts info from main message headers into structure
