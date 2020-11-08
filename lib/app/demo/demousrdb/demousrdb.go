@@ -10,13 +10,13 @@ type demoUsr struct {
 }
 
 var demoUsers = map[string]demoUsr{
-	"tester": demoUsr{
+	"tester": {
 		pass: "test",
 		attrs: map[string]interface{}{
 			"admin": false,
 		},
 	},
-	"admin": demoUsr{
+	"admin": {
 		pass: "hackme",
 		attrs: map[string]interface{}{
 			"admin": true,

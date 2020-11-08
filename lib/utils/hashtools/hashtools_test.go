@@ -53,12 +53,12 @@ const (
 )
 
 var hexp = [...][ht_max]string{
-	[ht_max]string{
+	{
 		"ms0bmq9elpsvml0zh5klbwjcl5fbevm3uxigmyeabcs5", // SHA2-224
 		"banl818ny8i178t8z7x93fwo51c5zumjmr8mb5v6bcm6", // BLAKE2b-224
 		"9ye8a31d0pffo0hsn6dp48psp5sk6jteiqhzagjt3hr9", // BLAKE3
 	},
-	[ht_max]string{
+	{
 		"scdpymqbxyn8zwgrevmz7227jhzipuwa6d94dsp10pf4", // SHA2-224
 		"1qvyte14cv8a0qyu4s8k2miv0600ggd2okv9r11gbfw8", // BLAKE2b-224
 		"9f34195rc24ar3xzdsy00wn42fani1c1zupo6jk7a1x9", // BLAKE3

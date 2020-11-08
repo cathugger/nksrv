@@ -54,7 +54,7 @@ var jsonCases = []jsonPair{
 			Body: BodyValue{&MultipartBody{
 				{
 					Head: []PartHeader{
-						PartHeader{
+						{
 							Key: "testkey1",
 							Val: []byte("testval1"),
 						},
@@ -68,20 +68,20 @@ var jsonCases = []jsonPair{
 	{
 		MsgRoot{
 			Head: map[string]ArrayOfStringByteBuf{
-				"a": ArrayOfStringByteBuf{[]byte("aval")},
+				"a": {[]byte("aval")},
 			},
 			Body: BodyValue{&MultipartBody{
 				{
 					Head: []PartHeader{
-						PartHeader{
+						{
 							Key: "testkey1",
 							Val: []byte("testval1"),
 						},
-						PartHeader{
+						{
 							Key: "testkey1",
 							Val: []byte("testval2"),
 						},
-						PartHeader{
+						{
 							Key: "testkey2",
 							Val: []byte("testval3"),
 						},
@@ -95,10 +95,10 @@ var jsonCases = []jsonPair{
 	{
 		MsgRoot{
 			Head: map[string]ArrayOfStringByteBuf{
-				"a": ArrayOfStringByteBuf{[]byte("aval")},
-				"b": ArrayOfStringByteBuf{[]byte("bval1"), []byte("bval2"), []byte("bval3")},
-				"c": ArrayOfStringByteBuf{[]byte("cval")},
-				"d": ArrayOfStringByteBuf{[]byte("dval")},
+				"a": {[]byte("aval")},
+				"b": {[]byte("bval1"), []byte("bval2"), []byte("bval3")},
+				"c": {[]byte("cval")},
+				"d": {[]byte("dval")},
 			},
 			Body: BodyValue{&MultipartBody{
 				{

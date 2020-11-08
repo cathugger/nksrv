@@ -6,13 +6,6 @@ package captcha
 
 import crand "crypto/rand"
 
-// Purposes for seed derivation. The goal is to make deterministic PRNG produce
-// different outputs for images and audio by using different derived seeds.
-const (
-	imageSeedPurpose = 0x01
-	audioSeedPurpose = 0x02
-)
-
 // RandomDigits returns a byte slice of the given length containing
 // pseudorandom numbers in range 0-9. The slice can be used as a captcha
 // solution.

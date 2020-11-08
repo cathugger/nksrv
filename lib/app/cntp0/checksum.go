@@ -26,21 +26,21 @@ func writeIdentification(w io.Writer, d Digest) {
 }
 
 var excHeadHeaders = map[string]struct{}{
-	"Message-ID":                struct{}{},
-	"Path":                      struct{}{},
-	"Xref":                      struct{}{},
-	"MIME-Version":              struct{}{},
-	"Content-Type":              struct{}{},
-	"Content-Transfer-Encoding": struct{}{},
-	"X-CNTP-Headers":            struct{}{},
+	"Message-ID":                {},
+	"Path":                      {},
+	"Xref":                      {},
+	"MIME-Version":              {},
+	"Content-Type":              {},
+	"Content-Transfer-Encoding": {},
+	"X-CNTP-Headers":            {},
 }
 
 var excPartHeaders = map[string]struct{}{
-	"Content-ID":                struct{}{},
-	"Content-Type":              struct{}{},
-	"Content-Disposition":       struct{}{},
-	"Content-Transfer-Encoding": struct{}{},
-	"X-CNTP-Headers":            struct{}{},
+	"Content-ID":                {},
+	"Content-Type":              {},
+	"Content-Disposition":       {},
+	"Content-Transfer-Encoding": {},
+	"X-CNTP-Headers":            {},
 }
 
 var (

@@ -83,6 +83,7 @@ func UnpackKeyID(ek []byte) (id uint64, err error) {
 func DecryptKey(kek cipher.AEAD, ek []byte) (k []byte, err error) {
 	if len(ek) != EncKeyLen {
 		err = errors.New("invalid length")
+		return
 	}
 
 	k, err = kek.Open(ek[8+24:8+24], ek[8:8+24], ek[8+24:], ek[0:8])
@@ -124,6 +125,7 @@ func UnpackKeyData(
 	challen := k[1+8]
 	if challen > MaxChalLen {
 		err = errors.New("bad challenge length")
+		return
 	}
 
 	chal, err = unpackBCD(nil, k[1+8+1:1+8+1+6], int(challen))
