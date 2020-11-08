@@ -28,6 +28,16 @@ then
 			goimports -local 'nksrv/' -w '{}' ';'
 fi
 
+if [ x"$1" = x"-s" ]
+then
+	exec find \
+		-type f \
+		-name '*.go' \
+		-not -regex ".*_nofmt[._].*" \
+		-exec \
+			gofmt -s -w '{}' ';'
+fi
+
 exec find "$@" \
 	-type f \
 	-name '*.go' \
