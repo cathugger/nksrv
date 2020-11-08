@@ -1,4 +1,8 @@
-[*.go]
+[*]
 charset = utf-8
 insert_final_newline = true
+end_of_line = lf
+trim_trailing_whitespace = true
+
+[*.go]
 indent_style = tab

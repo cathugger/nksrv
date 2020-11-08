@@ -59,7 +59,7 @@ func XFaceImgToString(img image.Image) (s string, err error) {
 	if !ok || !paleq(palWB[:], pimg.Palette) {
 		// need conversion probably
 		pimg = image.NewPaletted(ib, palWB[:])
-		draw.FloydSteinberg.Draw(pimg, ib, img, image.ZP)
+		draw.FloydSteinberg.Draw(pimg, ib, img, image.Point{})
 	}
 	// all gucci
 	s = xfaceEncodeString(pimg.Pix)

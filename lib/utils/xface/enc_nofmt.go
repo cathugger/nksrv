@@ -25,15 +25,15 @@ func allBlack(w, h uint32, bitmap []byte) bool {
 		w /= 2
 		h /= 2
 		return true &&
-			allBlack(w, h, bitmap[                 :]) &&
-			allBlack(w, h, bitmap[                w:]) &&
-			allBlack(w, h, bitmap[h*xfaceWidth    :]) &&
-			allBlack(w, h, bitmap[h*xfaceWidth + w:])
+			allBlack(w, h, bitmap[              :]) &&
+			allBlack(w, h, bitmap[             w:]) &&
+			allBlack(w, h, bitmap[h*xfaceWidth  :]) &&
+			allBlack(w, h, bitmap[h*xfaceWidth+w:])
 	} else {
 		/* at least one pixel in the 2x2 grid is non-zero */
 		return false ||
-			bitmap[            0] != 0 ||
-			bitmap[            1] != 0 ||
+			bitmap[           0] != 0 ||
+			bitmap[           1] != 0 ||
 			bitmap[xfaceWidth+0] != 0 ||
 			bitmap[xfaceWidth+1] != 0
 	}
@@ -47,14 +47,14 @@ func pushGreys(pq []probRange, w, h uint32, bitmap []byte) []probRange {
 	if w > 3 {
 		w /= 2
 		h /= 2
-		pq = pushGreys(pq, w, h, bitmap[                 :])
-		pq = pushGreys(pq, w, h, bitmap[                w:])
-		pq = pushGreys(pq, w, h, bitmap[h*xfaceWidth    :])
-		pq = pushGreys(pq, w, h, bitmap[h*xfaceWidth + w:])
+		pq = pushGreys(pq, w, h, bitmap[              :])
+		pq = pushGreys(pq, w, h, bitmap[             w:])
+		pq = pushGreys(pq, w, h, bitmap[h*xfaceWidth  :])
+		pq = pushGreys(pq, w, h, bitmap[h*xfaceWidth+w:])
 	} else {
 		p := probRanges2x2[
-			1*bitmap[            0]+
-			2*bitmap[            1]+
+			1*bitmap[           0]+
+			2*bitmap[           1]+
 			4*bitmap[xfaceWidth+0]+
 			8*bitmap[xfaceWidth+1]]
 		pq = append(pq, p)
@@ -75,10 +75,10 @@ func encodeBlock(
 		w /= 2
 		h /= 2
 		level++
-		pq = encodeBlock(pq, level, w, h, bitmap[                :])
-		pq = encodeBlock(pq, level, w, h, bitmap[               w:])
-		pq = encodeBlock(pq, level, w, h, bitmap[h*xfaceWidth    :])
-		pq = encodeBlock(pq, level, w, h, bitmap[h*xfaceWidth + w:])
+		pq = encodeBlock(pq, level, w, h, bitmap[              :])
+		pq = encodeBlock(pq, level, w, h, bitmap[             w:])
+		pq = encodeBlock(pq, level, w, h, bitmap[h*xfaceWidth  :])
+		pq = encodeBlock(pq, level, w, h, bitmap[h*xfaceWidth+w:])
 	}
 	return pq
 }

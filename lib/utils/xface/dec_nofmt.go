@@ -35,10 +35,10 @@ func popGreys(b *big.Int, w, h uint32, bitmap []byte) {
 	if w > 3 {
 		w /= 2
 		h /= 2
-		popGreys(b, w, h, bitmap[                :])
-		popGreys(b, w, h, bitmap[               w:])
-		popGreys(b, w, h, bitmap[h*xfaceWidth    :])
-		popGreys(b, w, h, bitmap[h*xfaceWidth + w:])
+		popGreys(b, w, h, bitmap[              :])
+		popGreys(b, w, h, bitmap[             w:])
+		popGreys(b, w, h, bitmap[h*xfaceWidth  :])
+		popGreys(b, w, h, bitmap[h*xfaceWidth+w:])
 	} else {
 		w = popInteger(b, probRanges2x2[:])
 		// XXX could we avoid ifs there?
@@ -67,8 +67,8 @@ func decodeBlock(b *big.Int, level, w, h uint32, bitmap []byte) {
 		w /= 2
 		h /= 2
 		level++
-		decodeBlock(b, level, w, h, bitmap[               :])
-		decodeBlock(b, level, w, h, bitmap[              w:])
+		decodeBlock(b, level, w, h, bitmap[              :])
+		decodeBlock(b, level, w, h, bitmap[             w:])
 		decodeBlock(b, level, w, h, bitmap[h*xfaceWidth  :])
 		decodeBlock(b, level, w, h, bitmap[h*xfaceWidth+w:])
 	}
@@ -121,7 +121,7 @@ func xfaceDecodeString(
 
 	b := xfaceRead(in)
 	if b == nil {
-		err = errors.New("I have no face")
+		err = errors.New("i have no face")
 		return
 	}
 
