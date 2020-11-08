@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	tp "net/textproto"
 
-	"nksrv/lib/app/text/bufreader"
 	. "nksrv/lib/utils/logx"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 // sugar because im lazy

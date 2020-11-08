@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"nksrv/lib/app/text/bufreader"
 	"nksrv/lib/mail"
 	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 func (c *NNTPPuller) readDotLine(dr *bufreader.DotReader) ([]byte, error) {

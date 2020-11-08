@@ -7,8 +7,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"nksrv/lib/certfp"
 	"nksrv/lib/nntp"
+	"nksrv/lib/utils/certfp"
 )
 
 type parsedUserCfg struct {

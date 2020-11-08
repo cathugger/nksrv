@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"nksrv/lib/nntp"
-	upn "nksrv/lib/userpassnorm"
+	upn "nksrv/lib/utils/text/userpassnorm"
 )
 
 type node struct {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	tp "net/textproto"
 
-	"nksrv/lib/app/text/bufreader"
 	. "nksrv/lib/utils/logx"
 	au "nksrv/lib/utils/text/asciiutils"
+	"nksrv/lib/utils/text/bufreader"
 )
 
 var errTooLargeResponse = errors.New("too large response")

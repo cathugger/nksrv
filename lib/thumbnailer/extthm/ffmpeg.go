@@ -89,14 +89,14 @@ func (b *ffmpegSoxBackend) doThumbnailing(
 		}
 	}()
 
-	close_err := func() {
+	closeErr := func() {
 		err = f.Close()
 		closed = true
 	}
 
 	fn := f.Name()
 
-	close_err()
+	closeErr()
 	if err != nil {
 		return
 	}

@@ -210,6 +210,7 @@ func (c *NNTPPusher) pushworker(
 				c.log.LogPrintf(DEBUG, "readResponse() err: %v", err)
 				return
 			}
+			_ = code
 		} else if code == 435 {
 			// server doesn't want
 		} else {

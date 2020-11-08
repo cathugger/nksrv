@@ -6,9 +6,9 @@ import (
 	"errors"
 	"sort"
 
-	. "nksrv/lib/certfp"
 	"nksrv/lib/nntp"
-	upn "nksrv/lib/userpassnorm"
+	. "nksrv/lib/utils/certfp"
+	upn "nksrv/lib/utils/text/userpassnorm"
 )
 
 type fpKeyParam struct {

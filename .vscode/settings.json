@@ -2,6 +2,12 @@
     "go.formatTool": "goimports",
 	"go.formatFlags": ["-local", "nksrv/"],
     "go.lintTool": "staticcheck",
+    "gopls":{
+        "local": "nksrv/",
+        "analyses":{
+            "unsafeptr": false
+        }
+    },
     "[go]": {
         "editor.formatOnSave": false
     }
