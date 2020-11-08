@@ -128,7 +128,7 @@ func cmdXListen(c *ConnState, args [][]byte, rest []byte) bool {
 	}
 	t := unsafeBytesToStr(args[0])
 	if t != "*" {
-		AbortOnErr(c.w.PrintfLine("503 XLISTEN %q unimplemented"))
+		AbortOnErr(c.w.PrintfLine("503 XLISTEN %q unimplemented", t))
 		return true
 	}
 	o := c.listen
