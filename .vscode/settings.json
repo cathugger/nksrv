@@ -1,10 +1,10 @@
 {
     "go.formatTool": "goimports",
-	"go.formatFlags": ["-local", "nksrv/"],
+    "go.formatFlags": [ "-local", "nksrv/" ],
     "go.lintTool": "staticcheck",
-    "gopls":{
+    "gopls": {
         "local": "nksrv/",
-        "analyses":{
+        "analyses": {
             "unsafeptr": false
         }
     },
