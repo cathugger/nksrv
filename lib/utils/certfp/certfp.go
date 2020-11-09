@@ -114,7 +114,7 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 		mt = MatchingTypeBLAKE2s
 	case "blake2b", "blake2b512", "blake2":
 		mt = MatchingTypeBLAKE2b
-	
+
 	case "blake3":
 		mt = MatchingTypeBLAKE3
 
@@ -240,7 +240,7 @@ func MakeFingerprint(
 	case MatchingTypeBLAKE2b:
 		h := blake2b.Sum512(data)
 		return h[:]
-	
+
 	case MatchingTypeBLAKE3:
 		h := blake3.Sum256(data)
 		return h[:]
