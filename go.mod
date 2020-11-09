@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/minio/highwayhash v1.0.1
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/zeebo/blake3 v0.1.0
+	github.com/zeebo/blake3 v0.1.1-0.20201014231448-350c65fcbf6b
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102

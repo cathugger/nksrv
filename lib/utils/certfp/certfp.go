@@ -8,18 +8,19 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/zeebo/blake3"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/blake2s"
-	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160" //lint:ignore SA1019 yeah ik rmd160 is deprecated
 	"golang.org/x/crypto/sha3"
 )
 
 type Selector int
 
 const (
-	SelectorFull   = Selector(0)
-	SelectorPubKey = Selector(1)
-	SelectorDigest = Selector(2)
+	SelectorFull   Selector = 0
+	SelectorPubKey Selector = 1
+	SelectorDigest Selector = 2
 )
 
 type MatchingType int
@@ -45,6 +46,8 @@ const (
 	MatchingTypeBLAKE2s
 	MatchingTypeBLAKE2b
 
+	MatchingTypeBLAKE3
+
 	_MatchingTypeMax
 )
 
@@ -68,6 +71,8 @@ var MatchingTypeStr = [_MatchingTypeMax]string{
 
 	"blake2s",
 	"blake2b",
+
+	"blake3",
 }
 
 var errUnknown = errors.New("unknown fingerprint type")
@@ -109,6 +114,9 @@ func ParseMatchingType(s string) (mt MatchingType, err error) {
 		mt = MatchingTypeBLAKE2s
 	case "blake2b", "blake2b512", "blake2":
 		mt = MatchingTypeBLAKE2b
+	
+	case "blake3":
+		mt = MatchingTypeBLAKE3
 
 	default:
 		err = errUnknown
@@ -145,7 +153,8 @@ func ParseCertFP(s string) (mt MatchingType, data []byte, err error) {
 		}
 
 	case MatchingTypeSHA2_256, MatchingTypeSHA3_256,
-		MatchingTypeSHAKE128, MatchingTypeBLAKE2s:
+		MatchingTypeSHAKE128, MatchingTypeBLAKE2s,
+		MatchingTypeBLAKE3:
 
 		if len(data) != 32 {
 			err = errBadSize
@@ -193,15 +202,12 @@ func MakeFingerprint(
 	case MatchingTypeSHA2_224:
 		h := sha256.Sum224(data)
 		return h[:]
-
 	case MatchingTypeSHA2_256:
 		h := sha256.Sum256(data)
 		return h[:]
-
 	case MatchingTypeSHA2_384:
 		h := sha512.Sum384(data)
 		return h[:]
-
 	case MatchingTypeSHA2_512:
 		h := sha512.Sum512(data)
 		return h[:]
@@ -209,15 +215,12 @@ func MakeFingerprint(
 	case MatchingTypeSHA3_224:
 		h := sha3.Sum224(data)
 		return h[:]
-
 	case MatchingTypeSHA3_256:
 		h := sha3.Sum256(data)
 		return h[:]
-
 	case MatchingTypeSHA3_384:
 		h := sha3.Sum384(data)
 		return h[:]
-
 	case MatchingTypeSHA3_512:
 		h := sha3.Sum512(data)
 		return h[:]
@@ -226,7 +229,6 @@ func MakeFingerprint(
 		var h [32]byte
 		sha3.ShakeSum128(h[:], data)
 		return h[:]
-
 	case MatchingTypeSHAKE256:
 		var h [64]byte
 		sha3.ShakeSum256(h[:], data)
@@ -235,9 +237,12 @@ func MakeFingerprint(
 	case MatchingTypeBLAKE2s:
 		h := blake2s.Sum256(data)
 		return h[:]
-
 	case MatchingTypeBLAKE2b:
 		h := blake2b.Sum512(data)
+		return h[:]
+	
+	case MatchingTypeBLAKE3:
+		h := blake3.Sum256(data)
 		return h[:]
 
 	default:
