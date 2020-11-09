@@ -6,8 +6,8 @@ import (
 	"io"
 
 	"nksrv/lib/app/psqlib/internal/pibase"
-	"nksrv/lib/date"
 	"nksrv/lib/nntp"
+	"nksrv/lib/utils/date"
 )
 
 type PullerDB struct {

@@ -10,7 +10,7 @@ import (
 
 	ir "nksrv/lib/app/base/ibrouter"
 	di "nksrv/lib/app/demo/demoib"
-	rs "nksrv/lib/rendererstatic"
+	rs "nksrv/lib/app/renderer/rendererstatic"
 )
 
 func main() {

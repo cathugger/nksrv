@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"nksrv/lib/xface"
+	"nksrv/lib/utils/xface"
 )
 
 const usage = `Usage:

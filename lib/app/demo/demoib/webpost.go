@@ -16,7 +16,7 @@ import (
 	"nksrv/lib/mail/form"
 	"nksrv/lib/utils/date"
 	mm "nksrv/lib/utils/minimail"
-	tu "nksrv/lib/utils/textutils"
+	tu "nksrv/lib/utils/text/textutils"
 )
 
 var FileFields = ib0.IBWebFormFileFields

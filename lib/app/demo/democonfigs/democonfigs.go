@@ -7,7 +7,7 @@ import (
 	"nksrv/lib/app/psqlib/piconfig"
 	"nksrv/lib/thumbnailer"
 	"nksrv/lib/thumbnailer/gothm"
-	"nksrv/lib/utils/fstore"
+	"nksrv/lib/utils/fs/fstore"
 )
 
 // configs commonly used in demo executables

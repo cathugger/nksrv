@@ -6,9 +6,9 @@ import (
 
 	"nksrv/lib/app/mailib"
 	ib0 "nksrv/lib/app/webib0"
-	fu "nksrv/lib/fileutil"
 	"nksrv/lib/mail/form"
 	"nksrv/lib/utils/emime"
+	fu "nksrv/lib/utils/fs/fileutil"
 	ht "nksrv/lib/utils/hashtools"
 	au "nksrv/lib/utils/text/asciiutils"
 )
