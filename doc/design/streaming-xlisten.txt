@@ -1,0 +1,30 @@
+commands:
+
+XLISTEN: setup listening filters
+params:
+  XLISTEN * -- listen all groups
+  XLISTEN groupname.*,groupname2.* -- wildmat selection
+returns:
+  ??? - OK
+  ??? - filter rejected because too complicated or too long (and instead * is applied)
+XXX:
+  we should have mode where we send \n separated list of filters.
+  would allow to fit much more filtered groups.
+
+XWAIT: actually do waiting
+params: none
+returns initial:
+  ??? - OK [and then waits for event or timeout]
+  ??? - listen facility is currently unavailable [final]
+returns final:
+  ??? - event arrived
+  ??? - interrupted by client
+  ??? - timeout
+  ??? - listen facility internal error
+
+XCANCEL: interrupt current XWAIT
+info: actually any command can interrupt XWAIT, but this one is specifically designed for that, without side-effects
+params: none
+returns:
+  ??? - interrupted
+  ??? - no XWAIT was running

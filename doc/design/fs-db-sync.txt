@@ -1,0 +1,39 @@
+this document describes the way files are placed to and removed from src/tmp folders in sync with database edits.
+
+for file post:
+  1.  process files, detect types, check their extensions' correctness, generate checksums, thumbnails, etc.
+  2.  move them to tmp folders of relevant filestores if not done yet (this will allow atomic move).
+  3.  open database transaction if not done yet. do some checks to see if store will likely succeed. proceed if it will.
+      can do database insertion stuff in parallel of next steps.
+  4.  sync these files in tmp folders. do not bother syncing tmp dir.
+  5.  for each file store, make distinct folder for current post in file store's pre-add dir. we will use "postdir" to refer to it.
+      this ensures there will be no clash between posts carrying same files.
+  6.  for each file store, move relevant files from their tmp dir to postdir. use proper, not temporary filename.
+  7.  for each file store, sync postdir, and then sync pre-add dir (parent of postdir). files shouldn't need sync since they already were in 4.
+      this should ensure we will have files intact on crash.
+  8.  join w/ database thread. this ensures it already done its work and acquired relevant database locks for files we're about to push in.
+  9.  for each file store, hardlink files from postdir to main store dir. if some files fail to hardlink because already exists, that's fine.
+      do not rename. do not remove files from postdir. if no hardlink is available, copy to tmpdir, sync, and attempt move.
+      keeping originals in postdir ensures we can't lose them incase transaction fails (and relevant locks to files get released),
+      and also keeps record of what we've possibly inserted in case we will need to clean it up.
+  10. perform transaction commit
+  11. if it fails, jump to 3, then skip other fs related steps until 8 (8 and later ones are to be executed)
+  12. if it succeeds, rm -rf postdir. do not bother with sync as dmg of it re-appearing would b minimal. return to the caller.
+if it totally fails leaving postdir behind and possibly modified main file store dirs, let reaper thingie reap it later.
+it probably failed because something something database or overloaded or some shit, let it exist until fixing works.
+
+for file delete:
+  files are counted in separate table, with filename and count;
+  when count reaches zero, trigger gets called which calls notify and adds to "todo-reap" table.
+  reaper thread waits for signal and watches/consumes todo-reap table.
+  yeah we aren't deleting files at the same time we're doing db actions which lead to their relevant posts getting deleted because
+  we want to ensure that transaction gets completely comitted first, and not remove files before that point, even if we already would have
+  relevant files/thumbnails ref count rows locked.
+  files disappearing even before transaction commits (and thus post ACTUALLY get deleted) won't look too well.
+  reap process:
+  1. start tx
+  2. if not event invoked, select from todo-reap table; otherwise we already have file/thumbnail for deletion
+  3. delete/return from files/thumbnails counters table if count == 0; this will wlock relevant row so that it'll block new inserts
+  4. if previous operation succeeded we can actually axe the file [I had idea to put it in pre-del folder but why??]
+  5. delete from todo-reap table at some point. doesn't actually matter when.
+  5. commit tx. actually we can batch several of these but should benchmark whether its actually effective.
