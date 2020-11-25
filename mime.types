@@ -15,15 +15,16 @@ text/css                css
 text/xml                xml
 text/javascript         js
 
-image/jpeg                      =jpg jpeg jpe
-image/png                       png
-image/gif                       gif
-image/webp                      webp
-image/x-icon                    ico
-image/bmp                       bmp
-image/avif                      avif
-image/svg+xml                   svg svgz
-image/tiff                      =tiff tif
+image/jpeg              =jpg jpeg jpe
+image/png               png
+image/gif               gif
+image/webp              webp
+image/x-icon            ico
+image/bmp               bmp
+image/avif              =avif !avifs
+image/svg+xml           svg svgz
+image/tiff              =tiff tif
+image/jxl               jxl
 
 audio/ogg                       ogg oga
 audio/ogg;codecs=opus           opus
