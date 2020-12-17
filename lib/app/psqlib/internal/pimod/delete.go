@@ -151,7 +151,7 @@ func (mc *modCtx) postDelete() (err error) {
 		bp_affs = append(bp_affs, aff)
 	}
 	if err = rows.Err(); err != nil {
-		err = sp.SQLError("drainDelGPosts rows", err)
+		err = mc.sp.SQLError("drainDelGPosts rows", err)
 		return
 	}
 
@@ -180,10 +180,10 @@ func (mc *modCtx) postDelete() (err error) {
 	*/
 
 	// re-calculate affected references
-	xref_up_st := tx.Stmt(sp.StPrep[St_mod_update_bpost_activ_refs])
+	xref_up_st := mc.tx.Stmt(mc.sp.StPrep[St_mod_update_bpost_activ_refs])
 	for _, bpa := range bp_affs {
 		err = pirefs.FixupAffectedXRefsInTx(
-			sp, tx, bpa.pn, bpa.bn, TCoreMsgIDStr(bpa.mi), xref_up_st)
+			mc.sp, mc.tx, bpa.pn, bpa.bn, TCoreMsgIDStr(bpa.mi), xref_up_st)
 		if err != nil {
 			return
 		}
