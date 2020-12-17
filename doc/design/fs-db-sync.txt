@@ -36,4 +36,4 @@ for file delete:
   3. delete/return from files/thumbnails counters table if count == 0; this will wlock relevant row so that it'll block new inserts
   4. if previous operation succeeded we can actually axe the file [I had idea to put it in pre-del folder but why??]
   5. delete from todo-reap table at some point. doesn't actually matter when.
-  5. commit tx. actually we can batch several of these but should benchmark whether its actually effective.
+  6. commit tx. actually we can batch several of these but should benchmark whether its actually effective.
