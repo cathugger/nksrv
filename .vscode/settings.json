@@ -6,7 +6,8 @@
         "local": "nksrv/",
         "analyses": {
             "unsafeptr": false
-        }
+        },
+        "experimentalWorkspaceModule": true,
     },
     "[go]": {
         "editor.formatOnSave": false
