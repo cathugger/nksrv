@@ -1,0 +1,9 @@
+body  { color: black; background-color: white }
+div.body { margin-right: 2em; margin-left: 2em }
+div.warning   { background-color: #ffe8e8; margin-right: 3em; margin-left: 3em; padding-right: 1em; padding-left: 1em; border: solid 1px black }
+div.footer { text-align: right }
+dd { margin-bottom: 1em }
+.samp { text-indent: -3em; margin-left: 4em }
+h1 { font-family: sans-serif; margin-left: 1em }
+h2 { margin-left: -0.5em }
+h3 { margin-left: 1em }

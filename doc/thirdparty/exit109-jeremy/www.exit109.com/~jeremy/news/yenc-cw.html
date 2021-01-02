@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html><head>
+ <meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+ <title>What's wrong with yEnc?</title>
+ <meta name="description" content="A Usenet post by Curt Welch about what's wrong with yEnc">
+ <meta name="keywords" content="yEnc, usenet, binary encoding, usenet binaries, curt welch, news.software.nntp">
+ <link rel="stylesheet" href="essay.css">
+ <style type="text/css">
+  .intro P.first:first-letter { letter-spacing: -5px }
+ </style>
+</head>
+
+<body text="#000000" bgcolor="#ffffff" link="#0000dd" vlink="#0000bb" alink="#dd0000">
+
+<h1>What's wrong with yEnc?</h1>
+
+<div class="byline">
+ <p><small>by <a href="http://curtwelch.com">Curt Welch</a>, 19 September 2002</small></p>
+</div>
+
+<div class="body">
+<div class="intro">
+ <p class="first">This is a post by Curt Welch to news.software.nntp, from a thread
+  about yEnc, reprinted by permission.</p>
+</div>
+
+<hr width="75%">
+
+<div class="section">
+
+<p>
+<b>Subject: Re: ATTN: news admins - what's wrong with yEnc</b><br>
+From: curt@kcwc.com (Curt Welch)<br>
+Date: 19 Sep 2002 22:38:08 GMT<br>
+Message-ID: &lt;20020919183808.553$mO@newsreader.com&gt;<br>
+Newsgroups: news.software.nntp</p>
+
+<blockquote>
+ <p>Daddy Freddy <daddy_freddy@hotmail.com> wrote:</p>
+ <blockquote>
+  <p>On 19 Sep 2002 15:12:57 GMT, curt@kcwc.com (Curt Welch) wrote:</p>
+  <blockquote>
+   <p>Daddy Freddy <daddy_freddy@hotmail.com> wrote:</p>
+   <p>Lay it all out. I want to know what evil is happening behind the
+    scenes, because as an end user I'm sure not seeing the problems.
+    Downloads are quicker. My monthly Giganews account lasts longer. I can
+    determine the exact segment that got thwacked in transit because of
+    the CRC. Posting goes along quicker. I think my penis is bigger, too.</p>
+   <p>So what the hell is wrong with yEnc???</p>
+  </blockquote>
+  <p>The only thing wrong is that it could have been done a lot better</p>
+ </blockquote>
+ <p>That can be said of just about everything!</p>
+ <blockquote>
+  <p>and the fact that it wasn't really upsets some people.  It's too late
+   to cry about now.  Good or bad, we are stuck with it.</p>
+ </blockquote>
+ <p>Good or bad, it works as advertised. That's something that can't be said
+  of everything...</p>
+</blockquote>
+
+<p>Ok, so my point was lost on you.  I'll go a little futher to try and help
+ you understand.</p>
+
+<p>We have been working for <em>years</em> to "fix" a large number of
+ binary-on-usenet problems.  Usenet is very hard to change because it
+ involves so many indepent organizations (news sites, server developers,
+ newsreader developers, and end-users) that all have their own problems they
+ want to see addressed.</p>
+
+<p>If you had spent the past 10 years in this group like I and many others
+ have, you would have seen all the discussions and ideas that have been
+ debated.  And you would have seen all the work going on to help change
+ things as well.  Servers have been converted to allow binary data to move
+ on Usenet, but some still remain.  Lots of ideas have been debated, and
+ tested in prototype to see which options would be best for encoding binary
+ data once Usenet was ready to carry it.  The only reason yEnc can work at
+ all is because of the years of work that went in to converting usenet from
+ a text transport system into a binary transport system (but we weren't
+ done).</p>
+
+<p>We had 10 or 20 problems we were trying to "fix" with a new standard, but
+ had only found workable solutions to maybe 8 of them.  We could have
+ stopped at any time and created a new standard to fix the 8 problems we
+ knew how to fix, but we knew that once a new standard was put in place,
+ usenet would be stuck with it for the next 20 years.  Fixing only 8 of the
+ problems didn't seem good enough to us to justify being stuck with the
+ solution for what could be the rest of our lives (some of us are old hacks
+ already).</p>
+
+<p>Then Juergen comes along and suggests yEnc.  It only fixes 2 of the 20
+ problems.  And, it was a poorly designed fix at that.  The standard
+ document he wrote was full of problems that would lead to people creating
+ incompatible encoders and decoders.  It was nothing more than a joke
+ compared to the other work in progress.</p>
+
+<p>But the damn thing got leaked out to the "public" anyway and started to
+ catch on because the users really liked the 2 things it fixed for them.  By
+ the time we realized it was going to actually take off, it was too late to
+ fix anything.  The incompatible encoders were already in the wild and being
+ used.  The developers that just had to spend time adding "yEnc" support to
+ their software were not interested in adding "yEnc II" only a month later.
+ And most the changes that were really needed would be incompatable with the
+ current decoders.  We just missed the boat because we didn't believe the
+ thing could float.</p>
+
+<p>Like always on Usenet, the standard will develop on it's own now by all the
+ developers "hacking until it works".  But now Usenet has seen what we
+ already knew.  Converting Usenet to a new encoding system is a painful,
+ slow, and expensive processes.  Look at how much time out for life has been
+ wasted in this thread alone on yEnc?  Multiply that by the millions of
+ users that have had to "deal" with yEnc.  Now, tell me how many of them are
+ going to be willing to convert to yet another new standard 2 years from now
+ (when the conversion to yEnc still isn't finished)?</p>
+
+<p>yEnc is good for the 2 things it "fixed" (uuencode overhead, the lack of
+ CRCs to identify corrupted data).  yEnc is bad because it has closed the
+ door on any other new fixes for probably at least another 10 years - new
+ fixes which we already had workable solutions for (like automatcially
+ identifying and combining reposts without the user having to think at all,
+ like allowing news servers to "fix" all the missing part problem by
+ filtering posts by file size instead of by article size, like having a way
+ to detect corrupted articles for all types of posts - not just yEnc posts,
+ like having workable extenstions to NNTP to allow newsreaders to download
+ lists of "files" instead of having to download thousands of duplicate
+ headers, like having news readers be able to know the true "file name" and
+ "hash" of a file before the 500 parts are downloaded to prevent users from
+ having to download duplicates, like allowing NNTP newsreaders do download
+ file attachements in pure binary and not have to deal with any type of
+ "encoding" system. etc, etc, etc).</p>
+
+<p>Enjoy the 2 fixes you got with yEnc, you aren't likely to see the other 10
+ we were working on for a very very long time.  Nobody here has even been
+ talking about that stuff since yEnc took over.</p>
+
+<p>yEnc itself is a hack job, but it's not "bad".  What's bad is the fact that
+ with its release, we have lost the one opportunity we had to do so much
+ more.</p>
+
+<p>Maybe we never would have gotten any of those other "good ideas" out the
+ door.  So maybe it's good that yEnc is here.  A "bird in hand" and all
+ that.  But just understand what opportunities were lost once yEnc took
+ over.  It's that loss of opportunity that most people are talking about
+ when they say "yEnc is bad".</p>
+
+<p>Usenet is neat because it has a life of it's own.  It envolves in
+ directions that no one expects at times. yEnc is just one more example of
+ what makes Usenet such an interesting social experiment.</p>
+
+<pre>
+-- 
+Curt Welch                                            http://CurtWelch.Com/
+curt@kcwc.com                          Webmaster for http://NewsReader.Com/
+</pre>
+
+
+</div>
+</div>
+
+<br>
+<div class="footer"><small>
+  <p><a href="./">Usenet stuff </a>&nbsp;|&nbsp; <a href="yenc.html">Why yEnc is bad</a></p>
+</small></div> 
+
+</body></html>

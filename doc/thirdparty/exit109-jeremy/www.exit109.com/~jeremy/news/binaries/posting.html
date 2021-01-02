@@ -1,0 +1,256 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+
+<head>
+	<meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+	<title>Binary Posting</title>
+  <link href="main.css" rel="stylesheet">
+</head>
+
+<body bgcolor="#ffffff" text="#000000">
+	<h1><img src="posting-big.gif" alt="Binary Posting" border="0" width="190" height="78"></h1>
+	<div class="body">
+		<p>Much of this binary posting specification deals with the MIME Content-Type header.
+		 The goal is for clients to be able to obtain all necessary metadata by examining just
+		 one header in the message.</p>
+		<p>Current practice is to use the Subject header to convey metadata about the file
+		 contained in the message.  Various formats are used, and user-agents are left to
+		 parse them with no real specification, resulting in ugly and imprecise code.  yEnc
+		 attempts to address this problem with a more detailed specification of the format.</p>
+		<p>However, the use of the Subject line is essentially a hack, used because it's
+		 there, and because clients generally download the overview information upon
+		 entering a newsgroup, and the overview includes the Subject line.  The Subject
+		 line is not well-suited for this purpose.  It is intended as free-form text for
+		 human consumption, not as a structured and machine-parsed field.  This specification
+		 eventually will free up the Subject line to be a Subject line by placing the
+		 metadata elsewhere.</p>
+		<p>When a newsreading client enters a group, it typically downloads the overview for
+		 that group. In a binary group, especially a multipart binary group, much or most of
+		 this data is redundant or otherwise unnecessary. For example, if someone has posted
+		 a file in 100 segments, you are downloading redundant information such as the From and
+		 Date headers 100 times. The References are generally not used at all, and the Subject
+		 (if it didn't contain the necessary metadata) is redundant as well.  Xref need not be
+		 used unless and until the user marks the message as read, and only if he wants his
+		 client to chase crossposts. Since many binary groups have <em>enormous</em> overview
+		 files, it is desirable to free the client from needing to do this, resulting in a
+		 savings in both time and bandwidth.  But even with single-part binaries, such as images,
+		 a well-defined method of specifying metadata is desirable.</p>
+		<p>This specification is fairly basic, and much of it is restating things from the MIME
+		 specification.  It is intended that it can serve as a starting point for programmers
+		 to use for implementing MIME binary posting and downloading in a newsreader (along with
+		 reading the appropriate RFCs, of course).  In addition, it serves as a base specification
+		 which can be extended for other purposes, for example to support multipart binaries.</p>
+	</div>
+
+	<div class="body">
+		<h2>Headers used</h2>
+		<p>As an implementation guideline, the headers which should be used in binary posts
+		 are specified below, with references to the applicable RFCs where appropriate. In
+		 addition, we add a couple of things to Content-Type, which is almost certain to be
+		 the most controversial part of this proposal.</p>
+	</div>
+
+	<div class="body">
+		<h3>Content-Type</h3>
+		<p>The basic MIME Content-Type header, as could be found in use right now, looks like these examples:</p>
+	  <p><samp>Content-Type: image/jpeg</samp></p>
+	  <p><samp>Content-Type: text/plain; charset=iso-8859-1</samp></p>
+	  <p>This defines the type of file contained within the MIME entity, with optional additional
+	   metadata given as parameters (the &quot;charset&quot; parameter in the above example).
+	   The goal of this specification is to add more metadata to this header with additional
+	   parameters.  For basic single-part binaries, the number of new parameters will be small,
+	   but Content-Type should still be used to maintain consistency for clients with the
+	   specification for multipart binaries, where we will be defining more metadata parameters.</p>
+	  <p>[Because this document adds additional parameters to existing content types, and the
+	   procedure for doing this is not well-documented in the MIME RFCs (that I can find), I
+	   would appreciate feedback on how best to do this.  Ie, should they begin with an x- prefix
+	   until some sort of standardization is achieved?  And, because we are basically overloading
+	   Content-Type by adding non-type-specific parameters, will it break anything? See below.]</p>
+	  <p>The three additional parameters are defined below).</p>
+	  <dl>
+	  	<dt><strong>name</strong></dt>
+	  	<dd>The <strong>name</strong> parameter specifies the filename of the attachment. This parameter has been deprecated in MIME in favor of placing the filename in the Content-Disposition header (defined in <a href="http://www.faqs.org/rfcs/rfc2183.html">RFC 2183</a>). I am suggesting un-deprecating it for this purpose, so that clients need only examine one header to obtain the necessary metadata. This parameter is already recognized by many implementations.</dd>
+	  	<dt><strong>md5</strong></dt>
+	  	<dd>The <strong>md5</strong> parameter contains an MD5 checksum of the file contained within
+	  	 the entity. The checksum is calculated on the raw (unencoded) data. The value of this parameter
+	  	 will be identical to the value of the Content-MD5 header (defined in
+	  	 <a href="http://www.faqs.org/rfcs/rfc1864.html">RFC 1864</a>), which may also be present. The
+	  	 checksum can be used by implementations to detect corrupted messages, and may also be used to
+	  	 determine whether the user already has the file even if the poster has changed the filename
+	  	 (a common complaint in some Usenet communities). It is included (redundantly) in the
+	  	 Content-Type header so the client can obtain it without needing to examine another header.</dd>
+	  	<dt><strong>length</strong></dt>
+	  	<dd>The <strong>length</strong> parameter contains the size in bytes of the unencoded file.
+	  	 It exists so that a client can determine how large the file will be, without needing full
+	  	 overview information.  In addition, it differs from the Bytes field in the overview in that
+	  	 it specifies the size only of the file, and after decoding.  Some current implementations
+	  	 actually use the Lines header to display the size of a message to the user, which has never
+	  	 made any sense at all to me because that tells us very little about the actual size of the
+	  	 message.  (It is actually an artifact from text newsgroups, where line count has actual
+	  	 meaning to a user in terms of the size of a post.)  This parameter is optional.</dd>
+	  </dl>
+	  <p>The first two above parameters are duplicates of the filename parameter of the Content-Disposition
+	   header, and of the Content-MD5 header, respectively. The purpose for the duplication is so that
+	   clients don't need to retrieve three headers in order to figure out what the user actually wants
+	   to download, and so that server implementations need not optimize for retrieval of many extra
+	   headers.  The information is in fact redundant, but the advantage of having it all in the
+	   single header outweighs that, in my opinion.</p>
+	  <p>The name parameter is already in widespread use, and thus should not cause any problems with
+	   existing software.  However, the other two are new.  This is the most dubious part of this
+	   proposal, and I am in need of serious feedback on whether this will break anything.  I feel
+	   that it is important for all the necessary metadata to be in one header, which is why I want
+	   to go forward with this in spite of the somewhat less-than-ideal method used.</p>
+	</div>
+
+	<div class="body">
+		<h3>Content-MD5</h3>
+		<p>The Content-MD5 header is described in <a href="http://www.faqs.org/rfcs/rfc1864.html">RFC 1864</a>.
+		 Although this header has been defined for some time, its use has not been widespread. However,
+		 it can be used to detect corrupt messages, and to detect duplicate files even when the name has
+		 been changed.  Because identical files will have identical checksums, it can be used to detect
+		 two posts containing the same file under different names.</p>
+		<p>Note that the checksum applies to the original file, before any decoding, and thus should
+	   clients attempting to verify using it should decode the file first, calculate the MD5 of the
+	   decoded data, and compare that result with the value of this header.  This also has the result
+	   that the checksum will remain useful even if the file has been re-encoded into base64 or another
+	   transfer encoding by a relaying agent.</p>
+ 		<p>When a client is attempting to verify the integrity of a decoded file, if the checksum is present
+ 		 in both the Content-MD5 header and in the md5 parameter of the Content-Type header, the Content-MD5
+ 		 header should take priority.</p>
+ 	</div>
+
+	<div class="body">
+		<h3>Content-Description</h3>
+ 		<p>The Content-Description header is described in <a href="http://www.faqs.org/rfcs/rfc2045.html">RFC 2045</a>, section 8. It is a free-form text field intended to describe the content of the entity. It can be used to provide a description of the file being posted, and can be displayed as such by the client.  In particular, a user might examine a list of files, and click on one to obtain more information prior to deciding whether to actually download the full post.  Content-Description can be used in that case to provide the user with the information he needs to make the decision.</p>
+ 	</div>
+
+	<div class="body">
+		<h3>Content-Transfer-Encoding</h3>
+		<p>This header specifies the encoding method used on the file. It is described in
+		 <a href="http://www.faqs.org/rfcs/rfc2045.html">RFC 2045</a>, section 6. Currently, when
+		 posting binary files, the content of this field will most often be <strong>base64</strong>.
+		 However, if one of the new, smaller encoding schemes described on my transfer-encoding
+		 <a href="encoding.html">page</a> is used, this is where that will be specified.</p>
+	</div>
+
+	<div class="body">
+		<h3>Content-Disposition</h3>
+		<p>The Content-Disposition header is described in <a href="http://www.faqs.org/rfcs/rfc2183.html">RFC 2183</a>.
+		 In general, there are two values which commonly appear for this header: <strong>inline</strong> and <strong>attachment</strong>.
+		 A value of inline means that the file is intended to be viewed directly within the message,
+		 while a value of attachment means it is intended to be offered for the user to save to disk
+		 (though clients do often also display attachments inline where they feel it is appropriate).</p>
+		<p>The <strong>filename</strong> parameter specifies the filename of the attachment.  If this
+		 is present, an implementation can suggest it as a filename under which to save the attachment.
+		 However, software should <em>not</em> blindly use the value of this parameter when saving to
+		 disk!  It should be examined first to ensure that it is suitable for the target system, and
+		 that it presents no security risks.  In particular, any path information should be removed
+		 and ignored.</p>
+		<p>With the suggestion that the filename be present in the Content-Type header, if it is
+		 specified in both places with different values, the value in Content-Disposition should take
+		 priority.</p>
+	</div>
+
+	<div class="body">
+		<h3>MIME-Version</h3>
+		<p>This header simply contains the value 1.0, and must be present.</p>
+	</div>
+
+	<div class="body">
+		<h2>Scanning newsgroups</h2>
+		<p>At this point you may be wondering what this gains us.  Well, in addition to the ability
+		 to use new transfer-encodings, we get machine-readable metadata for binary posts.</p>
+		<p>As mentioned previously, when a client enters a newsgroup, it typically downloads the full
+		 overview for the group.  This can be a very large amount of data and can take a long time.
+		 In a binary group, a user may only be interested in seeing what is available in the group,
+		 and may not care about anything else unless something looks interesting.</p>
+		<p>With posts in this format, a client could alternatively scan a newsgroup as follows.  First,
+		 issue the GROUP command as normal.  But, instead of doing an XOVER on all the messages (or
+		 all the unread messages, if the client caches overviews), it could do an XHDR to grab only
+		 the Content-Type headers for the new messages.  At this point, in a perfect Usenet where
+		 everyone is posting in MIME according to this specification, the client how has all the
+		 information it needs to present the user with a list of files available in the group.</p>
+		<p>Now, the user could, for example, tell the client he wants more information about a
+		 certain file. At that point, the client could use XOVER or even HEAD to grab all the
+		 available information about the file, including the identity of the poster (the From
+		 header), the Content-Description, etc. In the case of a multipart post, the client
+		 need only do this on one message in the series.</p>
+		<p>This can drastically reduce the amount of data that must be downloaded, and can make
+		 the process of scanning newsgroups for items of interest much faster.  As with much of
+		 this specification, this becomes far more significant when we extend it to support
+		 multipart binaries.</p>
+		<p>In this imperfect Usenet, in particular during the transition period, clients could
+		 still reduce the amount of data downloaded by also using XHDR to grab the Subject lines
+		 to be parsed the old-fashioned way.  In the beginning, when few posts are being made
+		 according to this specification, clients might choose to continue to simply use the
+		 old method until the advantage becomes greater.</p>
+	</div>
+
+	<div class="body">
+		<h2>Multipart MIME entities</h2>
+		<p>Files may sometimes be posted as a MIME multipart message (here, I'm not talking about
+		 multipart posts consisiting of several articles, but rather a single post with a root
+		 Content-Type of <strong>multipart/mixed</strong>.  Such a post might contain two leaf
+		 entities, the first being a text/plain part containing a description or other information,
+		 and the second being the actual file which was the purpose of the post.  In this case,
+		 the metadata about the file is currently &quot;hidden&quot; within the body of the message, and
+		 using the current methods, cannot be obtained by the client from just the headers.</p>
+	  <p>In a case where a single attached file is the main purpose of the post, and the other parts are incidental (a description, a signature, etc), it is desirable to have a way for a client to obtain the metadata for this file using only the message headers. When posting such a message, we can use <strong>multipart/related</strong> (defined in <a href="http://www.faqs.org/rfcs/rfc2387.html">RFC 2387</a>) rather than multipart/mixed.</p>
+	  <p>In a post of this type, the &quot;root&quot; object (as defined for multipart/related)
+	   is the entity which is the main purpose of the post.  In the case of a post containing
+	   an image part, and a text part with a short description of the image, the image part would
+	   be the root entity.</p>
+	  <p>A posting client would create the message as multipart/related (rather than multipart/mixed).
+	   Each entity within the message would have a Content-ID.  The parameters of the Content-Type
+	   header would be created as follows.</p>
+		<dl>
+			<dt><strong>start</strong></dt>
+			<dd>This parameter contains the Content-ID of the primary attachment of the post.  A reading
+			 client could use this information when deciding how to present the message to the user.</dd>
+			<dt><strong>type</strong></dt>
+			<dd>Specifies the MIME type of the primary (root) attachment.</dd>
+			<dt><strong>start-info</strong></dt>
+			<dd>Used to specify the MD5 checksum of the primary (root) attachment.  If specified,
+			 the value should be in the format md5:checksum (where &quot;checksum&quot; is the checksum
+			 in hex, same as for Content-MD5).</dd>
+		</dl>
+		<p>No means of including the filename in the header is specified.  This is unfortunate, and
+		 could be changed in a future revision.</p>
+	</div>
+
+	<div class="body">
+		<h2>The character set problem</h2>
+		<p>Unfortunately, this method of centering on the Content-Type header does create one unfortunate
+		 drawback: a character-set problem. With the filename specified in the header, we are functionally
+		 limited to us-ascii characters in the filenames in order to ensure consistent operation. There
+		 is no way to specify the character set of message headers, and the encoding described in
+		 <a href="http://www.faqs.org/rfcs/rfc2047.html">RFC 2047</a> cannot be used in this context.</p>
+		<p>This problem will solve itself before very long.  The next version of the Usenet article
+		 format standard will specify that headers use UTF-8.  Until that happens, it looks like
+		 we will be stuck with the same character-set problems that we have had all along.</p>
+		<p>The only current way to specify filenames with non-ascii characters in a reliable
+		 manner would be to have them in a text/plain entity within the message body, using MIME
+		 to define the character set of the entity.  This is clearly even worse than the present
+		 character set problem.  However, this is hardly a new problem, so I don't consider the
+		 failure to solve it a show-stopper.  (In particular, even if the current Subject header
+		 hacks were to be continued, my reading of the spec is that 2047 encoding would not be
+		 appropriate in that context either, so I see no loss in even potential functionality.)</p>
+		<p><a href="http://www.faqs.org/rfcs/rfc2231.html">RFC 2231</a> specifies a means of
+		 encoding non-ascii characters into structured MIME headers. While this would appear to
+		 be the right solution to the problem, I am only aware of a few newsreaders which
+		 support it.</p>
+	</div>
+
+ 	<div class="body">
+ 		<h2>What we have</h2>
+ 		<p>What the above leaves us with is a simple specification which can be extended for a variety
+ 	 	 of purposes, including posting multipart binaries and media-specific enhancements.</p>
+ 	</div>
+
+ <div class="footer">
+  <p><small><a href="../../../Exit109/">Posting binaries</a> &nbsp; Updated 7 April 2002 &nbsp;<strong><big>|</big></strong>&nbsp; <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a></small></p>
+ </div>
+
+</body>
+</html>

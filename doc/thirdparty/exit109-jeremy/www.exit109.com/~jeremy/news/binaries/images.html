@@ -1,0 +1,131 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+
+<head>
+	<meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+	<title>Posting Images</title>
+  <link href="main.css" rel="stylesheet">
+</head>
+
+<body bgcolor="#ffffff" text="#000000">
+	<h1><img src="images-big.gif" alt="Posting Images" border="0" width="184" height="78"></h1>
+	<div class="body">
+		<p>This page presents a specific example of extending the base
+		 <a href="posting.html">binary-posting specification</a> to add new features.
+		 Similar extensions could be created for other types of media or other kinds
+		 of feature additions.</p>
+		<p>Here, I specify a way of posting pictures to Usenet which allows clients
+		 to create thumbnail displays of the pictures available in a newsgroup without
+		 needing to download the full pictures first (similar to the functionality you
+		 would get on the kind of web-based thumbnail display featured by services like
+		 Easynews).  It also allows users to determine whether they already have a given
+		 picture (even under a different filename).  In many picture newsgroups, reposting
+		 images under different filenames is a common complaint.</p>
+	</div>
+
+	<div class="body">
+		<h2>Thumbnail posts</h2>
+	 	<p>Currently, thumbnail posts are generally done by simply creating an image of
+	   thumbnails and posting it along with a series of pictures.  The thumbnail image
+	   shows the filenames of the pictures, so a user can look through the Subject lines
+	   to find the posts containing the pictures he wants.  Surely there must be a better
+	   way.</p>
+	  <p>What we want from thumbnail posts is twofold.  First, a way for a client to
+	   automatically determine that a post contains thumbnails.  And second, a way to
+	   connect each thumbnail to the original, full-sized picture it represents.</p>
+	  <p>Both goals can be acheived with MIME.  We define a new MIME content-type,
+	   <strong>multipart/thumbnails</strong>.  This type is similar to multipart/related.</p>
+	  <p>The thumbnail post may contain an (optional) text part including descriptive
+	   text about the picture series it represents.  Then, it contains a number
+	   of image parts (usually jpeg, but this is not required), one for each thumbnail.</p>
+	  <p>(Existing MIME-compliant software should treat an unknown multipart type as
+	   multipart/mixed, and should therefore still be somewhat usable. A post of this
+	   type will be of little utility to a client which does not understand it, but such
+	   a client would, at the least, still be able to present the text description to
+	   the user, and may even display the thumbnail images.)</p>
+	  <p>The following parameter is defined for multipart/thumbnails.</p>
+	  <dl>
+	  	<dt><strong>start</strong></dt>
+	  	<dd>Contains the Content-ID of the entity within the message which provides
+	  	 a description of the picture series, if one is included.  This entity can be
+	  	 a text entity, or a multipart/alternative entity including text parts.
+	  	 (This parameter works like it does in multipart/related.)</dd>
+	  </dl>
+	  <p>If the description is in HTML, or an HTML part within a multipart/alternative
+		 part, it can refer to the thumbnail parts in the same manner as with
+		 multipart/related, and a client can choose to render it as the thumbnail display
+		 if it wishes to do so.  However, it need not do so, in particular if displaying
+		 thumbnails for multiple sets of images at once.</p>
+	  <p>Each image entity within the multipart/thumbnails message will have several
+	   important pieces of information in its header.</p>
+	  <dl>
+	  	<dt><strong>Content-Description</strong></dt>
+	  	<dd>The Content-Description header contains descriptive text about the image,
+	  	 which can be displayed to the user as a caption. If HTML is used in the
+	  	 description part, this should still be present for use when a client does
+	  	 not choose to render the display that way (which it might do if presenting
+	  	 a display of multiple sets of thumbnails) if a caption for the thumbnail
+	  	 is desired.  This parameter is, however, optional.</dd>
+	  	<dt><strong>Original-File-Message-ID</strong></dt>
+	  	<dd>A header containing the message-id of the article containing the full-sized
+	  	 version of the image, to be used by a client to retrieve the post.  If the image
+	  	 has been posted as a multipart post (more than one post), this should specify
+	  	 the message-id of the first part in the series.</dd>
+	  	<dt><strong>Original-File-MD5</strong></dt>
+	  	<dd>A header containing the MD5 checksum of the original (full-sized) image.  This
+	  	 can be used to determine whether the user already has the image (even under a
+	  	 different name), or to detect alteration of the original image.</dd>
+	  	<dt><strong>Original-Filename</strong></dt>
+	  	<dd>Contains the filename of the original (full-sized) image.  This should be the
+	  	 same as the filename specified in the full post. If the thumbnail has a filename
+	  	 specified in a Content-Disposition header, and that filename is the same as the
+	  	 name of the original picture, then this is optional. Posting clients are strongly
+	  	 encouraged to provide a filename, but it is not required.</dd>
+	  </dl>
+	  <p>Given the above, a client can find all the thumbnail posts in a group.  It can
+	   then display a screen of thumbnail images, including filenames and captions, along
+	   with text descriptions for any sets which include one in the thumbnail post.  A
+	   user could then click on one of the images to download the corresponding full
+	   post, since the client would have the message-id of that post.</p>
+		<p>A client could, therefore, show thumbnails of an entire picture group (assuming
+		 thumbnail posts are used in the group) <em>without</em> needing to download the
+		 group's overviews (headers) first.</p>
+	</div>
+
+	<div class="body">
+		<h2>Image posts</h2>
+		<p>For the full image posts, it is desirable to have a &quot;link&quot; to the
+		 corresponding thumbnail post, so a user who sees one of the pictures first can
+		 find the thumbnails for the set it goes with.  In this case, it is not of great
+		 importance where the information is placed, so we can simply add a header to the
+		 post for it.  So, a post of an image which has a corresponding thumbnail post
+		 can have an <strong>X-Thumbnail-Post</strong> header containing the message-id
+		 of the thumbnail post.  Implementations must recognize this also as Thumbnail-Post
+		 (no X- prefix), which may be the specified form in the future, but for now, it
+		 must be generated with the prefix.</p>
+		<p>Note that this creates two posts which refer to each other by message-id.  This
+		 will require that the client creates the message-ids for the posts, because that is
+		 the only way to know ahead of time what the ids will be.  My suggestion, if a client
+		 wishes to use X-Thumbnail-Post, would be to post the full images first, having
+		 decided on a message-id to use for the thumbnail post.  While posting the images,
+		 the client could build a list of message-ids corresponding to each image.  Then,
+		 it could create the thumbnail post and send it.  This procedure would be easiest
+		 even if the client does not wish to refer back to the thumbnail post from the
+		 full posts.</p>
+		<p>A very small number of servers do not allow client-supplied message-ids.  I am
+		 aware of two such servers, and at least one of them does not even inform the client
+		 of the message-id it has decided to use for the post (it just silently changes a
+		 client-supplied id).  This is unfortunate behavior which servers should not engage
+		 in (for reasons which go way beyond this specification), but unless they change,
+		 those servers would simply be considered unsuitable for posting of images.  Even
+		 more unfortunately, there is no way for a client to automatically know that a server
+		 is going to discard client-supplied ids.</p>
+	</div>
+
+ <div class="footer">
+  <p><small><a href="../../../Exit109/">Posting binaries</a> &nbsp; Created 2 April 2002 &nbsp;<strong><big>|</big></strong>&nbsp; <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a></small></p>
+ </div>
+
+</body>
+</html>

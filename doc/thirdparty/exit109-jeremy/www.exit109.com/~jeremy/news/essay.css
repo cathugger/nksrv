@@ -1,0 +1,42 @@
+BODY { background: #ffffff; color: #000000; }
+H1 { font: 45px/1 "minion pro", times, serif; color: #555599 }
+H2 { font-family: "myriad pro", "myriad web", helvetica, sans-serif;
+  margin: 1.1em 0 0.3em 1em }
+
+A:link { color: #0000dd }
+A:active { color: #dd0000 }
+A:visited { color: #0000bb }
+
+.body A { text-decoration: none; border-width: 0 }
+.body A:link { border-bottom: 1px dotted #0000ff; color: #000044 }
+.body A:visited { border-bottom: 1px dotted #0000ff; color: #000033 }
+.body A:hover { border-bottom: 1px solid #0000ff; color: #0000aa }
+
+A.groupname { text-decoration: none; border-width: 0 }
+A.groupname:link { border-bottom: 1px dotted #00aa00; color: #003300 }
+A.groupname:visited { border-bottom: 1px dotted #00aa00; color: #003300 }
+A.groupname:hover { border-bottom: 1px solid #00ff00; color: #004400 }
+
+DIV.byline { clear: both; margin-right: 5% }
+.byline P { font-family: "myriad pro", "myriad web", helvetica, sans-serif;
+  text-align: right; font-weight: bold }
+
+DIV.body { margin-left: 3em; margin-right: 12% }
+.body P { line-height: 1.1; margin-top: 0.4em }
+
+.intro P.first:first-letter { font-size: 400%; width: 1em }
+.intro P:first-line { line-height: 1.1em }
+DIV.intro { margin-top: -1em }
+
+DIV.rimg { float: right; margin-left: 1em }
+DIV.limg { float: left; margin-right: 1em }
+
+DIV.outro { margin: 2em 1em 0 1em; font-family: "myriad pro", "myriad web", helvetica, sans-serif }
+
+BLOCKQUOTE { border-left: 1px dashed #005500; margin-left: 2em;
+ padding-left: 1em; font-size: small }
+
+DIV.footer { clear: both; margin-top: 1em; font-family: "myriad pro", "myriad web", helvetica, sans-serif }
+.footer P { text-align: right }
+
+.hide { display: none }

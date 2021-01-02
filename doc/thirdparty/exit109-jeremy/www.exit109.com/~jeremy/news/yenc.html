@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+ <title>Why yEnc is bad for Usenet</title>
+ <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+ <meta name="description" content="An essay about why the yEnc encoding scheme is bad for Usenet in the long-term.">
+ <meta name="keywords" content="yEnc, usenet, binary encoding, usenet binaries,
+  mime, uuencode, uuencoding, base64, transfer encoding, yEnc considered harmful">
+ <link rel="stylesheet" href="essay.css">
+ <style type="text/css"><!--
+  .footer DIV.footimg { text-align: left; float: left }
+  .footer DIV.foottext { margin-top: 2em; margin-right: 2em; text-align: right }
+ --></style>
+</head>
+
+<body text="#000000" bgcolor="#ffffff" link="#0000dd" vlink="#0000bb" alink="#dd0000">
+
+<h1><img src="yenc-bad.gif" height="112" width="363" alt="Why yEnc is bad for Usenet"></h1>
+
+<div class="byline">
+ <p><small>by <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a>, 17 March 2002, updated 22 September 2002</small></p>
+</div>
+
+<div class="body">
+<div class="intro">
+ <p class="first">In the months since I wrote this essay, it has become largely moot.
+  yEnc has taken over as the main encoding scheme used in binary Usenet groups.  A lot
+  of people said, &#8220;Come up with something better, then,&#8221; and I
+  <a href="binaries/">did just that</a>, even figuring out how to do it within the
+  existing MIME spec.  And, as I predicted, despite hundreds of people telling me I
+  was wrong, the predominant response was, &#8220;Why should we care? yEnc is
+  already here.&#8221;</p>
+
+ <p>I was surprised by the rather extraordinary popularity of this essay.  I wrote
+  it thinking my audience was a few news admins and some regulars in
+  <a class="groupname" href="news:alt.binaries.news-server-comparison">alt.binaries.news-server-comparison</a>.
+  It ended up <a href="http://slashdot.org/article.pl?sid=02/03/23/2154235&mode=thread&tid=95">on Slashdot</a>,
+  the URL was posted to Usenet probably thousands of times (and still is being posted),
+  and I received more email than I could hope to reply to.  If I didn't reply to
+  yours, don't be offended, you're in good company of several thousand others.  I
+  did, however, read them all, and will continue to do so.</p>
+
+ <p>Anyway, I still think yEnc was the wrong way to do it, but at this point, this
+  essay serves mostly historical purposes.  There's nothing to do about it now.
+  My thanks to all the people who supported me.  Very surprisingly, the overwhelming
+  majority of end-users, the non-power-users, the weekend downloaders, the modem
+  users, were totally against yEnc.  Almost every programmer of news software I heard
+  from agreed with me strongly.  But, as always, the loudest voices won, and Usenet
+  goes on.</p>
+
+ <p>News administrator Curt Welch posted an excellent message about what's wrong
+  with yEnc, which I have <a href="yenc-cw.html">posted here</a> with permission.
+  He says some things better than I have.</p>
+</div>
+
+<hr width="75%">
+
+<div class="section">
+ <p>The introduction of the <a href="http://www.yenc.org">yEnc</a> encoding scheme
+  has led to some &#8220;interesting dialogue&#8221; on Usenet.  Unfortunately,
+  with the discussions being fragmented in many newsgroups, the people who will
+  ultimately determine the acceptance (or non-acceptance) of yEnc -- the end-users --
+  are largely unaware of the issues and problems raised by this situation.  yEnc
+  has been passed off as a solution, but the problem was never really defined.
+  I have created this page in the hope that the other side of this issue might be
+  understood.</p>
+
+ <p>I have actually seen comments on Usenet, about yEnc, to the effect that &#8220;if
+  they're writing the code, they must know what they're doing.&#8221;  As someone
+  who writes code, I appreciate the vote of confidence, but knowing how to program
+  isn't the same thing as knowing what you're doing.  You shouldn't take <em>my</em>
+  word for it either.  Read what I have to say and decide for yourself.  I do this
+  for a living; I am a news administrator for one of the largest sites on Usenet.
+  That doesn't mean I'm always right, but I think it <em>does</em> at least mean I
+  know what I'm talking about.</p>
+</div>
+
+<div class="section">
+ <h2>It wasn't a bad idea</h2>
+
+ <p>The main premise behind yEnc is lower overhead for encoded binaries.  The usual
+  methods of encoding a binary for Usenet transmission, uuencode and base64, both
+  result in more than a 33% increase in file size after encoding.  yEnc, on the other
+  hand, results in only a tiny overhead, meaning the posts are smaller.</p>
+
+ <p>I'm not here trying to tell you that was a bad idea.  I think it's a
+  good idea.  It doesn't make sense to use inefficient encoding methods on Usenet,
+  because Usenet is very nearly 8-bit clean.</p>
+
+ <p>In fact, it was largely my idea.  Some time ago, a discussion in the newsgroup
+  alt.binaries.news-server-comparison led me to the idea of a low-overhead binary
+  encoding system.  I wrote some code and made some test posts using an encoding
+  system very much like the one used in yEnc.  It worked.  I didn't go out and
+  get people to start using it right away, though, for reasons which will become
+  clear shortly.  And I now regret having done it in public, because the yEnc
+  implementor, Jürgen Helbing, took what I did and turned it into yEnc.</p>
+
+ <p>Please note, I am <em>not</em> accusing him of stealing anything.  I had no
+  intention of using my idea for any proprietary purpose; in fact, I was and
+  continue to be happy for it to be used freely, and I am probably not even the
+  first one to have thought of it (there were mentions of something similar on
+  the MIME mailing list a number of years ago, though it was never pursued).
+  My objection to yEnc is because it was done poorly, not because it was done by
+  Jürgen, and I certainly have nothing against him.  Had he done it right, I
+  would be thanking him right now.</p>
+ </div>
+
+ <div class="section">
+  <div class="limg">
+   <img src="no-yenc.gif" height="156" width="152">
+  </div>
+
+ <h2>What's wrong with it?</h2>
+
+ <p>yEnc creates significantly smaller encoded binaries than either uuencode,
+  base64, or binhex.  That means faster downloads and faster uploads.  It means people
+  using metered Usenet service can download more for the same amount of money.  These
+  are good things, of course.  So what's the problem?</p>
+
+ <p>The biggest technical problems with yEnc can be boiled down to this: it preserves
+  everything that is wrong with uuencoding, by re-inventing things which have already
+  been invented better.  It is the result of the logical fallacy, &#8220;We must do
+  something; this is something; therefore, we must do this.&#8221;</p>
+
+ <p>Uuencoding relies on searching for &#8220;magic strings&#8221; in the message body
+  of a Usenet post.  This is unreliable, error-prone, and has already led to problems
+  with certain client software.  It is absolutely the wrong way to go about tagging
+  message content, because what you really want is something reliably machine-readable
+  and precisely specified.  However, yEnc also relies upon magic strings in the body.
+  There was an excuse for doing it this way when uuencode was invented, but there is
+  none now, because reliable, machine-readable content tagging <em>has already been
+  invented.</em>  It's called MIME, and it works.</p>
+
+ <p>yEnc also offers a way to detect corrupted files or corrupted parts of a
+  multi-part post.  That's fine, but that, too, had already been invented and
+  specified.  It's called Content-MD5.</p>
+
+ <p>With a uuencoded multi-part post, client software typically uses the Subject
+  line of the post to attempt to determine the filename, and to tell where the
+  segment falls in the sequence.  This is obviously a terrible way to do it.
+  Clients must parse the Subject line for commonly-used conventions, and hope it
+  works.  Sure, it works out most of the time, but it is imprecise and error prone
+  (especially when spaces are used in filenames), and offers no actual reliable
+  means of reassembling a multipart, in particular if parts need to be reposted.
+  How is the software to know that this message, posted days later by a different
+  person, actually contains part 15 of that 30-part post from two days ago?  It
+  can't.  It's trial and error.</p>
+
+ <p>yEnc continues to use the Subject line for this.  It relies upon &#8220;yEnc&#8221;
+  being in the Subject to find messages which contain a yEnc binaries, and the
+  filename and part indication must be present.  The structure is a bit more specified,
+  but it is still a kludgy hack.</p>
+
+ <p>And this is also an already-solved problem.  A way to identify what a message
+  contains, and to specify the filename and other attributes such as sequence of a
+  multi-part, has already been developed.  But yEnc ignores all of that, and instead
+  uses the Subject line method.</p>
+
+ <p>The filename specification is horribly imprecise.  In its current
+  form, it essentially is restricted to us-ascii characters in order to remain
+  at all reliable.  It <em>claims</em> that non-ascii characters may be used,
+  but it recommends that the filename be placed in the Subject line of the
+  message.  When non-ascii characters are used in message headers, software
+  currently just has to guess what they mean.  Jürgen's filename specification
+  cannot even be used to reliably reproduce <em>his own name.</em>  This issue
+  may not be immediately obvious, because people use high-bit characters in
+  message headers frequently and it seems to work, but the fact is that, when
+  it works, it's mere coincidence.</p>
+
+ <p>Beyond that, though, there are other issues with filenames.  The syntax specified
+  for the Subject line of multipart binaries puts the filename into quotes, but
+  gives no method to specify a filename which happens to <em>contain</em> quotes,
+  which is not uncommon.  The specification seems to rely on the principle of
+  &#8220;it'll probably just work most of the time.&#8221;  I don't think that's a
+  very good premise upon which to base a standard.</p>
+
+ <p>And the bandwidth savings?  That's an illusion.  A smaller encoding scheme
+  gives us exactly one benefit: faster downloads and uploads for the users.  It is
+  <em>not</em> going to make Usenet smaller.  It is <em>not</em> going to allow
+  servers to increase retention.  Do you really think people aren't going to post
+  more, if they can do it faster?  Of course they are.  They're always going to
+  post more, with or without yEnc.  And, with yEnc, they are even more likely to
+  post more, because posting the same amount of material will take a shorter time,
+  and because people who can't use yEnc will ask for reposts in uuencode.</p>
+
+ <p>The growth of Usenet volume is more or less exponential, and has been for quite
+  some time.  So let's just say I'm wrong about people, and they really <em>will</em>
+  post less.  Let's say that, overnight, <em>all</em> of the binaries on Usenet
+  start getting posted in yEnc, and people post exactly the same amount they would
+  have posted with uuencode, resulting in less total volume.  All you have done, in
+  that far-fetched scenario, is create a one-time volume savings.  Usenet will
+  continue to grow at the same rate it has been growing, and after a few months, it
+  will be just as large as it was before.  And it will get bigger from there.  So
+  all you have done is moved the graph back by a few months.  Big deal.</p>
+
+ <p>So what's the problem we're trying to solve, again?</p>
+</div>
+
+<div class="section">
+ <h2>So what?</h2>
+
+ <p>At this point, you may be thinking, so what?  So what if it's not perfect?  We
+  can use it for now, and when something better comes along, we can switch to that.
+  But therein lies the problem.</p>
+
+ <p>Programmers of Usenet software now have to implement yEnc in their code.  Not
+  just once, either.  The specification is, as I write this, up to version 1.3, and
+  there will be future revisions.  So everyone has to go back and update their code
+  every time the spec is updated.  And they don't just have to change it, they have
+  to continue to support the older spec as well, because updates to a new version
+  won't happen overnight.  And because the spec is imprecise, programmers are
+  forced to create and maintain even more ugly code in their software, when
+  they could be spending time making more worthwhile improvements.  There is a
+  good reason for new standards to be discussed at length and incorporate feedback
+  from experts -- so that you don't have to keep going back and fixing it.  And,
+  even when something better comes along, all that yEnc code can't just go away;
+  it will still be there, and still have to be maintained.  People won't stop
+  using yEnc overnight.  It would take <em>years</em> to become uncommon.</p>
+
+ <p>Meanwhile, the transition creates confusion for the users.  People don't know
+  what yEnc is, and they have to re-learn how to download binaries.  Users of many
+  newsreaders are forced (for a time) to manually decode posts using external
+  software.  But, surprising as it may sound, this is not actually one of my
+  arguments against yEnc.  Well, it is, in a way, but not in the way you may be
+  thinking.</p>
+
+ <p>A transition period to a new method of binary posting is going to cause confusion
+  and some amount of difficulty.  There's no way around it.  It's just something you
+  have to live with.  No big deal.</p>
+
+ <p>But, the problem here is that we are undergoing too much transition period for too
+  little benefit.  How many times are the programmers going to go back in and update
+  their yEnc code before they get tired of it?  How many times are the users going
+  to deal with the confusion before they get tired of it?  What is going to happen
+  if and when someone comes up with a <em>real</em> standard to improve the posting
+  of binaries on Usenet (one which will almost certainly be more difficult to
+  implement)?</p>
+
+ <p>Is everyone just going to happily switch again?  Or are they going to say,
+  hey, I just figured out this yEnc thing a little while ago, and now you're making
+  me go through this crap again, and for what?  Why can't you just leave it alone?</p>
+
+ <p>Encoding isn't going to get a whole lot smaller than yEnc.  Smaller encoding
+  is the easy part.  The problem here isn't that we need a smaller encoding scheme,
+  the problem is that we need a <em>better way to post binaries on Usenet.</em></p>
+
+ <p>But the &#8220;sexy&#8221; feature for the users is the faster downloads, and
+  they will already have that.  A lot of the technical stuff in a &#8220;real&#8221;
+  standard won't mean a whole lot to the users.  They will ask, hey, the last
+  time we went through this crap, we got 30% faster downloads.  Are you doing
+  that for us again?  No?  Get lost, then, we don't care.  The programmers will
+  say, hey, you want me to add something <em>else</em> to my code?  Wasn't it
+  enough the last time?</p>
+
+ <p>Is everybody going to happily go through another, equally difficult period
+  of transition?</p>
+
+ <p>So, basically, we are going through all of this for a &#8220;standard&#8221;
+  which probably has a useful life of only a few years, but will require support
+  for <em>far</em> longer than that, and make the next change more difficult than
+  it needed to be.  This is not the way to go about introducing a standard.</p>
+</div>
+
+<div class="section">
+ <div class="rimg">
+  <img src="stop.gif" height="156" width="317">
+ </div>
+
+ <h2>What's the rush?</h2>
+
+ <p>yEnc was developed and implemented <em>very</em> quickly.  Sure, there was
+  some discussion in news.software.nntp and elsewhere about it, but when people
+  who know what they're talking about pointed out what was wrong with the plan,
+  they were essentially ignored.  When Jürgen found that going through an actual
+  standardization process within MIME would take time, he chose to ignore MIME in
+  favor of getting something out there right away.  He has bragged in Usenet posts
+  about how quickly yEnc has spread.  What was the problem that was so bad that it
+  needed to be solved <em>right now?</em>  What was so broken?  Nothing.  Usenet
+  was working just fine, and people were posting and downloading binaries just fine.
+  Was he more concerned with improving Usenet, or with getting his name on
+  something?</p>
+
+ <p>Now, he seems to be planning to update the spec to include a means of using
+  yEnc with MIME, which is the way everyone has told him it should be done.  But
+  he says he's going to do it within a few weeks!  You can't add something to
+  MIME in a few weeks, and there are good reasons for that.  So, in reality, what
+  he may be planning to do is bypass the standards process and simply publish a
+  specification.  This is <em>very bad.</em>  The problem is that doing yEnc within
+  MIME the way he suggested it will <em>break</em> the current MIME specification, and very likely cause
+  problems with existing software.  You <em>cannot</em> add yEnc to MIME without
+  <em>first</em> having two small changes made in the MIME specs.  Bypassing
+  the standards process would basically sabotage MIME by making it so that coding
+  to the spec will produce software that doesn't work in the real world.</p>
+
+ <p>Why not go through the process of updating MIME?  Because, to him, it will take
+  too long.  I say, <em>what's the rush?</em>  If he has the time to work on this,
+  and the desire to get it done, I think that's wonderful, but doing something which
+  will cause long-term harm is worse than not doing anything at all.</p>
+</div>
+
+<div class="section">
+ <h2>Conclusions</h2>
+
+ <p>I, and others, have repeatedly pointed out what is wrong with yEnc, and we
+  have been ignored.  Unfortunately, it has the big selling point of smaller
+  encoding, so getting users to accept it and to demand support for it from
+  their newsreaders has been remarkably easy, and yEnc has spread across
+  Usenet like a plague.</p>
+
+ <p>If you agree with me, what can you do to help?  If you are the author of a
+  Usenet newsreader, you probably have to implement yEnc at least for decoding,
+  but you can leave out posting support to try to prevent this from spreading
+  any more.  At the very least, if a MIME yEnc specification arrives but bypasses
+  the standards process, please, don't implement it.  If you are a user, you can
+  refuse to post in yEnc.</p>
+
+ <p>If you still don't agree with me, well, thanks for reading this far.  I tried.</p>
+</div>
+
+<hr width="25%">
+
+<div class="outro"><small>
+ <p>If you are interested in a better way to post binaries to Usenet, I have
+  published my <a href="http://www.exit109.com/~jeremy/news/binaries/">initial specification</a>.</p>
+
+ <p>There has been quite a lot of misinformation floating around about yEnc.
+  I've <a href="yencmyths.html">attempted to debunk some of it</a>.</p>
+</small></div>
+</div>
+
+<br>
+<div class="footer">
+ <div class="footimg"><img src="stop-small.gif" height="78" width="159"></div>
+ <div class="foottext"><small>
+  <p>The yEnc page is <a href="http://www.yenc.org/">here</a>.<br>
+  <a href="./">Usenet stuff </a>&nbsp;|&nbsp; <a href="yenc.html">Why yEnc is bad</a></p></small></div>
+</div> 
+
+</body></html>

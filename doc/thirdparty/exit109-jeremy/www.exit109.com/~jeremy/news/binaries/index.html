@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+	<title>A better way to post binaries on Usenet</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<meta name="description" content="Ideas for improving the posting of binary files to Usenet.">
+	<meta name="keywords" content="usenet, binaries, usenet binaries, binary newsgroups, binary groups, alt.binaries, mime, yenc, uuencode, base64, transfer encoding, multipart binaries, posting, mime encoding, file-fragment, application/file-fragment, content-md5, content-type, qplite, qp-lite, quoted-8bit">
+	<link href="main.css" rel="stylesheet">
+ </head>
+
+<body text="#000000" bgcolor="#ffffff" link="#0000ff" vlink="#551a8b" alink="#ff0000">
+
+ <h1><img src="better.gif" alt="" border="0" width="356" height="121"></h1>
+
+ <div class="body">
+  <p>My essay <a href="http://www.exit109.com/%7ejeremy/news/yenc.html">Why yEnc is
+   bad for Usenet</a> raised the idea that what we need is &quot;a better way to post
+   binaries on Usenet.&quot; However, that idea itself raises the question, &quot;what
+   is a better way?&quot; My answer is in these pages.</p>
+ </div>
+
+ <div class="warning">
+  <p>Because of the mess caused by yEnc, I am going to say this right up front:
+   This is a work in progress, <em>not</em> a finished standard.
+   <em><strong>Do not implement these ideas in production software!</strong></em>
+   Whatever standard may emerge is virtually guaranteed <em>not</em> to be
+   exactly what is on this page, so please don't turn all of Usenet into
+   beta-testers like yEnc did.  If you like the ideas presented here, please
+   come to news.software.nntp and join the discussion.  Feel free to write
+   test implementations, but please don't encourage people to use this stuff
+   on Usenet in general at this point in time.</p>
+ </div>
+
+ <div class="body">
+  <p>To define a better way to post binaries, there are three areas we must
+   address.  My goal is to do this entirely within the existing MIME specification,
+   rather than requiring changes to the spec first.  Basing
+   the design upon needed changes to the spec would, at the very least, make this
+   a much longer process, and may doom it to failure.</p>
+  <p>Due to the nature of MIME, we can look at each of the three areas individually.
+   In addition, I have a fourth section, giving a specific example of how the basic
+   ideas can be extended to add media-specific additional features.</p>
+ </div>
+
+ <div class="body">
+  <h2><a href="encoding.html"><img src="transfer.gif" alt="Transfer encoding" border="0" width="174" height="56"></a></h2>
+  <p>The main selling point of yEnc is its <strong>smaller encoding</strong>. The
+   bloat of uuencode and base64 is unnecessary on Usenet, where the channels of
+   transmission are very nearly 8-bit clean. By defining a smaller encoding within
+   MIME, we can take advantage of this, without giving up all the goodies MIME
+   makes possible.</p>
+  <p>To take advantage of existing code and gain full backwards compatibility with existing newsreaders, we can define <a href="encoding.html">yEnc as a MIME transfer-encoding</a>.</p>
+ </div>
+
+ <div class="body">
+  <h2><a href="posting.html"><img src="posting.gif" alt="Binary posting" border="0" width="156" height="56"></a></h2>
+  <p>Binaries (single-part ones, at least) can be <strong>posted using MIME</strong>
+   right now. However, the process could benefit from a more detailed specification.
+   If posting agents were to adopt a consistent set of methods, the entire process
+   could be made faster and easier for the users, and additional features could easily
+   be added on top of the basic specification.</p>
+  <p>In this section, I present a proposed set of guidelines for
+   <a href="posting.html">how clients should post binaries to Usenet</a>. This includes
+   several small additions to MIME (but is mainly a description of how to work within the
+   current specification), and serves as a basis we can then extend to support multipart
+   binaries as well as other added features.</p>
+ </div>
+
+ <div class="body">
+  <h2><a href="multipart.html"><img src="multipart.gif" alt="Multipart binaries" border="0" width="172" height="56"></a></h2>
+  <p>When files are too large to post in a single article, they are split up and
+   <strong>posted in segments</strong>.  In this section, I propose a
+   <a href="multipart.html">new MIME content type</a> for transmission of files in
+   multiple segments.  The goals are to enable reliable and automatic reassembly of
+   files; automatic searching for and identification of missing file segments;
+   partial reposts, even by third parties; automatic identification and use of later
+   reposts (including partial reposts) even under different filenames; automatic
+   location of metadata such as textual descriptions of files; and faster scanning
+   of newsgroups for items of interest.</p>
+ </div>
+
+ <div class="body">
+  <h2><a href="images.html"><img src="images.gif" alt="Posting images" border="0" width="156" height="56"></a></h2>
+  <p>Finally, I present a detailed example of the kind of media-specific features
+   that can be added to the basic posting specification to make it even <strong>more useful</strong>.
+   This is a proposed specification for <a href="images.html">posting images to Usenet</a>
+   which enables clients to show thumbnails of the pictures available in a newsgroup,
+   and allow the user to retrieve the full pictures from them.</p>
+ </div>
+
+ <hr width="75%">
+ <div class="body">
+  <p><strong>NEW:</strong> here's a note about the <a href="status.html">current status</a> of this project.</p>
+  <p>I have created these specifications in the hope that, if they don't suck, they
+   will provide some benefit to Usenet as a whole.  I place no proprietary restrictions
+   on the use of the ideas, methods, or algorithms here, or anything silly like that.</p>
+  <p>There is sample code available implementing yEnc as a MIME transfer encoding. See the <a href="encoding.html">encoding page</a>.</p>
+	<p>For another take on this issue, see Claus F&auml;rber's <a href="http://www.faerber.muc.de/temp/20020404-binary-posts.html">Large Binary posts on Usenet</a> page.</p>
+ </div>
+
+ <div class="footer">
+  <p><small>Site updated 16 August 2002 &nbsp;<strong><big>|</big></strong>&nbsp; <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a></small></p>
+ </div>
+
+</body></html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+	<meta name="description" content="Debunking widely-held misconceptions about yEnc">
+	<meta name="keywords" content="yEnc, usenet, binary encoding, usenet binaries,
+	 uuencode, uuencoding, yEnc considered harmful, compression, virus, propagation,
+	 news server, download, retention">
+	<style type="text/css"><!--
+	 @import url("essay.css");
+	--></style>
+	<title>yEnc Myths and Misconceptions</title>
+</head>
+
+<body text="#000000" bgcolor="#ffffff" link="#0000dd" vlink="#0000bb" alink="#dd0000">
+
+<h1><img src="yenc-myths.gif" alt="yEnc Myths and Misconceptions" height="125" width="450" border="0"></h1>
+
+<div class="byline">
+ <p><small>by <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a>, 9 September 2002</small></p>
+</div>
+
+<div class="body">
+<div class="intro">
+ <p class="first">Since writing my unexpectedly popular essay
+  "<a href="yenc.html">Why yEnc is Bad For Usenet</a>," I've heard
+  from quite a lot of people about <a href="http://www.yenc.org/">yEnc</a>.
+  Unfortunately, there seem to be a number of widespread misconceptions about
+  yEnc, what it is, how it works, and why it's bad (or why it's good). Since my
+  essay is so widely cited by yEnc opponents who often agree with me for the
+  wrong reasons, I figure it's about time I clear some of this up.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc is not compression</h2>
+
+ <p>The most widespread misconception about yEnc is that it's a file compression
+  system, like jpeg or mp3.  This seems to be due to all the talk about the
+  smaller posts.</p>
+
+ <p>yEnc <em>doesn't</em> make files smaller. It is not a replacement for zip, or
+  jpeg, or mp3.  It's an encoding format, designed to make files safe for NNTP
+  (Usenet) transport, as a replacement for uuencode. Don't be confused by all
+  the talk of smaller files; yEnc makes files larger, not smaller, it just
+  doesn't make them as large as uuencode does.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc does not affect quality</h2>
+
+ <p>Many people are under the impression that, because yEnc posts are smaller,
+  the files are of lower quality. With lossy compression schemes like jpeg and
+  mp3, smaller files generally translate to lower quality, because more
+  information is lost in the compression.</p>
+
+ <p>As noted above, yEnc has nothing to do with compression systems like jpeg
+  or mp3. When a file is posted using yEnc, it is still compressed in the same
+  way it was before, and the decoded file will be exactly the same whether yEnc
+  or uuencode is used. yEnc absolutely does <em>not</em> result in lower quality
+  pictures or sound.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc does not carry viruses</h2>
+
+ <p>No, really, I've heard from a number of people who blame yEnc for
+  infecting their systems with viruses. Some people also claim that, since yEnc
+  uses less encoding then uuencode, that it is more vulnerable to a virus
+  infecting a file in transit.  This is, of course, total nonsense.</p>
+
+ <p>If you download a program from Usenet, and run it, and you get a virus,
+  it had <em>nothing</em> to do with which encoding method was used to post
+  the program. It had everything to do with downloading executable
+  programs from random sources like newsgroups and then running them, which
+  is one of the best ways to get a virus. If the program that finally trashed
+  your system just happened to be one of the first yEnc posts you downloaded,
+  that was a coincidence. If you're using Windows, you were going to get hit
+  sooner or later.</p>
+
+ <p>There is nothing about yEnc that makes files more (or less) vulnerable to
+  viruses.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc does not hurt propagation</h2>
+
+ <p>A recurring complaint about yEnc is that posts made with it suffer from
+  poorer propagation than posts made with uuencode. Reasons cited range from
+  transit servers not yet implementing yEnc support (which, of course, they
+  don't have to) to the smaller encoding making the post more likely to get
+  lost.</p>
+
+ <p>Yes, it's true that sometimes yEnc posts fail to propagate well. The
+  most common cause, however, is posters using line counts to determine
+  part size.</p>
+
+ <p>Usenet was designed for text posts, and a line count makes sense for giving
+  a human an idea of how big a text post is. People can relate to line counts.</p>
+
+ <p>However, line count has nothing to do with the actual size of a post or a
+  file, because it says nothing about the length of each of the lines. A post
+  at 5000 lines in yEnc is much larger than a post at 5000 lines in uuencode,
+  because yEnc uses longer lines. Indeed, because line lengths in yEnc can vary,
+  there is no way to translate a line count into a size. (Line lengths can vary
+  in uuencode as well, but in practice they almost never do.)</p>
+
+ <p>So, if someone posts a file split into parts by line count, using yEnc,
+  and forgets to take the longer lines into account, each of those parts may
+  end up being a couple of megabytes in size, large enough to be rejected by
+  most servers. The same count using uuencode would result in articles well
+  under the one meg limit of most servers. Thus, the yEnc post gets bad
+  propagation, but the cause isn't the encoding, it's the size of the parts.</p>
+
+ <p>It is important that binary posting programs stop using line counts to
+  determine article size. Newsreaders designed for binary downloading should
+  show the article size in bytes, which is available from the overview just
+  as the line count is.  yEnc has made line counts even less meaningful
+  than they always were.</p>
+</div>
+
+<div class="section">
+ <h2>Modem compression doesn't negate yEnc</h2>
+
+ <p>A lot of people wonder if the bandwidth savings of yEnc are an illusion,
+  due to modem hardware compression. The reasoning goes like this: a yEnc
+  file, being closer in content to the original, already-compressed file,
+  cannot be compressed well. A uuencoded file, on the other hand, can be
+  compressed significantly. Thus, the savings of yEnc are offset by the
+  inability to compress the data while downloading it.</p>
+
+ <p>This is not the case.  While it's true that uuencoded files compress much
+  better than yEnc files, yEnc is still at least 10% smaller than uuencode
+  after v.42 compression is applied.</p>
+
+ <p>In addition, only modem users get line compression.  Downloads over other
+  connection types, such as ISDN, cable, or DSL, are not compressed for
+  transmission.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc does not require ISP support</h2>
+
+ <p>Your ISP or Usenet provider does not need to do anything special to support
+  yEnc.  As far as the servers are concerned, a yEnc post is a post
+  like any other.</p>
+
+ <p>One thing ISPs and news providers must do about yEnc is add support
+  for it to filters for misplaced binaries.  The binary filters in wide use
+  before the spread of yEnc don't recognize a yEnc post as a binary.
+  This, however, has no effect on the ability of an end-user to download yEnc
+  files.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc doesn't download slower</h2>
+
+ <p>Surprisingly, it's not an uncommon belief that yEnc actually results in
+  slower downloads, and thus fails to deliver what it advertises.  This
+  perception comes about for the same reason as perceived bad propagation
+  of yEnc posts: the misuse of line count as an indication of size.</p>
+
+ <p>Yes, a 3000 line yEnc post will take longer to download than a 3000 line
+  uuencoded post.  This is not because yEnc downloads slower, it's because
+  3000 lines of yEnc is a lot more data than 3000 lines of uuencode.
+  Line count has nothing to do with size and cannot be used as a comparison of
+  download times.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc doesn't decrease retention</h2>
+
+ <p>I've heard from some people under the mistaken impression that news
+  servers don't recognize yEnc posts as valid and therefore expire them
+  more quickly than uuencoded binaries.</p>
+
+ <p>Some servers, such as those used at Supernews, expire posts differently
+  based upon whether they are single-part or multi-part binaries (giving
+  longer retention to the much larger, and much more popular, single-part
+  posts, like the pictures).  There exists some posting software which
+  incorrectly places a <b>=ypart</b> header in single-part yEnc posts,
+  marking them as multi-part.  So, on servers which expire in this manner,
+  those posts (and only those, not all yEnc posts) will be expired as though
+  they were multi-part, because the broken posting software claimed they
+  were.  This is the fault of the posting software, not of yEnc.</p>
+</div>
+
+<div class="section">
+ <h2>yEnc doesn't increase retention</h2>
+
+ <p>Despite the optimistic predictions of its supporters, yEnc has not resulted in
+  any decrease in the volume or growth rate of Usenet traffic.  The growth rate
+  before and after the arrival of yEnc has remained pretty much the same.  yEnc
+  has had no effect at all on retention times of full-feed news servers.  Of
+  course, if the spools are the same size, and yEnc is smaller, this could
+  indicate that there is more total "stuff" available now.</p>
+
+ <p>Or it could just be people reposting things in uuencode after they've already
+  been posted in yEnc.</p>
+ </div>
+</div>
+
+<br>
+<div class="footer"><small>
+  <p><a href="./">Usenet stuff </a>&nbsp;|&nbsp; <a href="yenc.html">Why yEnc is bad</a></p>
+</small></div> 
+
+</body>
+</html>

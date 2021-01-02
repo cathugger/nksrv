@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+	<title>Multipart Binaries</title>
+  <link href="main.css" rel="stylesheet">
+</head>
+
+<body bgcolor="#ffffff" text="#000000">
+	<h1><img src="multipart-big.gif" alt="" border="0" width="205" height="78"></h1>
+	<div class="body">
+		<p>The current MIME specification does not provide a decent way to post <strong>multipart
+		 binaries</strong> (where a single file is split into segments and posted in multiple
+		 articles because it is too big for a single article). But we can fix that.</p>
+		<p>The goals here are to define a specification for transmission of files in
+		 multiple messages, and to make it easier for clients (and therefore users) to find
+		 what they are looking for. With the current methods, the file is simply split into
+		 segments and posted in multiple articles. Clients must use imprecise Subject line
+		 parsing to figure out which posts go in the series and in what order. If even one
+		 segment of a series is missing, the series is close to useless. Reposts of individual
+		 segments are difficult and error-prone, and there are few tools which even attempt it.
+		 Finding such a reposted segment and joining it with the rest of the series must be
+		 done manually.</p>
+		<p>MIME's current message/partial type (described in <a href="http://www.faqs.org/rfcs/rfc2046.html">RFC 2046</a>)
+		 is not really suitable for this purpose. It does not permit 8-bit encodings, so
+		 it won't work with the new proposed transfer-encodings. In addition, it was not
+		 created for this task and would not provide the desired functionality. The idea
+		 is to allow posting of segments of <em>files,</em> not of messages. There is no
+		 good reason to insist that a file must be reassembled only from one series of
+		 posts. As long as all of the data from a file has been posted, it can be reassembed,
+		 even if different portions of it were posted at different times by different people
+		 using different encodings and even in different newsgroups. And it should be
+		 possible to automate the task of searching for missing segments.</p>
+		<p>To this end, we define a new MIME content type, <strong>application/file-fragment</strong>.</p>
+	</div>
+
+	<div class="body">
+		<h2>application/file-fragment</h2>
+		<p>The MIME type application/file-fragment specifies that a MIME body contains a
+		 <strong>fragment</strong> of a larger file. The segment must be contiguous. A collection
+		 of application/file-fragment entities can be created by splitting the original, raw
+		 datastream at whatever intervals are appropriate, and encoding the result with some
+		 transfer-encoding in order to include it in a MIME entity. The divisions must occur
+		 at least on byte boundaries. It may be desirable to only create divisions on boundaries
+		 of multiples of four bytes.  (The datastream should be considered an octet-stream, not
+		 a bit-stream.) The segments in a series need not all be the same size.</p>
+		<p>For the purposes of this specification, the term <em>series</em> refers to a sequence
+		 of posts, done all at once, containing fragments of the same file. A complete series
+		 contains all of the data from the original file, and an incomplete series contains only
+		 some of the data (as in the case of a partial repost).  A complete series should contain
+		 the data in sequence; that is, the data in part number two should be that immediately
+		 after the data in part number one.</p>
+		<h3>Parameters</h3>
+		<p>application/file-fragment defines the following parameters.</p>
+		<dl>
+			<dt><strong>name</strong></dt>
+			<dd>Specifies the name of the file. This must have the same value in all messages in
+			 a series, and is required.  (However, implementations should be careful about blindly
+			 using the specified filename when saving data to disk.)</dd>
+			<dt><strong>offset</strong></dt>
+			<dd>Specifies the starting point of this fragment, in bytes, within the original
+			 (unencoded) data of which this fragment is part. Offsets are zero-based (the first
+			 byte in the file is at offset zero). This parameter is required.</dd>
+			<dt><strong>length</strong></dt>
+			<dd>The length, in bytes, of the unencoded data represented by this fragment.  This
+			 parameter is required.</dd>
+			<dt><strong>filesize</strong></dt>
+			<dd>Specifies the total size of the complete file of which this entity is a fragment.
+			 This parameter is optional, but encouraged.</dd>
+			<dt><strong>number</strong></dt>
+			<dd>Where this fragment falls in sequence, in this series of posts. This parameter
+			 is required if the fragment is being posted as part of a series, whether or not the
+			 series is complete with regard to the original file.  If a single fragment of a file
+			 is being posted, it need not be used.  (Thus, if not present, its value should be
+			 assumed to be 1.)</dd>
+			<dt><strong>total</strong></dt>
+			<dd>The total number of fragments in this series of posts. As with number, this
+			 parameter is required unless this is the only fragment of the file being posted.
+			 (Thus, if not present, its value should be assumed to be 1.)</dd>
+			<dt><strong>id</strong></dt>
+			<dd>Semantically identical to a message-id, this is a unique identifier for the
+			 series of posts. It must be the same in all posts comprising a series. This parameter
+			 is required in any series, and optional if only a single fragment is being posted.
+			 It can be used by a client to locate other posts in a particular series, and can be
+			 used to distinguish between multiple posts of the same file. It should <em>not</em>
+			 be the same as any message-id of any post in a series.  (The reason this parameter
+			 is required is to allow automated searching for other posts in a series by clients.)</dd>
+			<dt><strong>md5</strong></dt>
+			<dd>Contains the MD5 checksum (as in Content-MD5) of the full, reassembled, decoded,
+			 original file of which this fragment is a part. This can be used by a client to verify
+			 the integrity of the final, decoded file. It can also be used to locate different
+			 posts of the same file (reposts) in order to fill in &quot;gaps&quot; in in the file,
+			 even if the reposts were done with a different filename, and can be used to
+			 differentiate between different files posted under the same filename. It must be the
+			 same in all posts in a series, and is required (the reason it is required is to allow
+			 automated searching for fragments of a desired file by clients).</dd>
+			<dt><strong>type</strong></dt>
+			<dd>Specifies the MIME type of the full file.  This parameter is optional, and should
+			 only be included where appropriate (that is, if the value will not provide any useful
+			 information to a client, as in the case of application/octet-stream, it should not be
+			 specified).  If it is not present, the file should be treated as type application/octet-stream.</dd>
+		</dl>
+		<p>As an example of what such a header might look like, with all parameters given (broken onto multiple lines for readability):</p>
+		<p class="samp"><samp>Content-Type: application/file-fragment; name=foo.pdf; offset=0; length=500000;<br>filesize=7500000; number=1; total=15; id=&quot;&lt;ad438c$89ef@example.com&gt;&quot;;<br>md5=7c595c4ea2befbd6f9d0658506207438; type=application/pdf</samp></p>
+		<p>In addition to the Content-Type header, each application/file-fragment should have a
+		 Content-MD5 header which contains an MD5 checksum of the (decoded) data contained within
+		 that fragment. This can be used to detect corrupt fragments, so that a client can discard
+		 them and look for another post containing the needed data. Content-MD5 is described in
+		 <a href="http://www.faqs.org/rfcs/rfc1864.html">RFC 1864</a>. Since the checksum is taken
+		 from the original data, it should survive recoding to a different transfer-encoding.</p>
+		<p>A description of the file can be included in the Content-Description header (defined in
+		 <a href="http://www.faqs.org/rfcs/rfc2045.html">RFC 2045</a>). If it is used in a series
+		 (whether complete or incomplete with regard to the original file), it must be present in
+		 the first post in that series, and is optional in the other segments (and would be
+		 redundant in them). This way, a client looking for a description of the file need only
+		 check the headers of the first post in the series.</p>
+		<p>A Content-Disposition header, if present, should <em>not</em> contain the filename of
+		 the original file; the header is meant to describe only the entity within that one message,
+		 so it does not apply for that purpose.</p>
+	</div>
+
+	<div class="body">
+		<h2>Usage</h2>
+		<p>Given the above specification, we can post a file in a series of articles, using any
+		 encoding we want, and the file can be reassembled as long as a client has enough
+		 fragments to represent all of the data in the original file.  Overlaps in data between
+		 fragments are allowed and should be expected; they should not occur within a single
+		 full series, but can happen in the case of reposts.</p>
+		<p>A client can use the md5 parameter of the Content-Type header to locate other posts
+		 containing fragments of the same file, and can also use it to determine whether the user
+		 already has the file, even if it is being posted under a different filename (if the
+		 implementation includes a feature to keep track of files downloaded). It can use the id
+		 parameter to locate other posts within the same series, and it will know from the total
+		 parameter how many pieces it is looking for.</p>
+		<p>A binary downloading client could work like this. It enters a group as usual. Then,
+		 instead of downloading the possibly huge and certainly redundant overview for the group,
+		 it uses XHDR to retrieve the Content-Type headers from the posts in the group. Now it has
+		 enough information to present the user with a list of files available in the group. It
+		 also has enough information to automatically locate missing fragments of a file it is
+		 attempting to download, and to determine if the user already has any of the files, even
+		 under a different name.</p>
+		<p>When the client presents the user with a list of available files, a user could then
+		 have the option of requesting more information about a file. The client would then
+		 retrieve the headers (or XOVER information, or just a subset of the headers such as
+		 Content-Description) from the first article in the series (the post with the same id
+		 parameter as the others, where the value of the number parameter is 1). This would
+		 reveal the From, Subject, Content-Description, and other information about the series.
+		 In a multipart group, the overhead of even automatically doing this on the first post
+		 in every series in the group would be minimal. The end result is that scanning newsgroups
+		 for items of interest would be faster, not to mention far more functional, than simply
+		 downloading the full overview in every group (a procedure which was designed for, and is
+		 mostly functional for, discussion groups).  Although the Content-Type header we end up
+		 with is not exactly tiny, it is significantly smaller than a full overview entry.</p>
+ 		<p>In addition, automated searching for missing fragments is possible, and will work even
+ 		 if the missing fragments are located as part of a different series, or if they are in a
+ 		 different newsgroup. A client could be configured to scan several different groups for
+ 		 fragments of a file, for example if a newsgroup has a companion &quot;reposts&quot;
+ 		 group. Since several groups could be scanned with this method in the same time it would
+ 		 take to scan one group the &quot;old&quot; way, actually scanning a larger number of
+ 		 newsgroups becomes possible.  In fact, if a client wants only to search a group for
+ 		 desired fragments of a file, it can employ XPAT to perform the search without even
+ 		 needing to download the Content-Type headers for the group.</p>
+ 	</div>
+
+	<div class="body">
+		<h2>Notes on server implementations</h2>
+		<p>A small number of current NNTP server implementations restrict the set of headers
+		 available to the NNTP XHDR and XPAT commands to those in the overview index.  This
+		 behavior will obviously break the above method of scanning newsgroups, and generally
+		 cause problems for this specification.  Such servers should be modified to allow XHDR
+		 and XPAT on at least the Content-Type header.  This can be achieved without sacrifice
+		 in performance, and with only a very small overhead in the indexes, by simply indexing
+		 that header along with the overview headers, but not returning it in the XOVER output.</p>
+		<p>In addition, some current implementations suffer a performace hit when running XHDR
+		 and XPAT commands on non-overview headers.  It would be desirable for such implementations
+		 to index Content-Type as suggested above.</p>
+		<p>Aside from the above small problems, the methods in this specification should work,
+		 without changes, on <em>most</em> existing NNTP servers.  Servers which do not allow
+		 the XPAT command (there are a few) would present a problem for a client wishing to
+		 perform server-side searches without downloading the full list of Content-Type headers
+		 (for example, if searching multiple groups for desired fragments of a file), but would
+		 otherwise work.  Servers which do not implement XHDR at all, or which restrict it to
+		 overview headers and will not change their implementation, would simply not work with this
+		 specification, and should be considered unsuitable for binary downloading.</p>
+		<p>While this is clearly a drawback to this specification, I feel it is a worthwhile
+		 tradeoff against continuing to expect clients to download full overviews in all groups
+		 even when they don't need most of the information contained in them.</p>
+	</div>
+
+	<div class="body">
+		<h2>Transition period</h2>
+		<p>Obviously, there will be a transition period in which many posts will still be made
+		 using the old methods.  Clients should continue to use the Subject headers from a
+		 group to assemble multiparts until there is no good reason to continue doing so.
+		 Implementations are discouraged, however, from <em>generating</em> those Subject line
+		 formats, in order not to encourage the continued use of those methods.</p>
+		<p>Note that the time-saving method of avoiding a full overview download can still be
+		 employed while Subject lines are in use. A client can use XHDR to retrieve Subject
+		 headers from the group as well as Content-Type headers during the transition period
+		 in order to avoid a full overview download.  This will result in a higher overhead
+		 than only using the one header, but one hopes the transition period can be short (as
+		 evidenced by the overnight acceptance of yEnc).</p>
+		<p>In addition, during a transition period, it can be expected that many clients will
+		 not understand the application/file-fragment type.  The MIME spec states that unknown
+		 application types should be treated as application/octet-stream, so this should not
+		 cause any actual problems with clients.  But it is desirable during a transition
+		 period for users to be able to decode these messages using external decoders.</p>
+		<p>Any newsreader which is capable of saving a raw, unmodified article to disk would
+		 be suitable for use with an external decoding application.  In addition, most (or
+		 possibly all) Unix newsreaders are capable of piping an article directly into another
+		 program.  However, mere saving of the application/file-fragment data is <em>not</em>
+		 sufficient for an external decoder to work, because the necessary metadata would be
+		 lost in that process.  The message headers must be saved along with the body.</p>
+	</div>
+
+ <div class="footer">
+  <p><small><a href="../../../Exit109/">Posting binaries</a> &nbsp; Updated 7 April 2002 &nbsp;<strong><big>|</big></strong>&nbsp; <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a></small></p>
+ </div>
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+	<title>Transfer Encoding</title>
+  <link href="main.css" rel="stylesheet">
+</head>
+
+<body bgcolor="#ffffff" text="#000000">
+	<h1><img src="transfer-big.gif" alt="Transfer Encoding" border="0" width="229" height="78"></h1>
+	<div class="body">
+		<p>A new <strong>transfer-encoding</strong> for Usenet binary posts is based
+		 on the simple premise that NNTP transport is <em>nearly</em> 8-bit-clean.  The data
+		 is assumed by most implementations to be line-oriented, and although there
+		 is no specified limit to the length of lines, in practice they should be
+		 restricted to no more than 1000 characters including the trailing CRLF pair.
+		 It follows that CR and LF cannot be present in the body of a message other
+		 than as a CRLF line-termination sequence. NULL cannot be present in a message,
+		 because many implementations will not deal with it correctly. A dot at the
+		 start of a line should be escaped, because NNTP implementations often get
+		 dot-escaping wrong. Finally, the encoding needs to be prepared to deal with
+		 software adding blank lines to the end of messages, or servers which append
+		 signatures to all posts.</p>
+		<p>Usenet can, in practice, safely transmit messages created within the above
+		 restrictions.  In addition, those restrictions ensure better compliance with
+		 MIME in general, in preparation for the case where messages using our new
+		 encoding may end up in systems other than Usenet.  However, to be on the safe
+		 side, and better prepared for messages ending up in email (as they would if
+		 posted to a moderated newsgroup), an encoding specification should be prepared
+		 to prevent the occurance of certain things within the post-encoding data.</p>
+ 		<p>Specifically, a relay agent may want to encode trailing spaces on lines; TAB
+ 		 characters; and the sequence &quot;From &quot; (the last character is a space)
+ 		 at the beginning of a line, in order to ensure safe passage for a message through
+ 		 email-based systems. So, an encoding scheme should be able to do this, though it
+ 		 may not want to when simply posting to Usenet, where such sequences are not
+ 		 generally a problem.  (In actual practice, it would be best to never transmit an
+ 		 attachment encoded with this method via email, but rather to transcode it to base64 first.)</p>
+ 		<p>To find a good encoding method, we need look no further than yEnc.  The encoding
+ 		 scheme used in yEnc meets the above criteria, and can be used as a MIME
+ 		 transfer-encoding.</p>
+	</div>
+
+  <div class="body">
+  	<h2>yEnc in MIME</h2>
+  	<p>yEnc's encoding method is suitable for use as a transfer-encoding, and has
+  	 the additional advantage of already being widely implemented.  With a small effort,
+  	 we can make yEnc MIME messages fully backwards-compatible with current yEnc
+  	 decoding implementations -- in other words, these messages can be decoded by
+  	 <em>existing</em> newsreaders.  This helps greatly with a transition period.</p>
+  	<p>To use yEnc within MIME, we implement it as a transfer-encoding to encode the
+  	 data of a MIME entity.  Implementations can generate the header/trailer lines,
+  	 but would ignore them upon decoding.  The presence of the header/trailer lines
+  	 is what gives us backwards-compatibility.  (Unfortunately, it does make the
+  	 implementation somewhat more difficult as well.)  Clients which do not implement
+  	 the new transfer-encoding would still be able to decode the message if they have
+  	 implemented &quot;old-fashioned&quot; yEnc decoding.  If not, they could still
+  	 use an external decoding program, because MIME implementations are required to
+  	 treat entities with unknown transfer-encodings as an application/octet-stream,
+  	 which means they won't touch the data.</p>
+  </div>
+ 
+	<div class="body">
+		<h2>The algorithm</h2>
+		<p>The basic algorithm for yEnc-within-MIME encoding is presented below. For more information, see the <a href="http://www.yenc.org/">yEnc website</a>.</p>
+		<h3>The header line</h3>
+		<p>yEnc data begins with a header line, starting with <strong>=ybegin</strong>
+		 with several parameters following.  A header line looks like:</p>
+		<p><samp>=ybegin line=990 size=9556 name=example.jpg</samp></p>
+		<p>The <strong>line</strong> parameter specifies the target line length for the
+		 encoded data.  The <strong>size</strong> parameter specifies the size in bytes
+		 of the original (unencoded) file.  The <strong>name</strong> parameter gives the
+		 suggested filename for the file.</p>
+		<p>This header line exists <em>only</em> for the purpose of backwards-compatibility
+		 with existing (non-MIME) yEnc implementations, and MUST be ignored by decoders.
+		 Adding it at encoding time is optional but strongly encouraged during the early
+		 stages of adoption of this specification.</p>
+		<p>There is another header line, <strong>=ypart</strong>, which exists
+		 for the purpose of multipart (split) binaries.  This will be addressed in a future
+		 revision of this page as we begin to better address multipart posts.</p>
+		<h3>The footer line</h3>
+		<p>The footer line begins with <strong>=yend</strong> and is followed
+		 by two parameters.  The first, <strong>size</strong>, again gives the size of the
+		 unencoded file.  The second, <strong>crc32</strong>, is an optional parameter
+		 giving the CRC32 checksum of the data.</p>
+		<p>In this specification, the <strong>=yend</strong> sequence (at the start of a line) is
+		 considered an end-of-data marker.  Decoders should stop upon reaching it.  Encoders
+		 should add it to the end of their data.  The parameters exist <em>only</em> for the
+		 purpose of backwards-compatibility, and decoders implementing this standard MUST
+		 ignore them.  The <strong>size</strong> parameter is optional but strongly encouraged
+		 during the early stages of adoption of this standard.  The crc32 parameter is optional.</p>
+		<h3>The encoding</h3>
+		<p>Data is encoded by the following algorithm.  For each byte of input data, add 42 to
+		 the value, modulo 256.  If the result is the value of a character which must be encoded
+		 in the output stream, first write the escape character ("=", an equals sign), then
+		 add 64 to the value of the byte, modulo 256, and write that value.</p>
+		<p>Characters which must be encoded are NULL, CR, LF, and "=" (equals sign, the
+		 escape character), and a dot (period) if it appears at the beginning of a line
+		 in the encoded data.</p>
+		<p>A CRLF line-termination sequence should be inserted periodically to keep line lengths
+		 under 1000 characters.  The target line length as specified in the =ybegin line
+		 does <em>not</em> include the CRLF pair.  It may be exceeded by one in order to write
+		 both characters of an escape sequence; an escape sequence may not be broken over two
+		 lines.  Decoders must be prepared to decode any value following an escape charcter
+		 (not just the ones listed above), and must ignore any CR or LF values in the encoded
+		 data.</p>
+		<p>Any line starting with <strong>=y</strong> must be ignored by decoders,
+		 except the <strong>=yend</strong> sequence which indicates end-of-data.</p>
+		<p>As long as the parameters on the <strong>=y</strong> lines are given, messages
+		 formatted according to this specification can be decoded by already-existing
+		 yEnc decoders.</p>
+	</div>
+
+	<div class="body">
+		<h2>Sample code</h2>
+		<p>Sample test code is available here implementing yEnc as a MIME transfer-encoding.
+		 It is written in Perl, and works with the MIME-tools package which is available
+		 on CPAN.  It should be considered suitable for testing and experimentation only;
+		 it is not production-quality code.</p>
+		<p><a href="mime-yenc.tar.gz">Download the code.</a></p>
+	</div>
+
+	<div class="warning">
+		<h2>Check your code!</h2>
+		<p>Encodings of the type described above expose a frequent bug in existing MIME implementations.
+		 Specifically, clients often make mistakes regarding the final CRLF sequence in a body.
+		 According to the specification, in a top-level root entity, the final CRLF in the body is
+		 considered part of the entity's data. However, in a leaf entity (a part within a multipart
+		 message), the trailing CRLF is <em>not</em> considered part of the data.  Many newsreaders
+		 appear to get this wrong in one or the other case.  With base64 encoding, CRLF is ignored
+		 completely, so the bug has no effect.  However, with a mostly-8-bit encoding, this can
+		 cause corruption in decoded files.  The end-of-data escape sequence defined above should
+		 work around this bug, and the specification indicates that CR and LF should be ignored
+		 by decoders in any event.</p>
+		<p>MIME implementations in clients should still be checked to ensure they get this right.</p>
+	</div>
+
+	<div class="body">
+		<h2>Backwards compatibility</h2>
+		<p>MIME makes it intentionally difficult to introduce new transfer-encodings, for the simple
+		 reason that software which is not updated to understand it won't know what to do with it.
+		 For example, a gateway which would need to transcode 8-bit data into a 7-bit encoding won't
+		 know how to do so if it doesn't understand the encoding in which the data arrives.</p>
+		<p>The MIME specification states that implementations should treat messages with
+		 unknown encodings as an opaque application/octet-stream.  Thus, use of one of these
+		 new encodings should simply result in the case where a message can be saved for later
+		 processing by an external decoder.  In the case of a gateway wanting to send the message
+		 over a 7-bit transmission path, the gateway should reject the message if it cannot
+		 recode it (which it can't if it doesn't implement yEnc).  Software which does not
+		 behave this way can be considered broken, but may exist, so during a testing phase
+		 it would be wise to determine how existing software will react to the introduction
+		 of this kind of 8-bit encoding.  This problem, if it arises, is expected mainly in
+		 the area of gateways and other non-Usenet or non-NNTP modes of transit.  Since such
+		 transmission paths are highly unlikely to be currently carrying binary Usenet traffic,
+		 this should not be a large issue.</p>
+		<p>The one exception to the above is the case of moderated newsgroups, where posts to
+		 the group are actually forwarded to the group moderator via email.  It is impossible
+		 to determine what kinds of software are in use on every possible line of transmission
+		 for submissions to moderated newsgroups.  Therefore, it is <em>strongly</em> encouraged
+		 that yEnc not be used when forwarding submissions to moderators via email
+		 in the general case.  Clients are encouraged to fall back to base64 when posting to
+		 moderated groups, and servers are encouraged to recode yEnc messages into base64 before
+		 forwarding them to moderators.  In practice, the number of moderated binary groups
+		 is rather small, so this, too, is likely to be only a very small issue.</p>
+	</div>
+
+ <div class="footer">
+  <p><small><a href="../../../Exit109/">Posting binaries</a> &nbsp; Updated 7 April 2002 &nbsp;<strong><big>|</big></strong>&nbsp; <a href="mailto:jeremy@exit109.com">Jeremy Nixon</a></small></p>
+ </div>
+
+</body>
+</html>
