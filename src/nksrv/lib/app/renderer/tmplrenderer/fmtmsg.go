@@ -59,6 +59,129 @@ type msgLineFmtCfg struct {
  * but for this to happen formatter needs rework.
  */
 
+// context holding parser state
+type fmtCtx struct {
+	// given
+	w io.Writer
+	p *webib0.IBPostInfo
+
+	fullURLs     bool
+	lineLimit    int
+	charsPerLine int
+
+	// internal
+	src   webib0.IBMessage
+	srcp  int
+	lines int // how many lines so far?
+	atNL  bool // we're at new line?
+	qNL   bool // pending newline queued
+}
+
+func (c *fmtCtx) init() {
+	c.src = c.p.Message
+	c.atNL = true
+}
+
+func (c *fmtCtx) format() (err error) {
+	for c.srcp < len(c.src) {
+		firstch := c.atNL
+		var ok bool
+		ok, err = c.preLine()
+		if !ok || err != nil {
+			return
+		}
+		c := b[src]
+		inc := 1 // default amount to skip is one character
+		var esc []byte
+		switch c {
+		case '"':
+			esc = htmlQuot
+		case '\'':
+			esc = htmlApos
+		case '&':
+			esc = htmlAmp
+		case '<':
+			esc = htmlLt
+		case '>':
+			if firstch {
+				greentext = true
+				// flush
+				_, fe = w.Write(b[last:src])
+				if fe != nil {
+					return
+				}
+				src++
+				last = src
+				// pre-greentext
+				_, fe = w.Write(tr.m.PreQuote)
+				if fe != nil {
+					return
+				}
+				// rest of text is normal
+				_, fe = w.Write(htmlGt)
+				if fe != nil {
+					return
+				}
+				continue
+			}
+			esc = htmlGt
+		case '\000':
+			esc = htmlNull
+		case '\n':
+			// flush
+			_, fe = w.Write(b[last:src])
+			if fe != nil {
+				return
+			}
+			src++
+			last = src
+
+			if greentext {
+				// terminate greentext
+				_, fe = w.Write(tr.m.PostQuote)
+				if fe != nil {
+					return
+				}
+				greentext = false
+			}
+
+			n = true
+			pendingnewline = true
+			continue
+		case '\r':
+			// skip
+		default:
+			// dont interpret
+			src++
+			continue
+		}
+		// flush stuff before replacement
+		_, fe = w.Write(b[last:src])
+		if fe != nil {
+			return
+		}
+		// write replacement
+		_, fe = w.Write(esc)
+		if fe != nil {
+			return
+		}
+		// skip some amount
+		src += inc
+		// set new mark
+		last = src
+	}
+	// flush
+	_, fe = w.Write(b[last:src])
+	if fe != nil {
+		return
+	}
+	last = src
+
+	return true, nil
+}
+
+
+
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,
 	boardName string, threadInfo *webib0.IBCommonThread,
@@ -74,7 +197,6 @@ func formatmsg(
 	src, last := 0, 0
 	greentext := false
 	b := p.Message
-	blen := len(b)
 	n := true               // whether we're at start of new line
 	pendingnewline := false // whether there's pending newline to write
 	flushnewline := func(final bool) (fe error) {
@@ -262,7 +384,7 @@ func formatmsg(
 	rlen := len(p.References)
 	for ; r < rlen; r++ {
 		rr := &p.References[r]
-		if rr.Start > rr.End || rr.End > uint(blen) {
+		if rr.Start > rr.End || rr.End > uint(len(b)) {
 			break
 		}
 
@@ -312,7 +434,7 @@ func formatmsg(
 		}
 	}
 
-	cont, err = normalfmt(blen)
+	cont, err = normalfmt(len(b))
 	if err != nil {
 		return
 	}
