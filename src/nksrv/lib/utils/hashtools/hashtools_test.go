@@ -52,7 +52,7 @@ const (
 	sizesmol
 )
 
-var hexp = [...][ht_max]string{
+var hexp = [...][hashTypeIDMax]string{
 	{
 		"ms0bmq9elpsvml0zh5klbwjcl5fbevm3uxigmyeabcs5", // SHA2-224
 		"banl818ny8i178t8z7x93fwo51c5zumjmr8mb5v6bcm6", // BLAKE2b-224
@@ -65,14 +65,14 @@ var hexp = [...][ht_max]string{
 	},
 }
 
-func doxtest(t *testing.T, id byte, sizeidx int) {
-	pickhash(id)
+func doxtest(t *testing.T, id HashTypeIDType, sizeidx int) {
+	pickDefaultHash(id)
 	dotest(t, hexp[sizeidx][id-1], sizeidx)
 }
 
-func doxbench(b *testing.B, id byte, sizeidx int) {
+func doxbench(b *testing.B, id HashTypeIDType, sizeidx int) {
 	b.StopTimer()
-	pickhash(id)
+	pickDefaultHash(id)
 	b.StartTimer()
 
 	dobench(b, hexp[sizeidx][id-1], sizeidx)
@@ -81,51 +81,51 @@ func doxbench(b *testing.B, id byte, sizeidx int) {
 var sizes = [...]int64{4 << 20, 16 << 10}
 
 func TestHashAutoSmol(t *testing.T) {
-	autopickhash()
+	autoPickDefaultHash()
 	dotest(t, "", sizesmol)
 }
 
 func BenchmarkHashAutoSmol(b *testing.B) {
 	b.StopTimer()
-	autopickhash()
+	autoPickDefaultHash()
 	b.StartTimer()
 
 	dobench(b, "", sizesmol)
 }
 func BenchmarkHashAutoBigg(b *testing.B) {
 	b.StopTimer()
-	autopickhash()
+	autoPickDefaultHash()
 	b.StartTimer()
 
 	dobench(b, "", sizebigg)
 }
 
 func TestHashSHA2_224(t *testing.T) {
-	doxtest(t, ht_SHA2_224, sizesmol)
+	doxtest(t, SHA2_224, sizesmol)
 }
 func BenchmarkHashSHA2_224_Smol(b *testing.B) {
-	doxbench(b, ht_SHA2_224, sizesmol)
+	doxbench(b, SHA2_224, sizesmol)
 }
 func BenchmarkHashSHA2_224_Bigg(b *testing.B) {
-	doxbench(b, ht_SHA2_224, sizebigg)
+	doxbench(b, SHA2_224, sizebigg)
 }
 
 func TestHashBLAKE2b_224(t *testing.T) {
-	doxtest(t, ht_BLAKE2b_224, sizesmol)
+	doxtest(t, BLAKE2b_224, sizesmol)
 }
 func BenchmarkHashBLAKE2b_224_Smol(b *testing.B) {
-	doxbench(b, ht_BLAKE2b_224, sizesmol)
+	doxbench(b, BLAKE2b_224, sizesmol)
 }
 func BenchmarkHashBLAKE2b_224_Bigg(b *testing.B) {
-	doxbench(b, ht_BLAKE2b_224, sizebigg)
+	doxbench(b, BLAKE2b_224, sizebigg)
 }
 
 func TestHashBLAKE3_224(t *testing.T) {
-	doxtest(t, ht_BLAKE3_224, sizesmol)
+	doxtest(t, BLAKE3_224, sizesmol)
 }
 func BenchmarkHashBLAKE3_224_Smol(b *testing.B) {
-	doxbench(b, ht_BLAKE3_224, sizesmol)
+	doxbench(b, BLAKE3_224, sizesmol)
 }
 func BenchmarkHashBLAKE3_224_Bigg(b *testing.B) {
-	doxbench(b, ht_BLAKE3_224, sizebigg)
+	doxbench(b, BLAKE3_224, sizebigg)
 }
