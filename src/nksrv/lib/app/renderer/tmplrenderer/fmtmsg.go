@@ -72,7 +72,7 @@ type fmtCtx struct {
 	// internal
 	src   webib0.IBMessage
 	srcp  int
-	lines int // how many lines so far?
+	lines int  // how many lines so far?
 	atNL  bool // we're at new line?
 	qNL   bool // pending newline queued
 }
@@ -179,8 +179,6 @@ func (c *fmtCtx) format() (err error) {
 
 	return true, nil
 }
-
-
 
 func formatmsg(
 	w io.Writer, tr *TmplRenderer, ni *NodeInfo,

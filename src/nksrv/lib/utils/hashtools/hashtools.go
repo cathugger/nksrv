@@ -44,12 +44,14 @@ type fhash struct {
 
 const (
 	// XXX in idea these could be for arbitrary lengths, but we have no practical need for that atm
-	_              = iota // skip first to start with non-0
-	ht_SHA2_224           // can be faster if SHA2-256 crypto instructions are available
-	ht_BLAKE2b_224        // fastest on most 64bit CPUs without dedicated crypto instructions
-	//_                     // ht_BLAKE2s_224 // faster on weak 32bit CPUs -- waiting on when x/crypto provides New224 or equivalent
-	//_                     // ht_SHA3_224 // maybe once I get some hardware to test
-	ht_BLAKE3_224
+	_ = iota // skip first to start with non-0
+
+	ht_SHA2_224    // can be faster if SHA2-256 crypto instructions are available
+	ht_BLAKE2b_224 // fastest on most 64bit CPUs without dedicated crypto instructions
+	ht_BLAKE3_224  // fastest on 32bit arm stuff (without SHA2 instructions) or AVX2 supporting stuff
+
+	// ht_SHA3_224 or ht_SHAKE128_224 maybe once I get some hw to test w/ because w/o hw support they're so slow
+
 	ht_max = iota - 1
 )
 
@@ -59,6 +61,7 @@ var h_hashes = [ht_max]fhash{
 	{newHasher: func() hash.Hash { return blake3.New() }},
 }
 var h_pools [ht_max]sync.Pool
+
 var h_use_id byte
 var h_use_hash fhash
 var h_use_pool *sync.Pool
@@ -67,7 +70,7 @@ type hashstuff struct {
 	h       hash.Hash
 	copybuf *[32 * 1024]byte
 	x       big.Int
-	strbuf  [44]byte // 28 type bytes (224 bits) + 1 type byte = 29 bytes; floor(log36((2^224 - 1) + (2^224 * 3)) + 1 = 44; that remains true upto 10; 11 is 45 bytes
+	strbuf  [44]byte // 28 hash bytes (224 bits) + 1 type byte = 29 bytes; floor(log36((2^224 - 1) + (2^224 * 3)) + 1 = 44; that remains true upto 10; 11 is 45 bytes
 }
 
 func gethasher() *hashstuff {
@@ -107,6 +110,7 @@ func init() { autopickhash() }
 // It expects file to be seeked at 0.
 func MakeFileHash(r io.Reader) (s string, e error) {
 	hs := gethasher()
+	// NOTE: we're reusing strbuf (which is large enough) for hash destination. for 512-bit hashes this would be NOT large enough.
 	// first byte - hash type
 	hs.strbuf[0] = h_use_id
 	// hash

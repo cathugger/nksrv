@@ -91,12 +91,12 @@ func (ctx *postNNTPContext) pn_eatbody(
 		ctx.H = IH
 	}
 
-	if len(ctx.H["Subject"]) != 0 {
+	if ctx.H.Has("Subject") {
 		sh := ctx.H["Subject"][0].V
 
 		ssub := sh
 
-		if len(ctx.H["MIME-Version"]) != 0 {
+		if ctx.H.Has("MIME-Version") {
 			// undo MIME hacks, if any
 			dsub, e := mail.DecodeMIMEWordHeader(ssub)
 			if e == nil {

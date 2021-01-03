@@ -85,6 +85,11 @@ func OneHeaderVal(v string) HeaderMapVals {
 }
 
 // case-sensitive
+func (h HeaderMap) Has(x string) bool {
+	return len(h[x]) != 0
+}
+
+// case-sensitive
 func (h HeaderMap) GetFirst(x string) string {
 	if s := h[x]; len(s) != 0 {
 		return s[0].V
