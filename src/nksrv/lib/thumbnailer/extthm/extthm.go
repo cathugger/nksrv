@@ -9,6 +9,7 @@ import (
 	"github.com/gobwas/glob"
 
 	"nksrv/lib/thumbnailer"
+	"nksrv/lib/utils/emime"
 	"nksrv/lib/utils/fs/fstore"
 	. "nksrv/lib/utils/logx"
 )
@@ -63,6 +64,8 @@ func (c Config) BuildThumbnailer(
 			{t: imt, m_mime: glob.MustCompile("image/gif")},
 			{t: imt, m_mime: glob.MustCompile("image/webp")},
 			{t: imt, m_mime: glob.MustCompile("image/bmp")},
+			{t: imt, m_mime: glob.MustCompile("image/avif")},
+			{t: imt, m_mime: glob.MustCompile("image/jxl")},
 
 			{t: mt, m_mime: glob.MustCompile("video/webm"), p: tparams{"fmt": "webm"}},
 			{t: mt, m_mime: glob.MustCompile("video/ogg"), p: tparams{"fmt": "ogg"}},
@@ -120,15 +123,25 @@ func (t *ExternalThumbnailer) ThumbProcess(
 
 	t.log.LogPrintf(DEBUG, "ThumbProcess ext %q mime %q", ext, mt)
 
+	if mt == "application/octet-stream" {
+		nmt := emime.MIMECanonicalTypeByExtension(ext)
+		if nmt == "" {
+			nmt = emime.MIMETypeByExtension(ext)
+		}
+		if nmt != "" {
+			mt = nmt
+		}
+	}
+
 	for i := range t.routes {
 		if (t.routes[i].m_mime == nil || t.routes[i].m_mime.Match(mt)) &&
 			(t.routes[i].m_ext == nil || t.routes[i].m_ext.Match(ext)) {
 
-			t.log.LogPrintf(DEBUG, "ThumbProcess matched route %d", i)
+				t.log.LogPrintf(DEBUG, "ThumbProcess matched route %d", i)
 
-			// XXX fallbacks?
-			return t.routes[i].t.
-				doThumbnailing(t.routes[i].p, f, ext, mimeType, fsize, cfg)
+				// XXX fallbacks?
+				return t.routes[i].t.
+					doThumbnailing(t.routes[i].p, f, ext, mimeType, fsize, cfg)
 		}
 	}
 
