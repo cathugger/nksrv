@@ -6,19 +6,22 @@ import (
 	"strings"
 )
 
-var re_ref = regexp.MustCompile(
+// normal reference. usually within current board
+var reRef = regexp.MustCompile(
 	`>> ?([0-9a-fA-F]{8,40})\b`)
-var re_cref = regexp.MustCompile(
+// cross reference. explicitly specifies board
+var reCRef = regexp.MustCompile(
 	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
 
 // syntax of RFC 5536 seems restrictive enough to not allow much false positives
-const re_atom = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
-const re_datom = re_atom + "(?:\\." + re_atom + ")*"
-const re_mdtext = "[\x21-\x3D\x3F-\x5A\x5E-\x7E]"
-const re_nofoldlit = "\\[" + re_mdtext + "*\\]"
+const reAtom = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
+const reDAtom = reAtom + "(?:\\." + reAtom + ")*"
+const reMDText = "[\x21-\x3D\x3F-\x5A\x5E-\x7E]"
+const reNoFoldLit = "\\[" + reMDText + "*\\]"
 
-var re_msgid = regexp.MustCompile(
-	"<" + re_datom + "@(?:" + re_datom + "|" + re_nofoldlit + ")>")
+// Message-ID reference
+var reMsgID = regexp.MustCompile(
+	"<" + reDAtom + "@(?:" + reDAtom + "|" + reNoFoldLit + ")>")
 
 type Reference struct {
 	Board string
@@ -51,7 +54,8 @@ func (s tiedSorter) Swap(i, j int) {
 
 func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 	var sm [][]int
-	sm = re_ref.FindAllStringSubmatchIndex(msg, -1)
+
+	sm = reRef.FindAllStringSubmatchIndex(msg, -1)
 	for i := range sm {
 		srefs = append(srefs, Reference{
 			Post: strings.ToLower(msg[sm[i][2]:sm[i][3]]),
@@ -61,7 +65,8 @@ func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 			End:   sm[i][1],
 		})
 	}
-	sm = re_cref.FindAllStringSubmatchIndex(msg, -1)
+
+	sm = reCRef.FindAllStringSubmatchIndex(msg, -1)
 	for i := range sm {
 		x := Reference{
 			Board: msg[sm[i][2]:sm[i][3]],
@@ -76,7 +81,8 @@ func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 			End:   sm[i][1],
 		})
 	}
-	sm = re_msgid.FindAllStringIndex(msg, -1)
+
+	sm = reMsgID.FindAllStringIndex(msg, -1)
 	for i := range sm {
 		if sm[i][1]-sm[i][0] > 250 || sm[i][1]-sm[i][0] < 3 {
 			continue
@@ -89,8 +95,10 @@ func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 			End:   sm[i][1],
 		})
 	}
+
 	// sort by position
 	sort.Sort(tiedSorter{srefs: srefs, irefs: irefs})
+
 	// remove overlaps, if any
 	for i := 1; i < len(irefs); i++ {
 		if irefs[i-1].End > irefs[i].Start {
@@ -99,10 +107,12 @@ func ParseReferences(msg string) (srefs []Reference, irefs []Index) {
 			i--
 		}
 	}
+
 	// limit
 	if len(srefs) > 255 {
 		srefs = srefs[:255]
 		irefs = irefs[:255]
 	}
+
 	return
 }
