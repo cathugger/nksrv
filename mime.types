@@ -15,7 +15,7 @@ text/css                css
 text/xml                xml
 text/javascript         js
 
-image/jpeg              =jpg jpeg jpe
+image/jpeg              =jpg jpeg jpe jif jfif jfi
 image/png               png
 image/gif               gif
 image/webp              webp
