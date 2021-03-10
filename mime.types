@@ -55,7 +55,7 @@ application/wasm                        wasm
 application/atom+xml                    atom
 application/rss+xml                     rss
 application/json                        json
-application/xhtml+xml                   xhtml
+application/xhtml+xml                   xhtml xht
 application/zip                         zip zipx
 application/x-rar-compressed            rar
 application/x-7z-compressed             7z
