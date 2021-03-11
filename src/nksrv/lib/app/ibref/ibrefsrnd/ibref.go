@@ -6,12 +6,14 @@ import (
 	"strings"
 )
 
-// normal reference. usually within current board
-var reRef = regexp.MustCompile(
-	`>> ?([0-9a-fA-F]{8,40})\b`)
-// cross reference. explicitly specifies board
-var reCRef = regexp.MustCompile(
-	`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
+var (
+	// normal reference. usually within current board
+	reRef = regexp.MustCompile(
+		`>> ?([0-9a-fA-F]{8,40})\b`)
+	// cross reference. explicitly specifies board
+	reCRef = regexp.MustCompile(
+		`>>> ?/([0-9a-zA-Z+_.-]{1,255})/(?: ?([0-9a-fA-F]{8,40})\b)?`)
+)
 
 // syntax of RFC 5536 seems restrictive enough to not allow much false positives
 const reAtom = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
