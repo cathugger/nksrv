@@ -91,7 +91,7 @@ CREATE INDEX
 CREATE TABLE ib0.boards (
 	b_id      INTEGER  GENERATED ALWAYS AS IDENTITY, -- internal board ID
 	b_name    TEXT     COLLATE "C",                  -- board name. if NULL, don't show as board
-	newsgroup TEXT     COLLATE "C",                  -- newsgroup name
+	newsgroup TEXT     COLLATE "C",                  -- newsgroup name. if NULL, don't expose over NNTP
 	last_id   BIGINT   DEFAULT 0    NOT NULL,        -- used for post/thread IDs
 
 	t_count BIGINT  DEFAULT 0  NOT NULL, -- thread count
