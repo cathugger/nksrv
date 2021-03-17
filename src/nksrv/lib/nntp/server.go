@@ -107,8 +107,10 @@ func NewNNTPServer(
 	prov NNTPProvider, logx LoggerX, runCfg *NNTPServerRunCfg) *NNTPServer {
 
 	s := &NNTPServer{
-		prov: prov,
-		logx: logx,
+		prov:        prov,
+		logx:        logx,
+		listeners:   make(map[ListenerCW]struct{}),
+		connections: make(map[ConnCW]struct{}),
 	}
 	s.SetRunCfg(runCfg)
 	s.log = NewLogToX(logx, fmt.Sprintf("nntpsrv.%p", s))
@@ -122,9 +124,6 @@ func (s *NNTPServer) tryRegister(l ListenerCW) (bool, error) {
 
 	if s.closing {
 		return false, nil // XXX better err code
-	}
-	if s.listeners == nil {
-		s.listeners = make(map[ListenerCW]struct{})
 	}
 	if _, ok := s.listeners[l]; ok {
 		// already listening
@@ -146,11 +145,8 @@ func (s *NNTPServer) checkClosing(l ListenerCW) bool {
 	return true
 }
 
-func (s *NNTPServer) registerConn(c ConnCW) {
+func (s *NNTPServer) registerConnAndWorker(c ConnCW) {
 	s.mu.Lock()
-	if s.connections == nil {
-		s.connections = make(map[ConnCW]struct{})
-	}
 	s.connections[c] = struct{}{}
 	s.cwg.Add(1)
 	s.mu.Unlock()
@@ -158,9 +154,7 @@ func (s *NNTPServer) registerConn(c ConnCW) {
 
 func (s *NNTPServer) unregisterConn(c ConnCW) {
 	s.mu.Lock()
-	if s.connections != nil {
-		delete(s.connections, c)
-	}
+	delete(s.connections, c)
 	s.mu.Unlock()
 }
 
@@ -169,7 +163,7 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	defer s.cwg.Done()
 	defer s.unregisterConn(c)
 
-	var abortconn bool
+	var abortConn bool
 	cs := &ConnState{
 		srv:  s,
 		conn: c,
@@ -206,9 +200,9 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	cs.r = bufreader.NewBufReader(fc)
 	cs.w = Responder{tp.NewWriter(bufio.NewWriter(fc))}
 
-	abortconn = cs.serveClient()
+	abortConn = cs.serveClient()
 
-	if !abortconn {
+	if !abortConn {
 		// let OS handle FIN signaling in background
 		_ = c.SetLinger(-1)
 		s.log.LogPrintf(NOTICE,
@@ -284,7 +278,7 @@ func (s *NNTPServer) Serve(l ListenerCW) error {
 			NOTICE, "accepted %s on %s", c.RemoteAddr(), c.LocalAddr())
 		// track it, we gonna need it when closing,
 		// as Serve() functions may prematurely return and thats OK
-		s.registerConn(c)
+		s.registerConnAndWorker(c)
 		// spawn handler
 		go s.handleConnection(c)
 	}

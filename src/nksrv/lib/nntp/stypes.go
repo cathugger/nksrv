@@ -18,7 +18,6 @@ func (r Responder) Abort() {
 }
 
 type ConnState struct {
-
 	inbuf [512]byte
 
 	srv     *NNTPServer
