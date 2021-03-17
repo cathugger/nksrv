@@ -43,12 +43,12 @@ func (c *ConnState) setupDefaults(rCfg *NNTPServerRunCfg) {
 	c.UserPriv = rCfg.DefaultPriv
 }
 
-func (c *ConnState) postTLS(rCfg *NNTPServerRunCfg, tlsc *tls.Conn) {
-	c.tlsconn = tlsc
-	c.UserPriv = MergeUserPriv(c.UserPriv, rCfg.TLSPriv)
+func (c *ConnState) postTLS(rCfg *NNTPServerRunCfg, tlsConn *tls.Conn) {
+	c.tlsConn = tlsConn
+	c.UserPriv = MergeUserPriv(c.UserPriv, rCfg.TLSPriv) // TLS niceties, if any
 
 	if rCfg.CertFPAutoAuth && !c.authenticated {
-		cs := tlsc.ConnectionState()
+		cs := tlsConn.ConnectionState()
 		if len(cs.PeerCertificates) != 0 {
 			ui := rCfg.CertFPProvider.NNTPUserByFingerprint(cs.PeerCertificates[0])
 			if ui != nil {

@@ -88,18 +88,18 @@ var _ ListenerCW = tcpListenerWrapper{}
 
 func (w tcpListenerWrapper) AcceptCW() (ConnCW, error) {
 	c, err := w.AcceptTCP()
-	if err == nil {
-		_ = c.SetLinger(0)
-		if w.keepAlive != 0 {
-			_ = c.SetKeepAlive(true)
-			_ = c.SetKeepAlivePeriod(w.keepAlive)
-		} else {
-			_ = c.SetKeepAlive(false)
-		}
+	if err != nil {
+		return nil, err
 	}
-	// XXX incase c == nil, returns not nil interface,
-	// but interface which points to typed nil
-	// hopefuly err gon b set then, so that faulty nil interface won't be used
+
+	_ = c.SetLinger(0)
+	if w.keepAlive != 0 {
+		_ = c.SetKeepAlive(true)
+		_ = c.SetKeepAlivePeriod(w.keepAlive)
+	} else {
+		_ = c.SetKeepAlive(false)
+	}
+
 	return c, err
 }
 
@@ -116,6 +116,7 @@ func NewNNTPServer(
 }
 
 func (s *NNTPServer) tryRegister(l ListenerCW) (bool, error) {
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -164,6 +165,10 @@ func (s *NNTPServer) unregisterConn(c ConnCW) {
 }
 
 func (s *NNTPServer) handleConnection(c ConnCW) {
+
+	defer s.cwg.Done()
+	defer s.unregisterConn(c)
+
 	var abortconn bool
 	cs := &ConnState{
 		srv:  s,
@@ -185,8 +190,8 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 				"closing %s on %s because TLS Handshake error: %v",
 				c.RemoteAddr(), c.LocalAddr(), err)
 			_ = c.SetLinger(-1)
-			tlsc.Close()
-			goto cleanup
+			tlsc.Close() // XXX c.Close() too? though tls.Conn.Close() should handle it okay
+			return
 		}
 		fc = tlsc
 		cs.postTLS(rcfg, tlsc)
@@ -214,10 +219,6 @@ func (s *NNTPServer) handleConnection(c ConnCW) {
 	}
 
 	fc.Close()
-
-cleanup:
-	s.unregisterConn(c)
-	s.cwg.Done()
 }
 
 func (s *NNTPServer) ListenAndServe(
@@ -247,6 +248,7 @@ func (s *NNTPServer) ListenAndServe(
 }
 
 func (s *NNTPServer) Serve(l ListenerCW) error {
+
 	if ok, err := s.tryRegister(l); !ok {
 		return err
 	}

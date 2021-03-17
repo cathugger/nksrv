@@ -18,11 +18,12 @@ func (r Responder) Abort() {
 }
 
 type ConnState struct {
+
 	inbuf [512]byte
 
 	srv     *NNTPServer
 	conn    ConnCW
-	tlsconn *tls.Conn // TLS connection if activated
+	tlsConn *tls.Conn // TLS connection if activated
 	r       *bufreader.BufReader
 	dr      *bufreader.DotReader
 	w       Responder
@@ -58,7 +59,7 @@ func (c *ConnState) pullActiveLogin() (l *ActiveLogin) {
 }
 
 func (c *ConnState) tlsStarted() bool {
-	return c.tlsconn != nil
+	return c.tlsConn != nil
 }
 
 type commandFunc func(c *ConnState, args [][]byte, rest []byte) bool
