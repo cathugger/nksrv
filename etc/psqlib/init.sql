@@ -71,7 +71,7 @@ CREATE TABLE ib0.gposts (
 -- :next
 CREATE TABLE ib0.gposts_boards (
 	g_p_id BIGINT               NOT NULL,
-	b_name  TEXT    COLLATE "C"  NOT NULL,
+	b_name TEXT    COLLATE "C"  NOT NULL,
 
 
 	FOREIGN KEY (g_p_id)
