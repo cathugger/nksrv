@@ -295,7 +295,9 @@ func setExtensionsTypeLocked(exts []string, mimeType string) (err error) {
 			break
 		}
 
-		ext, pref, e := setExtensionTypeLocked(strings.ToLower(ext), mimeType)
+		var pref bool
+		var e error
+		ext, pref, e = setExtensionTypeLocked(strings.ToLower(ext), mimeType)
 
 		if err == nil {
 			err = e
