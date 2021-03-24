@@ -45,13 +45,13 @@ CREATE TABLE news.boards (
 )
 -- :next
 CREATE INDEX
-	ON ib0.boards (badded,b_id) -- NEWGROUPS
+	ON news.boards (badded,b_id) -- NEWGROUPS
 -- :next
 -- for UI-visible board list
 CREATE INDEX
-	ON ib0.boards (b_name COLLATE "und-x-icu")
+	ON news.boards (b_name COLLATE "und-x-icu")
 	WHERE b_name IS NOT NULL
 -- for netnews-visible grouplist
 CREATE INDEX
-	ON ib0.boards (newsgroup COLLATE "und-x-icu")
+	ON news.boards (newsgroup COLLATE "und-x-icu")
 	WHERE newsgroup IS NOT NULL

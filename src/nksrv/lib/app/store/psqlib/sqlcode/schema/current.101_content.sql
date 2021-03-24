@@ -1,7 +1,7 @@
 
 CREATE TYPE ib.btype_t ENUM (
-	'dead', -- some placeholder posts exists so can't totally nuke but otherwise dead
 	'okay', -- normal state
+	'dead', -- some placeholder posts exists so can't totally nuke but otherwise dead
 	'kill'  -- marked to be killed
 );
 
