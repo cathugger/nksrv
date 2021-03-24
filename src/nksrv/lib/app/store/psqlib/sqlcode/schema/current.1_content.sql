@@ -191,9 +191,131 @@ CREATE TABLE ib.bposts (
 	FOREIGN KEY (g_p_id)
 		REFERENCES ib.gposts
 		ON DELETE CASCADE
-		ON UPDATE CASCADE,
-	FOREIGN KEY (mod_id)
-		REFERENCES ib.modlist
-		ON DELETE RESTRICT
 		ON UPDATE CASCADE
 );
+
+-- web view / preview 
+CREATE INDEX
+	ON ib.bposts (
+		b_id      ASC,
+		b_t_id    ASC,
+		date_sent ASC,
+		b_p_id    ASC
+	);
+-- newnews
+CREATE INDEX
+	ON ib.bposts (
+		date_recv,
+		g_p_id,
+		b_id
+	);
+-- post id lookup
+CREATE UNIQUE INDEX
+	ON ib.bposts (
+		p_name text_pattern_ops,
+		b_id
+	)
+	WHERE
+		p_name IS NOT NULL;
+-- per-board ban i think
+CREATE UNIQUE INDEX
+	ON ib.bposts (
+		msgid,
+		b_id
+	)
+	WHERE
+		msgid IS NOT NULL;
+-- mod shit fk
+CREATE INDEX
+	ON ib.bposts (
+		mod_id,
+		date_sent
+	)
+	WHERE
+		mod_id IS NOT NULL;
+
+
+
+-- nuke thread on OP death
+ALTER TABLE
+	ib.threads
+ADD CONSTRAINT
+	fk_bposts
+FOREIGN KEY (b_id,b_t_id)
+	REFERENCES ib.bposts (b_id,b_p_id)
+	MATCH FULL
+	ON DELETE CASCADE
+	ON UPDATE CASCADE;
+
+
+
+CREATE TYPE ib.ftype_t AS ENUM (
+	'file',  -- normal unknown/fallback attachment
+	'msg',   -- original message (gets its own file if too large)
+	'face',  -- decoded X-Face / Face hdr. not regular attachment.
+	'text',  -- attachment recognised as text, eg .txt file
+	'image', -- attachment recognised as image, eg .jpg, .png
+	'audio', -- attachment recognised as audio, eg .opus
+	'video'  -- attachment recognised as video, eg .webp
+);
+
+
+
+CREATE TABLE ib.files (
+	f_id   BIGINT GENERATED ALWAYS AS IDENTITY, -- internal file ID of this file
+	g_p_id BIGINT NOT NULL,                     -- post file belongs to
+
+	fname    TEXT        COLLATE "C"  NOT NULL, -- internal file name of original file. not unique!
+	ftype    ib.ftype_t               NOT NULL, -- file type
+	fsize    BIGINT                   NOT NULL, -- file size
+	thumb    TEXT        COLLATE "C"  NOT NULL, -- filename of thumbnail. not unique!
+	oname    TEXT        COLLATE "C"  NOT NULL, -- original file name of this file
+	filecfg  JSON,                              -- additional info about original file. like metadata
+	thumbcfg JSON,                              -- additional info about thumbnail. like width/height
+	extras   JSON,                              -- extra info not used for display but sometimes useful. undecided.
+
+
+	PRIMARY KEY (f_id),
+
+	FOREIGN KEY (g_p_id)
+		REFERENCES ib.gposts
+		ON DELETE CASCADE
+		ON UPDATE CASCADE
+);
+
+-- for lookups by g_p_id
+CREATE INDEX
+	ON ib.files (
+		g_p_id,
+		f_id
+	);
+-- for .. idk .. ?
+CREATE INDEX
+	ON ib.files (
+		fname,
+		thumb
+	);
+
+
+
+-- for fnames GC
+CREATE TABLE ib.files_uniq_fname (
+	-- key
+	fname  TEXT  COLLATE "C"  NOT NULL,
+	-- count
+	cnt  BIGINT  NOT NULL,
+
+	PRIMARY KEY (fname)
+);
+-- for thumbs GC
+CREATE TABLE ib.files_uniq_thumb (
+	-- key
+	fname  TEXT  COLLATE "C"  NOT NULL,
+	thumb  TEXT  COLLATE "C"  NOT NULL,
+	-- count
+	cnt  BIGINT  NOT NULL,
+
+	PRIMARY KEY (fname,thumb)
+);
+
+
