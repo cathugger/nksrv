@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -46,6 +47,16 @@ func (l Loader) Load(r io.Reader) (queries Bucket, err error) {
 
 func (l Loader) LoadFromFile(fn string) (_ Bucket, err error) {
 	f, err := os.Open(fn)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	return l.Load(f)
+}
+
+func (l Loader) LoadFromFS(fs fs.FS, name string) (_ Bucket, err error) {
+	f, err := fs.Open(name)
 	if err != nil {
 		return
 	}
