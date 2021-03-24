@@ -1,10 +1,18 @@
 
+CREATE TYPE ib.btype_t ENUM (
+	'dead', -- some placeholder posts exists so can't totally nuke but otherwise dead
+	'okay', -- normal state
+	'kill'  -- marked to be killed
+);
+
 -- boards/newsgroups
 CREATE TABLE ib.boards (
 
 	b_id      INTEGER  GENERATED ALWAYS AS IDENTITY, -- internal board ID
 	b_webname TEXT     COLLATE "und-x-icu",          -- board name. if NULL, don't expose on the web
 	newsgroup TEXT     COLLATE "und-x-icu",          -- newsgroup name. if NULL, don't expose over NNTP
+
+	b_type    ib.btype_t  NOT NULL,
 
 	b_added TIMESTAMP  WITH TIME ZONE  NOT NULL, -- date added to our node
 	b_desc  TEXT                       NOT NULL, -- short description
