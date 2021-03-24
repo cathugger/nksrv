@@ -44,7 +44,7 @@ func NewPGXProvider() (_ PGXProvider, err error) {
 type dockerPGXProvider struct {
 	directPGXProvider
 
-	dPath string
+	dPath  string
 	contID string
 }
 
@@ -78,7 +78,7 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 		return
 	}
 
-	defer func(){
+	defer func() {
 		if err != nil {
 			_ = exec.Command(dPath, "rm", "-v", id).Run()
 		}
@@ -93,7 +93,7 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 		directPGXProvider: directPGXProvider{
 			conn: conn,
 		},
-		dPath: dPath,
+		dPath:  dPath,
 		contID: id,
 	}, nil
 }
@@ -102,7 +102,7 @@ func (pp dockerPGXProvider) Close() error {
 	err := pp.directPGXProvider.Close()
 	e := exec.Command(pp.dPath, "rm", "-v", pp.contID).Run()
 	if e != nil && err == nil {
-		err =  e
+		err = e
 	}
 	return err
 }
@@ -118,10 +118,11 @@ func newDirectPGXProvider(connStr string) (_ PGXProvider, err error) {
 	}, nil
 }
 
+///
 
 type PGXDatabase struct {
 	mainConn *pgx.Conn
-	Config *pgx.ConnConfig
+	Config   *pgx.ConnConfig
 }
 
 func (pp directPGXProvider) Close() error {
@@ -152,7 +153,7 @@ func (pp directPGXProvider) NewDatabase() (_ PGXDatabase, err error) {
 	if err != nil {
 		return
 	}
-	defer func(){
+	defer func() {
 		if err != nil {
 			dropPGXDatabase(pp.conn, dbName)
 		}
@@ -178,6 +179,7 @@ func (pd PGXDatabase) Close() error {
 	return dropPGXDatabase(pd.mainConn, pd.Config.Database)
 }
 
+///
 
 func createPGXDatabase(conn *pgx.Conn, name string) error {
 	_, err := conn.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", name))
@@ -189,6 +191,7 @@ func dropPGXDatabase(conn *pgx.Conn, name string) error {
 	return err
 }
 
+///
 
 func testTCPPort(addr string) error {
 	conn, err := net.Dial("tcp", addr)

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"nksrv/lib/app/base/oauth2"
 	"nksrv/lib/app/renderer"
 	ib0 "nksrv/lib/app/webib0"
 	"nksrv/lib/mail/form"
@@ -19,7 +18,6 @@ import (
 type Cfg struct {
 	Renderer        renderer.Renderer     // handles everything else?
 	WebPostProvider ib0.IBWebPostProvider // handles html form submissions
-	Auth            *oauth2.IBOAuth2
 	// fallback?
 }
 
@@ -273,44 +271,46 @@ func NewAPIRouter(cfg Cfg) http.Handler {
 	h.Handle("/overboard", true,
 		handler.NewMethod().Handle("GET", h_overboard))
 
-	if cfg.Auth != nil {
-		h.Handle("/auth/login", false, http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+	/*
+		if cfg.Auth != nil {
+			h.Handle("/auth/login", false, http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
 
-				ct, _, e :=
-					mime.ParseMediaType(r.Header.Get("Content-Type"))
-				if e != nil {
-					http.Error(
-						w, fmt.Sprintf("failed to parse content type: %v", e),
-						http.StatusBadRequest)
-					return
-				}
-				if ct != "application/json" {
-					http.Error(w, "bad Content-Type", http.StatusBadRequest)
-					return
-				}
+					ct, _, e :=
+						mime.ParseMediaType(r.Header.Get("Content-Type"))
+					if e != nil {
+						http.Error(
+							w, fmt.Sprintf("failed to parse content type: %v", e),
+							http.StatusBadRequest)
+						return
+					}
+					if ct != "application/json" {
+						http.Error(w, "bad Content-Type", http.StatusBadRequest)
+						return
+					}
 
-				jd := json.NewDecoder(r.Body)
-				logininfo := struct {
-					User string `json:"user"`
-					Pass string `json:"pass"`
-				}{}
-				e = jd.Decode(&logininfo)
-				if e != nil {
-					http.Error(
-						w, fmt.Sprintf("failed to parse content: %v", e),
-						http.StatusBadRequest)
-					return
-				}
+					jd := json.NewDecoder(r.Body)
+					logininfo := struct {
+						User string `json:"user"`
+						Pass string `json:"pass"`
+					}{}
+					e = jd.Decode(&logininfo)
+					if e != nil {
+						http.Error(
+							w, fmt.Sprintf("failed to parse content: %v", e),
+							http.StatusBadRequest)
+						return
+					}
 
-				tok, err, code := cfg.Auth.Login(r, logininfo.User, logininfo.Pass)
-				if err != nil {
-					http.Error(w, err.Error(), code)
-					return
-				}
-				w.Write([]byte(tok))
-			}))
-	}
+					tok, err, code := cfg.Auth.Login(r, logininfo.User, logininfo.Pass)
+					if err != nil {
+						http.Error(w, err.Error(), code)
+						return
+					}
+					w.Write([]byte(tok))
+				}))
+		}
+	*/
 
 	return h_root
 }
