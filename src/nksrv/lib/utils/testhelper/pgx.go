@@ -64,7 +64,13 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 	}
 	passwd := fmt.Sprintf("%x", buf)
 
-	bid, err := exec.Command(dPath, "run", "-e", "POSTGRES_PASSWORD="+passwd, "-d", pgImage).Output()
+	bid, err := exec.Command(
+		dPath, "run",
+		"-p", "127.0.0.1:5432:5432",
+		"-e", "POSTGRES_PASSWORD="+passwd,
+		"-d",
+		pgImage,
+	).Output()
 	if err != nil {
 		return
 	}
@@ -80,12 +86,14 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 
 	defer func() {
 		if err != nil {
-			_ = exec.Command(dPath, "rm", "-v", id).Run()
+			_ = exec.Command(dPath, "stop", id).Run()
+			_ = exec.Command(dPath, "rm", "-v", "-f", id).Run()
 		}
 	}()
 
-	conn, err := connPGXString("host=localhost dbname=postgres user=postgres password=" + passwd)
+	conn, err := connPGXString("host=127.0.0.1 sslmode=disable dbname=postgres user=postgres password=" + passwd)
 	if err != nil {
+		err = fmt.Errorf("failed establishing main connection to container: %w", err)
 		return
 	}
 
@@ -99,12 +107,21 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 }
 
 func (pp dockerPGXProvider) Close() error {
-	err := pp.directPGXProvider.Close()
-	e := exec.Command(pp.dPath, "rm", "-v", pp.contID).Run()
-	if e != nil && err == nil {
-		err = e
+	err0 := pp.directPGXProvider.Close()
+	e1 := exec.Command(pp.dPath, "stop", pp.contID).Run()
+	e2 := exec.Command(pp.dPath, "rm", "-v", "-f", pp.contID).Run()
+
+	if err0 != nil {
+		return err0
 	}
-	return err
+	if e1 != nil {
+		return fmt.Errorf("container stop err: %w", e1)
+	}
+	if e2 != nil {
+		return fmt.Errorf("container rm err: %w", e2)
+	}
+
+	return nil
 }
 
 func newDirectPGXProvider(connStr string) (_ PGXProvider, err error) {
@@ -126,7 +143,11 @@ type PGXDatabase struct {
 }
 
 func (pp directPGXProvider) Close() error {
-	return pp.conn.Close(context.Background())
+	e := pp.conn.Close(context.Background())
+	if e != nil {
+		return fmt.Errorf("conn.Close err: %w", e)
+	}
+	return nil
 }
 
 func (pp directPGXProvider) NewDatabase() (_ PGXDatabase, err error) {
@@ -241,28 +262,39 @@ func connPGXString(str string) (_ *pgx.Conn, err error) {
 
 func connPGXConfig(cfg *pgx.ConnConfig) (_ *pgx.Conn, err error) {
 	c := 0
+	const cMax = 30
 	for {
 		var conn *pgx.Conn
-		conn, err = pgx.ConnectConfig(context.Background(), cfg)
+		func (){
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second * 3)
+			defer ctxCancel()
+			conn, err = pgx.ConnectConfig(ctx, cfg)
+		}()
 		if err != nil {
-			if c >= 15 {
+			//log.Printf("pgx.ConnectConfig err %d: %v", c, err)
+			if c >= cMax {
 				return
 			}
 			c++
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 300)
 			continue
 		}
 
 		var dummy int
-		err = conn.QueryRow(context.Background(), "SELECT 1").Scan(&dummy)
+		func(){
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second * 3)
+			defer ctxCancel()
+			err = conn.QueryRow(ctx, "SELECT 1").Scan(&dummy)
+		}()
 		if err != nil {
+			//log.Printf("conn.QueryRow err %d: %v", c, err)
 			_ = conn.Close(context.Background())
 
-			if c >= 15 {
+			if c >= cMax {
 				return
 			}
 			c++
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 300)
 			continue
 		}
 
