@@ -214,6 +214,8 @@ func dropPGXDatabase(conn *pgx.Conn, name string) error {
 
 ///
 
+const cMax = 30
+
 func testTCPPort(addr string) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -226,9 +228,15 @@ func testTCPPort(addr string) error {
 func testPGXConfig(cfg *pgx.ConnConfig) error {
 	c := 0
 	for {
-		conn, err := pgx.ConnectConfig(context.Background(), cfg)
+		var conn *pgx.Conn
+		var err error
+		func() {
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer ctxCancel()
+			conn, err = pgx.ConnectConfig(ctx, cfg)
+		}()
 		if err != nil {
-			if c >= 15 {
+			if c >= cMax {
 				return err
 			}
 			c++
@@ -237,10 +245,14 @@ func testPGXConfig(cfg *pgx.ConnConfig) error {
 		}
 
 		var dummy int
-		err = conn.QueryRow(context.Background(), "SELECT 1").Scan(&dummy)
+		func() {
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer ctxCancel()
+			err = conn.QueryRow(ctx, "SELECT 1").Scan(&dummy)
+		}()
 		_ = conn.Close(context.Background())
 		if err != nil {
-			if c >= 15 {
+			if c >= cMax {
 				return err
 			}
 			c++
@@ -262,11 +274,11 @@ func connPGXString(str string) (_ *pgx.Conn, err error) {
 
 func connPGXConfig(cfg *pgx.ConnConfig) (_ *pgx.Conn, err error) {
 	c := 0
-	const cMax = 30
+
 	for {
 		var conn *pgx.Conn
-		func (){
-			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second * 3)
+		func() {
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*3)
 			defer ctxCancel()
 			conn, err = pgx.ConnectConfig(ctx, cfg)
 		}()
@@ -281,8 +293,8 @@ func connPGXConfig(cfg *pgx.ConnConfig) (_ *pgx.Conn, err error) {
 		}
 
 		var dummy int
-		func(){
-			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second * 3)
+		func() {
+			ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*3)
 			defer ctxCancel()
 			err = conn.QueryRow(ctx, "SELECT 1").Scan(&dummy)
 		}()

@@ -46,7 +46,7 @@ func TestDB(t *testing.T) {
 		t.Errorf("pgxProv.NewDatabase err: %v", err)
 		return
 	}
-	defer func(){
+	defer func() {
 		e := db.Close()
 		if e != nil {
 			t.Errorf("db.Close err: %v", e)
@@ -58,7 +58,7 @@ func TestDB(t *testing.T) {
 		t.Errorf("pgx.ConnectConfig err: %v", err)
 		return
 	}
-	defer func(){
+	defer func() {
 		e := conn.Close(context.Background())
 		if e != nil {
 			t.Errorf("conn.Close err: %v", e)
