@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -12,9 +13,14 @@ type Versioner interface {
 	SetVersion(h pgx.Tx, comp string, ver, oldver int) error
 }
 
-type TableVersioner struct {}
+type TableVersioner struct{}
 
 var errEmptyComponent = errors.New("empty component not allowed")
+
+func isNoTableError(e error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(e, &pgErr) && pgErr != nil && pgErr.Code == "42P01"
+}
 
 func (TableVersioner) GetVersion(h *pgx.Conn, comp string) (_ int, err error) {
 
@@ -33,8 +39,18 @@ WHERE
 
 	var ver int
 	err = h.QueryRow(context.Background(), q, pgx.QuerySimpleProtocol(true), comp).Scan(&ver)
+	if err != nil && isNoTableError(err) {
+		// run init logic and retry
+		err = initTableVersioner(h)
+		if err == nil {
+			err = h.QueryRow(context.Background(), q, pgx.QuerySimpleProtocol(true), comp).Scan(&ver)
+		}
+	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			return -1, nil
+		}
+		if isNoTableError(err) {
 			return -1, nil
 		}
 		return -1, err

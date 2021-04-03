@@ -145,30 +145,43 @@ func NewSchemaTool(dir fs.FS) (_ PGXSchemaTool, err error) {
 	}
 
 	if tool.current != nil {
-		ms := tool.seeds[len(tool.seeds)-1]
-		if ms.v > currentVer {
-			err = fmt.Errorf(
-				"invalid config: current ver %d < seed ver %d", currentVer, ms.v)
-			return
+		if len(tool.seeds) != 0 {
+			ms := tool.seeds[len(tool.seeds)-1]
+			if ms.v > currentVer {
+				err = fmt.Errorf(
+					"invalid config: current ver %d < seed ver %d", currentVer, ms.v)
+				return
+			}
+			if ms.v == currentVer && !reflect.DeepEqual(ms.s, tool.current) {
+				err = fmt.Errorf(
+					"invalid config: current and seed mismatch")
+				return
+			}
 		}
-		if ms.v == currentVer && !reflect.DeepEqual(ms.s, tool.current) {
-			err = fmt.Errorf(
-				"invalid config: current and seed mismatch")
-			return
-		}
-		if mmv := tool.migrations[len(tool.migrations)-1].v; mmv > currentVer {
-			err = fmt.Errorf(
-				"invalid config: current ver %d < migration ver %d", currentVer, mmv)
-			return
+		if len(tool.migrations) != 0 {
+			if mmv := tool.migrations[len(tool.migrations)-1].v; mmv > currentVer {
+				err = fmt.Errorf(
+					"invalid config: current ver %d < migration ver %d", currentVer, mmv)
+				return
+			}
 		}
 	}
 
 	tool.maxVer = currentVer
-	if msv := tool.seeds[len(tool.seeds)-1].v; msv > tool.maxVer {
-		tool.maxVer = msv
+	if len(tool.seeds) != 0 {
+		if msv := tool.seeds[len(tool.seeds)-1].v; msv > tool.maxVer {
+			tool.maxVer = msv
+		}
 	}
-	if mmv := tool.migrations[len(tool.migrations)-1].v; mmv > tool.maxVer {
-		tool.maxVer = mmv
+	if len(tool.migrations) != 0 {
+		if mmv := tool.migrations[len(tool.migrations)-1].v; mmv > tool.maxVer {
+			tool.maxVer = mmv
+		}
+	}
+
+	if tool.maxVer < 0 {
+		err = errors.New("no seeds, no migrations")
+		return
 	}
 
 	tool.versioner = TableVersioner{}

@@ -127,6 +127,10 @@ func (l Loader) Scan(in *bufio.Scanner) Bucket {
 		}
 	}
 
+	if noName {
+		queries[currtag] = []string{""}
+	}
+
 	for in.Scan() {
 
 		line := strings.TrimRightFunc(in.Text(), unicode.IsSpace)

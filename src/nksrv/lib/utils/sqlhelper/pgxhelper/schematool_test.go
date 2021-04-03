@@ -1,12 +1,9 @@
 package pgxhelper
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
-
-	"github.com/jackc/pgx/v4"
 
 	"nksrv/lib/utils/testhelper"
 )
@@ -64,34 +61,8 @@ func test01(t *testing.T) {
 		t.Errorf("unexpected CheckDBConfig err: %v", err)
 		return
 	}
-
-
-
 }
 
 func TestFS01(t *testing.T) {
-
-
-	conn, err := pgx.ConnectConfig(context.Background(), db.Config)
-	if err != nil {
-		t.Errorf("pgx.ConnectConfig err: %v", err)
-		return
-	}
-	defer func() {
-		e := conn.Close(context.Background())
-		if e != nil {
-			t.Errorf("conn.Close err: %v", e)
-		}
-	}()
-
-	var dst int
-	err = conn.QueryRow(context.Background(), "SELECT 1").Scan(&dst)
-	if err != nil {
-		t.Errorf("conn.QueryRow err: %v", err)
-		return
-	}
-	if dst != 1 {
-		t.Errorf("conn.QueryRow bogus ret: %d", dst)
-		return
-	}
+	test01(t)
 }
