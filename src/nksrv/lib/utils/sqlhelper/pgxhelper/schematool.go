@@ -323,10 +323,7 @@ reVer:
 
 func (tool *PGXSchemaTool) performUpgrade(conn *pgx.Conn, comp string, nowVer int) (err error) {
 
-	tx, err := conn.BeginTx(context.Background(), pgx.TxOptions{
-		IsoLevel:   pgx.RepeatableRead,
-		AccessMode: pgx.ReadWrite,
-	})
+	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return err
 	}
@@ -359,10 +356,7 @@ func (tool *PGXSchemaTool) performUpgrade(conn *pgx.Conn, comp string, nowVer in
 
 func (tool *PGXSchemaTool) performSeed(conn *pgx.Conn, comp string, nowVer int) (err error) {
 
-	tx, err := conn.BeginTx(context.Background(), pgx.TxOptions{
-		IsoLevel:   pgx.RepeatableRead,
-		AccessMode: pgx.ReadWrite,
-	})
+	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return
 	}

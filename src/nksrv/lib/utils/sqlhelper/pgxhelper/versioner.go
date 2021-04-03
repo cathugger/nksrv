@@ -39,13 +39,6 @@ WHERE
 
 	var ver int
 	err = h.QueryRow(context.Background(), q, pgx.QuerySimpleProtocol(true), comp).Scan(&ver)
-	if err != nil && isNoTableError(err) {
-		// run init logic and retry
-		err = initTableVersioner(h)
-		if err == nil {
-			err = h.QueryRow(context.Background(), q, pgx.QuerySimpleProtocol(true), comp).Scan(&ver)
-		}
-	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return -1, nil
@@ -70,13 +63,13 @@ CREATE TABLE IF NOT EXISTS public.components_versions (
 	return err
 }
 
-func (TableVersioner) SetVersion(h pgx.Tx, comp string, ver, oldver int) error {
+func (TableVersioner) SetVersion(h pgx.Tx, comp string, ver, oldVer int) error {
 
 	if comp == "" {
 		return errEmptyComponent
 	}
 
-	if oldver >= 0 {
+	if oldVer >= 0 {
 
 		q := `
 UPDATE
@@ -93,10 +86,10 @@ RETURNING
 		err := h.QueryRow(
 			context.Background(), q,
 			pgx.QuerySimpleProtocol(true),
-			comp, ver, oldver,
+			comp, ver, oldVer,
 		).Scan(&dummy)
 		if err != nil {
-			if err == pgx.ErrNoRows {
+			if err == pgx.ErrNoRows || isNoTableError(err) {
 				return errVersionRace
 			}
 			return err
@@ -129,6 +122,13 @@ RETURNING
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return errVersionRace
+			}
+			if isNoTableError(err) {
+				_ = h.Rollback(context.Background())
+				err = initTableVersioner(h.Conn())
+				if err == nil {
+					err = errVersionRace
+				}
 			}
 			return err
 		}

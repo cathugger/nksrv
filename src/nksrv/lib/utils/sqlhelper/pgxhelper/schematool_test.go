@@ -61,6 +61,32 @@ func test01(t *testing.T) {
 		t.Errorf("unexpected CheckDBConfig err: %v", err)
 		return
 	}
+
+	didSomething, err := st.MigrateDBConfig(db.Config, "test")
+	if err != nil {
+		t.Errorf("unexpected MigrateDBConfig err: %v", err)
+		return
+	}
+	if !didSomething {
+		t.Errorf("didSomething should be true")
+		return
+	}
+
+	err = st.CheckDBConfig(db.Config, "test")
+	if err != nil {
+		t.Errorf("unexpected CheckDBConfig err: %v", err)
+		return
+	}
+
+	didSomething, err = st.MigrateDBConfig(db.Config, "test")
+	if err != nil {
+		t.Errorf("unexpected MigrateDBConfig err: %v", err)
+		return
+	}
+	if didSomething {
+		t.Errorf("didSomething should be false")
+		return
+	}
 }
 
 func TestFS01(t *testing.T) {

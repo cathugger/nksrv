@@ -48,12 +48,24 @@ type dockerPGXProvider struct {
 	contID string
 }
 
+func execError(when string, e error) error {
+	if ee, _ := e.(*exec.ExitError); ee != nil {
+		return fmt.Errorf(
+			"error during execution of %s (%w): %s",
+			when, e, strings.TrimSpace(string(ee.Stderr)),
+		)
+	} else {
+		return fmt.Errorf("error executing %s: %w",when, e)
+	}
+}
+
 func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 
 	pgImage := "postgres:alpine"
 
 	err = exec.Command(dPath, "pull", pgImage).Run()
 	if err != nil {
+		err = execError("docker pull", err)
 		return
 	}
 
@@ -72,6 +84,7 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 		pgImage,
 	).Output()
 	if err != nil {
+		err = execError("docker run", err)
 		return
 	}
 	id := strings.TrimSpace(string(bid))
