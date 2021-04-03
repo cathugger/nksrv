@@ -25,6 +25,7 @@ type PGXSchemaTool struct {
 	seeds      []schemaAndVer // various versions seeds
 	migrations []schemaAndVer // version upgrades
 	maxVer     int            // max ver, either ver of "current" or maximum reachable via seeds and migrations
+	versioner  Versioner
 }
 
 func NewSchemaTool(dir fs.FS) (_ PGXSchemaTool, err error) {
@@ -170,6 +171,8 @@ func NewSchemaTool(dir fs.FS) (_ PGXSchemaTool, err error) {
 		tool.maxVer = mmv
 	}
 
+	tool.versioner = TableVersioner{}
+
 	return tool, nil
 }
 
@@ -208,7 +211,7 @@ func (tool *PGXSchemaTool) MigrateDBConfig(cfg *pgx.ConnConfig, comp string) (di
 var ErrNeedsMigrate = errors.New("database needs update")
 
 func (tool *PGXSchemaTool) CheckDBConn(conn *pgx.Conn, comp string) error {
-	nowVer, err := getVersion(conn, `SELECT version FROM public.capabilities WHERE component = $1`, comp)
+	nowVer, err := tool.versioner.GetVersion(conn, comp)
 	if err != nil {
 		return err
 	}
@@ -266,7 +269,7 @@ func (tool *PGXSchemaTool) MigrateDBConn(conn *pgx.Conn, comp string) (didSometh
 	cRepeat := 0
 
 reVer:
-	nowVer, err := getVersion(conn, `SELECT version FROM public.capabilities WHERE component = $1`, comp)
+	nowVer, err := tool.versioner.GetVersion(conn, comp)
 	if err != nil {
 		return
 	}
@@ -320,16 +323,7 @@ func (tool *PGXSchemaTool) performUpgrade(conn *pgx.Conn, comp string, nowVer in
 		}
 	}()
 
-	nowVer2, err := getVersion(tx, `SELECT version FROM public.capabilities WHERE component = $1 FOR UPDATE`, comp)
-	if err != nil {
-		return err
-	}
-	if nowVer != nowVer2 {
-		err = errVersionRace
-		return
-	}
-
-	_, err = tx.Exec(context.Background(), `UPDATE public.capabilities SET version=$2 WHERE component = $1`, comp, tool.maxVer)
+	err = tool.versioner.SetVersion(tx, comp, tool.maxVer, nowVer)
 	if err != nil {
 		return
 	}
@@ -357,7 +351,7 @@ func (tool *PGXSchemaTool) performSeed(conn *pgx.Conn, comp string, nowVer int) 
 		AccessMode: pgx.ReadWrite,
 	})
 	if err != nil {
-		return err
+		return
 	}
 	defer func() {
 		if err != nil {
@@ -365,16 +359,7 @@ func (tool *PGXSchemaTool) performSeed(conn *pgx.Conn, comp string, nowVer int) 
 		}
 	}()
 
-	nowVer2, err := getVersion(tx, `SELECT version FROM public.capabilities WHERE component = $1 FOR UPDATE`, comp)
-	if err != nil {
-		return err
-	}
-	if nowVer != nowVer2 {
-		err = errVersionRace
-		return
-	}
-
-	_, err = tx.Exec(context.Background(), `UPDATE public.capabilities SET version=$2 WHERE component = $1`, comp, tool.maxVer)
+	err = tool.versioner.SetVersion(tx, comp, tool.maxVer, nowVer)
 	if err != nil {
 		return
 	}
@@ -412,29 +397,15 @@ func (tool *PGXSchemaTool) performSeed(conn *pgx.Conn, comp string, nowVer int) 
 
 func executeMigration(tx pgx.Tx, s []string) error {
 	for _, v := range s {
+		if v == "" {
+			continue
+		}
 		_, err := tx.Exec(context.Background(), v, pgx.QuerySimpleProtocol(true))
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-type pgxQueryer interface {
-	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
-}
-
-func getVersion(q pgxQueryer, stmt, comp string) (_ int, err error) {
-	var ver int
-	err = q.QueryRow(context.Background(), stmt, pgx.QuerySimpleProtocol(true), comp).Scan(&ver)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return -1, nil
-		}
-		return -1, err
-	}
-	return ver, nil
 }
 
 func CheckServerVersion(q pgxQueryer, verReq int) error {

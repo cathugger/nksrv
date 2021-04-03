@@ -1,47 +1,26 @@
-package pgxhelper
+package testhelper
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v4"
-
-	"nksrv/lib/utils/testhelper"
 )
 
-var pgxProv testhelper.PGXProvider
-
-func TestMain(m *testing.M) {
-	// call flag.Parse() here if TestMain uses flags
-
-	code := func() (code int) {
-		// we gonna use postgresql stuff
-		pp, err := testhelper.NewPGXProvider()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "NewPGXProvider err: %v\n", err)
-			return 1
+func TestPGX(t *testing.T) {
+	pp, err := NewPGXProvider()
+	if err != nil {
+		t.Errorf("NewPGXProvider err: %v\n", err)
+		return
+	}
+	defer func() {
+		e := pp.Close()
+		if e != nil {
+			t.Errorf("PGXProvider.Close err: %v\n", e)
 		}
-		defer func() {
-			e := pp.Close()
-			if e != nil {
-				fmt.Fprintf(os.Stderr, "PGXProvider.Close err: %v\n", e)
-				if code == 0 {
-					code = 1
-				}
-			}
-		}()
-		pgxProv = pp
-
-		return m.Run()
 	}()
 
-	os.Exit(code)
-}
-
-func TestDB(t *testing.T) {
-	db, err := pgxProv.NewDatabase()
+	db, err := pp.NewDatabase()
 	if err != nil {
 		t.Errorf("pgxProv.NewDatabase err: %v", err)
 		return
