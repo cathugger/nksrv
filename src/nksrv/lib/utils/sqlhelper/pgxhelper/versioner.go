@@ -124,6 +124,7 @@ RETURNING
 				return errVersionRace
 			}
 			if isNoTableError(err) {
+				// SQL statement error auto-rollbacks transaction
 				_ = h.Rollback(context.Background())
 				err = initTableVersioner(h.Conn())
 				if err == nil {

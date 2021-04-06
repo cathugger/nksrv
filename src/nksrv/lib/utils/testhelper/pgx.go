@@ -55,7 +55,7 @@ func execError(when string, e error) error {
 			when, e, strings.TrimSpace(string(ee.Stderr)),
 		)
 	} else {
-		return fmt.Errorf("error executing %s: %w",when, e)
+		return fmt.Errorf("error executing %s: %w", when, e)
 	}
 }
 

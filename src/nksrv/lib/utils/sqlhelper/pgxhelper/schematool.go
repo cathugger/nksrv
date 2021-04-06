@@ -415,7 +415,7 @@ func executeMigration(tx pgx.Tx, s []string) error {
 	return nil
 }
 
-func CheckServerVersion(q pgxQueryer, verReq int) error {
+func CheckServerVersion(q pgxQueryRower, verReq int) error {
 	var verNow int
 	err := q.QueryRow(context.Background(), "SHOW server_version_num", pgx.QuerySimpleProtocol(true)).Scan(&verNow)
 	if err != nil {
