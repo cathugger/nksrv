@@ -62,7 +62,7 @@ func NewSchemaTool(dir fs.FS) (_ PGXSchemaTool, err error) {
 		}
 
 		ver := strings.TrimPrefix(path, "schema/")
-		i := strings.IndexAny(ver, "./")
+		i := strings.IndexAny(ver, "./_")
 		if i <= 0 {
 			return fmt.Errorf("invalid path %q", path)
 		}

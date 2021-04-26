@@ -1,0 +1,10 @@
+-- :set version 2
+CREATE SCHEMA test;
+CREATE TABLE test.test (
+    t_id INTEGER  GENERATED ALWAYS AS IDENTITY,
+    PRIMARY KEY (t_id)
+);
+CREATE TABLE test.test2 (
+    t_id INTEGER  GENERATED ALWAYS AS IDENTITY,
+    PRIMARY KEY (t_id)
+);

@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func test01(t *testing.T) {
+func testOK(t *testing.T, which string) {
 	db, err := pgxProv.NewDatabase()
 	if err != nil {
 		t.Errorf("pgxProv.NewDatabase err: %v", err)
@@ -50,7 +50,7 @@ func test01(t *testing.T) {
 		}
 	}()
 
-	st, err := NewSchemaTool(os.DirFS("testdata/01"))
+	st, err := NewSchemaTool(os.DirFS("testdata/" + which))
 	if err != nil {
 		t.Errorf("NewSchemaTool err: %v", err)
 		return
@@ -90,5 +90,13 @@ func test01(t *testing.T) {
 }
 
 func TestFS01(t *testing.T) {
-	test01(t)
+	testOK(t, "01")
+}
+
+func TestFS02(t *testing.T) {
+	testOK(t, "02")
+}
+
+func TestFS03(t *testing.T) {
+	testOK(t, "03")
 }
