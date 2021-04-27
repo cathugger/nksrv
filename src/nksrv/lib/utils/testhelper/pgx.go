@@ -79,6 +79,7 @@ func newDockerPGXProvider(dPath, port string) (_ PGXProvider, err error) {
 	bid, err := exec.Command(
 		dPath, "run",
 		"-p", "127.0.0.1:5432:5432",
+		"-e", "POSTGRES_INITDB_ARGS=--no-sync",
 		"-e", "POSTGRES_PASSWORD="+passwd,
 		"-d",
 		pgImage,
