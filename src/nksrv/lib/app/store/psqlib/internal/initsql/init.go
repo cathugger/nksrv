@@ -1,47 +1,71 @@
 package initsql
 
 import (
+	"context"
 	"fmt"
-	"strconv"
+	"io/fs"
+	"path"
+	"strings"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v4"
 
 	. "nksrv/lib/app/store/psqlib/internal/basesql"
 	"nksrv/lib/utils/sqlbucket"
 )
 
-var StListX [StCount]string
-var StLoadErr error
-
-
-func LoadStatements() {
-	if StListX[0] != "" {
-		panic("already loaded")
+func loadSttatementsFromFS(src fs.FS) (_ sqlbucket.Bucket, err error) {
+	list, err := fs.ReadDir(src, "statements")
+	if err != nil {
+		return
 	}
-	bm := make(map[string]sqlbucket.Bucket)
-	for i := 0; i < StCount; i++ {
-		sn := StatementIndexEntry(i).String()
-		if bm[sn.Bucket] == nil {
-			fn := "etc/psqlib/" + sn.Bucket + ".sql"
-			sqlbucket.New().LoadFromFS()
-			stmts, err := sqlbucket.LoadFromFile(fn)
-			if err != nil {
-				StLoadErr = fmt.Errorf("err loading %s: %v", fn, err)
-				return
-			}
-			bm[sn.Bucket] = stmts
+	var dst sqlbucket.Bucket
+	for _, e := range list {
+		name := e.Name()
+		if len(name) == 0 || name[0] == '.' || name[0] == '_' || !strings.HasSuffix(name, ".sql") || e.IsDir() {
+			continue
 		}
-		sm := bm[sn.Bucket]
-		sl := sm[sn.Name]
-		if len(sl) != 1 {
-			StLoadErr = fmt.Errorf(
-				"wrong count %d for statement %s", len(sl), sn)
+		dst, err = sqlbucket.New().
+			WithNeedSemicolon(true).
+			WithNoNext(true).
+			WithBase(dst).
+			LoadFromFS(src, path.Join("statements", name))
+		if err != nil {
 			return
 		}
-		StListX[i] = sl[0] + "\n"
 	}
+	return dst, nil
 }
 
+func compileStatementList(src sqlbucket.Bucket) (_ *[SISize]string, err error) {
+	dst := new([SISize]string)
+	for i := 0; i < SISize; i++ {
+		stn := StatementIndexEntry(i).String()
+		st := src[stn]
+		if len(st) == 0 {
+			err = fmt.Errorf("%q statement err: not found", stn)
+			return
+		}
+		if len(st) > 1 {
+			err = fmt.Errorf("%q statement err: multiple statements", stn)
+			return
+		}
+		dst[i] = st[0]
+	}
+	return dst, nil
+}
+
+func prepareStatementsForConn(ctx context.Context, conn *pgx.Conn, src *[SISize]string) (err error) {
+	for i := 0; i < SISize; i++ {
+		stn := StatementIndexEntry(i).String()
+		_, err = conn.Prepare(ctx, stn, src[i])
+		if err != nil {
+			return
+		}
+	}
+	return nil
+}
+
+/*
 func (sp *PSQLIB) prepareStatements() (err error) {
 	if sp.StPrep[0] != nil {
 		panic("already prepared")
@@ -75,15 +99,4 @@ func (sp *PSQLIB) prepareStatements() (err error) {
 	return
 }
 
-func (sp *PSQLIB) closeStatements() (err error) {
-	for i := range StListX {
-		if sp.StPrep[i] != nil {
-			ex := sp.StPrep[i].Close()
-			if err == nil {
-				err = ex
-			}
-			sp.StPrep[i] = nil
-		}
-	}
-	return
-}
+*/

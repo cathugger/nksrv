@@ -14,6 +14,7 @@ import (
 )
 
 type Loader struct {
+	base          Bucket
 	name          string
 	noNext        bool
 	needSemicolon bool
@@ -21,6 +22,11 @@ type Loader struct {
 
 func New() Loader {
 	return Loader{}
+}
+
+func (l Loader) WithBase(base Bucket) Loader {
+	l.base = base
+	return l
 }
 
 func (l Loader) WithName(name string) Loader {
@@ -94,7 +100,12 @@ func (l Loader) trimFinal(s string) string {
 }
 
 func (l Loader) Scan(in *bufio.Scanner) Bucket {
-	queries := make(Bucket)
+	var queries Bucket
+	if l.base != nil {
+		queries = l.base
+	} else {
+		queries = make(Bucket)
+	}
 
 	currtag := l.name
 	noName := currtag != ""
