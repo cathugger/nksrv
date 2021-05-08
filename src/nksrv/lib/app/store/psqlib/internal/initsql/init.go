@@ -13,7 +13,7 @@ import (
 	"nksrv/lib/utils/sqlbucket"
 )
 
-func loadSttatementsFromFS(src fs.FS) (_ sqlbucket.Bucket, err error) {
+func loadStatementsFromFS(src fs.FS) (_ sqlbucket.Bucket, err error) {
 	list, err := fs.ReadDir(src, "statements")
 	if err != nil {
 		return
@@ -49,7 +49,12 @@ func compileStatementList(src sqlbucket.Bucket) (_ *[SISize]string, err error) {
 			err = fmt.Errorf("%q statement err: multiple statements", stn)
 			return
 		}
+		delete(src, stn)
 		dst[i] = st[0]
+	}
+	if len(src) != 0 {
+		err = fmt.Errorf("%d unprocessed statements left", len(src))
+		return
 	}
 	return dst, nil
 }
