@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -78,23 +79,54 @@ func PrepareStatementsForConn(ctx context.Context, conn *pgx.Conn, src *[SISize]
 	for i := 0; i < SISize; i++ {
 		stn := StatementIndexEntry(i).String()
 		s := src[i]
+
 		_, err = conn.Prepare(ctx, stn, s)
+
 		if err != nil {
 			if xerr, _ := err.(*pgconn.PgError); xerr != nil {
-				ss, se := xerr.Position, xerr.Position
-				for ss > 0 && s[ss-1] != '\n' {
-					ss--
+
+				var pos, ss, se int
+				if xerr.Position != 0 || xerr.Line == 0 {
+					// character position -> byte position
+					for i := range s {
+						pos++
+						if pos >= int(xerr.Position) {
+							pos = i
+							break
+						}
+					}
+					// start and end of relevant line
+					ss, se = pos, pos
+					for ss > 0 && s[ss-1] != '\n' {
+						ss--
+					}
+					for se < len(s) && s[se] != '\n' {
+						se++
+					}
+				} else {
+					// position wasn't provided, but line num was
+					for i := 0; i < int(xerr.Line); i++ {
+						x := strings.IndexByte(s[ss:], '\n')
+						if x < 0 {
+							ss = len(s)
+							break
+						}
+						ss = x
+					}
+					pos = ss
+					se = ss
+					for se < len(s) && s[se] != '\n' {
+						se++
+					}
 				}
-				for int(se) < len(s) && s[se] != '\n' {
-					se++
-				}
+
 				err = fmt.Errorf(
-					"err preparing %d %q stmt (%w): pos[%d] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
-					i, stn, err, xerr.Position, xerr.Message, xerr.Detail, s[ss:se], s,
+					"sql error preparing %d %q stmt (%w): detail[%s] hint[%s] pos[%d] line[%s] linenum[%d]\nfull stmt:\n%s",
+					i, stn, err, xerr.Detail, xerr.Hint, utf8.RuneCountInString(s[ss:pos]), s[ss:se], xerr.Line, s,
 				)
 			} else {
 				err = fmt.Errorf(
-					"weird err preparing %d %q stmt: %w",
+					"non-sql error preparing %d %q stmt: %w",
 					i, stn, err,
 				)
 			}

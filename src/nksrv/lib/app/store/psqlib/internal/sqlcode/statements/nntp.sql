@@ -252,11 +252,11 @@ LEFT JOIN
 USING
 	(b_id)
 WHERE
-	xb.badded >= $1
+	xb.b_added >= $1
 GROUP BY
 	xb.b_id
 ORDER BY
-	xb.badded,
+	xb.b_added,
 	xb.b_id
 
 

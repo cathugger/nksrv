@@ -9,9 +9,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"nksrv/lib/utils/sqlbucket"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -58,7 +60,7 @@ func NewSchemaTool(dir fs.FS) (_ PGXSchemaTool, err error) {
 			WithNoNext(true).
 			LoadFromFS(dir, path)
 		if xerr != nil {
-			return xerr
+			return fmt.Errorf("error loading %q: %w", path, xerr)
 		}
 
 		ver := strings.TrimPrefix(path, "schema/")
@@ -221,7 +223,14 @@ func (tool *PGXSchemaTool) MigrateDBConfig(cfg *pgx.ConnConfig, comp string) (di
 	return
 }
 
-var ErrNeedsMigrate = errors.New("database needs update")
+type NeedsMigrationError struct{ s string }
+
+func (e NeedsMigrationError) Error() string { return e.s }
+
+var (
+	ErrNeedsInitialization = NeedsMigrationError{"database needs initialization"}
+	ErrNeedsMigration      = NeedsMigrationError{"database needs migration"}
+)
 
 func (tool *PGXSchemaTool) CheckDBConn(conn *pgx.Conn, comp string) error {
 	nowVer, err := tool.versioner.GetVersion(conn, comp)
@@ -234,14 +243,14 @@ func (tool *PGXSchemaTool) CheckDBConn(conn *pgx.Conn, comp string) error {
 	}
 	if nowVer < 0 {
 		// needs initialization
-		return ErrNeedsMigrate
+		return ErrNeedsInitialization
 	}
 	err = tool.checkCanUpgrade(nowVer)
 	if err != nil {
 		return err
 	}
 	// we could do it
-	return ErrNeedsMigrate
+	return ErrNeedsMigration
 }
 
 var errVersionRace = errors.New("version race")
@@ -402,14 +411,57 @@ func (tool *PGXSchemaTool) performSeed(conn *pgx.Conn, comp string, nowVer int) 
 	return
 }
 
-func executeMigration(tx pgx.Tx, s []string) error {
-	for _, v := range s {
-		if v == "" {
+func executeMigration(tx pgx.Tx, statements []string) error {
+	for i, s := range statements {
+		if s == "" {
 			continue
 		}
-		_, err := tx.Exec(context.Background(), v, pgx.QuerySimpleProtocol(true))
+		_, err := tx.Exec(context.Background(), s, pgx.QuerySimpleProtocol(true))
 		if err != nil {
-			return err
+
+			if xerr, _ := err.(*pgconn.PgError); xerr != nil {
+
+				var pos, ss, se int
+				if xerr.Position != 0 || xerr.Line == 0 {
+					// character position -> byte position
+					for i := range s {
+						pos++
+						if pos >= int(xerr.Position) {
+							pos = i
+							break
+						}
+					}
+					// start and end of relevant line
+					ss, se = pos, pos
+					for ss > 0 && s[ss-1] != '\n' {
+						ss--
+					}
+					for se < len(s) && s[se] != '\n' {
+						se++
+					}
+				} else {
+					// position wasn't provided, but line num was
+					for i := 0; i < int(xerr.Line); i++ {
+						x := strings.IndexByte(s[ss:], '\n')
+						if x < 0 {
+							ss = len(s)
+							break
+						}
+						ss = x
+					}
+					pos = ss
+					se = ss
+					for se < len(s) && s[se] != '\n' {
+						se++
+					}
+				}
+
+				return fmt.Errorf(
+					"sql error executing %dth migration part (%w): detail[%s] hint[%s] pos[%d] line[%s] linenum[%d]",
+					i, err, xerr.Detail, xerr.Hint, utf8.RuneCountInString(s[ss:pos]), s[ss:se], xerr.Line,
+				)
+			}
+			return fmt.Errorf("error executing %dth migration part: %w", i, err)
 		}
 	}
 	return nil

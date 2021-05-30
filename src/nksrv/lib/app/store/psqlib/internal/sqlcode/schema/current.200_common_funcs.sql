@@ -20,7 +20,6 @@ $$ LANGUAGE plpgsql;
 
 
 
--- :next
 CREATE FUNCTION
 	ib.bposts_thread_bump(x_b_id INTEGER, x_b_t_id BIGINT) RETURNS VOID
 AS $$

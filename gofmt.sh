@@ -115,6 +115,7 @@ dofmt ()
 
 if [ $FMTALL = 1 -o $# -lt 1 ]
 then
+	cd $(dirname "$0")
 	dofmt src
 	exit
 fi

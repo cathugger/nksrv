@@ -46,8 +46,16 @@ func (l Loader) WithNeedSemicolon(needSemicolon bool) Loader {
 
 func (l Loader) Load(r io.Reader) (queries Bucket, err error) {
 	scanner := bufio.NewScanner(r)
-	queries = l.Scan(scanner)
+	queries, err = l.Scan(scanner)
+	if err != nil {
+		err = fmt.Errorf("processing error: %w", err)
+		return
+	}
 	err = scanner.Err()
+	if err != nil {
+		err = fmt.Errorf("scanner error: %w", err)
+		return
+	}
 	return
 }
 
@@ -87,19 +95,19 @@ var (
 	reSomething = regexp.MustCompile(`^\s*--\s*:[[:alnum:]]+(?:\s+.*)?\s*$`)
 )
 
-func (l Loader) trimFinal(s string) string {
+func (l Loader) trimFinal(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if l.needSemicolon {
 		if s[len(s)-1] != ';' {
-			panic(fmt.Sprintf("no semicolon: %q", s))
+			return "", fmt.Errorf("no semicolon: %q", s)
 		}
 		s = s[:len(s)-1]
 		s = strings.TrimSpace(s)
 	}
-	return s
+	return s, nil
 }
 
-func (l Loader) Scan(in *bufio.Scanner) Bucket {
+func (l Loader) Scan(in *bufio.Scanner) (_ Bucket, err error) {
 	var queries Bucket
 	if l.base != nil {
 		queries = l.base
@@ -117,20 +125,26 @@ func (l Loader) Scan(in *bufio.Scanner) Bucket {
 	finishcurrent := func() {
 		q := queries[currtag][curri]
 		var qw strings.Builder
-		e := template.Must(template.New(currtag).Parse(q)).
+		err = template.Must(template.New(currtag).Parse(q)).
 			Execute(&qw, templates)
-		if e != nil {
-			panic("exec err: " + e.Error())
+		if err != nil {
+			err = fmt.Errorf("template %q execution error: %w", currtag, err)
+			return
 		}
 		q = qw.String()
 		if !currt {
 			// normal query
 			// XXX improve
-			queries[currtag][curri] = l.trimFinal(q)
+			queries[currtag][curri], err = l.trimFinal(q)
+			if err != nil {
+				err = fmt.Errorf("error on %q[%d]: %w", currtag, curri, err)
+				return
+			}
 		} else {
 			// template
 			if curri != 0 {
-				panic("can't use :next in conjuction with :namet")
+				err = fmt.Errorf("%q: can't use :next in conjuction with :namet", currtag)
+				return
 			}
 			currt = false
 			templates[currtag] = q
@@ -192,7 +206,8 @@ func (l Loader) Scan(in *bufio.Scanner) Bucket {
 		}
 
 		if reSomething.MatchString(line) {
-			panic(fmt.Sprintf("unrecognised ctl line: %q", line))
+			err = fmt.Errorf("unrecognised ctl line: %q", line)
+			return
 		}
 
 		if currtag == "" {
@@ -205,5 +220,5 @@ func (l Loader) Scan(in *bufio.Scanner) Bucket {
 		finishcurrent()
 	}
 
-	return queries
+	return queries, nil
 }

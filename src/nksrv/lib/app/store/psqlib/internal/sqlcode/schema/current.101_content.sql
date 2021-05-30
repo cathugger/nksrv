@@ -1,5 +1,5 @@
 
-CREATE TYPE ib.btype_t ENUM (
+CREATE TYPE ib.btype_t AS ENUM (
 	'okay', -- normal state
 	'dead', -- some placeholder posts exists so can't totally nuke but otherwise dead
 	'kill'  -- marked to be killed
@@ -46,7 +46,7 @@ CREATE TABLE ib.boards (
 );
 -- for NEWGROUPS
 CREATE INDEX
-	ON ib.boards (badded,b_id);
+	ON ib.boards (b_added,b_id);
 -- for UI-visible board list
 CREATE UNIQUE INDEX
 	ON ib.boards (b_webname COLLATE "und-x-icu")
@@ -202,7 +202,7 @@ CREATE TABLE ib.bposts (
 		ON UPDATE CASCADE
 );
 
--- web view / preview 
+-- web view / preview
 CREATE INDEX
 	ON ib.bposts (
 		b_id      ASC,

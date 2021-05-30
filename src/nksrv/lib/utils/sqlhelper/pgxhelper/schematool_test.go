@@ -11,7 +11,6 @@ import (
 var pgxProv testhelper.PGXProvider
 
 func TestMain(m *testing.M) {
-	// call flag.Parse() here if TestMain uses flags
 
 	code := func() (code int) {
 		// we gonna use postgresql stuff
@@ -57,7 +56,7 @@ func testOK(t *testing.T, which string) {
 	}
 
 	err = st.CheckDBConfig(db.Config, "test")
-	if err != ErrNeedsMigrate {
+	if err != ErrNeedsInitialization {
 		t.Errorf("unexpected CheckDBConfig err: %v", err)
 		return
 	}
