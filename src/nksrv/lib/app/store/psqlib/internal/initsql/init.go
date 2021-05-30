@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 
 	. "nksrv/lib/app/store/psqlib/internal/basesql"
@@ -59,49 +60,46 @@ func compileStatementList(src sqlbucket.Bucket) (_ *[SISize]string, err error) {
 	return dst, nil
 }
 
-func prepareStatementsForConn(ctx context.Context, conn *pgx.Conn, src *[SISize]string) (err error) {
+func LoadStatementsFromFS(src fs.FS) (_ *[SISize]string, err error) {
+	bucket, err := loadStatementsFromFS(src)
+	if err != nil {
+		err = fmt.Errorf("error loading statements: %w", err)
+		return
+	}
+	list, err := compileStatementList(bucket)
+	if err != nil {
+		err = fmt.Errorf("error compiling statement list: %w", err)
+		return
+	}
+	return list, nil
+}
+
+func PrepareStatementsForConn(ctx context.Context, conn *pgx.Conn, src *[SISize]string) (err error) {
 	for i := 0; i < SISize; i++ {
 		stn := StatementIndexEntry(i).String()
-		_, err = conn.Prepare(ctx, stn, src[i])
+		s := src[i]
+		_, err = conn.Prepare(ctx, stn, s)
 		if err != nil {
+			if xerr, _ := err.(*pgconn.PgError); xerr != nil {
+				ss, se := xerr.Position, xerr.Position
+				for ss > 0 && s[ss-1] != '\n' {
+					ss--
+				}
+				for int(se) < len(s) && s[se] != '\n' {
+					se++
+				}
+				err = fmt.Errorf(
+					"err preparing %d %q stmt (%w): pos[%d] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
+					i, stn, err, xerr.Position, xerr.Message, xerr.Detail, s[ss:se], s,
+				)
+			} else {
+				err = fmt.Errorf(
+					"weird err preparing %d %q stmt: %w",
+					i, stn, err,
+				)
+			}
 			return
 		}
 	}
 	return nil
 }
-
-/*
-func (sp *PSQLIB) prepareStatements() (err error) {
-	if sp.StPrep[0] != nil {
-		panic("already prepared")
-	}
-	for i := range StListX {
-
-		s := StListX[i]
-		sp.StPrep[i], err = sp.DB.DB.Prepare(s)
-		if err != nil {
-
-			if pe, _ := err.(*pq.Error); pe != nil {
-
-				pos, _ := strconv.Atoi(pe.Position)
-				ss, se := pos, pos
-				for ss > 0 && s[ss-1] != '\n' {
-					ss--
-				}
-				for se < len(s) && s[se] != '\n' {
-					se++
-				}
-
-				return fmt.Errorf(
-					"err preparing %d %q stmt: pos[%s] msg[%s] detail[%s] line[%s]\nstmt:\n%s",
-					i, stNames[i].Name, pe.Position, pe.Message, pe.Detail, s[ss:se], s)
-			}
-
-			return fmt.Errorf("error preparing %d %q stmt: %v",
-				i, stNames[i].Name, err)
-		}
-	}
-	return
-}
-
-*/
